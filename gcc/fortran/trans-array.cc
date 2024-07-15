@@ -4294,7 +4294,6 @@ gfc_trans_preloop_setup (gfc_loopinfo * loop, int dim, int flag,
   gfc_ss *ss, *pss;
   gfc_loopinfo *ploop;
   gfc_array_ref *ar;
-  int i;
 
   /* This code will be executed before entering the scalarization loop
      for this dimension.  */
@@ -4340,19 +4339,12 @@ gfc_trans_preloop_setup (gfc_loopinfo * loop, int dim, int flag,
 	  pss = ss;
 	}
 
-      if (dim == loop->dimen - 1)
-	i = 0;
-      else
-	i = dim + 1;
-
-      /* For the time being, there is no loop reordering.  */
-      gcc_assert (i == ploop->order[i]);
-      i = ploop->order[i];
-
       if (dim == loop->dimen - 1 && loop->parent == NULL)
 	{
+	  gcc_assert (0 == ploop->order[0]);
+
 	  stride = gfc_conv_array_stride (info->descriptor,
-					  innermost_ss (ss)->dim[i]);
+					  innermost_ss (ss)->dim[0]);
 
 	  /* Calculate the stride of the innermost loop.  Hopefully this will
 	     allow the backend optimizers to do their stuff more effectively.
@@ -4364,7 +4356,7 @@ gfc_trans_preloop_setup (gfc_loopinfo * loop, int dim, int flag,
 	     base offset of the array.  */
 	  if (info->ref)
 	    {
-	      for (i = 0; i < ar->dimen; i++)
+	      for (int i = 0; i < ar->dimen; i++)
 		{
 		  if (ar->dimen_type[i] != DIMEN_ELEMENT)
 		    continue;
@@ -4374,8 +4366,21 @@ gfc_trans_preloop_setup (gfc_loopinfo * loop, int dim, int flag,
 	    }
 	}
       else
-	/* Add the offset for the previous loop dimension.  */
-	add_array_offset (pblock, ploop, ss, ar, pss->dim[i], i);
+	{
+	  int i;
+
+	  if (dim == loop->dimen - 1)
+	    i = 0;
+	  else
+	    i = dim + 1;
+
+	  /* For the time being, there is no loop reordering.  */
+	  gcc_assert (i == ploop->order[i]);
+	  i = ploop->order[i];
+
+	  /* Add the offset for the previous loop dimension.  */
+	  add_array_offset (pblock, ploop, ss, ar, pss->dim[i], i);
+	}
 
       /* Remember this offset for the second loop.  */
       if (dim == loop->temp_dim - 1 && loop->parent == NULL)
@@ -9885,15 +9890,7 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
 	      else
 		{
 		  /* Build the vtable address and set the vptr with it.  */
-		  tree vtab;
-		  gfc_symbol *vtable;
-		  vtable = gfc_find_derived_vtab (c->ts.u.derived);
-		  vtab = vtable->backend_decl;
-		  if (vtab == NULL_TREE)
-		    vtab = gfc_get_symbol_decl (vtable);
-		  vtab = gfc_build_addr_expr (NULL, vtab);
-		  vtab = fold_convert (TREE_TYPE (tmp), vtab);
-		  gfc_add_modify (&tmpblock, tmp, vtab);
+		  gfc_reset_vptr (&tmpblock, nullptr, tmp, c->ts.u.derived);
 		}
 	    }
 
@@ -9924,15 +9921,13 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
 	      && (CLASS_DATA (c)->attr.allocatable
 		  || CLASS_DATA (c)->attr.class_pointer))
 	    {
-	      tree vptr_decl;
+	      tree class_ref;
 
 	      /* Allocatable CLASS components.  */
-	      comp = fold_build3_loc (input_location, COMPONENT_REF, ctype,
-				      decl, cdecl, NULL_TREE);
+	      class_ref = fold_build3_loc (input_location, COMPONENT_REF, ctype,
+					   decl, cdecl, NULL_TREE);
 
-	      vptr_decl = gfc_class_vptr_get (comp);
-
-	      comp = gfc_class_data_get (comp);
+	      comp = gfc_class_data_get (class_ref);
 	      if (GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (comp)))
 		gfc_conv_descriptor_data_set (&fnblock, comp,
 					      null_pointer_node);
@@ -9947,19 +9942,7 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl, tree dest,
 	      /* The dynamic type of a disassociated pointer or unallocated
 		 allocatable variable is its declared type. An unlimited
 		 polymorphic entity has no declared type.  */
-	      if (!UNLIMITED_POLY (c))
-		{
-		  vtab = gfc_find_derived_vtab (c->ts.u.derived);
-		  if (!vtab->backend_decl)
-		     gfc_get_symbol_decl (vtab);
-		  tmp = gfc_build_addr_expr (NULL_TREE, vtab->backend_decl);
-		}
-	      else
-		tmp = build_int_cst (TREE_TYPE (vptr_decl), 0);
-
-	      tmp = fold_build2_loc (input_location, MODIFY_EXPR,
-					 void_type_node, vptr_decl, tmp);
-	      gfc_add_expr_to_block (&fnblock, tmp);
+	      gfc_reset_vptr (&fnblock, nullptr, class_ref, c->ts.u.derived);
 
 	      cmp_has_alloc_comps = false;
 	    }

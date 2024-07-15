@@ -4472,9 +4472,17 @@ get_vec_init_expr (tree t)
    ? DECL_LANG_SPECIFIC (NODE)->u.base.selector == lds_decomp		\
    : false)
 
-/* The underlying artificial VAR_DECL for structured binding.  */
+/* The underlying artificial VAR_DECL for structured binding.  On the
+   artificial base VAR_DECL this can be NULL, or integer_{zero,one}_node
+   for structured binding used in if/while/for resp. switch conditions,
+   or a TARGET_EXPR with the condition value after cp_finish_decomp in
+   those cases.  */
 #define DECL_DECOMP_BASE(NODE) \
   (LANG_DECL_DECOMP_CHECK (NODE)->base)
+
+/* True for the artificial VAR_DECL for structured binding.  */
+#define DECL_DECOMP_IS_BASE(NODE) \
+  (!DECL_DECOMP_BASE (NODE) || !VAR_P (DECL_DECOMP_BASE (NODE)))
 
 /* Nonzero if NODE is an inline VAR_DECL.  In C++17, static data members
    declared with constexpr specifier are implicitly inline variables.  */
@@ -7482,7 +7490,6 @@ extern tree canonical_type_parameter		(tree);
 extern void push_access_scope			(tree);
 extern void pop_access_scope			(tree);
 extern bool check_template_shadow		(tree);
-extern bool check_auto_in_tmpl_args             (tree, tree);
 extern tree get_innermost_template_args		(tree, int);
 extern void maybe_begin_member_template_processing (tree);
 extern void maybe_end_member_template_processing (void);
@@ -8584,7 +8591,6 @@ extern hashval_t hash_placeholder_constraint	(tree);
 extern bool deduce_constrained_parameter        (tree, tree&, tree&);
 extern tree resolve_constraint_check            (tree);
 extern tree check_function_concept              (tree);
-extern tree finish_template_introduction        (tree, tree, location_t loc);
 extern bool valid_requirements_p                (tree);
 extern tree finish_concept_name                 (tree);
 extern tree finish_shorthand_constraint         (tree, tree);
