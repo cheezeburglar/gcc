@@ -76,7 +76,11 @@ enum diagnostics_output_format
   DIAGNOSTICS_OUTPUT_FORMAT_SARIF_STDERR,
 
   /* SARIF-based output, to a file.  */
-  DIAGNOSTICS_OUTPUT_FORMAT_SARIF_FILE
+  DIAGNOSTICS_OUTPUT_FORMAT_SARIF_FILE,
+
+  /* SARIF-based output, to a Unix domain socket as a series of
+     JSON-RPC 2.0 notifications.  */
+  DIAGNOSTICS_OUTPUT_FORMAT_SARIF_SOCKET
 };
 
 /* An enum for controlling how diagnostic_paths should be printed.  */
@@ -1243,6 +1247,34 @@ extern const char *diagnostic_get_color_for_kind (diagnostic_t kind);
 /* Pure text formatting support functions.  */
 
 extern char *build_message_string (const char *, ...) ATTRIBUTE_PRINTF_1;
+
+extern void diagnostic_output_format_init (diagnostic_context &,
+					   const char *main_input_filename_,
+					   const char *base_file_name,
+					   enum diagnostics_output_format,
+					   bool json_formatting);
+extern void diagnostic_output_format_init_json_stderr (diagnostic_context &context,
+						       bool formatted);
+extern void diagnostic_output_format_init_json_file (diagnostic_context &context,
+						     bool formatted,
+						     const char *base_file_name);
+extern void diagnostic_output_format_init_sarif_stderr (diagnostic_context &context,
+							const line_maps *line_maps,
+							const char *main_input_filename_,
+							bool formatted);
+extern void diagnostic_output_format_init_sarif_file (diagnostic_context &context,
+						      const line_maps *line_maps,
+						      const char *main_input_filename_,
+						      bool formatted,
+						      const char *base_file_name);
+extern void diagnostic_output_format_init_sarif_stream (diagnostic_context &context,
+							const line_maps *line_maps,
+							const char *main_input_filename_,
+							bool formatted,
+							FILE *stream);
+extern void diagnostic_output_format_init_sarif_socket (diagnostic_context &context,
+							const line_maps *line_maps,
+							const char *main_input_filename_);
 
 /* Compute the number of digits in the decimal representation of an integer.  */
 extern int num_digits (int);

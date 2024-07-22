@@ -6997,6 +6997,7 @@ c_cpp_diagnostic (cpp_reader *pfile ATTRIBUTE_UNUSED,
 		  rich_location *richloc,
 		  const char *msg, va_list *ap)
 {
+  auto_diagnostic_group d;
   diagnostic_info diagnostic;
   diagnostic_t dlevel;
   bool save_warn_system_headers = global_dc->m_warn_system_headers;

@@ -142,6 +142,7 @@ LANGUAGES = c $(CONFIG_LANGUAGES)
 ifeq (@enable_gcov@,yes)
 LANGUAGES += gcov$(exeext) gcov-dump$(exeext) gcov-tool$(exeext)
 endif
+LANGUAGES += sarif-listener(exeext)
 
 # Default values for variables overridden in Makefile fragments.
 # CFLAGS is for the user to override to, e.g., do a cross build with -O2.
@@ -1305,6 +1306,8 @@ RUST_TARGET_OBJS=@rust_target_objs@
 GCC_OBJS = gcc.o gcc-main.o ggc-none.o gcc-urlifier.o options-urls.o
 
 SARIF_REPLAY_OBJS = sarif-replay.o libsarifreplay.o
+# FIXME
+SARIF_LISTENER_OBJS = sarif-listener.o
 
 c-family-warn = $(STRICT_WARN)
 
@@ -1888,7 +1891,8 @@ ALL_HOST_BACKEND_OBJS = $(GCC_OBJS) $(OBJS) $(OBJS-libcommon) \
   $(OBJS-libcommon-target) main.o c-family/cppspec.o \
   $(COLLECT2_OBJS) $(EXTRA_GCC_OBJS) $(GCOV_OBJS) $(GCOV_DUMP_OBJS) \
   $(GCOV_TOOL_OBJS) $(GENGTYPE_OBJS) gcc-ar.o gcc-nm.o gcc-ranlib.o \
-  lto-wrapper.o collect-utils.o lockfile.o lto-ltrans-cache.o
+  lto-wrapper.o collect-utils.o lockfile.o lto-ltrans-cache.o \
+  $(SARIF_LISTENER_OBJS)
 
 # for anything that is shared use the cc1plus profile data, as that
 # is likely the most exercised during the build
@@ -2301,7 +2305,6 @@ cpp$(exeext): $(GCC_OBJS) c-family/cppspec.o libcommon-target.a $(LIBDEPS) \
 	  c-family/cppspec.o $(EXTRA_GCC_OBJS) libcommon-target.a \
 	  $(EXTRA_GCC_LIBS) $(LIBS)
 
-
 libgdiagnostics_OBJS = libgdiagnostics.o \
 	libcommon.a
 
@@ -2429,6 +2432,12 @@ endif
 sarif-replay: $(SARIF_REPLAY_OBJS) $(LIBGDIAGNOSTICS_FILENAME)
 	+$(LINKER) $(ALL_LINKERFLAGS) $(LDFLAGS) -o $@ \
 	  $(SARIF_REPLAY_OBJS) $(LIBGDIAGNOSTICS_FILENAME) $(LIBS)
+
+sarif-listener(exeext): $(SARIF_LISTENER_OBJS) libcommon-target.a $(LIBDEPS) \
+	$(EXTRA_GCC_OBJS)
+	+$(LINKER) $(ALL_LINKERFLAGS) $(LDFLAGS) -o $@ $(SARIF_LISTENER_OBJS) \
+	  $(EXTRA_GCC_OBJS) libcommon-target.a \
+	  $(EXTRA_GCC_LIBS) $(LIBS)
 
 # Dump a specs file to make -B./ read these specs over installed ones.
 $(SPECS): xgcc$(exeext)

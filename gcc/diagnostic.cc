@@ -1343,6 +1343,9 @@ emit_diagnostic_with_group_va (diagnostic_t kind,
 bool
 diagnostic_context::report_diagnostic (diagnostic_info *diagnostic)
 {
+  /* FIXME: ensure that we have a group push/pop here (on "this",
+     rather than global_dc); otherwise every caller of
+     diagnostic_report_diagnostic needs to do this.  */
   diagnostic_t orig_diag_kind = diagnostic->kind;
 
   /* Every call to report_diagnostic should be within a
@@ -1814,6 +1817,12 @@ diagnostic_output_format_init (diagnostic_context &context,
 						json_formatting,
 						sarif_version::v2_1_0,
 						base_file_name);
+      break;
+
+    case DIAGNOSTICS_OUTPUT_FORMAT_SARIF_SOCKET:
+      diagnostic_output_format_init_sarif_socket (context,
+						  line_table,
+						  main_input_filename_);
       break;
     }
 }

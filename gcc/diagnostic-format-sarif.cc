@@ -50,6 +50,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "pretty-print-urlifier.h"
 #include "demangle.h"
 #include "backtrace.h"
+#include <sys/un.h> // FIXME
+#include <sys/socket.h> // FIXME
 
 /* Forward decls.  */
 class sarif_builder;
@@ -1786,7 +1788,8 @@ sarif_builder::emit_diagram (const diagnostic_diagram &diagram)
   m_cur_group_result->on_diagram (diagram, *this);
 }
 
-/* Implementation of "end_group_cb" for SARIF output.  */
+/* Implementation of "end_group_cb" for SARIF output.
+   Append the current sarifResult to results, and set it to nullptr.  */
 
 void
 sarif_builder::end_group ()
@@ -3468,7 +3471,7 @@ public:
   {
     /* No-op,  */
   }
-  void on_end_group () final override
+  void on_end_group () override
   {
     m_builder.end_group ();
   }
@@ -3571,6 +3574,79 @@ private:
 };
 
 /* Print the start of an embedded link to PP, as per 3.11.6.  */
+class sarif_socket_output_format : public sarif_output_format
+{
+public:
+  sarif_socket_output_format (diagnostic_context &context,
+			      const line_maps *line_maps,
+			      const char *main_input_filename_,
+			      int fd)
+  : sarif_output_format (context, line_maps, main_input_filename_, false),
+    m_fd (fd)
+  {
+  }
+  ~sarif_socket_output_format ()
+  {
+    close (m_fd);
+  }
+  bool machine_readable_stderr_p () const final override
+  {
+    return false;
+  }
+
+  /* Rather than appending it to the results array, instead
+     send it to the output socket as a JSON-RPC 2.0 notification.  */
+  void on_end_group () final override
+  {
+    std::unique_ptr<sarif_result> result = m_builder.take_current_result ();
+    if (!result)
+      return;
+
+    auto notification = ::make_unique<json::object> ();
+    notification->set_string ("jsonrpc", "2.0");
+    notification->set_string ("method", "OnSarifResult");
+    {
+      auto params = ::make_unique<json::object> ();
+      params->set ("result", std::move (result));
+      notification->set ("params", std::move (params));
+    }
+
+    const bool formatted = false;
+    pretty_printer pp_content;
+    notification->print (&pp_content, formatted);
+    size_t content_length = strlen (pp_formatted_text (&pp_content));
+
+    pretty_printer pp_header;
+    pp_printf (&pp_header, "Content-Length: %li\n\n", content_length);
+    size_t header_length = strlen (pp_formatted_text (&pp_header));
+
+    size_t output_size = header_length + content_length;
+    char *buf = (char *)xmalloc (output_size);
+    memcpy (buf, pp_formatted_text (&pp_header), header_length);
+    memcpy (buf + header_length,
+	    pp_formatted_text (&pp_content),
+	    content_length);
+
+    // FIXME: should there be a trailing newline?
+
+    size_t written_sz = write (m_fd, buf, output_size);
+    if (written_sz != output_size)
+      {
+	fatal_error (UNKNOWN_LOCATION, "partial write");
+	/* FIXME: how to handle this???
+	   fatal_error will cause a re-entry to the error-reporting
+	   routines.  */
+      }
+
+    free (buf);
+  }
+
+private:
+  int m_fd;
+};
+
+/* Populate CONTEXT in preparation for SARIF output (either to stderr, or
+   to a file).  */
 
 static void
 sarif_begin_embedded_link (pretty_printer *pp)
@@ -3819,6 +3895,45 @@ make_sarif_sink (diagnostic_context &context,
   return sink;
 }
 
+/* Populate CONTEXT in preparation for SARIF output to FIXME.  */
+
+void
+diagnostic_output_format_init_sarif_socket (diagnostic_context &context,
+					    const line_maps *line_maps,
+					    const char *main_input_filename_)
+{
+  diagnostic_output_format_init_sarif (context);
+  const char * const env_var_name = "SARIF_SOCKET";
+  const char * const socket_name = getenv (env_var_name);
+  const char * const optname = "-fdiagnostics-format=sarif-socket";
+  if (!socket_name)
+    fatal_error (UNKNOWN_LOCATION,
+		 "used %qs but environment variable %qs not set",
+		 optname, env_var_name);
+
+  int sfd = socket (AF_UNIX, SOCK_STREAM, 0);
+  if (sfd == -1)
+    fatal_error (UNKNOWN_LOCATION,
+		 "%qs: unable to create socket",
+		 optname);
+
+  struct sockaddr_un addr;
+  memset (&addr, 0, sizeof (addr));
+  addr.sun_family = AF_UNIX;
+  strncpy (addr.sun_path, socket_name, sizeof (addr.sun_path) - 1);
+
+  if (connect (sfd, (struct sockaddr *)&addr, sizeof (addr)) == -1)
+    fatal_error (UNKNOWN_LOCATION,
+		 "%qs: unable to connect to %qs",
+		 optname, socket_name);
+
+  context.set_output_format
+    (new sarif_socket_output_format (context,
+				     line_maps,
+				     main_input_filename_,
+				     sfd));
+}
+
 #if CHECKING_P
 
 namespace selftest {
@@ -4012,6 +4127,7 @@ test_simple_log (enum sarif_version version)
   dc.report (DK_ERROR, richloc, nullptr, 0, "this is a test: %i", 42);
 
   auto log_ptr = dc.flush_to_object ();
+  log_ptr->dump ();
 
   // 3.13 sarifLog:
   auto log = log_ptr.get ();
