@@ -1,6 +1,4 @@
-/* Tree-dumping functionality for intermediate representation.
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
-   Written by Mark Mitchell <mark@codesourcery.com>
+/* Basically copy what we do for emitting OPTINFO as json.
 
 This file is part of GCC.
 
@@ -18,8 +16,8 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
-#ifndef GCC_TREE_DUMP_H
-#define GCC_TREE_DUMP_H
+#ifndef GCC_TREE_DUMP_JSON
+#define GCC_TREE_DUMP_JSON
 
 #include "splay-tree.h"
 #include "dumpfile.h"
@@ -27,9 +25,30 @@ along with GCC; see the file COPYING3.  If not see
 
 typedef struct dump_info *dump_info_p;
 
+
+/*==============================================================================*/
+
+class tree_json_writer {
+  public:
+    tree_json_writer();
+    ~tree_json_writer();
+    void write () const;
+    void add_child (); //!!!!
+    void pop_scope ();
+
+    void add_child (json::object *obj);
+    json::object *node_to_json(tree t);
+    
+  private:
+    json::array *parent_node;
+};
+  
+
+/*==============================================================================*/
 /* Flags used with queue functions.  */
 #define DUMP_NONE     0
 #define DUMP_BINFO    1
+#define DUMP_CHILD    2
 
 /* Information about a node to be dumped.  */
 
@@ -72,14 +91,12 @@ struct dump_info
   dump_queue_p queue_end;
   /* Free queue nodes.  */
   dump_queue_p free_list;
+  /* MAYBE - how we write? */
+  json::object tree_json;
   /* The tree nodes which we have already written out.  The
      keys are the addresses of the nodes; the values are the integer
      indices we assigned them.  */
   splay_tree nodes;
-  /* JSON tree holder. Carries everything, each node is a sub-array */
-  json::array* tree_json;
-
-  json::array* tree_json_debug;
 };
 
 /* Dump the CHILD and its children.  */
@@ -93,5 +110,6 @@ extern void dump_string_field (dump_info_p, const char *, const char *);
 extern void queue_and_dump_index (dump_info_p, const char *, const_tree, int);
 extern void queue_and_dump_type (dump_info_p, const_tree);
 extern int dump_flag (dump_info_p, dump_flags_t, const_tree);
-extern json::object* node_emit_json(tree t);
-#endif /* ! GCC_TREE_DUMP_H */
+void dump_json_tree (const_tree, dump_flags_t, FILE*);
+
+#endif /* ! GCC_TREE_DUMP_JSON */
