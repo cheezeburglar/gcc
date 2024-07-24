@@ -26,6 +26,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-dump.h"
 #include "langhooks.h"
 #include "tree-iterator.h"
+#include "dumpfile.h"
+#include "json.h"
+#include "tm.h"
 
 static unsigned int queue (dump_info_p, const_tree, int);
 static void dump_index (dump_info_p, unsigned int);
@@ -75,10 +78,17 @@ queue (dump_info_p di, const_tree t, int flags)
 }
 
 static void
-dump_index (dump_info_p di, unsigned int index)
+dump_index (dump_info_p di, unsigned int index, bool parent)
 {
-  fprintf (di->stream, "@%-6u ", index);
-  di->column += 8;
+  json::object* node;
+  node = new json::object ();
+  //DANGER, type cast implicit
+    node->set_integer("index", index);
+  if (parent == true)
+    node->set_bool("has child", true);
+  else
+    node->set_bool("has child", false);
+  di->tree_json->append(node);
 }
 
 /* If T has not already been output, queue it for subsequent output.
@@ -90,7 +100,8 @@ queue_and_dump_index (dump_info_p di, const char *field, const_tree t, int flags
 {
   unsigned int index;
   splay_tree_node n;
-
+  json::array* child;
+  json::object* dummy;
   /* If there's no node, just return.  This makes for fewer checks in
      our callers.  */
   if (!t)
@@ -98,17 +109,25 @@ queue_and_dump_index (dump_info_p di, const char *field, const_tree t, int flags
 
   /* See if we've already queued or dumped this node.  */
   n = splay_tree_lookup (di->nodes, (splay_tree_key) t);
-  if (n)
+  if (n) {
     index = ((dump_node_info_p) n->value)->index;
-  else
+    //DO RECURSION STUFF HERE
+  } else {
     /* If we haven't, add it to the queue.  */
     index = queue (di, t, flags);
-
+  }
   /* Print the index of the node.  */
-  dump_maybe_newline (di);
-  fprintf (di->stream, "%-4s: ", field);
-  di->column += 6;
-  dump_index (di, index);
+  if (n) {
+    child = new json::array ();
+    dummy = new json::object ();
+    dummy->set_integer("index", index);
+    //This is hacky and should be fixed
+    dummy->set_bool(field, true);
+    child->append(dummy);
+    di->tree_json->append(child);
+  } else {
+    dump_index (di, index, false);
+  }
 }
 
 /* Dump the type of T.  */
@@ -157,10 +176,10 @@ dump_maybe_newline (dump_info_p di)
 void
 dump_pointer (dump_info_p di, const char *field, void *ptr)
 {
-  dump_maybe_newline (di);
-  fprintf (di->stream, "%-4s: %-8" HOST_WIDE_INT_PRINT "x ", field,
-	   (unsigned HOST_WIDE_INT) (uintptr_t) ptr);
-  di->column += 15;
+  json::object* dummy;
+  dummy = new json::object ();
+  dummy->set_integer(field, (uintptr_t) ptr);
+  di->tree_json->append(dummy);
 }
 
 /* Dump integer I using FIELD to identify it.  */
@@ -168,9 +187,10 @@ dump_pointer (dump_info_p di, const char *field, void *ptr)
 void
 dump_int (dump_info_p di, const char *field, int i)
 {
-  dump_maybe_newline (di);
-  fprintf (di->stream, "%-4s: %-7d ", field, i);
-  di->column += 14;
+  json::object* dummy;
+  dummy = new json::object ();
+  dummy->set_integer(field, i);
+  di->tree_json->append(dummy);
 }
 
 /* Dump the floating point value R, using FIELD to identify it.  */
@@ -178,11 +198,12 @@ dump_int (dump_info_p di, const char *field, int i)
 static void
 dump_real (dump_info_p di, const char *field, const REAL_VALUE_TYPE *r)
 {
+  json::object* dummy;
   char buf[32];
+  dummy = new json::object ();
   real_to_decimal (buf, r, sizeof (buf), 0, true);
-  dump_maybe_newline (di);
-  fprintf (di->stream, "%-4s: %s ", field, buf);
-  di->column += strlen (buf) + 7;
+  dummy->set_string(field, buf);
+  di->tree_json->append(dummy);
 }
 
 /* Dump the fixed-point value F, using FIELD to identify it.  */
@@ -190,16 +211,17 @@ dump_real (dump_info_p di, const char *field, const REAL_VALUE_TYPE *r)
 static void
 dump_fixed (dump_info_p di, const char *field, const FIXED_VALUE_TYPE *f)
 {
+  json::object* dummy;
   char buf[32];
+  dummy = new json::object ();
   fixed_to_decimal (buf, f, sizeof (buf));
-  dump_maybe_newline (di);
-  fprintf (di->stream, "%-4s: %s ", field, buf);
-  di->column += strlen (buf) + 7;
+  dummy->set_string(field, buf);
+  di->tree_json->append(dummy);
 }
 
 
 /* Dump the string S.  */
-
+// CHECK LATER
 void
 dump_string (dump_info_p di, const char *string)
 {
@@ -216,13 +238,517 @@ dump_string (dump_info_p di, const char *string)
 void
 dump_string_field (dump_info_p di, const char *field, const char *string)
 {
-  dump_maybe_newline (di);
-  fprintf (di->stream, "%-4s: %-7s ", field, string);
-  if (strlen (string) > 7)
-    di->column += 6 + strlen (string) + 1;
-  else
-    di->column += 14;
+  json::object* dummy;
+  dummy = new json::object ();
+  dummy->set_string(field, string);
+  di->tree_json->append(dummy);
 }
+
+/* Here we emit data in the generic tree without traversing the tree. base on tree-pretty-print.cc */
+
+json::object* 
+node_emit_json(tree t)
+{
+  json::object* dummy;
+  json::array* holder;
+  enum tree_code code;
+  
+  dummy = new json::object ();
+  holder = new json::array ();
+
+  if (EXPR_HAS_LOCATION(t))
+    
+  
+  code = TREE_CODE(t);
+  switch (code)
+  {
+    case ERROR_MARK:
+      {
+      dummy->set_bool("error_mark", true);
+      }
+    case IDENTIFIER_NODE:
+      {
+      //Error on this access - figure out whats going wrong later.
+      //dummy->set_string("identifier", (IDENTIFIER_POINTER(t)));
+      break;
+      }
+    case TREE_LIST:
+      while (t && t != error_mark_node)
+      {
+        if (TREE_PURPOSE (t))
+	{
+          holder->append(node_emit_json(TREE_PURPOSE(t)));
+	}
+	holder->append(node_emit_json(TREE_VALUE(t)));
+        t = TREE_CHAIN(t);
+      }
+      break;
+    case TREE_BINFO:
+    {
+      holder->append(node_emit_json(BINFO_TYPE(t)));
+    }
+    //Make sure this actually goes through all the elements - cf dump_generic_node
+    case TREE_VEC:
+    {
+      size_t i;
+      if (TREE_VEC_LENGTH(t) > 0)
+	{
+          size_t len = TREE_VEC_LENGTH (t);
+	  for (i = 0; i < len ; i++)
+	  {
+	    holder->append(node_emit_json(TREE_VEC_ELT(t, i)));
+	  }
+	}
+    }
+    break;
+
+    case VOID_TYPE:
+    case INTEGER_TYPE:
+    case REAL_TYPE:
+    case FIXED_POINT_TYPE:
+    case COMPLEX_TYPE:
+    case VECTOR_TYPE:
+    case ENUMERAL_TYPE:
+    case BOOLEAN_TYPE:
+    case BITINT_TYPE:
+    case OPAQUE_TYPE:
+      {
+	unsigned int quals = TYPE_QUALS (t);
+	enum tree_code_class tclass;
+
+	if (quals & TYPE_QUAL_ATOMIC)
+	  dummy->set_string("qual", "atomic");
+	if (quals & TYPE_QUAL_CONST)
+	  dummy->set_string("qual", "const");
+	if (quals & TYPE_QUAL_VOLATILE)
+	  dummy->set_string("qual", "volatile");
+	if (quals & TYPE_QUAL_RESTRICT)
+	  dummy->set_string("qual", "restrict");
+
+	if (!ADDR_SPACE_GENERIC_P (TYPE_ADDR_SPACE (t)))
+	  {
+	    dummy->set_integer("address space", TYPE_ADDR_SPACE(t));
+	  }
+	
+	tclass = TREE_CODE_CLASS (TREE_CODE(t));
+
+	if (tclass == tcc_declaration)
+	  {
+	  if (DECL_NAME (t))
+	    dummy->set_string("decl", "TODO");
+	  else
+	    dummy->set_string("decl", "<unnamed type decl>");
+	  }
+	else if (tclass = tcc_type)
+	  {
+	  if (TYPE_NAME (t))
+	  {  
+	    if (TREE_CODE(TYPE_NAME (t)) == IDENTIFIER_NODE)
+	      break;
+	    else if (TREE_CODE (TYPE_NAME (t)) == TYPE_DECL
+		       && DECL_NAME (TYPE_NAME (t)))
+	      break; //same DECL_NAME sol
+	    else // unnamed 
+	      break;
+	   }
+    	else if (TREE_CODE (t) == VECTOR_TYPE)
+	  {
+    	  holder->append(node_emit_json(TREE_TYPE (t)));
+	  }
+    	else if (TREE_CODE (t) == INTEGER_TYPE)
+	  {
+	    if (TYPE_PRECISION (t) == CHAR_TYPE_SIZE)
+	      dummy->set_string("type precision", (TYPE_UNSIGNED(t)
+						   ? "unsigned char"
+						   : "signed char"));
+	    else if (TYPE_PRECISION (t) == SHORT_TYPE_SIZE)
+	      dummy->set_string("type precision", (TYPE_UNSIGNED(t)
+						   ? "unsigned short"
+						   : "signed short"));
+	    else if (TYPE_PRECISION (t) == INT_TYPE_SIZE)
+	      dummy->set_string("type precision", (TYPE_UNSIGNED(t)
+						   ? "unsigned int"
+						   : "signed int"));
+	    else if (TYPE_PRECISION (t) == LONG_TYPE_SIZE)
+	      dummy->set_string("type precision", (TYPE_UNSIGNED(t)
+						   ? "unsigned long"
+						   : "signed long"));
+	    else if (TYPE_PRECISION (t) == LONG_LONG_TYPE_SIZE)
+	      dummy->set_string("type precision", (TYPE_UNSIGNED(t)
+						   ? "unsigned long long"
+						   : "signed long long"));
+	    else if (TYPE_PRECISION (t) == CHAR_TYPE_SIZE
+		     && pow2p_hwi (TYPE_PRECISION (t)))
+	      {
+	      
+	      }
+	  }
+    	  
+    	    
+    	  }
+
+      }
+      break;
+
+    case POINTER_TYPE:
+    case REFERENCE_TYPE:
+
+    case OFFSET_TYPE:
+
+    case MEM_REF:
+    case TARGET_MEM_REF:
+
+    case ARRAY_TYPE:
+
+    case RECORD_TYPE:
+    case UNION_TYPE:
+    case QUAL_UNION_TYPE:
+
+    case LANG_TYPE:
+
+    case INTEGER_CST:
+
+    case POLY_INT_CST:
+
+    case REAL_CST:
+
+    case FIXED_CST:
+
+    case STRING_CST:
+
+    case VECTOR_CST:
+
+    case FUNCTION_TYPE:
+    case METHOD_TYPE:
+
+    case FUNCTION_DECL:
+    case CONST_DECL:
+
+    case LABEL_DECL:
+
+    case TYPE_DECL:
+
+    case VAR_DECL:
+    case PARM_DECL:
+    case FIELD_DECL:
+    case DEBUG_EXPR_DECL:
+    case NAMESPACE_DECL:
+    case NAMELIST_DECL:
+
+    case RESULT_DECL:
+
+    case COMPONENT_REF:
+
+    case BIT_FIELD_REF:
+
+    case BIT_INSERT_EXPR:
+
+    case ARRAY_REF:
+//    case ARRANGE_ARRAY_REF:
+
+    case OMP_ARRAY_SECTION:
+
+    case CONSTRUCTOR:
+
+    case COMPOUND_EXPR:
+
+    case STATEMENT_LIST:
+
+    case MODIFY_EXPR:
+    case INIT_EXPR:
+
+    case TARGET_EXPR:
+
+    case DECL_EXPR:
+
+    case COND_EXPR:
+
+    case BIND_EXPR:
+
+    case CALL_EXPR:
+
+    case WITH_CLEANUP_EXPR:
+
+    case CLEANUP_POINT_EXPR:
+
+    case PLACEHOLDER_EXPR:
+
+    /* Binary operations */
+    case WIDEN_SUM_EXPR:
+    case WIDEN_MULT_EXPR:
+    case MULT_EXPR:
+    case MULT_HIGHPART_EXPR:
+    case PLUS_EXPR:
+    case POINTER_PLUS_EXPR:
+    case POINTER_DIFF_EXPR:
+    case MINUS_EXPR:
+    case TRUNC_DIV_EXPR:
+    case CEIL_DIV_EXPR:
+    case FLOOR_DIV_EXPR:
+    case ROUND_DIV_EXPR:
+    case TRUNC_MOD_EXPR:
+    case CEIL_MOD_EXPR:
+    case FLOOR_MOD_EXPR:
+    case ROUND_MOD_EXPR:
+    case RDIV_EXPR:
+    case EXACT_DIV_EXPR:
+    case LSHIFT_EXPR:
+    case RSHIFT_EXPR:
+    case LROTATE_EXPR:
+    case RROTATE_EXPR:
+    case WIDEN_LSHIFT_EXPR:
+    case BIT_IOR_EXPR:
+    case BIT_XOR_EXPR:
+    case BIT_AND_EXPR:
+    case TRUTH_ANDIF_EXPR:
+    case TRUTH_ORIF_EXPR:
+    case TRUTH_AND_EXPR:
+    case TRUTH_OR_EXPR:
+    case TRUTH_XOR_EXPR:
+    case LT_EXPR:
+    case LE_EXPR:
+    case GT_EXPR:
+    case GE_EXPR:
+    case EQ_EXPR:
+    case NE_EXPR:
+    case UNLT_EXPR:
+    case UNLE_EXPR:
+    case UNGT_EXPR:
+    case UNGE_EXPR:
+    case UNEQ_EXPR:
+    case LTGT_EXPR:
+    case ORDERED_EXPR:
+    case UNORDERED_EXPR:
+    
+    case ADDR_EXPR:
+
+    case NEGATE_EXPR:
+    case BIT_NOT_EXPR:
+    case TRUTH_NOT_EXPR:
+    case PREDECREMENT_EXPR:
+    case PREINCREMENT_EXPR:
+    case INDIRECT_REF:
+
+    case POSTDECREMENT_EXPR:
+    case POSTINCREMENT_EXPR:
+
+    case MIN_EXPR:
+
+    case MAX_EXPR:
+
+    case ABS_EXPR:
+
+    case ABSU_EXPR:
+
+    case RANGE_EXPR:
+    
+    case ADDR_SPACE_CONVERT_EXPR:
+    case FIXED_CONVERT_EXPR:
+    case FIX_TRUNC_EXPR:
+    case FLOAT_EXPR:
+
+    case VIEW_CONVERT_EXPR:
+
+    case PAREN_EXPR:
+
+    case NON_LVALUE_EXPR:
+
+    case SAVE_EXPR:
+
+    case COMPLEX_EXPR:
+
+    case CONJ_EXPR:
+
+    case REALPART_EXPR:
+
+    case IMAGPART_EXPR:
+
+    case VA_ARG_EXPR:
+
+    case TRY_FINALLY_EXPR:
+    case TRY_CATCH_EXPR:
+
+    case CATCH_EXPR:
+    
+    case EH_FILTER_EXPR:
+
+    case LABEL_EXPR:
+
+    case LOOP_EXPR:
+
+    case PREDICT_EXPR:
+
+    case ANNOTATE_EXPR:
+
+    case RETURN_EXPR:
+
+    case EXIT_EXPR:
+
+    case SWITCH_EXPR:
+
+    case GOTO_EXPR:
+
+    case ASM_EXPR:
+
+    case CASE_LABEL_EXPR:
+
+    case OBJ_TYPE_REF:
+
+    case SSA_NAME:
+
+    case WITH_SIZE_EXPR:
+
+    case SCEV_KNOWN:
+
+    case SCEV_NOT_KNOWN:
+
+    case POLYNOMIAL_CHREC:
+
+    case REALIGN_LOAD_EXPR:
+
+    case VEC_COND_EXPR:
+
+    case VEC_PERM_EXPR:
+
+    case DOT_PROD_EXPR:
+
+    case WIDEN_MULT_PLUS_EXPR:
+
+    case WIDEN_MULT_MINUS_EXPR:
+
+    /*OACC and OMP */
+    case OACC_PARALLEL:
+
+    case OACC_KERNELS:
+
+    case OACC_SERIAL:
+
+    case OACC_DATA:
+
+    case OACC_HOST_DATA:
+
+    case OACC_DECLARE:
+
+    case OACC_UPDATE:
+
+    case OACC_ENTER_DATA:
+
+    case OACC_EXIT_DATA:
+
+    case OACC_CACHE:
+
+    case OMP_PARALLEL:
+
+    case OMP_TASK:
+
+    case OMP_FOR:
+
+    case OMP_SIMD:
+
+    case OMP_DISTRIBUTE:
+
+    case OMP_TASKLOOP:
+
+    case OMP_LOOP:
+
+    case OMP_TILE:
+
+    case OMP_UNROLL:
+
+    case OACC_LOOP:
+
+    case OMP_TEAMS:
+
+    case OMP_TARGET_DATA:
+
+    case OMP_TARGET_ENTER_DATA:
+
+    case OMP_TARGET_EXIT_DATA:
+
+    case OMP_TARGET:
+
+    case OMP_TARGET_UPDATE:
+
+    case OMP_SECTIONS:
+
+    case OMP_SECTION:
+
+    case OMP_STRUCTURED_BLOCK:
+
+    case OMP_SCAN:
+
+    case OMP_MASTER:
+
+    case OMP_MASKED:
+
+    case OMP_TASKGROUP:
+
+    case OMP_ORDERED:
+
+    case OMP_CRITICAL:
+
+    case OMP_ATOMIC:
+
+    case OMP_ATOMIC_READ:
+
+    case OMP_ATOMIC_CAPTURE_OLD:
+    case OMP_ATOMIC_CAPTURE_NEW:
+
+    case OMP_SINGLE:
+
+    case OMP_SCOPE:
+
+    case OMP_CLAUSE:
+
+    case TRANSACTION_EXPR:
+
+    case VEC_SERIES_EXPR:
+    case VEC_WIDEN_MULT_HI_EXPR:
+    case VEC_WIDEN_MULT_LO_EXPR:
+    case VEC_WIDEN_MULT_ODD_EXPR:
+    case VEC_WIDEN_LSHIFT_HI_EXPR:
+    case VEC_WIDEN_LSHIFT_LO_EXPR:
+
+    case VEC_DUPLICATE_EXPR:
+
+    case VEC_UNPACK_HI_EXPR:
+
+    case VEC_UNPACK_LO_EXPR:
+
+    case VEC_UNPACK_FLOAT_HI_EXPR:
+
+    case VEC_UNPACK_FLOAT_LO_EXPR:
+
+    case VEC_UNPACK_FIX_TRUNC_HI_EXPR:
+
+    case VEC_UNPACK_FIX_TRUNC_LO_EXPR:
+
+    case VEC_PACK_TRUNC_EXPR:
+
+    case VEC_PACK_SAT_EXPR:
+
+    case VEC_PACK_FIX_TRUNC_EXPR:
+
+    case VEC_PACK_FLOAT_EXPR:
+
+    case BLOCK:
+
+    case DEBUG_BEGIN_STMT:
+      {
+      dummy->set_bool("fallthrough", true);
+      }
+      break;
+    default:
+      break;
+  }
+  return dummy;
+}
+
+//json::array*
+//traverse_tree_emit_json (dump_info_p di, tree t,)
+//{
+//  json::object* dummy;
+//}
 
 /* Dump the next node in the queue.  */
 
@@ -237,6 +763,14 @@ dequeue_and_dump (dump_info_p di)
   enum tree_code code;
   enum tree_code_class code_class;
   const char* code_name;
+  
+  json::array* parent;
+  json::array* child;
+  json::object* dummy;
+
+  parent = new json::array ();
+  child = new json::array ();
+  dummy = new json::object ();
 
   /* Get the next node from the queue.  */
   dq = di->queue;
@@ -253,14 +787,16 @@ dequeue_and_dump (dump_info_p di)
   di->free_list = dq;
 
   /* Print the node index.  */
-  dump_index (di, index);
+  dummy->set_integer("index", index);
+  dump_index (di, index, true);
   /* And the type of node this is.  */
   if (dni->binfo_p)
     code_name = "binfo";
   else
     code_name = get_tree_code_name (TREE_CODE (t));
-  fprintf (di->stream, "%-16s ", code_name);
-  di->column = 25;
+  dummy->set_string("tree_code", code_name);
+//  fprintf (di->stream, "%-16s ", code_name);
+//  di->column = 25;
 
   /* Figure out what kind of node this is.  */
   code = TREE_CODE (t);
@@ -274,11 +810,13 @@ dequeue_and_dump (dump_info_p di)
       tree base;
       vec<tree, va_gc> *accesses = BINFO_BASE_ACCESSES (t);
 
-      dump_child ("type", BINFO_TYPE (t));
+//      dummy->set_string("type", BINFO_TYPE (t));
 
       if (BINFO_VIRTUAL_P (t))
+//        dummy->set_string("spec", "virt");
 	dump_string_field (di, "spec", "virt");
 
+//      dummy->set_integer("bases", BINFO_N_BASE_BINFOS (t))
       dump_int (di, "bases", BINFO_N_BASE_BINFOS (t));
       for (ix = 0; BINFO_BASE_ITERATE (t, ix, base); ix++)
 	{
@@ -294,13 +832,14 @@ dequeue_and_dump (dump_info_p di)
 	  else
 	    gcc_unreachable ();
 
-	  dump_string_field (di, "accs", string);
+	  dummy->set_string("accs", string);
+          //dump_string_field (di, "accs", string);
+          //This recurses over base. Fix later
 	  queue_and_dump_index (di, "binf", base, DUMP_BINFO);
 	}
 
       goto done;
     }
-/*AH?*/
   /* We can knock off a bunch of expression nodes in exactly the same
      way.  */
   if (IS_EXPR_CODE_CLASS (code_class))
@@ -425,6 +964,7 @@ dequeue_and_dump (dump_info_p di)
 	    char buffer[32];
 	    sprintf (buffer, "%u", i);
 	    dump_child (buffer, tsi_stmt (it));
+	    node_emit_json(tsi_stmt(it));
 	  }
       }
       break;
@@ -704,7 +1244,12 @@ dequeue_and_dump (dump_info_p di)
     dump_pointer (di, "addr", (void *)t);
 
   /* Terminate the line.  */
-  fprintf (di->stream, "\n");
+  // Is this where a pass ends?
+  child->append(dummy);
+  di->tree_json->append(child);
+  dummy = node_emit_json(t);
+  dummy->set_integer("index", index);
+  di->tree_json_debug->append(dummy);
 }
 
 /* Return nonzero if FLAG has been specified for the dump, and NODE
@@ -723,7 +1268,7 @@ dump_node (const_tree t, dump_flags_t flags, FILE *stream)
   struct dump_info di;
   dump_queue_p dq;
   dump_queue_p next_dq;
-
+  pretty_printer pp;
   /* Initialize the dump-information structure.  */
   di.stream = stream;
   di.index = 0;
@@ -735,13 +1280,17 @@ dump_node (const_tree t, dump_flags_t flags, FILE *stream)
   di.node = t;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
-
+  di.tree_json = new json::array ();
+  di.tree_json_debug = new json::array ();
+/*TEST
   /* Queue up the first node.  */
   queue (&di, t, DUMP_NONE);
 
   /* Until the queue is empty, keep dumping nodes.  */
   while (di.queue)
     dequeue_and_dump (&di);
+
+  di.tree_json_debug->dump(stream, false);
 
   /* Now, clean up.  */
   for (dq = di.free_list; dq; dq = next_dq)
