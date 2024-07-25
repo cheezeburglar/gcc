@@ -260,11 +260,17 @@ node_emit_json(tree t)
     
   
   code = TREE_CODE(t);
+
+  if (TREE_CODE(t) == ERROR_MARK)
+    dummy->set_bool("error_mark", true);
+    code = TREE_CODE(t);
+  
   switch (code)
   {
     case ERROR_MARK:
       {
       dummy->set_bool("error_mark", true);
+      break;
       }
     case IDENTIFIER_NODE:
       {
@@ -341,58 +347,126 @@ node_emit_json(tree t)
 	  }
 	else if (tclass = tcc_type)
 	  {
-	  if (TYPE_NAME (t))
-	  {  
-	    if (TREE_CODE(TYPE_NAME (t)) == IDENTIFIER_NODE)
-	      break;
-	    else if (TREE_CODE (TYPE_NAME (t)) == TYPE_DECL
-		       && DECL_NAME (TYPE_NAME (t)))
-	      break; //same DECL_NAME sol
-	    else // unnamed 
-	      break;
-	   }
-    	else if (TREE_CODE (t) == VECTOR_TYPE)
-	  {
-    	  holder->append(node_emit_json(TREE_TYPE (t)));
-	  }
-    	else if (TREE_CODE (t) == INTEGER_TYPE)
-	  {
-	    if (TYPE_PRECISION (t) == CHAR_TYPE_SIZE)
-	      dummy->set_string("type precision", (TYPE_UNSIGNED(t)
-						   ? "unsigned char"
-						   : "signed char"));
-	    else if (TYPE_PRECISION (t) == SHORT_TYPE_SIZE)
-	      dummy->set_string("type precision", (TYPE_UNSIGNED(t)
-						   ? "unsigned short"
-						   : "signed short"));
-	    else if (TYPE_PRECISION (t) == INT_TYPE_SIZE)
-	      dummy->set_string("type precision", (TYPE_UNSIGNED(t)
-						   ? "unsigned int"
-						   : "signed int"));
-	    else if (TYPE_PRECISION (t) == LONG_TYPE_SIZE)
-	      dummy->set_string("type precision", (TYPE_UNSIGNED(t)
-						   ? "unsigned long"
-						   : "signed long"));
-	    else if (TYPE_PRECISION (t) == LONG_LONG_TYPE_SIZE)
-	      dummy->set_string("type precision", (TYPE_UNSIGNED(t)
-						   ? "unsigned long long"
-						   : "signed long long"));
-	    else if (TYPE_PRECISION (t) == CHAR_TYPE_SIZE
-		     && pow2p_hwi (TYPE_PRECISION (t)))
-	      {
-	      
-	      }
-	  }
-    	  
-    	    
+	    if (TYPE_NAME (t))
+	    {  
+	      if (TREE_CODE(TYPE_NAME (t)) == IDENTIFIER_NODE)
+	        break;
+	      else if (TREE_CODE (TYPE_NAME (t)) == TYPE_DECL
+	               && DECL_NAME (TYPE_NAME (t)))
+	        break; //same DECL_NAME sol
+	      else // unnamed 
+	        break;
+	    }
+            else if (TREE_CODE (t) == VECTOR_TYPE)
+    	  {
+              //Handle recursion here later	  
+	      holder->append(node_emit_json(TREE_TYPE (t)));
     	  }
-
+            else if (TREE_CODE (t) == INTEGER_TYPE)
+    	      {
+    	        if (TYPE_PRECISION (t) == CHAR_TYPE_SIZE)
+    	          dummy->set_string("type precision", (TYPE_UNSIGNED(t)
+    	          				   ? "unsigned char"
+    	          				   : "signed char"));
+    	        else if (TYPE_PRECISION (t) == SHORT_TYPE_SIZE)
+    	          dummy->set_string("type precision", (TYPE_UNSIGNED(t)
+    	          				   ? "unsigned short"
+    	          				   : "signed short"));
+    	        else if (TYPE_PRECISION (t) == INT_TYPE_SIZE)
+    	          dummy->set_string("type precision", (TYPE_UNSIGNED(t)
+    	          				   ? "unsigned int"
+    	          				   : "signed int"));
+    	        else if (TYPE_PRECISION (t) == LONG_TYPE_SIZE)
+    	          dummy->set_string("type precision", (TYPE_UNSIGNED(t)
+    	          				   ? "unsigned long"
+    	          				   : "signed long"));
+    	        else if (TYPE_PRECISION (t) == LONG_LONG_TYPE_SIZE)
+    	          dummy->set_string("type precision", (TYPE_UNSIGNED(t)
+    	          				   ? "unsigned long long"
+    	          				   : "signed long long"));
+    	        else if (TYPE_PRECISION (t) == CHAR_TYPE_SIZE
+    	                 && pow2p_hwi (TYPE_PRECISION (t)))
+    	          {
+    	            dummy->set_integer(TYPE_UNSIGNED(t) ? "uint": "int",
+	                               TYPE_PRECISION(t));
+    	          }
+	        else
+		  {
+		    dummy->set_integer(TYPE_UNSIGNED(t)
+				      ? "unnamed-unsigned"
+				      : "unnamed-signed", TYPE_PRECISION(t));
+		  }
+  	      }
+	    else if (TREE_CODE (t) == COMPLEX_TYPE) //make sure this is okay later, need track cmplx here?
+	      {
+	        dummy = node_emit_json(TREE_TYPE(t));
+	      }
+	    else if (TREE_CODE (t) == REAL_TYPE)
+	      {
+		dummy->set_integer("float", TYPE_PRECISION(t));
+	      }
+	    else if (TREE_CODE (t) == FIXED_POINT_TYPE)
+	      {
+		dummy->set_integer("fixed point", TYPE_PRECISION(t));
+	      }
+	    else if (TREE_CODE (t) == BOOLEAN_TYPE)
+	      {
+		dummy->set_integer(TYPE_UNSIGNED(t) 
+		                   ? "unsigned boolean"
+				   : "signed boolean", TYPE_PRECISION(t));
+	      }
+	    else if (TREE_CODE (t) == BITINT_TYPE)
+	      {
+		dummy->set_integer(TYPE_UNSIGNED (t)
+		                   ? "unsigned_BitInt"
+				   : "_BitInt", TYPE_PRECISION(t));
+	      }
+	    else if (TREE_CODE (t) == VOID_TYPE)
+	      dummy->set_boolean("float", true);
+	    else
+	      dummy->set_boolean("unnamed type", true);
+          }
       }
       break;
 
     case POINTER_TYPE:
     case REFERENCE_TYPE:
+      _x = (TREE_CODE (t) == POINTER_TYPE ? "" : "");
 
+      if (TREE_TYPE (t) == NULL)
+        {
+	  dummy->set_bool("null type", true);
+        }
+      else if (TREE_CODE (TREE_TYPE (t)) == FUNCTION_TYPE)
+        {
+          tree function_node = TREE_TYPE(t);
+	  tree arg_node = TYPE_ARG_TYPES(function_node);
+	  json::array* args_holder;
+	  json::object* _id;
+
+          dummy->set("fnode", node_emit_json(function_node));
+
+	  if (TYPE_IDENTIFIER (t))
+	    _id->set("type identifier", node_emit_json(TYPE_NAME(t));
+	  else
+	    _id->set_integer("uid", TYPE_UID(t));
+
+          while (arg && arg != void_list_node && arg != error_mark_node)
+	    {
+	      args_holder->append(node_emit_json(arg));
+	      arg = TREE_CHAIN (arg);
+	    }
+	  dummy->set(_x, _id);
+	  dummy->set("args", args_holder);
+        }
+      else
+        {
+	  //pickup here
+	  unsigned int quals = TYPE_QUALS (t);
+	  
+	  dummy->set("child", node_emit_json(TREE_TYPE(t)));
+        }
+      break;
     case OFFSET_TYPE:
 
     case MEM_REF:
@@ -840,14 +914,6 @@ dequeue_and_dump (dump_info_p di)
 
       goto done;
     }
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-/*AH?*/
->>>>>>> Stashed changes
-=======
-/*AH?*/
->>>>>>> Stashed changes
   /* We can knock off a bunch of expression nodes in exactly the same
      way.  */
   if (IS_EXPR_CODE_CLASS (code_class))
