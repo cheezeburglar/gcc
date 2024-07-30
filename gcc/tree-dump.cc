@@ -29,6 +29,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "dumpfile.h"
 #include "json.h"
 #include "tm.h"
+#include "wide-int-print.h" //for print_hex
 
 static unsigned int queue (dump_info_p, const_tree, int);
 static void dump_index (dump_info_p, unsigned int);
@@ -269,14 +270,13 @@ node_emit_json(tree t)
   {
     case ERROR_MARK:
       {
-      dummy->set_bool("error_mark", true);
-      break;
+        dummy->set_bool("error_mark", true);
+        break;
       }
     case IDENTIFIER_NODE:
       {
-      //Error on this access - figure out whats going wrong later.
-      //dummy->set_string("identifier", (IDENTIFIER_POINTER(t)));
-      break;
+        dummy->set_string("identifier", identifier_to_locale ((IDENTIFIER_POINTER(t))));
+        break;
       }
     case TREE_LIST:
       while (t && t != error_mark_node)
@@ -422,58 +422,201 @@ node_emit_json(tree t)
 				   : "_BitInt", TYPE_PRECISION(t));
 	      }
 	    else if (TREE_CODE (t) == VOID_TYPE)
-	      dummy->set_boolean("float", true);
+	      dummy->set_bool("float", true);
 	    else
-	      dummy->set_boolean("unnamed type", true);
+	      dummy->set_bool("unnamed type", true);
           }
       }
       break;
 
     case POINTER_TYPE:
     case REFERENCE_TYPE:
-      _x = (TREE_CODE (t) == POINTER_TYPE ? "" : "");
+      {
+	const char* _x = (TREE_CODE (t) == POINTER_TYPE ? "" : "");
+      
+          //Do we need to emit pointer type here?
+    
+        if (TREE_TYPE (t) == NULL)
+          {
+   	    dummy->set_bool("null type", true);
+          }
+        else if (TREE_CODE (TREE_TYPE (t)) == FUNCTION_TYPE)
+          {
+            tree function_node = TREE_TYPE(t);
+   	    tree arg_node = TYPE_ARG_TYPES(function_node);
+   	    json::array* args_holder;
+	    json::object* it_args;
+   	    json::object* _id;
 
-      if (TREE_TYPE (t) == NULL)
-        {
-	  dummy->set_bool("null type", true);
-        }
-      else if (TREE_CODE (TREE_TYPE (t)) == FUNCTION_TYPE)
-        {
-          tree function_node = TREE_TYPE(t);
-	  tree arg_node = TYPE_ARG_TYPES(function_node);
-	  json::array* args_holder;
-	  json::object* _id;
+	    args_holder = new json::array ();
+	    _id = new json::object ();
+	    
+	    
+            dummy->set("fnode", node_emit_json(function_node));
+   
+   	    if (TYPE_IDENTIFIER (t))
+   	      _id->set("type identifier", node_emit_json(TYPE_NAME(t)));
+            else 
+              {
+//	        This needs to be HEX.
+//   	        _id->set_integer("uid", 11223344);
+                char* buff;
+                buff = new char ();
+                print_hex(TYPE_UID(t), buff);
+   	        _id->set_string("uid", buff);
 
-          dummy->set("fnode", node_emit_json(function_node));
+              }
+  
+            //Argument iteration
+            if (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
+	      it_args = new json::object();
 
-	  if (TYPE_IDENTIFIER (t))
-	    _id->set("type identifier", node_emit_json(TYPE_NAME(t));
-	  else
-	    _id->set_integer("uid", TYPE_UID(t));
-
-          while (arg && arg != void_list_node && arg != error_mark_node)
-	    {
-	      args_holder->append(node_emit_json(arg));
-	      arg = TREE_CHAIN (arg);
-	    }
-	  dummy->set(_x, _id);
-	  dummy->set("args", args_holder);
-        }
-      else
-        {
-	  //pickup here
-	  unsigned int quals = TYPE_QUALS (t);
-	  
-	  dummy->set("child", node_emit_json(TREE_TYPE(t)));
-        }
+            //Fix this later.
+            while (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
+   	      {
+	        it_args = node_emit_json(arg_node);
+	        args_holder->append(it_args);
+   	        arg_node = TREE_CHAIN (arg_node);
+   	      }
+   	    dummy->set(_x, _id);
+   	    dummy->set("args", args_holder);
+          }
+        else
+          {
+   	  //pickup here
+   	  unsigned int quals = TYPE_QUALS (t);
+   	  const char* type_qual;
+   
+   	  dummy->set("tree type", node_emit_json(TREE_TYPE(t)));
+   	  
+          if (quals & TYPE_QUAL_CONST)
+   	    type_qual = "const";
+   	  if (quals & TYPE_QUAL_VOLATILE)
+   	    type_qual = "volatile";
+   	  if (quals & TYPE_QUAL_RESTRICT)
+   	    type_qual = "restrict";
+   	  
+   	  if (!ADDR_SPACE_GENERIC_P (TYPE_ADDR_SPACE (t)))
+   	    {
+   	      dummy->set_integer("address space", TYPE_ADDR_SPACE (t));
+   	    }
+   	  
+   	  if (TYPE_REF_CAN_ALIAS_ALL (t))
+   	    dummy->set_bool("ref can alias all", true);
+   	  
+          }
+      }
       break;
+
     case OFFSET_TYPE:
+      break;
 
     case MEM_REF:
     case TARGET_MEM_REF:
+      {
+        //TDF_GIMPLE corresponds to the gimple front end - is this okay? Check later
+        if ((TREE_CODE (t) == MEM_REF
+             || TREE_CODE (t) == TARGET_MEM_REF))
+          {
+            dummy->set("__MEM_REF", node_emit_json(TREE_TYPE(t)));
+
+            if (TYPE_ALIGN (TREE_TYPE (t))
+                != TYPE_ALIGN (TYPE_MAIN_VARIANT (TREE_TYPE (t))))
+              {
+                dummy->set_integer("offset", TYPE_ALIGN (TREE_TYPE(t)));
+              }
+            dummy->set("op0", node_emit_json(TREE_TYPE(TREE_OPERAND (t, 0))));
+            if (TREE_TYPE (TREE_OPERAND (t, 0))
+                != TREE_TYPE (TREE_OPERAND (t, 1)))
+              {
+                dummy->set("op1", node_emit_json(TREE_TYPE(TREE_OPERAND (t, 1))));
+              }
+            // if (! integer_zerop (TREE_OPERAND (node, 1)))
+            if (TREE_CODE (t) == TARGET_MEM_REF)
+              {
+                if (TREE_OPERAND (t, 2))
+                  {
+                  dummy->set("op2", node_emit_json(TREE_TYPE(TREE_OPERAND (t, 2))));
+                  dummy->set("op3", node_emit_json(TREE_TYPE(TREE_OPERAND (t, 3))));
+                  }
+                if (TREE_OPERAND (t, 4))
+                  dummy->set("op4", node_emit_json(TREE_TYPE(TREE_OPERAND (t, 4))));
+              }
+          }
+        else if (TREE_CODE (t) == MEM_REF
+                 && integer_zerop (TREE_OPERAND (t, 1))
+                 && TREE_CODE (TREE_OPERAND (t, 0)) != INTEGER_CST
+                 && TREE_TYPE (TREE_OPERAND (t, 0)) != NULL_TREE
+                 && (TREE_TYPE (TREE_TYPE (TREE_OPERAND (t, 0)))
+             	     == TREE_TYPE (TREE_TYPE (TREE_OPERAND (t, 1))))
+             	 && (TYPE_MODE (TREE_TYPE (TREE_OPERAND (t, 0)))
+             	     == TYPE_MODE (TREE_TYPE (TREE_OPERAND (t, 1))))
+             	 && (TYPE_REF_CAN_ALIAS_ALL (TREE_TYPE (TREE_OPERAND (t, 0)))
+             	     == TYPE_REF_CAN_ALIAS_ALL (TREE_TYPE (TREE_OPERAND (t, 1))))
+                 && (TYPE_MAIN_VARIANT (TREE_TYPE (t))
+                     == TYPE_MAIN_VARIANT (TREE_TYPE (TREE_TYPE (TREE_OPERAND (t, 1))))))
+          {
+            if (TREE_CODE (TREE_OPERAND (t, 0)) != ADDR_EXPR)
+              {
+                dummy->set("FOO_564", node_emit_json(TREE_OPERAND (t, 0)));
+              }
+            else
+              dummy->set("FOO_567", node_emit_json(TREE_OPERAND (TREE_OPERAND (t, 0), 0)));
+          }
+        else
+          {
+            tree type = TREE_TYPE(t);
+            tree op0 = TREE_OPERAND(t, 0);
+            tree op1 = TREE_OPERAND(t, 1);
+            tree op1type = TYPE_MAIN_VARIANT (TREE_TYPE (op1));
+
+            tree op0size = TYPE_SIZE(type);
+            tree op1size = TYPE_SIZE (TREE_TYPE(op1type));
+            dummy->set("type", node_emit_json(type));
+            
+            holder->append(node_emit_json(op0));
+            holder->append(node_emit_json(op1type));
+            if (! integer_zerop (op1))
+              holder->append(node_emit_json(op1));
+            if (TREE_CODE(t) == TARGET_MEM_REF)
+              {
+                tree temp = TMR_INDEX2 (t);
+                if (temp)
+                  holder->append(node_emit_json(temp));
+                temp = TMR_INDEX (t);
+                if (temp)
+                  {
+                    holder->append(node_emit_json(temp));
+                    temp = TMR_STEP(t);
+                    if (temp)
+                      holder->append(node_emit_json(temp)); //check later - missing 1 append.
+                  }
+                dummy->set("tmf_address", holder);
+              }
+          }
+        if (MR_DEPENDENCE_CLIQUE (t) != 0) //TDF_ALIAS usually controls
+          {
+            dummy->set_integer("clique", MR_DEPENDENCE_CLIQUE(t));
+            dummy->set_integer("base", MR_DEPENDENCE_BASE(t));
+          }
+      }
+    break;
 
     case ARRAY_TYPE:
+      {
+        unsigned int quals = TYPE_QUALS (t);
+        tree temp;
 
+	if (quals & TYPE_QUAL_ATOMIC)
+	  dummy->set_bool("atomic", true);
+	if (quals & TYPE_QUAL_CONST)
+	  dummy->set_bool("const", true);
+	if (quals & TYPE_QUAL_VOLATILE)
+	  dummy->set_bool("volatile", true);
+
+
+      }
+      break;
     case RECORD_TYPE:
     case UNION_TYPE:
     case QUAL_UNION_TYPE:
