@@ -30,6 +30,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "json.h"
 #include "tm.h"
 #include "wide-int-print.h" //for print_hex
+#include "real.h" //for real printing
 
 static unsigned int queue (dump_info_p, const_tree, int);
 static void dump_index (dump_info_p, unsigned int);
@@ -260,24 +261,16 @@ node_emit_json(tree t)
   if (EXPR_HAS_LOCATION(t))
     
   
-  code = TREE_CODE(t);
 
   if (TREE_CODE(t) == ERROR_MARK)
     dummy->set_bool("error_mark", true);
-    code = TREE_CODE(t);
-  
+
+  code = TREE_CODE(t);
   switch (code)
   {
-    case ERROR_MARK:
-      {
-        dummy->set_bool("error_mark", true);
-        break;
-      }
     case IDENTIFIER_NODE:
-      {
-        dummy->set_string("identifier", identifier_to_locale ((IDENTIFIER_POINTER(t))));
-        break;
-      }
+      dummy->set_string("identifier", identifier_to_locale ((IDENTIFIER_POINTER(t))));
+      break;
     case TREE_LIST:
       while (t && t != error_mark_node)
       {
@@ -290,23 +283,22 @@ node_emit_json(tree t)
       }
       break;
     case TREE_BINFO:
-    {
       holder->append(node_emit_json(BINFO_TYPE(t)));
-    }
+      break;
     //Make sure this actually goes through all the elements - cf dump_generic_node
     case TREE_VEC:
-    {
-      size_t i;
-      if (TREE_VEC_LENGTH(t) > 0)
-	{
-          size_t len = TREE_VEC_LENGTH (t);
-	  for (i = 0; i < len ; i++)
+      {
+        size_t i;
+        if (TREE_VEC_LENGTH(t) > 0)
 	  {
-	    holder->append(node_emit_json(TREE_VEC_ELT(t, i)));
+            size_t len = TREE_VEC_LENGTH (t);
+	    for (i = 0; i < len ; i++)
+	    {
+	      holder->append(node_emit_json(TREE_VEC_ELT(t, i)));
+	    }
 	  }
-	}
-    }
-    break;
+      }
+      break;
 
     case VOID_TYPE:
     case INTEGER_TYPE:
@@ -332,9 +324,7 @@ node_emit_json(tree t)
 	  dummy->set_string("qual", "restrict");
 
 	if (!ADDR_SPACE_GENERIC_P (TYPE_ADDR_SPACE (t)))
-	  {
 	    dummy->set_integer("address space", TYPE_ADDR_SPACE(t));
-	  }
 	
 	tclass = TREE_CODE_CLASS (TREE_CODE(t));
 
@@ -350,18 +340,19 @@ node_emit_json(tree t)
 	    if (TYPE_NAME (t))
 	    {  
 	      if (TREE_CODE(TYPE_NAME (t)) == IDENTIFIER_NODE)
-	        break;
+                dummy->set("identifier", node_emit_json(TYPE_NAME(t)));
 	      else if (TREE_CODE (TYPE_NAME (t)) == TYPE_DECL
 	               && DECL_NAME (TYPE_NAME (t)))
-	        break; //same DECL_NAME sol
+                dummy->set_string("DECL", "TODO");
 	      else // unnamed 
-	        break;
+                dummy->set_string("type_name", "unnamed");
 	    }
             else if (TREE_CODE (t) == VECTOR_TYPE)
-    	  {
+    	      {
               //Handle recursion here later	  
 	      holder->append(node_emit_json(TREE_TYPE (t)));
-    	  }
+              dummy->set("vector", holder);
+    	      }
             else if (TREE_CODE (t) == INTEGER_TYPE)
     	      {
     	        if (TYPE_PRECISION (t) == CHAR_TYPE_SIZE)
@@ -386,20 +377,17 @@ node_emit_json(tree t)
     	          				   : "signed long long"));
     	        else if (TYPE_PRECISION (t) == CHAR_TYPE_SIZE
     	                 && pow2p_hwi (TYPE_PRECISION (t)))
-    	          {
     	            dummy->set_integer(TYPE_UNSIGNED(t) ? "uint": "int",
 	                               TYPE_PRECISION(t));
-    	          }
 	        else
-		  {
 		    dummy->set_integer(TYPE_UNSIGNED(t)
 				      ? "unnamed-unsigned"
 				      : "unnamed-signed", TYPE_PRECISION(t));
-		  }
   	      }
 	    else if (TREE_CODE (t) == COMPLEX_TYPE) //make sure this is okay later, need track cmplx here?
 	      {
-	        dummy = node_emit_json(TREE_TYPE(t));
+	        holder->append(node_emit_json(TREE_TYPE(t)));
+                dummy->set("complex", holder);
 	      }
 	    else if (TREE_CODE (t) == REAL_TYPE)
 	      {
@@ -437,9 +425,8 @@ node_emit_json(tree t)
           //Do we need to emit pointer type here?
     
         if (TREE_TYPE (t) == NULL)
-          {
-   	    dummy->set_bool("null type", true);
-          }
+   	  dummy->set_bool("null type", true);
+        //might be able to remove later and replace with the FUNCTIONT_TYPE in this switch statement
         else if (TREE_CODE (TREE_TYPE (t)) == FUNCTION_TYPE)
           {
             tree function_node = TREE_TYPE(t);
@@ -459,7 +446,6 @@ node_emit_json(tree t)
             else 
               {
 //	        This needs to be HEX.
-//   	        _id->set_integer("uid", 11223344);
                 char* buff;
                 buff = new char ();
                 print_hex(TYPE_UID(t), buff);
@@ -478,7 +464,7 @@ node_emit_json(tree t)
 	        args_holder->append(it_args);
    	        arg_node = TREE_CHAIN (arg_node);
    	      }
-   	    dummy->set(_x, _id);
+   	    dummy->set("type_uid", _id);
    	    dummy->set("args", args_holder);
           }
         else
@@ -497,9 +483,7 @@ node_emit_json(tree t)
    	    type_qual = "restrict";
    	  
    	  if (!ADDR_SPACE_GENERIC_P (TYPE_ADDR_SPACE (t)))
-   	    {
    	      dummy->set_integer("address space", TYPE_ADDR_SPACE (t));
-   	    }
    	  
    	  if (TYPE_REF_CAN_ALIAS_ALL (t))
    	    dummy->set_bool("ref can alias all", true);
@@ -614,33 +598,149 @@ node_emit_json(tree t)
 	if (quals & TYPE_QUAL_VOLATILE)
 	  dummy->set_bool("volatile", true);
 
-
       }
       break;
     case RECORD_TYPE:
     case UNION_TYPE:
     case QUAL_UNION_TYPE:
-
+      {
+      dummy->set_bool("RUQ_fallthrough", true);
+      }
+      break;
     case LANG_TYPE:
 
     case INTEGER_CST:
+      {
+        dummy->set_bool("integer_cst", true);
+
+        if ((POINTER_TYPE_P (TREE_TYPE (t))) 
+            || (TYPE_PRECISION (TREE_TYPE (t))
+                < TYPE_PRECISION (integer_type_node))
+            || exact_log2 (TYPE_PRECISION (TREE_TYPE (t))) == -1
+            || tree_int_cst_sgn (t) < 0)
+          {
+            holder->append( node_emit_json (TREE_TYPE(t)));
+            dummy->set("_Literal", holder);
+          }
+        if (TREE_CODE (TREE_TYPE(t)) == POINTER_TYPE) 
+          {
+            // In bytes
+            dummy->set_bool("pointer", true);
+            dummy->set_integer("val", TREE_INT_CST_LOW(t));
+          }
+        else if (tree_fits_shwi_p(t))
+          dummy->set_integer("val", tree_to_shwi (t));
+        else if (tree_fits_uhwi_p(t))
+          dummy->set_integer("val", tree_to_uhwi (t));
+        else
+          {
+            wide_int val = wi::to_wide (t);
+            unsigned int len;
+            char* buff;
+
+            buff = new char ();
+
+            //FIX LATER
+            if (wi::neg_p (val, TYPE_SIGN (TREE_TYPE (t))))
+              val = -val;
+            print_hex_buf_size (val, &len);
+            buff = XALLOCAVEC (char, len);
+            print_hex(val, buff);
+
+            dummy->set_string("val", buff);
+        }
+      if (TREE_OVERFLOW (t))
+        dummy->set_bool("overflow", true);
+      }
+      break;
 
     case POLY_INT_CST:
+      dummy->set_string("code", "poly_int_cst");
+      for (unsigned int i = 1; i < NUM_POLY_INT_COEFFS; i++)
+        holder->append(node_emit_json(POLY_INT_CST_COEFF(t, i)));
+      dummy->set("poly_int_cst", holder);
+      break;
 
     case REAL_CST:
+      {
+        REAL_VALUE_TYPE d;
+
+        d = TREE_REAL_CST (t);
+
+        if (TREE_OVERFLOW (t))
+          dummy->set_bool("overflow", true);
+
+        if (REAL_VALUE_ISINF (d))
+          dummy->set_string("value", REAL_VALUE_NEGATIVE(d) ? "-Inf" : "Inf");
+        else if (REAL_VALUE_ISNAN(d))
+          dummy->set_string("value", "NaN");
+        else
+          {
+            char string[100];
+            real_to_decimal(string, &d, sizeof (string), 0, 1);
+            dummy->set_string("real_value", string);
+          }
+      }
+      break;
 
     case FIXED_CST:
+      {
+        char string[100];
+        fixed_to_decimal(string, TREE_FIXED_CST_PTR(t), sizeof (string));
+        dummy->set_string("fixed_cst", string);
+      }
+      break;
 
     case STRING_CST:
+        dummy->set_string("string_cst", TREE_STRING_POINTER(t));
+        break;
 
     case VECTOR_CST:
+      {
+        unsigned int i;
+        unsigned HOST_WIDE_INT nunits;
+
+        if (!VECTOR_CST_NELTS (t).is_constant (&nunits))
+          nunits = vector_cst_encoded_nelts (t);
+        for (i = 0; i < nunits; i++)
+          {
+            holder->append(node_emit_json(VECTOR_CST_ELT (t, i)));
+          }
+        dummy->set("vector_cst", holder);
+      }
+      break;
 
     case FUNCTION_TYPE:
     case METHOD_TYPE:
+      dummy->set("type_data", node_emit_json(TREE_TYPE (t)));
+
+      if (TREE_CODE (t) == METHOD_TYPE)
+        {
+          dummy->set_bool("method_type", true);
+          if (TYPE_METHOD_BASETYPE (t))
+            dummy->set("basetype", node_emit_json (TYPE_NAME (TYPE_METHOD_BASETYPE(t))));
+          else 
+            dummy->set_string("basetype", "null method basetype");
+        }
+      if (TYPE_IDENTIFIER (t))
+        dummy->set("type_identifier", node_emit_json (TYPE_NAME(t)));
+      else if ( TYPE_NAME (t) && DECL_NAME (TYPE_NAME (t)) )
+        break;
+        //handle DECL TODO
+      else
+        {
+          char* buff;
+          buff = new char ();
+          print_hex(TYPE_UID(t), buff);
+   	  dummy->set_string("uid", buff);
+        }
+      //TODO handle function_decl
+      break;
+
 
     case FUNCTION_DECL:
     case CONST_DECL:
-
+      // TODO handle decl_name
     case LABEL_DECL:
 
     case TYPE_DECL:
@@ -951,15 +1051,14 @@ node_emit_json(tree t)
     case BLOCK:
 
     case DEBUG_BEGIN_STMT:
-      {
       dummy->set_bool("fallthrough", true);
-      }
       break;
     default:
+      dummy->set_bool("default fallthrough", true);
       break;
   }
   return dummy;
-}
+  }
 
 //json::array*
 //traverse_tree_emit_json (dump_info_p di, tree t,)
