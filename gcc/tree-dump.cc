@@ -246,6 +246,76 @@ dump_string_field (dump_info_p di, const char *field, const char *string)
   di->tree_json->append(dummy);
 }
 
+/* Helper for emitting function_decl information. Called iff TREE_CODE is FUNCTION_TYPE */
+
+json::array*
+function_decl_emit_json (tree t)
+{
+  bool wrote_arg = false;
+  tree arg;
+  json::array* arg_holder;
+  json::object* arg_json;
+
+  arg_json = new json::object ();
+  arg_holder = new json::array ();
+
+  arg = TYPE_ARG_TYPES (t);
+
+  while (arg && arg != void_list_node && arg != error_mark_node)
+    {
+      wrote_arg = true;
+      arg_json = node_emit_json(TREE_VALUE (arg));
+      arg_holder->append(arg_json);
+      arg = TREE_CHAIN (arg);
+    }
+
+  if (arg == void_list_node && !wrote_arg)
+    {
+      arg_json->set_bool("void_list_node", true);
+      arg_holder->append(arg_json);
+    }
+
+  return arg_holder;
+}
+
+/* Helper for emitting _DECL node information
+    See the qualms in dump_decl_name of tree-pretty-print.cc -
+     maybe ask to see if everything is okay here.*/
+
+void
+decl_node_add_json (tree t, json::object* dummy)
+  {
+    tree name = DECL_NAME (t);
+
+    if (name)
+      {
+        dummy->set_string("id_to_locale", identifier_to_locale (IDENTIFIER_POINTER (name)));
+        dummy->set_string("id_pointer", IDENTIFIER_POINTER (name));
+      }
+    //Need account for flags later
+    
+    if (name == NULL_TREE)
+      {
+        if (TREE_CODE (t) == LABEL_DECL && LABEL_DECL_UID (t) != -1)
+          {
+            dummy->set_integer("Label_UID", LABEL_DECL_UID(t));
+          }
+        else if (TREE_CODE (t) == DEBUG_EXPR_DECL)
+          {
+            dummy->set_integer("Debug_UID", DEBUG_TEMP_UID (t));
+          }
+        else 
+          {
+            const char* c = TREE_CODE (t) == CONST_DECL ? "Const_UID" : "Decl_UID";
+            dummy->set_integer(c, DECL_UID(t));
+          }
+      }
+    if (DECL_PT_UID (t) != DECL_UID (t))
+      {
+        dummy->set_integer("ptDecl", DECL_PT_UID(t));
+      }
+  }
+
 /* Here we emit data in the generic tree without traversing the tree. base on tree-pretty-print.cc */
 
 json::object* 
@@ -254,16 +324,19 @@ node_emit_json(tree t)
   json::object* dummy;
   json::array* holder;
   enum tree_code code;
-  
+//  std::string address_buffer;
+
   dummy = new json::object ();
   holder = new json::array ();
 
-  if (EXPR_HAS_LOCATION(t))
-    
-  
+//  if (EXPR_HAS_LOCATION(t))
+
 
   if (TREE_CODE(t) == ERROR_MARK)
     dummy->set_bool("error_mark", true);
+
+// What do we want to dump for every node?
+//  TODO dump node address
 
   code = TREE_CODE(t);
   switch (code)
@@ -331,11 +404,11 @@ node_emit_json(tree t)
 	if (tclass == tcc_declaration)
 	  {
 	  if (DECL_NAME (t))
-	    dummy->set_string("decl", "TODO");
+            decl_node_add_json(t, dummy);
 	  else
 	    dummy->set_string("decl", "<unnamed type decl>");
 	  }
-	else if (tclass = tcc_type)
+	else if (tclass == tcc_type)
 	  {
 	    if (TYPE_NAME (t))
 	    {  
@@ -343,7 +416,8 @@ node_emit_json(tree t)
                 dummy->set("identifier", node_emit_json(TYPE_NAME(t)));
 	      else if (TREE_CODE (TYPE_NAME (t)) == TYPE_DECL
 	               && DECL_NAME (TYPE_NAME (t)))
-                dummy->set_string("DECL", "TODO");
+                decl_node_add_json( TYPE_NAME (t), dummy);
+                //dummy->set_bool("type_decl", true);
 	      else // unnamed 
                 dummy->set_string("type_name", "unnamed");
 	    }
@@ -740,7 +814,8 @@ node_emit_json(tree t)
 
     case FUNCTION_DECL:
     case CONST_DECL:
-      // TODO handle decl_name
+      decl_node_add_json(t, dummy);
+      break;
     case LABEL_DECL:
 
     case TYPE_DECL:
