@@ -246,6 +246,7 @@ dump_string_field (dump_info_p di, const char *field, const char *string)
   di->tree_json->append(dummy);
 }
 
+
 /* Helper for emitting function_decl information. Called iff TREE_CODE is FUNCTION_TYPE */
 
 json::array*
@@ -282,15 +283,33 @@ function_decl_emit_json (tree t)
     See the qualms in dump_decl_name of tree-pretty-print.cc -
      maybe ask to see if everything is okay here.*/
 
+/* Adds Identifier information to JSON object. Make sensitive to translate ID? */
+
+void
+identifier_node_add_json (tree t, json::object* dummy)
+  {
+    //ID_to_local flag here later
+    const char* buff = IDENTIFIER_POINTER (t);
+    dummy->set_string("id_to_locale", identifier_to_locale(buff));
+    buff = IDENTIFIER_POINTER (t);
+    dummy->set_string("id_point", buff);
+  }
+
 void
 decl_node_add_json (tree t, json::object* dummy)
-  {
-    tree name = DECL_NAME (t);
-
-    if (name)
+{
+  tree name = DECL_NAME (t);
+    
+  if (name)
       {
-        dummy->set_string("id_to_locale", identifier_to_locale (IDENTIFIER_POINTER (name)));
-        dummy->set_string("id_pointer", IDENTIFIER_POINTER (name));
+        if (HAS_DECL_ASSEMBLER_NAME_P(t) //flag later
+            && DECL_ASSEMBLER_NAME_SET_P(t))
+          identifier_node_add_json(DECL_ASSEMBLER_NAME_RAW(t), dummy);
+        else if (DECL_NAMELESS(t)
+                 && DECL_IGNORED_P(t))
+          name = NULL_TREE;
+        else 
+          identifier_node_add_json(name, dummy);
       }
     //Need account for flags later
     
@@ -314,13 +333,23 @@ decl_node_add_json (tree t, json::object* dummy)
       {
         dummy->set_integer("ptDecl", DECL_PT_UID(t));
       }
-  }
+}
+
+/* Function call */
+
+void
+function_name_json (tree t, json::object* dummy)
+{
+  if (CONVERT_EXPR_P (t))
+    decl_node_add_json(t, dummy);
+}
 
 /* Here we emit data in the generic tree without traversing the tree. base on tree-pretty-print.cc */
 
 json::object* 
 node_emit_json(tree t)
 {
+  tree op0, op1;
   json::object* dummy;
   json::array* holder;
   enum tree_code code;
@@ -494,7 +523,7 @@ node_emit_json(tree t)
     case POINTER_TYPE:
     case REFERENCE_TYPE:
       {
-	const char* _x = (TREE_CODE (t) == POINTER_TYPE ? "" : "");
+	const char* _x = (TREE_CODE (t) == POINTER_TYPE ? "*" : "&");
       
           //Do we need to emit pointer type here?
     
@@ -526,20 +555,22 @@ node_emit_json(tree t)
    	        _id->set_string("uid", buff);
 
               }
-  
-            //Argument iteration
-            if (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
-	      it_args = new json::object();
+ 
+            dummy->set("function decl", function_decl_emit_json(function_node));
 
-            //Fix this later.
-            while (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
-   	      {
-	        it_args = node_emit_json(arg_node);
-	        args_holder->append(it_args);
-   	        arg_node = TREE_CHAIN (arg_node);
-   	      }
-   	    dummy->set("type_uid", _id);
-   	    dummy->set("args", args_holder);
+//            //Argument iteration
+//            if (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
+//	      it_args = new json::object();
+//
+//            //Fix this later.
+//            while (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
+//   	      {
+//	        it_args = node_emit_json(arg_node);
+//	        args_holder->append(it_args);
+//   	        arg_node = TREE_CHAIN (arg_node);
+//   	      }
+//   	    dummy->set("type_uid", _id);
+//   	    dummy->set("args", args_holder);
           }
         else
           {
@@ -799,15 +830,15 @@ node_emit_json(tree t)
       if (TYPE_IDENTIFIER (t))
         dummy->set("type_identifier", node_emit_json (TYPE_NAME(t)));
       else if ( TYPE_NAME (t) && DECL_NAME (TYPE_NAME (t)) )
-        break;
-        //handle DECL TODO
-      else
+        decl_node_add_json( TYPE_NAME(t), dummy);
+      else //TDF_NOUID
         {
           char* buff;
           buff = new char ();
           print_hex(TYPE_UID(t), buff);
    	  dummy->set_string("uid", buff);
         }
+      dummy->set("function_decl", function_decl_emit_json(t));
       //TODO handle function_decl
       break;
 
@@ -817,8 +848,28 @@ node_emit_json(tree t)
       decl_node_add_json(t, dummy);
       break;
     case LABEL_DECL:
+      if (DECL_NAME (t))
+        decl_node_add_json(t, dummy);
+      else if (LABEL_DECL_UID (t) != -1)
+        dummy->set_integer("LabelDeclUID", LABEL_DECL_UID (t));
+      else 
+        dummy->set_integer("DeclUID", DECL_UID(t));
+      break;
 
     case TYPE_DECL:
+      if (DECL_IS_UNDECLARED_BUILTIN (t)) //parity w/ dump_generic_node
+        break;
+      if (DECL_NAME (t))
+        decl_node_add_json(t, dummy);
+      else if (TYPE_NAME (TREE_TYPE (t)) != t)
+        {
+          dummy->set(TREE_CODE (TREE_TYPE (t)) == UNION_TYPE ? "union"
+                                                             : "struct",
+                     node_emit_json( TREE_TYPE (t)));
+        }
+      else
+        dummy->set_bool("anon_type_decl", true);
+      break;
 
     case VAR_DECL:
     case PARM_DECL:
@@ -826,22 +877,93 @@ node_emit_json(tree t)
     case DEBUG_EXPR_DECL:
     case NAMESPACE_DECL:
     case NAMELIST_DECL:
-
+      decl_node_add_json(t, dummy);
+      break;
+      
     case RESULT_DECL:
+      dummy->set_bool("retval", true);
+      break;
 
     case COMPONENT_REF:
+      op0 = TREE_OPERAND (t, 0);
+      op1 = TREE_OPERAND (t, 1);
+      //Check if the following is okay later
+      if (op0
+          && (TREE_CODE (op0) == INDIRECT_REF
+              || (TREE_CODE (op0) == MEM_REF
+                  && TREE_CODE (TREE_OPERAND (op0, 0)) != ADDR_EXPR
+                  && integer_zerop (TREE_OPERAND (op0, 1))
+                  //We want to be explicit about Integer_CSTs
+                  && TREE_CODE (TREE_OPERAND (op0, 0)) != INTEGER_CST
+                  // To play nice with SSA
+                  && TREE_TYPE (TREE_OPERAND (op0, 0)) != NULL_TREE
+                  // I don't understand what the qualm is here
+                  && (TREE_TYPE (TREE_TYPE (TREE_OPERAND (op0, 0)))
+                      == (TREE_TYPE (TREE_TYPE (TREE_OPERAND (op0, 1)))))
+                  && (TYPE_MODE (TREE_TYPE (TREE_OPERAND (op0, 0)))
+                      == (TYPE_MODE (TREE_TYPE (TREE_OPERAND (op0, 1)))))
+                  && (TYPE_REF_CAN_ALIAS_ALL (TREE_TYPE (TREE_OPERAND (op0, 0)))
+                      == (TYPE_REF_CAN_ALIAS_ALL (TREE_TYPE (TREE_OPERAND (op0, 1)))))
+                  // Understand this later too
+                  && (TYPE_MAIN_VARIANT (TREE_TYPE (op0))
+                      == TYPE_MAIN_VARIANT (TREE_TYPE (TREE_TYPE (TREE_OPERAND (op0, 1)))))
+                  && MR_DEPENDENCE_CLIQUE (op0) == 0)))
+        {
+          //
+          op0 = TREE_OPERAND (op0, 0);
+        }
+      dummy->set_string("tree_code", "component_ref");
+      dummy->set("expr", node_emit_json(op0));
+      dummy->set("field", node_emit_json(op1));
+      if (DECL_P (op1))
+        if (tree off = component_ref_field_offset(t))
+          if (TREE_CODE (off) != INTEGER_CST)
+            {
+              dummy->set("offset", node_emit_json(off));
+            }
+    break;
 
     case BIT_FIELD_REF:
+      dummy->set_string("tree_code", "bit_field_ref");
+      dummy->set("expr",
+                 node_emit_json( TREE_OPERAND (node, 0));
+      dummy->set("bits_ref",
+                 node_emit_json( TREE_OPERAND (node, 1));
+      dummy->set("bits_first_pos",
+                 node_emit_json( TREE_OPERAND (node, 2));
+      break;
 
     case BIT_INSERT_EXPR:
+      dummy->set_string("tree_code", "bit_insert_expr");
+      dummy->set("container",
+                 node_emit_json( TREE_OPERAND (node, 0));
+      dummy->set("replacement",
+                 node_emit_json( TREE_OPERAND (node, 1));
+      dummy->set("constant_bit_pos",
+                 node_emit_json( TREE_OPERAND (node, 2));
+      break;
 
     case ARRAY_REF:
-//    case ARRANGE_ARRAY_REF:
-
+    case ARRAY_RANGE_REF:
+      op0 = TREE_OPERAND (node, 0);
+      dummy->set("array",
+                 node_emit_json (TREE_OPERAND (t, 0));
+      dummy->set("index",
+                 node_emit_json (TREE_OPERAND (t, 1));
+      if (TREE_OPERAND(t, 2))
+        dummy->set("type_min_val", 
+                   node_emit_json (TREE_OPERAND (t, 2)));
+      if (TREE_OPERAND(t, 3))
+        dummy->set("element_size", 
+                   node_emit_json (TREE_OPERAND (t, 3)));
+      break;
+  
+    //TODO
     case OMP_ARRAY_SECTION:
+      break;
 
     case CONSTRUCTOR:
-
+      
     case COMPOUND_EXPR:
 
     case STATEMENT_LIST:
