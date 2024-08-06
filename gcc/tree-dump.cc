@@ -926,30 +926,30 @@ node_emit_json(tree t)
     case BIT_FIELD_REF:
       dummy->set_string("tree_code", "bit_field_ref");
       dummy->set("expr",
-                 node_emit_json( TREE_OPERAND (node, 0));
+                 node_emit_json( TREE_OPERAND (t, 0)));
       dummy->set("bits_ref",
-                 node_emit_json( TREE_OPERAND (node, 1));
+                 node_emit_json( TREE_OPERAND (t, 1)));
       dummy->set("bits_first_pos",
-                 node_emit_json( TREE_OPERAND (node, 2));
+                 node_emit_json( TREE_OPERAND (t, 2)));
       break;
 
     case BIT_INSERT_EXPR:
       dummy->set_string("tree_code", "bit_insert_expr");
       dummy->set("container",
-                 node_emit_json( TREE_OPERAND (node, 0));
+                 node_emit_json( TREE_OPERAND (t, 0)));
       dummy->set("replacement",
-                 node_emit_json( TREE_OPERAND (node, 1));
+                 node_emit_json( TREE_OPERAND (t, 1)));
       dummy->set("constant_bit_pos",
-                 node_emit_json( TREE_OPERAND (node, 2));
+                 node_emit_json( TREE_OPERAND (t, 2)));
       break;
 
     case ARRAY_REF:
     case ARRAY_RANGE_REF:
-      op0 = TREE_OPERAND (node, 0);
+      op0 = TREE_OPERAND (t, 0);
       dummy->set("array",
-                 node_emit_json (TREE_OPERAND (t, 0));
+                 node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set("index",
-                 node_emit_json (TREE_OPERAND (t, 1));
+                 node_emit_json (TREE_OPERAND (t, 1)));
       if (TREE_OPERAND(t, 2))
         dummy->set("type_min_val", 
                    node_emit_json (TREE_OPERAND (t, 2)));
@@ -963,7 +963,91 @@ node_emit_json(tree t)
       break;
 
     case CONSTRUCTOR:
-      
+      {
+        unsigned HOST_WIDE_INT ix;
+        tree field, val;
+        bool is_struct_init = false;
+        bool is_array_init = false;
+        widest_int curidx;
+
+        if (TREE_CLOBBER_P (t))
+          switch (CLOBBER_KIND(t))
+            {
+            case CLOBBER_STORAGE_BEGIN:
+              dummy->set_string("CLOBBER", "storage_begin");
+              break;
+            case CLOBBER_STORAGE_END:
+              dummy->set_bool("CLOBBER", "storage_end");
+              break;
+            case CLOBBER_OBJECT_BEGIN:
+              dummy->set_bool("CLOBBER", "object_begin");
+              break;
+            case CLOBBER_OBJECT_END:
+              dummy->set_bool("CLOBBER", "object_end");
+              break;
+            default:
+              break;
+          }
+        else if (TREE_CODE (TREE_TYPE (t)) == RECORD_TYPE
+                 || TREE_CODE (TREE_TYPE (t)) == UNION_TYPE)
+          is_struct_init = true;
+        else if (TREE_CODE (TREE_TYPE (t)) == ARRAY_TYPE
+                 && TYPE_DOMAIN (TREE_TYPE (t))
+                 && TREE_CODE (TYPE_MIN_VALUE (TYPE_DOMAIN (TREE_TYPE (t))))
+                    == INTEGER_CST)
+          {
+            tree minv = TYPE_MIN_VALUE (TYPE_DOMAIN (TREE_TYPE (t)));
+            is_array_init = true;
+            curidx = wi::to_widest (minv);
+          }
+        FOR_EACH_CONSTRUCTOR_ELT (CONSTRUCTOR_ELTS (t), ix, field, val)
+          {
+            json::object* cst_elt;
+            json::object* _val_json;
+            cst_elt = new json::object ();
+            cst_elt->set_integer("", ix); //fix
+            if (field)
+              {
+                if (is_struct_init)
+                  cst_elt->set("field", node_emit_json(field));
+                else if (is_array_init 
+                         && (TREE_CODE (field) != INTEGER_CST
+                             || curidx != wi::to_widest (field)))
+                  {
+                    json::array* _array_init_json;
+                    if (TREE_CODE (field) == RANGE_EXPR) //CHECK LATER
+                      {
+                        _array_init_json = new json::array ();
+                        _array_init_json->append( node_emit_json( TREE_OPERAND( field, 0)));
+                        _array_init_json->append( node_emit_json( TREE_OPERAND( field, 1)));
+                        cst_elt->set("field", _array_init_json);
+                      }
+                    else 
+                      cst_elt->set ("field", node_emit_json (field));
+                  }
+              }
+            if (is_array_init)
+              curidx += 1;
+            if (val && TREE_CODE (val) == ADDR_EXPR)
+              if (TREE_CODE (TREE_OPERAND (val, 0)) == FUNCTION_DECL)
+                val = TREE_OPERAND (val, 0);
+            if (val && TREE_CODE (val) == FUNCTION_DECL)
+              { //This workaround is ugly; refactor or fix later
+                _val_json = new json::object ();
+                decl_node_add_json (val, _val_json);
+                cst_elt->set("val", _val_json);
+              }
+            else
+              cst_elt->set("val", node_emit_json(val));
+
+            if (TREE_CODE (field) == INTEGER_CST)
+              curidx = wi::to_widest (field);
+            holder->append(cst_elt);
+          }
+        dummy->set("ctor_elts", holder);
+      }
+      break;
+
     case COMPOUND_EXPR:
 
     case STATEMENT_LIST:
