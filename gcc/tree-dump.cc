@@ -31,6 +31,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "tm.h"
 #include "wide-int-print.h" //for print_hex
 #include "real.h" //for real printing
+#include "internal-fn.h"
 
 static unsigned int queue (dump_info_p, const_tree, int);
 static void dump_index (dump_info_p, unsigned int);
@@ -959,8 +960,8 @@ node_emit_json(tree t)
       break;
   
     //TODO
-    case OMP_ARRAY_SECTION:
-      break;
+//    case OMP_ARRAY_SECTION:
+//      break;
 
     case CONSTRUCTOR:
       {
@@ -973,7 +974,7 @@ node_emit_json(tree t)
         if (TREE_CLOBBER_P (t))
           switch (CLOBBER_KIND(t))
             {
-            case CLOBBER_STORAGE_BEGIN:
+          case CLOBBER_STORAGE_BEGIN:
               dummy->set_string("CLOBBER", "storage_begin");
               break;
             case CLOBBER_STORAGE_END:
@@ -1005,7 +1006,7 @@ node_emit_json(tree t)
             json::object* cst_elt;
             json::object* _val_json;
             cst_elt = new json::object ();
-            cst_elt->set_integer("", ix); //fix
+            //cst_elt->set_integer("", ix); //fix
             if (field)
               {
                 if (is_struct_init)
@@ -1046,30 +1047,122 @@ node_emit_json(tree t)
           }
         dummy->set("ctor_elts", holder);
       }
+    break;
+
+   case COMPOUND_EXPR:
+     {
+        tree *tp;
+        holder->append( node_emit_json( TREE_OPERAND (t, 0)));
+
+        for (tp = &TREE_OPERAND (t, 1);
+             TREE_CODE (*tp) == COMPOUND_EXPR;
+             tp = &TREE_OPERAND (*tp, 1))
+          {
+          holder->append( node_emit_json ( TREE_OPERAND (*tp, 0)));
+          }
+
+        dummy->set("compound_expr", holder);
+      }
       break;
 
-    case COMPOUND_EXPR:
-
     case STATEMENT_LIST:
+      {
+        tree_stmt_iterator si;
+
+        for (si =  tsi_start (t); !tsi_end_p (si); tsi_next (&si))
+          {
+            holder->append( node_emit_json (tsi_stmt (si)));
+          }
+        dummy->set("statement_list", holder);
+      }
+      break;
 
     case MODIFY_EXPR:
     case INIT_EXPR:
+      dummy->set_string("tree_code",
+                        TREE_CODE(t) == MODIFY_EXPR ? "modify_expr"
+                                                    : "init_expr");
+      dummy->set("op0",
+                 node_emit_json( TREE_OPERAND (t, 0)));
+      dummy->set("op1",
+                 node_emit_json( TREE_OPERAND (t, 1)));
+      break;
 
     case TARGET_EXPR:
+      dummy->set_string("tree_code", "target_expr");
+      dummy->set("slot", node_emit_json (TARGET_EXPR_SLOT(t)));
+      dummy->set("initial", node_emit_json (TARGET_EXPR_INITIAL(t)));
+      break;
 
     case DECL_EXPR:
+      decl_node_add_json(DECL_EXPR_DECL(t), dummy);
+      break;
 
     case COND_EXPR:
+    /* I don't think we account for lowering this to GIMPLE. */
+//      if (TREE_TYPE (t) == NULL || TREE_TYPE (t) == void_type_node)
+//        {
+//          
+//        }
+      dummy->set_bool("cond_expr", true);
+      dummy->set("if",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set("then",
+                 node_emit_json (TREE_OPERAND (t, 1)));
+      dummy->set("else",
+                 node_emit_json (TREE_OPERAND (t, 2)));
+      break;
 
     case BIND_EXPR:
+      if (BIND_EXPR_VARS (t))
+        {
+          for (op0 = BIND_EXPR_VARS (t); op0; op0 = DECL_CHAIN (op0))
+            {
+              // TODO c.f. tree-pretty print's impl
+              holder->append(node_emit_json (op0));
+            }
+          dummy->set("bind_expr_vars", holder);
+        }
+      dummy->set("bind_expr_body", 
+                 node_emit_json(BIND_EXPR_BODY(t)));
+      break;
 
     case CALL_EXPR:
+      {
+        dummy->set_bool("return_slot_optimization", CALL_EXPR_RETURN_SLOT_OPT(t));
+        dummy->set_bool("tail_call", CALL_EXPR_TAILCALL(t));
+        if (CALL_EXPR_FN (t) != NULL_TREE)
+          /* TODO ()*/ ;
+        else
+          dummy->set_string("", internal_fn_name (CALL_EXPR_IFN (t)));
 
+        tree arg;
+        call_expr_arg_iterator iter;
+        bool call;
+        FOR_EACH_CALL_EXPR_ARG(arg, iter, t)
+          {
+            call = true;
+            holder->append(node_emit_json(arg));
+          }
+        if (call)
+          dummy->set("call_expr_arg", holder);
+
+        if (CALL_EXPR_VA_ARG_PACK (t))
+          dummy->set_bool("__builtin_va_arg_pack", true); //check later
+        
+        op1 = CALL_EXPR_STATIC_CHAIN (t);
+        if (op1)
+          dummy->set("", node_emit_json(op1));
+      }
+      break;
     case WITH_CLEANUP_EXPR:
-
+      break;
     case CLEANUP_POINT_EXPR:
-
+      dummy->set("cleanup_point", node_emit_json (TREE_OPERAND(t, 0)));
+      break;
     case PLACEHOLDER_EXPR:
+      dummy->set("placeholder_expr", node_emit_json (TREE_OPERAND(t, 0)));
+      break;
 
     /* Binary operations */
     case WIDEN_SUM_EXPR:
@@ -1117,15 +1210,25 @@ node_emit_json(tree t)
     case LTGT_EXPR:
     case ORDERED_EXPR:
     case UNORDERED_EXPR:
-    
-    case ADDR_EXPR:
+      {
+        op0 = TREE_OPERAND(t, 0);
+        op1 = TREE_OPERAND(t, 1);
+        
+        dummy->set_string("bin_operator", "bar");
+        holder->append(node_emit_json(op0));
+        holder->append(node_emit_json(op1));
+        dummy->set("operands", holder);
+      }
+      break;
 
+    case ADDR_EXPR:
     case NEGATE_EXPR:
     case BIT_NOT_EXPR:
     case TRUTH_NOT_EXPR:
     case PREDECREMENT_EXPR:
     case PREINCREMENT_EXPR:
     case INDIRECT_REF:
+      
 
     case POSTDECREMENT_EXPR:
     case POSTINCREMENT_EXPR:
@@ -1339,7 +1442,7 @@ node_emit_json(tree t)
       break;
   }
   return dummy;
-  }
+}
 
 //json::array*
 //traverse_tree_emit_json (dump_info_p di, tree t,)
