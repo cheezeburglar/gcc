@@ -350,7 +350,7 @@ function_name_json (tree t, json::object* dummy)
 json::object* 
 node_emit_json(tree t)
 {
-  tree op0, op1;
+  tree op0, op1, type;
   json::object* dummy;
   json::array* holder;
   enum tree_code code;
@@ -1211,10 +1211,11 @@ node_emit_json(tree t)
     case ORDERED_EXPR:
     case UNORDERED_EXPR:
       {
+        const char* c = op_symbol_code(TREE_CODE(t), TDF_NONE); //ugly
         op0 = TREE_OPERAND(t, 0);
         op1 = TREE_OPERAND(t, 1);
         
-        dummy->set_string("bin_operator", "bar");
+        dummy->set_string("bin_operator", c);
         holder->append(node_emit_json(op0));
         holder->append(node_emit_json(op1));
         dummy->set("operands", holder);
@@ -1222,77 +1223,239 @@ node_emit_json(tree t)
       break;
 
     case ADDR_EXPR:
+      //TDF_GIMPLE_VAL
+      dummy->set("_Literal", node_emit_json( TREE_TYPE (t)));
     case NEGATE_EXPR:
     case BIT_NOT_EXPR:
     case TRUTH_NOT_EXPR:
     case PREDECREMENT_EXPR:
     case PREINCREMENT_EXPR:
     case INDIRECT_REF:
-      
-
     case POSTDECREMENT_EXPR:
     case POSTINCREMENT_EXPR:
+      {
+        const char * c = op_symbol_code(code, TDF_NONE);
+        dummy->set(c, node_emit_json (TREE_OPERAND (t, 0)));
+      }
+      break;
 
     case MIN_EXPR:
+      holder->append (node_emit_json (TREE_OPERAND (t,0)));
+      holder->append (node_emit_json (TREE_OPERAND (t,1)));
+      dummy->set("min_expr", holder);
+      break;
 
     case MAX_EXPR:
+      holder->append (node_emit_json (TREE_OPERAND (t,0)));
+      holder->append (node_emit_json (TREE_OPERAND (t,1)));
+      dummy->set("max_expr", holder);
+      break;
 
     case ABS_EXPR:
+      holder->append (node_emit_json (TREE_OPERAND (t,0)));
+      dummy->set("abs_expr", holder);
+      break;
 
     case ABSU_EXPR:
+      holder->append (node_emit_json (TREE_OPERAND (t,0)));
+      dummy->set("absu_expr", holder);
+      break;
 
     case RANGE_EXPR:
-    
+      break;
+
     case ADDR_SPACE_CONVERT_EXPR:
     case FIXED_CONVERT_EXPR:
     case FIX_TRUNC_EXPR:
     case FLOAT_EXPR:
+    CASE_CONVERT: //Check this later
+      type = TREE_TYPE (t);
+      op0 = TREE_OPERAND (t, 0);
+      if (type != TREE_TYPE(op0))
+        {
+          dummy->set ("type", node_emit_json (type));
+        }
+      dummy->set ("operand", node_emit_json (op0));
+      break;
 
     case VIEW_CONVERT_EXPR:
+      holder->append (node_emit_json (TREE_TYPE(t)));
+      holder->append (node_emit_json (TREE_OPERAND(t, 0)));
+      dummy->set("view_convert_expr", holder);
+      break;
 
     case PAREN_EXPR:
+      dummy->set("paren_expr",
+                 node_emit_json (TREE_OPERAND (t,0)));
+      break;
 
     case NON_LVALUE_EXPR:
+      dummy->set("non_lvalue_expr",
+                 node_emit_json (TREE_OPERAND (t,0)));
+      break;
 
     case SAVE_EXPR:
+      dummy->set("save_expr",
+                 node_emit_json (TREE_OPERAND (t,0)));
+      break;
 
-    case COMPLEX_EXPR:
+    case COMPLEX_EXPR: //check later
+      holder->append (node_emit_json (TREE_OPERAND (t,0)));
+      holder->append (node_emit_json (TREE_OPERAND (t,1)));
+      dummy->set("complex_expr", holder);
+//      dummy->set("non_lvalue_expr",
+//                 node_emit_json (TREE_OPERAND (t,0)));
+//      dummy->set("non_lvalue_expr",
+//                 node_emit_json (TREE_OPERAND (t,0)));
+      break;
 
     case CONJ_EXPR:
+      dummy->set("conj_expr",
+                 node_emit_json (TREE_OPERAND (t,0)));
+      break;
 
     case REALPART_EXPR:
+      dummy->set("realpart_expr",
+                 node_emit_json (TREE_OPERAND (t,0)));
+      break;
 
     case IMAGPART_EXPR:
+      dummy->set("imagpart_expr",
+                 node_emit_json (TREE_OPERAND (t,0)));
+      break;
 
     case VA_ARG_EXPR:
+      dummy->set("va_arg_expr",
+                 node_emit_json (TREE_OPERAND (t,0)));
+      break;
 
     case TRY_FINALLY_EXPR:
     case TRY_CATCH_EXPR:
+      {
+        tree _t;
+        dummy->set("try",
+                   node_emit_json (TREE_OPERAND (t, 0)));
+        if (TREE_CODE (t) == TRY_CATCH_EXPR)
+          {
+            _t = TREE_OPERAND(t, 1);
+            dummy->set("catch",
+                        node_emit_json (_t));
+          }
+        else
+          {
+            gcc_assert (TREE_CODE (t) == TRY_FINALLY_EXPR);
+            _t = TREE_OPERAND(t, 1);
+            if (TREE_CODE (t) == EH_ELSE_EXPR)
+              {
+                _t = TREE_OPERAND (_t, 0);
+                dummy->set("finally",
+                           node_emit_json (_t));
+                _t = TREE_OPERAND(_t, 1);
+                dummy->set("else",
+                           node_emit_json (_t));
+              }
+            else
+              {
+              dummy->set("finally",
+                         node_emit_json(_t));
+              }
+          }
+      }
+      break;
 
     case CATCH_EXPR:
-    
+      dummy->set("catch_types", node_emit_json(CATCH_TYPES(t)));
+      dummy->set("catch_body", node_emit_json(CATCH_BODY(t)));
+      break;
+
     case EH_FILTER_EXPR:
+      dummy->set("eh_filter_types", node_emit_json(EH_FILTER_TYPES(t)));
+      dummy->set("eh_filter_failure", node_emit_json(EH_FILTER_FAILURE(t)));
+      break;
 
     case LABEL_EXPR:
+      decl_node_add_json (TREE_OPERAND (t, 0), dummy);
+      break;
 
     case LOOP_EXPR:
+      dummy->set("while (1)", node_emit_json (LOOP_EXPR_BODY (t)));
+      break;
 
     case PREDICT_EXPR:
 
     case ANNOTATE_EXPR:
+      {
+      switch ((enum annot_expr_kind) TREE_INT_CST_LOW (TREE_OPERAND(t,1)))
+        { //Is this expensive? ask later
+          case annot_expr_ivdep_kind:
+            dummy->set("ivdep", node_emit_json(TREE_OPERAND (t, 0)));
+            break;
+          case annot_expr_unroll_kind:
+            dummy->set("unroll", node_emit_json(TREE_OPERAND (t, 0)));
+            break;
+          case annot_expr_no_vector_kind:
+            dummy->set("no-vector", node_emit_json(TREE_OPERAND (t, 0)));
+            break;
+          case annot_expr_vector_kind:
+            dummy->set("vector", node_emit_json(TREE_OPERAND (t, 0)));
+            break;
+          case annot_expr_parallel_kind:
+            dummy->set("parallel", node_emit_json(TREE_OPERAND (t, 0)));
+            break;
+          case annot_expr_maybe_infinite_kind:
+            dummy->set("maybe_infinite", node_emit_json(TREE_OPERAND (t, 0)));
+            break;
+          default:
+            gcc_unreachable();
+        }
+      }
+      break;
 
     case RETURN_EXPR:
+      {
+        op0 = TREE_OPERAND (t, 0);
+        if (op0)
+          {
+            if (TREE_CODE (op0) == MODIFY_EXPR)
+              dummy->set("return_expr", node_emit_json (TREE_OPERAND (op0, 1)));
+            else
+              dummy->set("return_expr", node_emit_json (op0));
+          }
+        else //it MIGHT be okay to dump out the null tree in this case?
+          dummy->set_bool("return_expr", true);
+      }
+      break;
 
     case EXIT_EXPR:
+      dummy->set("exit_if", node_emit_json (TREE_OPERAND (t, 0)));
+      break;
 
     case SWITCH_EXPR:
+      dummy->set("switch_cond", node_emit_json(SWITCH_COND(t)));
+      dummy->set("switch_body", node_emit_json(SWITCH_BODY(t)));
+      break;
 
     case GOTO_EXPR:
+      op0 = GOTO_DESTINATION (t);
+      dummy->set("goto", node_emit_json(op0));
+      break;
 
     case ASM_EXPR:
+      dummy->set("asm_string", node_emit_json (ASM_STRING (t)));
+      dummy->set("asm_outputs", node_emit_json (ASM_OUTPUTS (t)));
+      dummy->set("asm_inputs", node_emit_json (ASM_INPUTS (t)));
+      if (ASM_CLOBBERS (t))
+        dummy->set("asm_clobbers", node_emit_json (ASM_CLOBBERS (t)));
+      break;
 
     case CASE_LABEL_EXPR:
-
+      if (CASE_LOW(t) && CASE_HIGH(t))
+        {}
+      else if (CASE_LOW(t))
+        {}
+      else
+        {}
+      break;
     case OBJ_TYPE_REF:
 
     case SSA_NAME:
