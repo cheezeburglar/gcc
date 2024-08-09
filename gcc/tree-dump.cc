@@ -345,6 +345,110 @@ function_name_json (tree t, json::object* dummy)
     decl_node_add_json(t, dummy);
 }
 
+/* */
+void
+omp_iterator_add_json(tree iter, json::object* dummy)
+{
+  json::array* iter_holder;
+  iter_holder = new json::array ();
+
+  for (tree it = iter; it; it = TREE_CHAIN (it))
+    {
+      for (int i = 0; i < 4; i++)
+        {
+          if (TREE_VEC_ELT (it, 0) != NULL_TREE)
+            iter_holder->append (node_emit_json (TREE_VEC_ELT (it, 0)));
+        }
+    }
+  dummy->set("omp_iter", iter_holder);
+}
+
+/*  */
+void
+omp_clause_add_json(tree clause, json::object* dummy)
+{
+  char* name;
+  const char* modifier = NULL;
+  switch (OMP_CLAUSE_CODE (clause))
+    {
+    case OMP_CLAUSE_PRIVATE:
+      name = "private";
+      goto print_remap;
+    case OMP_CLAUSE_SHARED:
+      name = "shared";
+      goto print_remap;
+    case OMP_CLAUSE_FIRSTPRIVATE:
+      name = "firstprivate";
+      goto print_remap;
+    case OMP_CLAUSE_LASTPRIVATE:
+      name = "lastprivate";
+      if (OMP_CLAUSE_LASTPRIVATE_CONDITIONAL (clause))
+	modifier = "conditional:";
+      goto print_remap;
+    case OMP_CLAUSE_COPYIN:
+      name = "copyin";
+      goto print_remap;
+    case OMP_CLAUSE_COPYPRIVATE:
+      name = "copyprivate";
+      goto print_remap;
+    case OMP_CLAUSE_UNIFORM:
+      name = "uniform";
+      goto print_remap;
+    case OMP_CLAUSE_USE_DEVICE_PTR:
+      name = "use_device_ptr";
+      if (OMP_CLAUSE_USE_DEVICE_PTR_IF_PRESENT (clause))
+	modifier = "if_present:";
+      goto print_remap;
+    case OMP_CLAUSE_USE_DEVICE_ADDR:
+      name = "use_device_addr";
+      goto print_remap;
+    case OMP_CLAUSE_HAS_DEVICE_ADDR:
+      name = "has_device_addr";
+      goto print_remap;
+    case OMP_CLAUSE_IS_DEVICE_PTR:
+      name = "is_device_ptr";
+      goto print_remap;
+    case OMP_CLAUSE_INCLUSIVE:
+      name = "inclusive";
+      goto print_remap;
+    case OMP_CLAUSE_EXCLUSIVE:
+      name = "exclusive";
+      goto print_remap;
+    case OMP_CLAUSE__LOOPTEMP_:
+      name = "_looptemp_";
+      goto print_remap;
+    case OMP_CLAUSE__REDUCTEMP_:
+      name = "_reductemp_";
+      goto print_remap;
+    case OMP_CLAUSE__CONDTEMP_:
+      name = "_condtemp_";
+      goto print_remap;
+    case OMP_CLAUSE__SCANTEMP_:
+      name = "_scantemp_";
+      goto print_remap;
+    case OMP_CLAUSE_ENTER:
+      if (OMP_CLAUSE_ENTER_TO (clause))
+	name = "to";
+      else
+	name = "enter";
+      goto print_remap;
+    case OMP_CLAUSE_LINK:
+      name = "link";
+      goto print_remap;
+    case OMP_CLAUSE_NONTEMPORAL:
+      name = "nontemporal";
+      goto print_remap;
+  print_remap:
+      if (modifier) //check later
+        {}
+      dummy->set(name, node_emit_json (OMP_CLAUSE_DECL (clause)));
+      break;
+
+    case OMP_CLAUSE_TASK_REDUCTION:
+    case OMP_CLAUSE_IN_REDUCTION:
+      break;
+    }
+}
 /* Here we emit data in the generic tree without traversing the tree. base on tree-pretty-print.cc */
 
 json::object* 
@@ -368,7 +472,7 @@ node_emit_json(tree t)
 // What do we want to dump for every node?
 //  TODO dump node address
 
-  code = TREE_CODE(t);
+  code = TREE_CODE (t);
   switch (code)
   {
     case IDENTIFIER_NODE:
@@ -1450,36 +1554,202 @@ node_emit_json(tree t)
 
     case CASE_LABEL_EXPR:
       if (CASE_LOW(t) && CASE_HIGH(t))
-        {}
+        {
+          dummy->set ("case_low", node_emit_json (CASE_LOW(t)));
+          dummy->set ("case_high", node_emit_json (CASE_HIGH(t)));
+        }
       else if (CASE_LOW(t))
-        {}
+        dummy->set ("case", node_emit_json (CASE_LOW(t)));
       else
-        {}
+        dummy->set_string("case", "default");
       break;
-    case OBJ_TYPE_REF:
 
-    case SSA_NAME:
+    // check later - okay?
+    case OBJ_TYPE_REF:
+      dummy->set("obj_type_ref_expr",
+                 node_emit_json(OBJ_TYPE_REF_EXPR(t)));
+      dummy->set("obj_type_ref_object",
+                 node_emit_json(OBJ_TYPE_REF_OBJECT(t)));
+      dummy->set("obj_type_ref_token",
+                 node_emit_json(OBJ_TYPE_REF_TOKEN(t)));
+      break;
+
+    case SSA_NAME: //check later- augment with more accesssors?
+      {
+      if (SSA_NAME_IDENTIFIER (t))
+        dummy->set("ssa_name_identifier",
+                   node_emit_json (SSA_NAME_IDENTIFIER (t)));
+      if (SSA_NAME_IS_DEFAULT_DEF (t))
+dummy->set_bool("ssa_default_def", true);
+      if (SSA_NAME_OCCURS_IN_ABNORMAL_PHI (t))
+	dummy->set_bool("abnormal_phi", true);
+      }
+      break;
 
     case WITH_SIZE_EXPR:
+      dummy->set("expr", node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set("size", node_emit_json (TREE_OPERAND (t, 1)));
+      break;
 
     case SCEV_KNOWN:
+      dummy->set_bool("scev_known", true);
+      break;
 
     case SCEV_NOT_KNOWN:
+      dummy->set_bool("scev_not_known", true);
+      break;
 
     case POLYNOMIAL_CHREC:
+      dummy->set_integer("chrec_var", CHREC_VARIABLE(t));
+      dummy->set("chrec_left", node_emit_json (CHREC_LEFT(t)));
+      dummy->set("chrec_right", node_emit_json (CHREC_RIGHT(t)));
+      dummy->set_bool("chrec_nowrap", CHREC_NOWRAP(t));
+      break;
 
     case REALIGN_LOAD_EXPR:
+      dummy->set_bool("realign_load_expr", true); //verbose?
+      dummy->set("input_0", node_emit_json(TREE_OPERAND (t, 0)));
+      dummy->set("input_1", node_emit_json(TREE_OPERAND (t, 1)));
+      dummy->set("offset", node_emit_json(TREE_OPERAND (t, 2)));
+      break;
 
     case VEC_COND_EXPR:
+      dummy->set_bool("vec_cond_expr", true);
+      dummy->set("if",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set("then",
+                 node_emit_json (TREE_OPERAND (t, 1)));
+      dummy->set("else",
+                 node_emit_json (TREE_OPERAND (t, 2)));
+      break;
 
     case VEC_PERM_EXPR:
+      dummy->set_bool("vec_perm_expr", true);
+      dummy->set("v0",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set("v1",
+                 node_emit_json (TREE_OPERAND (t, 1)));
+      dummy->set("mask",
+                 node_emit_json (TREE_OPERAND (t, 2)));
+      break;
 
-    case DOT_PROD_EXPR:
+    case DOT_PROD_EXPR: //check later
+      dummy->set_bool("dot_prod_expr", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set("arg2",
+                 node_emit_json (TREE_OPERAND (t, 1)));
+      dummy->set("arg3",
+                 node_emit_json (TREE_OPERAND (t, 2)));
+      break;
 
     case WIDEN_MULT_PLUS_EXPR:
+      dummy->set_bool("widen_mult_plus_expr", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set("arg2",
+                 node_emit_json (TREE_OPERAND (t, 1)));
+      dummy->set("arg3",
+                 node_emit_json (TREE_OPERAND (t, 2)));
+      break;
 
     case WIDEN_MULT_MINUS_EXPR:
+      dummy->set_bool("widen_mult_minus_expr", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set("arg2",
+                 node_emit_json (TREE_OPERAND (t, 1)));
+      dummy->set("arg3",
+                 node_emit_json (TREE_OPERAND (t, 2)));
+      break;
 
+    case VEC_SERIES_EXPR:
+    case VEC_WIDEN_MULT_HI_EXPR:
+    case VEC_WIDEN_MULT_LO_EXPR:
+    case VEC_WIDEN_MULT_ODD_EXPR:
+    case VEC_WIDEN_LSHIFT_HI_EXPR:
+    case VEC_WIDEN_LSHIFT_LO_EXPR:
+      //check later - why do we use this trick only here?
+      dummy->set_bool (get_tree_code_name (code), true);
+      dummy->set ("arg1", 
+                  node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set ("arg2",
+                  node_emit_json (TREE_OPERAND (t, 1)));
+      break;
+
+    case VEC_DUPLICATE_EXPR:
+      dummy->set_bool("dot_prod_expr", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      break;
+
+    case VEC_UNPACK_HI_EXPR:
+      dummy->set_bool("vec_unpack_hi", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      break;
+
+    case VEC_UNPACK_LO_EXPR:
+      dummy->set_bool("vec_unpack_lo", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      break;
+
+    case VEC_UNPACK_FLOAT_HI_EXPR:
+      dummy->set_bool("vec_unpack_float_hi", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      break;
+
+    case VEC_UNPACK_FLOAT_LO_EXPR:
+      dummy->set_bool("vec_unpack_float_lo", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      break;
+
+    case VEC_UNPACK_FIX_TRUNC_HI_EXPR:
+      dummy->set_bool("vec_unpack_fix_trunc_hi", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      break;
+
+    case VEC_UNPACK_FIX_TRUNC_LO_EXPR:
+      dummy->set_bool("vec_unpack_fix_trunc_hi", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      break;
+
+    case VEC_PACK_TRUNC_EXPR:
+      dummy->set_bool("vec_pack_trunc", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set("arg2",
+                 node_emit_json (TREE_OPERAND (t, 1)));
+      break;
+
+    case VEC_PACK_SAT_EXPR:
+      dummy->set_bool("vec_pack_sat", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set("arg2",
+                 node_emit_json (TREE_OPERAND (t, 1)));
+      break;
+
+    case VEC_PACK_FIX_TRUNC_EXPR:
+      dummy->set_bool("vec_pack_fix_trunc", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set("arg2",
+                 node_emit_json (TREE_OPERAND (t, 1)));
+      break;
+
+    case VEC_PACK_FLOAT_EXPR:
+      dummy->set_bool("vec_pack_float", true);
+      dummy->set("arg1",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set("arg2",
+                 node_emit_json (TREE_OPERAND (t, 1)));
+      break;
     /*OACC and OMP */
     case OACC_PARALLEL:
 
@@ -1565,35 +1835,6 @@ node_emit_json(tree t)
     case OMP_CLAUSE:
 
     case TRANSACTION_EXPR:
-
-    case VEC_SERIES_EXPR:
-    case VEC_WIDEN_MULT_HI_EXPR:
-    case VEC_WIDEN_MULT_LO_EXPR:
-    case VEC_WIDEN_MULT_ODD_EXPR:
-    case VEC_WIDEN_LSHIFT_HI_EXPR:
-    case VEC_WIDEN_LSHIFT_LO_EXPR:
-
-    case VEC_DUPLICATE_EXPR:
-
-    case VEC_UNPACK_HI_EXPR:
-
-    case VEC_UNPACK_LO_EXPR:
-
-    case VEC_UNPACK_FLOAT_HI_EXPR:
-
-    case VEC_UNPACK_FLOAT_LO_EXPR:
-
-    case VEC_UNPACK_FIX_TRUNC_HI_EXPR:
-
-    case VEC_UNPACK_FIX_TRUNC_LO_EXPR:
-
-    case VEC_PACK_TRUNC_EXPR:
-
-    case VEC_PACK_SAT_EXPR:
-
-    case VEC_PACK_FIX_TRUNC_EXPR:
-
-    case VEC_PACK_FLOAT_EXPR:
 
     case BLOCK:
 
