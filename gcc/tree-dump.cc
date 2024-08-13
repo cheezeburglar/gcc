@@ -18,6 +18,7 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
+#define INCLUDE_STRING
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -363,11 +364,14 @@ omp_iterator_add_json(tree iter, json::object* dummy)
   dummy->set("omp_iter", iter_holder);
 }
 
-/*  */
+/* Currently we pay a heap allocation everytime we call this. Double check if that's okay 
+ * C-style string handling alright? seems consistent with the rest of the codebase */
+
 void
 omp_clause_add_json(tree clause, json::object* dummy)
 {
-  char* name;
+  char buffer[100] = {'\0'};
+  const char* name;
   const char* modifier = NULL;
   switch (OMP_CLAUSE_CODE (clause))
     {
@@ -438,15 +442,176 @@ omp_clause_add_json(tree clause, json::object* dummy)
     case OMP_CLAUSE_NONTEMPORAL:
       name = "nontemporal";
       goto print_remap;
-  print_remap:
-      if (modifier) //check later
-        {}
-      dummy->set(name, node_emit_json (OMP_CLAUSE_DECL (clause)));
+  print_remap: //FIX LATER
+      strcpy(buffer, name);
+      if (modifier)
+        strcat(buffer, modifier);
+      dummy->set (buffer, node_emit_json (OMP_CLAUSE_DECL (clause)));
       break;
 
     case OMP_CLAUSE_TASK_REDUCTION:
     case OMP_CLAUSE_IN_REDUCTION:
+    case OMP_CLAUSE_REDUCTION:
       break;
+
+    case OMP_CLAUSE_IF:
+      strcpy(buffer, "omp_clause_if");
+      switch (OMP_CLAUSE_IF_MODIFIER (clause))
+        {
+        case ERROR_MARK: break;
+        case VOID_CST: strcat(buffer, "_cancel"); break;
+        case OMP_PARALLEL: strcat(buffer, "_parallel"); break;
+        case OMP_SIMD: strcat(buffer, "_simd"); break; 
+        case OMP_TASK: strcat(buffer, "_task"); break;
+        case OMP_TASKLOOP: strcat(buffer, "_taskloop"); break;
+        case OMP_TARGET_DATA: strcat(buffer, "_target_data"); break;
+        case OMP_TARGET: strcat(buffer, "_target"); break;
+        case OMP_TARGET_UPDATE: strcat(buffer, "_target_update"); break;
+        case OMP_TARGET_ENTER_DATA: strcat(buffer, "_target_enter_data"); break;
+        case OMP_TARGET_EXIT_DATA: strcat(buffer, "_target_exit_data"); break;
+        default: gcc_unreachable ();
+        }
+      dummy->set(buffer, node_emit_json (OMP_CLAUSE_IF_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_SELF:
+      dummy->set("omp_self", node_emit_json (OMP_CLAUSE_SELF_EXPR(clause)));
+      break;
+
+    case OMP_CLAUSE_NUM_THREADS:
+      dummy->set("omp_num_threads", node_emit_json (OMP_CLAUSE_NUM_THREADS_EXPR(clause)));
+      break;
+
+    case OMP_CLAUSE_NOWAIT:
+      dummy->set_bool("omp_nowait", true);
+      break;
+
+    case OMP_CLAUSE_ORDERED:
+      dummy->set("omp_ordered", node_emit_json (OMP_CLAUSE_ORDERED_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_DEFAULT:
+      strcpy(buffer, "omp_default");
+      switch (OMP_CLAUSE_DEFAULT_KIND (clause))
+        {
+	case OMP_CLAUSE_DEFAULT_UNSPECIFIED:
+	  break;
+	case OMP_CLAUSE_DEFAULT_SHARED:
+	  strcat (buffer, "_shared");
+	  break;
+	case OMP_CLAUSE_DEFAULT_NONE:
+	  strcat (buffer, "_none");
+	  break;
+	case OMP_CLAUSE_DEFAULT_PRIVATE:
+	  strcat (buffer, "_private");
+	  break;
+	case OMP_CLAUSE_DEFAULT_FIRSTPRIVATE:
+	  strcat (buffer, "_firstprivate");
+	  break;
+	case OMP_CLAUSE_DEFAULT_PRESENT:
+	  strcat (buffer, "_present");
+	  break;
+	default:
+	  gcc_unreachable ();
+        }
+      dummy->set_bool(buffer, true);
+      break;
+
+    case OMP_CLAUSE_SCHEDULE:
+      strcpy (buffer, "schedule");
+      if (OMP_CLAUSE_SCHEDULE_KIND (clause)
+	  & (OMP_CLAUSE_SCHEDULE_MONOTONIC
+	     | OMP_CLAUSE_SCHEDULE_NONMONOTONIC))
+	{
+	  if (OMP_CLAUSE_SCHEDULE_KIND (clause)
+	      & OMP_CLAUSE_SCHEDULE_MONOTONIC)
+	    strcat (buffer, "_monotonic");
+	  else
+	    strcat (buffer, "_nonmonotonic");
+	}
+      if (OMP_CLAUSE_SCHEDULE_SIMD (clause))
+	strcat (buffer, "_simd");
+
+      switch (OMP_CLAUSE_SCHEDULE_KIND (clause) & OMP_CLAUSE_SCHEDULE_MASK)
+	{
+	case OMP_CLAUSE_SCHEDULE_STATIC:
+	  strcat (buffer, "_static");
+	  break;
+	case OMP_CLAUSE_SCHEDULE_DYNAMIC:
+	  strcat (buffer, "_dynamic");
+	  break;
+	case OMP_CLAUSE_SCHEDULE_GUIDED:
+	  strcat (buffer, "_guided");
+	  break;
+	case OMP_CLAUSE_SCHEDULE_RUNTIME:
+	  strcat (buffer, "_runtime");
+	  break;
+	case OMP_CLAUSE_SCHEDULE_AUTO:
+	  strcat (buffer, "_auto");
+	  break;
+	default:
+	  gcc_unreachable ();
+	}
+      dummy->set(buffer, node_emit_json(OMP_CLAUSE_SCHEDULE_CHUNK_EXPR(clause)));
+      break;
+
+    case OMP_CLAUSE_UNTIED:
+      dummy->set_bool("omp_clause_untied", true);
+      break;
+
+    case OMP_CLAUSE_COLLAPSE:
+      dummy->set("omp_collapse_collapse", node_emit_json (OMP_CLAUSE_COLLAPSE_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_FINAL:
+      dummy->set("omp_final", node_emit_json (OMP_CLAUSE_FINAL_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_MERGEABLE:
+      dummy->set_bool("omp_clause_mergeable", true);
+      break;
+
+    case OMP_CLAUSE_LINEAR:
+      strcpy (buffer, "omp_linear");
+      if (OMP_CLAUSE_LINEAR_OLD_LINEAR_MODIFIER (clause))
+	switch (OMP_CLAUSE_LINEAR_KIND (clause))
+	  {
+	  case OMP_CLAUSE_LINEAR_DEFAULT:
+	    break;
+	  case OMP_CLAUSE_LINEAR_REF:
+	    strcat (buffer, "_ref");
+	    break;
+	  case OMP_CLAUSE_LINEAR_VAL:
+	    strcat (buffer, "_val");
+	    break;
+	  case OMP_CLAUSE_LINEAR_UVAL:
+	    strcat (buffer, "_uval");
+	    break;
+	  default:
+	    gcc_unreachable ();
+	  }
+      dummy->set(buffer, node_emit_json (OMP_CLAUSE_DECL (clause)));
+      if (!OMP_CLAUSE_LINEAR_OLD_LINEAR_MODIFIER (clause)
+	  && OMP_CLAUSE_LINEAR_KIND (clause) != OMP_CLAUSE_LINEAR_DEFAULT)
+	switch (OMP_CLAUSE_LINEAR_KIND (clause))
+	  {
+	    case OMP_CLAUSE_LINEAR_REF:
+	      strcpy (buffer, "_ref,step");
+	      break;
+	    case OMP_CLAUSE_LINEAR_VAL:
+	      strcpy (buffer, "_val,step");
+	      break;
+	    case OMP_CLAUSE_LINEAR_UVAL:
+	      strcpy (buffer, "_uval,step");
+	      break;
+	    default:
+	      gcc_unreachable ();
+	  }
+      dummy->set(buffer, node_emit_json (OMP_CLAUSE_LINEAR_STEP (clause)));
+      break;
+
+    default:
+      gcc_unreachable();
     }
 }
 /* Here we emit data in the generic tree without traversing the tree. base on tree-pretty-print.cc */
@@ -584,7 +749,7 @@ node_emit_json(tree t)
     	          				   ? "unsigned long long"
     	          				   : "signed long long"));
     	        else if (TYPE_PRECISION (t) == CHAR_TYPE_SIZE
-    	                 && pow2p_hwi (TYPE_PRECISION (t)))
+ && pow2p_hwi (TYPE_PRECISION (t)))
     	            dummy->set_integer(TYPE_UNSIGNED(t) ? "uint": "int",
 	                               TYPE_PRECISION(t));
 	        else
