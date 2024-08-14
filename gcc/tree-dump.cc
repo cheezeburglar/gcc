@@ -32,6 +32,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "tm.h"
 #include "wide-int-print.h" //for print_hex
 #include "real.h" //for real printing
+#include "gomp-constants.h"
 #include "internal-fn.h"
 
 static unsigned int queue (dump_info_p, const_tree, int);
@@ -610,6 +611,635 @@ omp_clause_add_json(tree clause, json::object* dummy)
       dummy->set(buffer, node_emit_json (OMP_CLAUSE_LINEAR_STEP (clause)));
       break;
 
+    case OMP_CLAUSE_ALIGNED:
+      dummy->set("omp_aligned", node_emit_json (OMP_CLAUSE_DECL(clause)));
+      if (OMP_CLAUSE_ALIGNED_ALIGNMENT (clause))
+	{
+          dummy->set("omp_aligned_alignment",
+                     node_emit_json (OMP_CLAUSE_ALIGNED_ALIGNMENT (clause)));
+	}
+      break;
+
+    case OMP_CLAUSE_ALLOCATE:
+      if (OMP_CLAUSE_ALLOCATE_ALLOCATOR (clause))
+          dummy->set("omp_allocator",
+                     node_emit_json (OMP_CLAUSE_ALLOCATE_ALLOCATOR (clause)));
+      if (OMP_CLAUSE_ALLOCATE_ALIGN (clause))
+          dummy->set("omp_allocate_align",
+                     node_emit_json (OMP_CLAUSE_ALLOCATE_ALIGN (clause)));
+      dummy->set("omp_allocate",
+                 node_emit_json (OMP_CLAUSE_DECL (clause)));
+      break;
+
+    case OMP_CLAUSE_AFFINITY:
+      {
+	tree t = OMP_CLAUSE_DECL (clause);
+	if (TREE_CODE (t) == TREE_LIST
+	    && TREE_PURPOSE (t)
+	    && TREE_CODE (TREE_PURPOSE (t)) == TREE_VEC)
+	  {
+            omp_iterator_add_json(TREE_PURPOSE (t), dummy);
+	    t = TREE_VALUE (t);
+	  }
+        dummy->set("omp_affinity", node_emit_json(t));
+      }
+      break;
+
+    case OMP_CLAUSE_DEPEND:
+      strcpy (buffer, "omp_depend");
+      switch (OMP_CLAUSE_DEPEND_KIND (clause))
+	{
+	case OMP_CLAUSE_DEPEND_DEPOBJ:
+	  strcat (buffer, "_depobj");
+	  break;
+	case OMP_CLAUSE_DEPEND_IN:
+	  strcat (buffer, "_in");
+	  break;
+	case OMP_CLAUSE_DEPEND_OUT:
+	  strcat (buffer, "_out");
+	  break;
+	case OMP_CLAUSE_DEPEND_INOUT:
+	  strcat (buffer, "_inout");
+	  break;
+	case OMP_CLAUSE_DEPEND_MUTEXINOUTSET:
+	  strcat (buffer, "_mutexinoutset");
+	  break;
+	case OMP_CLAUSE_DEPEND_INOUTSET:
+	  strcat (buffer, "_inoutset");
+	  break;
+	case OMP_CLAUSE_DEPEND_LAST:
+	  strcat (buffer, "__internal__");
+	  break;
+	default:
+	  gcc_unreachable ();
+	}
+      {
+	tree t = OMP_CLAUSE_DECL (clause);
+	if (TREE_CODE (t) == TREE_LIST
+	    && TREE_PURPOSE (t)
+	    && TREE_CODE (TREE_PURPOSE (t)) == TREE_VEC)
+	  {
+	    omp_iterator_add_json(TREE_PURPOSE (t), dummy); //consider annotating or adding string arg
+	    t = TREE_VALUE (t);
+	  }
+	if (t == null_pointer_node)
+	  dummy->set_bool("omp_all_memory", true);
+	else
+          dummy->set(buffer, node_emit_json(t));
+      }
+      break;
+
+    case OMP_CLAUSE_DOACROSS:
+      strcpy (buffer, OMP_CLAUSE_DOACROSS_DEPEND (clause)
+		     ? "omp_depend" : "omp_doacross");
+      switch (OMP_CLAUSE_DOACROSS_KIND (clause))
+	{
+	case OMP_CLAUSE_DOACROSS_SOURCE:
+	  if (OMP_CLAUSE_DOACROSS_DEPEND (clause))
+	    strcat (buffer, "_source");
+	  else
+	    strcat (buffer, "_source:");
+          dummy->set_bool(buffer, true);
+	  break;
+        
+	case OMP_CLAUSE_DOACROSS_SINK:
+          json::array* iter_holder;
+          iter_holder = new json::array ();
+	  strcat (buffer, "_sink:");
+	  if (OMP_CLAUSE_DECL (clause) == NULL_TREE)
+	    {
+	      strcat (buffer, "_omp_cur_iteration-1");
+              dummy->set_bool(buffer, true);
+	      break;
+	    }
+	  for (tree t = OMP_CLAUSE_DECL (clause); t; t = TREE_CHAIN (t)) //TODO
+	    if (TREE_CODE (t) == TREE_LIST)
+	      {
+		iter_holder->append(node_emit_json(TREE_VALUE (t)));
+		if (TREE_PURPOSE (t) != integer_zero_node)
+		  {
+		    if (OMP_CLAUSE_DOACROSS_SINK_NEGATIVE (t))
+                    {}
+		    else
+                    {}
+		  }
+		if (TREE_CHAIN (t))
+                {}
+	      }
+	    else
+	      gcc_unreachable ();
+	  break;
+	default:
+	  gcc_unreachable ();
+	}
+      break;
+    case OMP_CLAUSE_MAP:
+      strcat (buffer, "omp_map");
+      if (OMP_CLAUSE_MAP_READONLY (clause))
+	strcat (buffer, "_readonly,");
+      switch (OMP_CLAUSE_MAP_KIND (clause))
+	{
+	case GOMP_MAP_ALLOC:
+	case GOMP_MAP_POINTER:
+	case GOMP_MAP_POINTER_TO_ZERO_LENGTH_ARRAY_SECTION:
+	  strcat (buffer, "_alloc");
+	  break;
+	case GOMP_MAP_IF_PRESENT:
+	  strcat (buffer, "_no_alloc");
+	  break;
+	case GOMP_MAP_TO:
+	case GOMP_MAP_TO_PSET:
+	  strcat (buffer, "_to");
+	  break;
+	case GOMP_MAP_FROM:
+	  strcat (buffer, "_from");
+	  break;
+	case GOMP_MAP_TOFROM:
+	  strcat (buffer, "_tofrom");
+	  break;
+	case GOMP_MAP_FORCE_ALLOC:
+	  strcat (buffer, "_force_alloc");
+	  break;
+	case GOMP_MAP_FORCE_TO:
+	  strcat (buffer, "_force_to");
+	  break;
+	case GOMP_MAP_FORCE_FROM:
+	  strcat (buffer, "_force_from");
+	  break;
+	case GOMP_MAP_FORCE_TOFROM:
+	  strcat (buffer, "_force_tofrom");
+	  break;
+	case GOMP_MAP_FORCE_PRESENT:
+	  strcat (buffer, "_force_present");
+	  break;
+	case GOMP_MAP_DELETE:
+	  strcat (buffer, "_delete");
+	  break;
+	case GOMP_MAP_FORCE_DEVICEPTR:
+	  strcat (buffer, "_force_deviceptr");
+	  break;
+	case GOMP_MAP_ALWAYS_TO:
+	  strcat (buffer, "_always,to");
+	  break;
+	case GOMP_MAP_ALWAYS_FROM:
+	  strcat (buffer, "_always,from");
+	  break;
+	case GOMP_MAP_ALWAYS_TOFROM:
+	  strcat (buffer, "_always,tofrom");
+	  break;
+	case GOMP_MAP_RELEASE:
+	  strcat (buffer, "_release");
+	  break;
+	case GOMP_MAP_FIRSTPRIVATE_POINTER:
+	  strcat (buffer, "_firstprivate");
+	  break;
+	case GOMP_MAP_FIRSTPRIVATE_REFERENCE:
+	  strcat (buffer, "_firstprivate ref");
+	  break;
+	case GOMP_MAP_STRUCT:
+	  strcat (buffer, "_struct");
+	  break;
+	case GOMP_MAP_STRUCT_UNORD:
+	  strcat (buffer, "_struct_unord");
+	  break;
+	case GOMP_MAP_ALWAYS_POINTER:
+	  strcat (buffer, "_always_pointer");
+	  break;
+	case GOMP_MAP_DEVICE_RESIDENT:
+	  strcat (buffer, "_device_resident");
+	  break;
+	case GOMP_MAP_LINK:
+	  strcat (buffer, "_link");
+	  break;
+	case GOMP_MAP_ATTACH:
+	  strcat (buffer, "_attach");
+	  break;
+	case GOMP_MAP_DETACH:
+	  strcat (buffer, "_detach");
+	  break;
+	case GOMP_MAP_FORCE_DETACH:
+	  strcat (buffer, "_force_detach");
+	  break;
+	case GOMP_MAP_ATTACH_DETACH:
+	  strcat (buffer, "_attach_detach");
+	  break;
+	case GOMP_MAP_ATTACH_ZERO_LENGTH_ARRAY_SECTION:
+	  strcat (buffer, "_attach_zero_length_array_section");
+	  break;
+	case GOMP_MAP_PRESENT_ALLOC:
+	  strcat (buffer, "_present,alloc");
+	  break;
+	case GOMP_MAP_PRESENT_TO:
+	  strcat (buffer, "_present,to");
+	  break;
+	case GOMP_MAP_PRESENT_FROM:
+	  strcat (buffer, "_present,from");
+	  break;
+	case GOMP_MAP_PRESENT_TOFROM:
+	  strcat (buffer, "_present,tofrom");
+	  break;
+	case GOMP_MAP_ALWAYS_PRESENT_TO:
+	  strcat (buffer, "_always,present,to");
+	  break;
+	case GOMP_MAP_ALWAYS_PRESENT_FROM:
+	  strcat (buffer, "_always,present,from");
+	  break;
+	case GOMP_MAP_ALWAYS_PRESENT_TOFROM:
+	  strcat (buffer, "_always,present,tofrom");
+	  break;
+	default:
+	  gcc_unreachable ();
+	}
+      dummy->set (buffer, node_emit_json (OMP_CLAUSE_DECL (clause)));
+     print_clause_size:
+      if (OMP_CLAUSE_SIZE (clause))
+	{
+	  switch (OMP_CLAUSE_CODE (clause) == OMP_CLAUSE_MAP
+		  ? OMP_CLAUSE_MAP_KIND (clause) : GOMP_MAP_TO)
+	    {
+	    case GOMP_MAP_POINTER:
+	    case GOMP_MAP_FIRSTPRIVATE_POINTER:
+	    case GOMP_MAP_FIRSTPRIVATE_REFERENCE:
+	    case GOMP_MAP_ALWAYS_POINTER:
+	      strcpy (buffer, "pointer assign, bias");
+	      break;
+	    case GOMP_MAP_POINTER_TO_ZERO_LENGTH_ARRAY_SECTION:
+	      strcpy (buffer, "pointer assign, zero-length array section, bias");
+	      break;
+	    case GOMP_MAP_TO_PSET:
+	      strcpy (buffer, "pointer set, len");
+	      break;
+	    case GOMP_MAP_ATTACH:
+	    case GOMP_MAP_DETACH:
+	    case GOMP_MAP_FORCE_DETACH:
+	    case GOMP_MAP_ATTACH_DETACH:
+	    case GOMP_MAP_ATTACH_ZERO_LENGTH_ARRAY_SECTION:
+	      strcpy (buffer, "bias");
+	      break;
+	    case GOMP_MAP_RELEASE:
+	    case GOMP_MAP_DELETE:
+	      if (OMP_CLAUSE_CODE (clause) == OMP_CLAUSE_MAP
+		  && OMP_CLAUSE_RELEASE_DESCRIPTOR (clause))
+		{
+		  strcpy (buffer, "pointer set, len");
+		  break;
+		}
+	      /* Fallthrough.  */
+	    default:
+	      strcpy (buffer, "len");
+	      break;
+	    }
+          dummy->set (buffer, node_emit_json (OMP_CLAUSE_SIZE (clause)));
+	}
+      if (OMP_CLAUSE_CODE (clause) == OMP_CLAUSE_MAP
+	  && OMP_CLAUSE_MAP_RUNTIME_IMPLICIT_P (clause))
+        dummy->set_bool("implicit", true);
+      break;
+
+    case OMP_CLAUSE_FROM:
+      strcat (buffer, "omp_from");
+      if (OMP_CLAUSE_MOTION_PRESENT (clause))
+	strcat (buffer, "_present");
+      dummy->set(buffer, node_emit_json (OMP_CLAUSE_DECL (clause)));
+      goto print_clause_size;
+
+    case OMP_CLAUSE_TO:
+      strcpy (buffer, "omp_to");
+      if (OMP_CLAUSE_MOTION_PRESENT (clause))
+	strcat (buffer, "_present");
+      dummy->set(buffer, node_emit_json (OMP_CLAUSE_DECL (clause)));
+      goto print_clause_size;
+
+    case OMP_CLAUSE__CACHE_:
+      strcat (buffer, "omp__cache__");
+      if (OMP_CLAUSE__CACHE__READONLY (clause))
+	strcat (buffer, "_readonly");
+      dummy->set(buffer, node_emit_json (OMP_CLAUSE_DECL (clause)));
+      goto print_clause_size;
+
+    case OMP_CLAUSE_NUM_TEAMS:
+      strcat (buffer, "omp_num_teams");
+      if (OMP_CLAUSE_NUM_TEAMS_LOWER_EXPR (clause))
+	{
+          dummy->set("omp_num_teams_lower",
+                     node_emit_json (OMP_CLAUSE_NUM_TEAMS_LOWER_EXPR (clause)));
+          strcat (buffer, "_upper");
+	}
+      else
+        dummy->set(buffer,
+                   node_emit_json (OMP_CLAUSE_NUM_TEAMS_UPPER_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_THREAD_LIMIT:
+      dummy->set("omp_thread_limit",
+                 node_emit_json (OMP_CLAUSE_THREAD_LIMIT_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_DEVICE:
+      strcpy (buffer, "omp_device(");
+      if (OMP_CLAUSE_DEVICE_ANCESTOR (clause))
+	strcat (buffer, "_ancestor:");
+      dummy->set(buffer,
+                 node_emit_json (OMP_CLAUSE_DEVICE_ID (clause)));
+      break;
+
+    case OMP_CLAUSE_DIST_SCHEDULE:
+      strcat (buffer, "omp_dist_schedule(static)");
+      if (OMP_CLAUSE_DIST_SCHEDULE_CHUNK_EXPR (clause))
+	{
+          dummy->set(buffer,
+                     node_emit_json (OMP_CLAUSE_DIST_SCHEDULE_CHUNK_EXPR (clause)));
+	}
+      else
+        dummy->set_bool(buffer, true);
+      break;
+
+    case OMP_CLAUSE_PROC_BIND:
+      strcpy (buffer, "omp_proc_bind(");
+      switch (OMP_CLAUSE_PROC_BIND_KIND (clause))
+	{
+	case OMP_CLAUSE_PROC_BIND_MASTER:
+	  /* Same enum value: case OMP_CLAUSE_PROC_BIND_PRIMARY: */
+	  /* TODO: Change to 'primary' for OpenMP 5.1.  */
+	  strcat (buffer, "_master");
+	  break;
+	case OMP_CLAUSE_PROC_BIND_CLOSE:
+	  strcat (buffer, "_close");
+	  break;
+	case OMP_CLAUSE_PROC_BIND_SPREAD:
+	  strcat (buffer, "_spread");
+	  break;
+	default:
+	  gcc_unreachable ();
+	}
+      dummy->set_bool(buffer, true);
+      break;
+
+    case OMP_CLAUSE_DEVICE_TYPE:
+    strcpy (buffer, "omp_device_type");
+      switch (OMP_CLAUSE_DEVICE_TYPE_KIND (clause))
+	{
+	case OMP_CLAUSE_DEVICE_TYPE_HOST:
+	  strcat (buffer, "_host");
+	  break;
+	case OMP_CLAUSE_DEVICE_TYPE_NOHOST:
+	  strcat (buffer, "_nohost");
+	  break;
+	case OMP_CLAUSE_DEVICE_TYPE_ANY:
+	  strcat (buffer, "_any");
+	  break;
+	default:
+	  gcc_unreachable ();
+	}
+      dummy->set_bool(buffer, true);
+      break;
+
+    case OMP_CLAUSE_SAFELEN:
+      dummy->set("omp_safelen",
+                 node_emit_json (OMP_CLAUSE_SAFELEN_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_SIMDLEN:
+      dummy->set("omp_simdlen",
+                 node_emit_json (OMP_CLAUSE_SIMDLEN_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_PRIORITY:
+      dummy->set("omp_priority",
+                 node_emit_json (OMP_CLAUSE_PRIORITY_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_GRAINSIZE:
+      strcpy (buffer, "omp_grainsize");
+      if (OMP_CLAUSE_GRAINSIZE_STRICT (clause))
+        strcat (buffer, "_strict");
+      dummy->set(buffer,
+                 node_emit_json (OMP_CLAUSE_GRAINSIZE_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_NUM_TASKS:
+      strcpy (buffer, "omp_num_tasks");
+      if (OMP_CLAUSE_NUM_TASKS_STRICT (clause))
+	strcat (buffer, "_strict");
+      dummy->set(buffer,
+                 node_emit_json (OMP_CLAUSE_NUM_TASKS_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_HINT:
+      dummy->set("omp_hint",
+                 node_emit_json (OMP_CLAUSE_HINT_EXPR(clause)));
+      break;
+
+    case OMP_CLAUSE_FILTER:
+      dummy->set("omp_filter",
+                 node_emit_json (OMP_CLAUSE_FILTER_EXPR(clause)));
+      break;
+
+    case OMP_CLAUSE_DEFAULTMAP:
+      strcat (buffer, "omp_defaultmap");
+      switch (OMP_CLAUSE_DEFAULTMAP_BEHAVIOR (clause))
+	{
+	case OMP_CLAUSE_DEFAULTMAP_ALLOC:
+	  strcat (buffer, "_alloc");
+	  break;
+	case OMP_CLAUSE_DEFAULTMAP_TO:
+	  strcat (buffer, "_to");
+	  break;
+	case OMP_CLAUSE_DEFAULTMAP_FROM:
+	  strcat (buffer, "_from");
+	  break;
+	case OMP_CLAUSE_DEFAULTMAP_TOFROM:
+	  strcat (buffer, "_tofrom");
+	  break;
+	case OMP_CLAUSE_DEFAULTMAP_FIRSTPRIVATE:
+	  strcat (buffer, "_firstprivate");
+	  break;
+	case OMP_CLAUSE_DEFAULTMAP_NONE:
+	  strcat (buffer, "_none");
+	  break;
+	case OMP_CLAUSE_DEFAULTMAP_PRESENT:
+	  strcat (buffer, "_present");
+	  break;
+	case OMP_CLAUSE_DEFAULTMAP_DEFAULT:
+	  strcat (buffer, "_default");
+	  break;
+	default:
+	  gcc_unreachable ();
+	}
+      //Check later if we're happy with this
+      switch (OMP_CLAUSE_DEFAULTMAP_CATEGORY (clause))
+	{
+	case OMP_CLAUSE_DEFAULTMAP_CATEGORY_UNSPECIFIED:
+	  break;
+	case OMP_CLAUSE_DEFAULTMAP_CATEGORY_ALL:
+	  strcat (buffer, ":all");
+	  break;
+	case OMP_CLAUSE_DEFAULTMAP_CATEGORY_SCALAR:
+	  strcat (buffer, ":scalar");
+	  break;
+	case OMP_CLAUSE_DEFAULTMAP_CATEGORY_AGGREGATE:
+	  strcat (buffer, ":aggregate");
+	  break;
+	case OMP_CLAUSE_DEFAULTMAP_CATEGORY_ALLOCATABLE:
+	  strcat (buffer, ":allocatable");
+	  break;
+	case OMP_CLAUSE_DEFAULTMAP_CATEGORY_POINTER:
+	  strcat (buffer, ":pointer");
+	  break;
+	default:
+	  gcc_unreachable ();
+	}
+      dummy->set_bool(buffer, true);
+      break;
+
+    case OMP_CLAUSE_ORDER:
+      strcpy (buffer, "omp_order_");
+      if (OMP_CLAUSE_ORDER_UNCONSTRAINED (clause))
+	strcat (buffer, "unconstrained:");
+      else if (OMP_CLAUSE_ORDER_REPRODUCIBLE (clause))
+	strcat (buffer, "reproducible:");
+      strcat (buffer, "concurrent)");
+      dummy->set_bool(buffer, true);
+      break;
+
+    case OMP_CLAUSE_BIND:
+      strcpy (buffer, "omp_bind");
+      switch (OMP_CLAUSE_BIND_KIND (clause))
+	{
+	case OMP_CLAUSE_BIND_TEAMS:
+	  strcat (buffer, "_teams");
+	  break;
+	case OMP_CLAUSE_BIND_PARALLEL:
+	  strcat (buffer, "_parallel");
+	  break;
+	case OMP_CLAUSE_BIND_THREAD:
+	  strcat (buffer, "_thread");
+	  break;
+	default:
+	  gcc_unreachable ();
+	}
+      dummy->set_bool(buffer, true);
+      break;
+
+    case OMP_CLAUSE__SIMDUID_:
+      dummy->set("omp__simduid__", 
+                 node_emit_json(OMP_CLAUSE__SIMDUID__DECL (clause)));
+      break;
+
+    case OMP_CLAUSE__SIMT_:
+      dummy->set_bool("omp__simt__", true);
+      break;
+
+    //In our current implementation, we dump exprs etc even if not NULL.
+    case OMP_CLAUSE_GANG: 
+      dummy->set_bool ("omp_gang", true);
+      if (OMP_CLAUSE_GANG_EXPR (clause) != NULL_TREE)
+          dummy->set("num", node_emit_json (OMP_CLAUSE_GANG_EXPR (clause)));
+      if (OMP_CLAUSE_GANG_STATIC_EXPR (clause) != NULL_TREE)
+	{
+	  strcpy (buffer, "static");
+	  if (OMP_CLAUSE_GANG_STATIC_EXPR (clause)
+	      == integer_minus_one_node)
+	    strcat (buffer, "*"); 
+          dummy->set(buffer, node_emit_json (OMP_CLAUSE_GANG_STATIC_EXPR (clause)));
+	}
+      break;
+
+    case OMP_CLAUSE_ASYNC:
+      dummy->set("omp_async", 
+                 node_emit_json (OMP_CLAUSE_ASYNC_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_AUTO:
+    case OMP_CLAUSE_SEQ:
+      strcpy (buffer, omp_clause_code_name[OMP_CLAUSE_CODE (clause)]);
+      dummy->set_bool(buffer, true);
+      break;
+
+    case OMP_CLAUSE_WAIT:
+      dummy->set("omp_wait",
+                 node_emit_json (OMP_CLAUSE_WAIT_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_WORKER:
+      dummy->set("omp_worker",
+                 node_emit_json (OMP_CLAUSE_WORKER_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_VECTOR:
+      dummy->set("omp_vector",
+                 node_emit_json (OMP_CLAUSE_VECTOR_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_NUM_GANGS:
+      dummy->set("omp_num_gangs",
+                 node_emit_json (OMP_CLAUSE_NUM_GANGS_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_NUM_WORKERS:
+      dummy->set("omp_num_workers",
+                 node_emit_json (OMP_CLAUSE_NUM_WORKERS_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_VECTOR_LENGTH:
+      dummy->set("omp_vector_length",
+                 node_emit_json (OMP_CLAUSE_VECTOR_LENGTH_EXPR (clause)));
+      break;
+
+    case OMP_CLAUSE_INBRANCH:
+      dummy->set_bool ("inbranch", true);
+      break;
+    case OMP_CLAUSE_NOTINBRANCH:
+      dummy->set_bool ("notinbranch", true);
+      break;
+    case OMP_CLAUSE_FOR:
+      dummy->set_bool ("for", true);
+      break;
+    case OMP_CLAUSE_PARALLEL:
+      dummy->set_bool ("parallel", true);
+      break;
+    case OMP_CLAUSE_SECTIONS:
+      dummy->set_bool ("sections", true);
+      break;
+    case OMP_CLAUSE_TASKGROUP:
+      dummy->set_bool ("taskgroup", true);
+      break;
+    case OMP_CLAUSE_NOGROUP:
+      dummy->set_bool ("nogroup", true);
+      break;
+    case OMP_CLAUSE_THREADS:
+      dummy->set_bool ("threads", true);
+      break;
+    case OMP_CLAUSE_SIMD:
+      dummy->set_bool ("simd", true);
+      break;
+    case OMP_CLAUSE_INDEPENDENT:
+      dummy->set_bool ("independent", true);
+      break;
+    case OMP_CLAUSE_TILE:
+      dummy->set ("omp_tile", node_emit_json (OMP_CLAUSE_TILE_LIST (clause)));
+      break;
+    case OMP_CLAUSE_PARTIAL:
+      dummy->set ("omp_partial", node_emit_json (OMP_CLAUSE_PARTIAL_EXPR (clause)));
+      break;
+    case OMP_CLAUSE_FULL:
+      dummy->set_bool("full", true);
+      break;
+    case OMP_CLAUSE_SIZES:
+      dummy->set("omp_sizes", node_emit_json (OMP_CLAUSE_SIZES_LIST (clause)));
+      break;
+    case OMP_CLAUSE_IF_PRESENT:
+      dummy->set_bool("if_present", true);
+      break;
+    case OMP_CLAUSE_FINALIZE:
+      dummy->set_bool("finalize", true);
+      break;
+    case OMP_CLAUSE_NOHOST:
+      dummy->set_bool("nohost", true);
+      break;
+    case OMP_CLAUSE_DETACH:
+      dummy->set("omp_detach", node_emit_json (OMP_CLAUSE_DECL (clause)));
+      break;
     default:
       gcc_unreachable();
     }
