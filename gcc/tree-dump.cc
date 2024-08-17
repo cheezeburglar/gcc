@@ -365,8 +365,7 @@ omp_iterator_add_json(tree iter, json::object* dummy)
   dummy->set("omp_iter", iter_holder);
 }
 
-/* Currently we pay a heap allocation everytime we call this. Double check if that's okay 
- * C-style string handling alright? seems consistent with the rest of the codebase */
+/* C-style string handling alright? seems consistent with the rest of the codebase */
 
 void
 omp_clause_add_json(tree clause, json::object* dummy)
@@ -1244,6 +1243,67 @@ omp_clause_add_json(tree clause, json::object* dummy)
       gcc_unreachable();
     }
 }
+
+void
+omp_atomic_memory_order_add_json (json::object* dummy, enum omp_memory_order mo)
+{
+  switch (mo & OMP_MEMORY_ORDER_MASK)
+    {
+    case OMP_MEMORY_ORDER_RELAXED:
+      dummy->set_string ("omp_memory_order", "relaxed");
+      break;
+    case OMP_MEMORY_ORDER_SEQ_CST:
+      dummy->set_string ("omp_memory_order", "seq_cst");
+      break;
+    case OMP_MEMORY_ORDER_ACQ_REL:
+      dummy->set_string ("omp_memory_order", "acq_rel");
+      break;
+    case OMP_MEMORY_ORDER_ACQUIRE:
+      dummy->set_string ("omp_memory_order", "acquire");
+      break;
+    case OMP_MEMORY_ORDER_RELEASE:
+      dummy->set_string ("omp_memory_order", "release");
+      break;
+    case OMP_MEMORY_ORDER_UNSPECIFIED:
+      break;
+    default:
+      gcc_unreachable ();
+    }
+  switch (mo & OMP_FAIL_MEMORY_ORDER_MASK)
+    {
+    case OMP_FAIL_MEMORY_ORDER_RELAXED:
+      dummy->set_string ("omp_memory_order", "fail(relaxed)");
+      break;
+    case OMP_FAIL_MEMORY_ORDER_SEQ_CST:
+      dummy->set_string ("omp_memory_order", "fail(seq_cst)");
+      break;
+    case OMP_FAIL_MEMORY_ORDER_ACQUIRE:
+      dummy->set_string ("omp_memory_order", "fail(acquire)");
+      break;
+    case OMP_FAIL_MEMORY_ORDER_UNSPECIFIED:
+      break;
+    default:
+      gcc_unreachable ();
+    }
+}
+
+json::object*
+omp_atomic_memory_order_emit_json(omp_memory_order mo)
+{
+  json::object* _x;
+  _x = new json::object ();
+  omp_atomic_memory_order_add_json(_x, mo);
+  return _x;
+}
+
+json::object*
+omp_clause_emit_json(tree t)
+{
+  json::object* _x;
+  _x = new json::object ();
+  omp_clause_add_json(t, _x);
+  return _x;
+}
 /* Here we emit data in the generic tree without traversing the tree. base on tree-pretty-print.cc */
 
 json::object* 
@@ -1253,7 +1313,10 @@ node_emit_json(tree t)
   json::object* dummy;
   json::array* holder;
   enum tree_code code;
-//  std::string address_buffer;
+  char address_buffer[SIZEOF_VOID_P];
+
+  void* p = &t;
+  sprintf(address_buffer, HOST_PTR_PRINTF, p);
 
   dummy = new json::object ();
   holder = new json::array ();
@@ -1264,8 +1327,7 @@ node_emit_json(tree t)
   if (TREE_CODE(t) == ERROR_MARK)
     dummy->set_bool("error_mark", true);
 
-// What do we want to dump for every node?
-//  TODO dump node address
+  dummy->set_string("addr", address_buffer);
 
   code = TREE_CODE (t);
   switch (code)
@@ -2547,89 +2609,313 @@ dummy->set_bool("ssa_default_def", true);
       break;
     /*OACC and OMP */
     case OACC_PARALLEL:
+      dummy->set_bool("oacc_parallel", true);
+      goto dump_omp_clauses_body;
 
     case OACC_KERNELS:
+      dummy->set_bool("oacc_kernels", true);
+      goto dump_omp_clauses_body;
 
     case OACC_SERIAL:
+      dummy->set_bool("oacc_serial", true);
+      goto dump_omp_clauses_body;
 
     case OACC_DATA:
+      dummy->set_bool( "oacc_data", true);
+      goto dump_omp_clauses_body;
 
     case OACC_HOST_DATA:
+      dummy->set_bool("oacc_host_data", true);
+      dummy->set("oacc_host_data_clauses", 
+                 omp_clause_emit_json (OACC_HOST_DATA_CLAUSES(t)));
+      dummy->set("oacc_host_data_body", 
+                 omp_clause_emit_json (OACC_HOST_DATA_BODY(t)));
+      break;
 
     case OACC_DECLARE:
+      dummy->set_bool("oacc_declare", true);
+      dummy->set("oacc_declare_clauses", 
+                 omp_clause_emit_json (OACC_DECLARE_CLAUSES(t)));
+      break;
 
     case OACC_UPDATE:
+      dummy->set_bool("oacc_update", true);
+      dummy->set("oacc_update_clauses",
+                 omp_clause_emit_json (OACC_UPDATE_CLAUSES(t)));
+      break;
 
     case OACC_ENTER_DATA:
-
+      dummy->set_bool("oacc_enter_data", true);
+      dummy->set("oacc_enter_data_clauses",
+                 omp_clause_emit_json (OACC_ENTER_DATA_CLAUSES(t)));
+      break;
+      
     case OACC_EXIT_DATA:
+      dummy->set_bool("oacc_exit_data", true);
+      dummy->set("oacc_exit_data_clauses",
+                 omp_clause_emit_json (OACC_EXIT_DATA_CLAUSES(t)));
+      break;
 
     case OACC_CACHE:
+      dummy->set_bool("oacc_cache", true);
+      dummy->set("oacc_cache_clauses",
+                 omp_clause_emit_json (OACC_CACHE_CLAUSES(t)));
+      break;
 
     case OMP_PARALLEL:
+      dummy->set_bool("omp_parallel", true);
+      dummy->set("omp_parallel_body",
+                 node_emit_json (OMP_PARALLEL_BODY(t)));
+      dummy->set("omp_parallel_clauses",
+                 omp_clause_emit_json (OMP_PARALLEL_CLAUSES(t)));
+      break;
 
     case OMP_TASK:
+      {
+      if (OMP_TASK_BODY (t))
+        {
+          dummy->set_bool("omp_task", true);
+          dummy->set("omp_task_body",
+                     node_emit_json(OMP_TASK_BODY (t)));
+          dummy->set("omp_task_clauses",
+                     omp_clause_emit_json (OMP_TASK_CLAUSES(t)));
+        } else {
+          dummy->set_bool("omp_taskwait", true);
+          dummy->set("omp_taskwait_clauses",
+                     omp_clause_emit_json (OMP_TASK_CLAUSES(t)));
+        }
+        break;
+      }
+
+    dump_omp_clauses_body:
+      dummy->set("omp_clauses", omp_clause_emit_json (OMP_CLAUSES (t)));
+      goto dump_omp_body;
+
+    dump_omp_body:
+      dummy->set("omp_body", node_emit_json (OMP_BODY(t)));
+      dummy->set_bool("is_expr", false);
+      break;
 
     case OMP_FOR:
-
+      dummy->set_bool("omp_for", true);
+      goto dump_omp_loop;
+      
     case OMP_SIMD:
+      dummy->set_bool("omp_simd", true);
+      goto dump_omp_loop;
 
     case OMP_DISTRIBUTE:
+      dummy->set_bool("omp_distribute", true);
+      goto dump_omp_loop;
 
     case OMP_TASKLOOP:
+      dummy->set_bool("omp_taskloop", true);
+      goto dump_omp_loop;
 
     case OMP_LOOP:
+      dummy->set_bool("omp_loop", true);
+      goto dump_omp_loop;
 
     case OMP_TILE:
+      dummy->set_bool("omp_tile", true);
+      goto dump_omp_loop;
 
     case OMP_UNROLL:
+      dummy->set_bool("omp_unroll", true);
+      goto dump_omp_loop;
 
     case OACC_LOOP:
+      dummy->set_bool("oacc_loop", true);
+      goto dump_omp_loop;
+      
+    dump_omp_loop:
+      dummy->set("omp_for_body",
+                 node_emit_json(OMP_FOR_BODY (t)));
+      dummy->set("omp_for_clauses",
+                 omp_clause_emit_json (OMP_FOR_CLAUSES(t)));
+      dummy->set("omp_for_init",
+                 node_emit_json(OMP_FOR_INIT (t)));
+      dummy->set("omp_for_incr",
+                 node_emit_json(OMP_FOR_INCR (t)));
+      dummy->set("omp_for_pre_body",
+                 node_emit_json(OMP_FOR_PRE_BODY (t)));
+      dummy->set("omp_for_orig_decls",
+                 node_emit_json(OMP_FOR_ORIG_DECLS (t)));
+      break;
 
     case OMP_TEAMS:
+      dummy->set_bool("omp_teams", true);
+      dummy->set("omp_teams_body",
+                 omp_clause_emit_json (OMP_TEAMS_BODY(t)));
+      dummy->set("omp_teams_clauses",
+                 omp_clause_emit_json (OMP_TEAMS_CLAUSES(t)));
+      break;
 
     case OMP_TARGET_DATA:
+      dummy->set_bool("omp_target_data", true);
+      dummy->set("omp_target_data_body",
+                 omp_clause_emit_json (OMP_TARGET_DATA_BODY(t)));
+      dummy->set("omp_target_data_clauses",
+                 omp_clause_emit_json (OMP_TARGET_DATA_CLAUSES(t)));
+      break;
 
     case OMP_TARGET_ENTER_DATA:
+      dummy->set_bool("omp_target_enter_data", true);
+      dummy->set("omp_target_enter_data_clauses",
+                 omp_clause_emit_json (OMP_TARGET_ENTER_DATA_CLAUSES(t)));
+      break;
 
     case OMP_TARGET_EXIT_DATA:
+      dummy->set_bool("omp_target_exit_data", true);
+      dummy->set("omp_target_exit_data_clauses",
+                 omp_clause_emit_json (OMP_TARGET_EXIT_DATA_CLAUSES(t)));
+      break;
 
     case OMP_TARGET:
+      dummy->set_bool("omp_target", true);
+      dummy->set("omp_target_body",
+                 omp_clause_emit_json (OMP_TARGET_BODY(t)));
+      dummy->set("omp_target_clauses",
+                 omp_clause_emit_json (OMP_TARGET_CLAUSES(t)));
+      break;
 
     case OMP_TARGET_UPDATE:
+      dummy->set_bool("omp_target_update", true);
+      dummy->set("omp_target_update_clauses",
+                 omp_clause_emit_json (OMP_TARGET_UPDATE_CLAUSES(t)));
+      break;
 
     case OMP_SECTIONS:
+      dummy->set_bool("omp_sections", true);
+      dummy->set("omp_sections_body",
+                 omp_clause_emit_json (OMP_SECTIONS_BODY(t)));
+      dummy->set("omp_sections_clauses",
+                 omp_clause_emit_json (OMP_SECTIONS_CLAUSES(t)));
+      break;
 
     case OMP_SECTION:
+      dummy->set_bool("omp_section", true);
+      dummy->set("omp_section_body",
+                 omp_clause_emit_json (OMP_SECTION_BODY(t)));
+      break;
 
     case OMP_STRUCTURED_BLOCK:
+      dummy->set_bool("omp_structured_block", true);
+      dummy->set("omp_structured_block_body",
+                 omp_clause_emit_json (OMP_STRUCTURED_BLOCK_BODY(t)));
+      break;
 
     case OMP_SCAN:
+      dummy->set_bool("omp_scan", true);
+      dummy->set("omp_scan_body",
+                 omp_clause_emit_json (OMP_SCAN_BODY(t)));
+      dummy->set("omp_scan_clauses",
+                 omp_clause_emit_json (OMP_SCAN_CLAUSES(t)));
+      break;
 
     case OMP_MASTER:
+      dummy->set_bool("omp_master", true);
+      dummy->set("omp_master_body",
+                 omp_clause_emit_json (OMP_MASTER_BODY(t)));
 
     case OMP_MASKED:
+      dummy->set_bool("omp_masked", true);
+      dummy->set("omp_masked_body",
+                 omp_clause_emit_json (OMP_MASKED_BODY(t)));
+      dummy->set("omp_masked_clauses",
+                 omp_clause_emit_json (OMP_MASKED_CLAUSES(t)));
+      break;
 
     case OMP_TASKGROUP:
+      dummy->set_bool("omp_taskgroup", true);
+      dummy->set("omp_taskgroup_body",
+                 omp_clause_emit_json (OMP_TASKGROUP_BODY(t)));
+      dummy->set("omp_taskgroup_clauses",
+                 omp_clause_emit_json (OMP_TASKGROUP_CLAUSES(t)));
+      break;
 
     case OMP_ORDERED:
+      dummy->set_bool("omp_ordered", true);
+      dummy->set("omp_ordered_body",
+                 omp_clause_emit_json (OMP_ORDERED_BODY(t)));
+      dummy->set("omp_ordered_clauses",
+                 omp_clause_emit_json (OMP_ORDERED_CLAUSES(t)));
+      break;
 
     case OMP_CRITICAL:
+      dummy->set_bool("omp_masked", true);
+      dummy->set("omp_masked_body",
+                 omp_clause_emit_json (OMP_CRITICAL_BODY(t)));
+      dummy->set("omp_masked_clauses",
+                 omp_clause_emit_json (OMP_CRITICAL_CLAUSES(t)));
+      dummy->set("omp_masked_name",
+                 node_emit_json (OMP_CRITICAL_NAME(t)));
+      break;
 
     case OMP_ATOMIC:
+      if (OMP_ATOMIC_WEAK (t))
+        dummy->set_bool("omp_atomic_weak", true);
+      else
+        dummy->set_bool("omp_atomic", true);
+      dummy->set("omp_atomic_memory_order",
+                 omp_atomic_memory_order_emit_json (OMP_ATOMIC_MEMORY_ORDER(t)));
+      dummy->set("op0",
+                 node_emit_json (TREE_OPERAND(t, 0)));
+      dummy->set("op1",
+                 node_emit_json (TREE_OPERAND(t, 1)));
+      break;
 
     case OMP_ATOMIC_READ:
+      dummy->set_bool("omp_atomic_read", true);
+      dummy->set("omp_atomic_memory_order",
+                 omp_atomic_memory_order_emit_json (OMP_ATOMIC_MEMORY_ORDER(t)));
+      dummy->set("op0",
+                 node_emit_json (TREE_OPERAND(t, 0)));
 
     case OMP_ATOMIC_CAPTURE_OLD:
     case OMP_ATOMIC_CAPTURE_NEW:
+      if (OMP_ATOMIC_WEAK (t))
+        dummy->set_bool("omp_atomic_capture_weak", true);
+      else
+        dummy->set_bool("omp_atomic_capture", true);
+      dummy->set("omp_atomic_memory_order",
+                 omp_atomic_memory_order_emit_json (OMP_ATOMIC_MEMORY_ORDER(t)));
+      dummy->set("op0",
+                 node_emit_json (TREE_OPERAND(t, 0)));
+      dummy->set("op1",
+                 node_emit_json (TREE_OPERAND(t, 1)));
+      break;
 
     case OMP_SINGLE:
+      dummy->set_bool("omp_single", true);
+      dummy->set("omp_single_body",
+                 omp_clause_emit_json (OMP_SINGLE_BODY(t)));
+      dummy->set("omp_single_clauses",
+                 omp_clause_emit_json (OMP_SINGLE_CLAUSES(t)));
+      break;
 
     case OMP_SCOPE:
+      dummy->set_bool("omp_scope", true);
+      dummy->set("omp_scope_body",
+                 omp_clause_emit_json (OMP_SCOPE_BODY(t)));
+      dummy->set("omp_scope_clauses",
+                 omp_clause_emit_json (OMP_SCOPE_CLAUSES(t)));
+      break;
 
     case OMP_CLAUSE:
+      dummy->set("omp_clause",
+                 omp_clause_emit_json(t));
+      break;
 
     case TRANSACTION_EXPR:
+      if (TRANSACTION_EXPR_OUTER (t))
+	dummy->set_bool ("omp_transaction_atomic [[outer]]", true);
+      else if (TRANSACTION_EXPR_RELAXED (t))
+	dummy->set_bool ("omp_transaction_relaxed", true);
+      else
+	dummy->set_bool ("omp_transaction_atomic", true);
+      dummy->set("omp_transaction_body", 
+                 node_emit_json (TRANSACTION_EXPR_BODY(t)));
 
     case BLOCK:
 
@@ -2642,12 +2928,6 @@ dummy->set_bool("ssa_default_def", true);
   }
   return dummy;
 }
-
-//json::array*
-//traverse_tree_emit_json (dump_info_p di, tree t,)
-//{
-//  json::object* dummy;
-//}
 
 /* Dump the next node in the queue.  */
 
@@ -3199,3 +3479,14 @@ dump_node (const_tree t, dump_flags_t flags, FILE *stream)
     }
   splay_tree_delete (di.nodes);
 }
+
+DEBUG_FUNCTION void
+debug_tree_json (tree t)
+{
+  json::object* _x = node_emit_json(t);
+  _x->dump(stderr, true);
+  fprintf(stderr, "\n");
+}
+
+
+
