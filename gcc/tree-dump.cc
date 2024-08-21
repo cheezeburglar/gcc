@@ -1313,23 +1313,69 @@ node_emit_json(tree t)
   json::object* dummy;
   json::array* holder;
   enum tree_code code;
-  char address_buffer[SIZEOF_VOID_P];
-
-  void* p = &t;
-  sprintf(address_buffer, HOST_PTR_PRINTF, p);
+  char address_buffer[sizeof(&t)] = {"\0"};
 
   dummy = new json::object ();
   holder = new json::array ();
 
-//  if (EXPR_HAS_LOCATION(t))
-
-
-  if (TREE_CODE(t) == ERROR_MARK)
-    dummy->set_bool("error_mark", true);
-
-  dummy->set_string("addr", address_buffer);
-
   code = TREE_CODE (t);
+  // Some things we emit for all trees - address in memory, corresponding location in file, type, and 
+  // tree code class, and tree code name?
+
+//  if (TREE_CODE(t) == ERROR_MARK)
+//    dummy->set_bool("error_mark", true);
+  
+  sprintf(address_buffer, HOST_PTR_PRINTF, t);
+  dummy->set_string("addr", address_buffer);
+  dummy->set_string("tree code", get_tree_code_name(TREE_CODE (t)));
+
+  //Flag handling
+
+  if (TREE_ADDRESSABLE (t))
+    dummy->set_bool ("addressable", true);
+  if (TREE_THIS_VOLATILE (t))
+    dummy->set_bool ("volatile", true);
+  if (TREE_ASM_WRITTEN (t))
+    dummy->set_bool ("asm_written", true);
+  if (TREE_USED (t))
+    dummy->set_bool ("used", true);
+  if (TREE_NOTHROW (t))
+    dummy->set_bool ("nothrow", true);
+  if (TREE_PUBLIC (t))
+    dummy->set_bool ("public", true);
+  if (TREE_PRIVATE (t))
+    dummy->set_bool ("private", true);
+  if (TREE_PROTECTED (t))
+    dummy->set_bool ("protected", true);
+  if (TREE_STATIC (t))
+    dummy->set_bool (code == CALL_EXPR ? " must-tail-call"
+                                       : " static", true);
+  if (TREE_DEPRECATED (t))
+    dummy->set_bool ("deprecated", true);
+  if (TREE_VISITED (t))
+    dummy->set_bool ("visited", true);
+
+  if (code != TREE_VEC && code != SSA_NAME)
+    {
+      if (TREE_UNAVAILABLE (t))
+	dummy->set_bool ("unavailable", true);
+      if (TREE_LANG_FLAG_0 (t))
+	dummy->set_bool ("tree_0", true);
+      if (TREE_LANG_FLAG_1 (t))
+        dummy->set_bool ("tree_1", true);
+      if (TREE_LANG_FLAG_2 (t))
+	dummy->set_bool ("tree_2", true);
+      if (TREE_LANG_FLAG_3 (t))
+	dummy->set_bool ("tree_3", true);
+      if (TREE_LANG_FLAG_4 (t))
+	dummy->set_bool ("tree_4", true);
+      if (TREE_LANG_FLAG_5 (t))
+	dummy->set_bool ("tree_5", true);
+      if (TREE_LANG_FLAG_6 (t))
+	dummy->set_bool ("tree_6", true);
+    }
+
+  // Accessors
   switch (code)
   {
     case IDENTIFIER_NODE:
@@ -1400,6 +1446,7 @@ node_emit_json(tree t)
 	    dummy->set_string("decl", "<unnamed type decl>");
 	  }
 	else if (tclass == tcc_type)
+        // Throw type attributes here?
 	  {
 	    if (TYPE_NAME (t))
 	    {  
@@ -1520,19 +1567,19 @@ node_emit_json(tree t)
  
             dummy->set("function decl", function_decl_emit_json(function_node));
 
-//            //Argument iteration
-//            if (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
-//	      it_args = new json::object();
-//
-//            //Fix this later.
-//            while (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
-//   	      {
-//	        it_args = node_emit_json(arg_node);
-//	        args_holder->append(it_args);
-//   	        arg_node = TREE_CHAIN (arg_node);
-//   	      }
-//   	    dummy->set("type_uid", _id);
-//   	    dummy->set("args", args_holder);
+            //Argument iteration
+            if (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
+	      it_args = new json::object();
+
+            //Fix this later.
+            while (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
+   	      {
+	        it_args = node_emit_json(arg_node);
+	        args_holder->append(it_args);
+   	        arg_node = TREE_CHAIN (arg_node);
+   	      }
+   	    dummy->set("type_uid", _id);
+   	    dummy->set("args", args_holder);
           }
         else
           {
@@ -1703,16 +1750,9 @@ node_emit_json(tree t)
           {
             wide_int val = wi::to_wide (t);
             unsigned int len;
-            char* buff;
-
-            buff = new char ();
-
-            //FIX LATER
-            if (wi::neg_p (val, TYPE_SIGN (TREE_TYPE (t))))
-              val = -val;
-            print_hex_buf_size (val, &len);
-            buff = XALLOCAVEC (char, len);
-            print_hex(val, buff);
+            char buff[WIDE_INT_PRINT_BUFFER_SIZE];
+        
+            print_dec(wi::to_wide (t), buff, TYPE_SIGN (TREE_TYPE (t)));
 
             dummy->set_string("val", buff);
         }
@@ -1921,8 +1961,15 @@ node_emit_json(tree t)
       break;
   
     //TODO
-//    case OMP_ARRAY_SECTION:
-//      break;
+    case OMP_ARRAY_SECTION:
+      dummy->set_bool("omp_array_section", true);
+      dummy->set("op0",
+                 node_emit_json (TREE_OPERAND (t, 0)));
+      dummy->set("op1",
+                 node_emit_json (TREE_OPERAND (t, 1)));
+      dummy->set("op2",
+                 node_emit_json (TREE_OPERAND (t, 2)));
+      break;
 
     case CONSTRUCTOR:
       {
@@ -2186,6 +2233,7 @@ node_emit_json(tree t)
     case ADDR_EXPR:
       //TDF_GIMPLE_VAL
       dummy->set("_Literal", node_emit_json( TREE_TYPE (t)));
+      /* FALLTHROUGH */
     case NEGATE_EXPR:
     case BIT_NOT_EXPR:
     case TRUTH_NOT_EXPR:
@@ -2260,14 +2308,10 @@ node_emit_json(tree t)
                  node_emit_json (TREE_OPERAND (t,0)));
       break;
 
-    case COMPLEX_EXPR: //check later
+    case COMPLEX_EXPR:
       holder->append (node_emit_json (TREE_OPERAND (t,0)));
       holder->append (node_emit_json (TREE_OPERAND (t,1)));
       dummy->set("complex_expr", holder);
-//      dummy->set("non_lvalue_expr",
-//                 node_emit_json (TREE_OPERAND (t,0)));
-//      dummy->set("non_lvalue_expr",
-//                 node_emit_json (TREE_OPERAND (t,0)));
       break;
 
     case CONJ_EXPR:
@@ -2520,7 +2564,7 @@ dummy->set_bool("ssa_default_def", true);
                  node_emit_json (TREE_OPERAND (t, 2)));
       break;
 
-    case VEC_SERIES_EXPR:
+//    case VEC_SERIES_EXPR:
     case VEC_WIDEN_MULT_HI_EXPR:
     case VEC_WIDEN_MULT_LO_EXPR:
     case VEC_WIDEN_MULT_ODD_EXPR:
@@ -2918,12 +2962,62 @@ dummy->set_bool("ssa_default_def", true);
                  node_emit_json (TRANSACTION_EXPR_BODY(t)));
 
     case BLOCK:
+      {
+      tree iter;
+      json::array *subblock, *chain, *vars, *fragment_chain;
+      dummy->set_integer ("block #", BLOCK_NUMBER (t));
+      /* Check this sort of thing later- I'm not sure what use of
+       * dumping loc here is - ask? */
+//      if (BLOCK_SOURCE_LOCATION (t)) // TODO
+//        dummy->set("block_source_location",
+//                   node_emit_json(BLOCK_SOURCE_LOCATION (t)));
+      if (BLOCK_SUPERCONTEXT (t))
+        dummy->set("block_supercontext",
+                   node_emit_json(BLOCK_SUPERCONTEXT (t)));
+      if (BLOCK_SUBBLOCKS(t))
+        {
+          subblock = new json::array ();
+          for (iter = BLOCK_SUBBLOCKS (t); iter; iter = BLOCK_CHAIN (t))
+            subblock->append(node_emit_json(iter));
+          dummy->set("block_subblocks", subblock);
+        }
+      if (BLOCK_CHAIN (t))
+        {
+          chain = new json::array ();
+          for (iter = BLOCK_SUBBLOCKS (t); iter; iter = BLOCK_CHAIN (t))
+              chain->append(node_emit_json(iter));
+          dummy->set("block_chain", chain);
+        
+        }
+      if (BLOCK_VARS (t))
+          vars = new json::array ();
+          for (iter = BLOCK_VARS (t); iter; iter = TREE_CHAIN (t))
+              vars->append(node_emit_json(iter));
+          dummy->set("block_varss", vars);
+      if (vec_safe_length (BLOCK_NONLOCALIZED_VARS (t)) > 0)
+
+      if (BLOCK_ABSTRACT_ORIGIN (t))
+        dummy->set("block_abstract_origin",
+                   node_emit_json (BLOCK_ABSTRACT_ORIGIN (t)));
+      if (BLOCK_FRAGMENT_ORIGIN (t))
+        dummy->set("block_fragment_origin",
+                   node_emit_json (BLOCK_FRAGMENT_ORIGIN (t)));
+
+      if (BLOCK_FRAGMENT_CHAIN (t))
+        {
+          fragment_chain = new json::array ();
+          for (iter = BLOCK_FRAGMENT_CHAIN (t); iter; iter = BLOCK_FRAGMENT_CHAIN (t))
+              fragment_chain->append(node_emit_json(iter));
+          dummy->set("block_fragment_chain", fragment_chain);
+        }
+      }
+      break;
 
     case DEBUG_BEGIN_STMT:
       dummy->set_bool("fallthrough", true);
       break;
     default:
-      dummy->set_bool("default fallthrough", true);
+      dummy->set_string("default_fallthrough", get_tree_code_name(code));
       break;
   }
   return dummy;
@@ -3469,7 +3563,7 @@ dump_node (const_tree t, dump_flags_t flags, FILE *stream)
   while (di.queue)
     dequeue_and_dump (&di);
 
-  di.tree_json_debug->dump(stream, false);
+  di.tree_json_debug->dump(stream, true);
 
   /* Now, clean up.  */
   for (dq = di.free_list; dq; dq = next_dq)
@@ -3487,6 +3581,3 @@ debug_tree_json (tree t)
   _x->dump(stderr, true);
   fprintf(stderr, "\n");
 }
-
-
-
