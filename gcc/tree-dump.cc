@@ -34,6 +34,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "real.h" //for real printing
 #include "gomp-constants.h"
 #include "internal-fn.h"
+#include "cgraph.h"
 
 static unsigned int queue (dump_info_p, const_tree, int);
 static void dump_index (dump_info_p, unsigned int);
@@ -1382,178 +1383,173 @@ node_emit_json(tree t)
       if (CODE_CONTAINS_STRUCT (code, TS_DECL_COMMON))
         {
           if (DECL_UNSIGNED (t))
-	    fputs (" unsigned", file);
+	    dummy->set_bool ("unsigned", true);
 	  if (DECL_IGNORED_P (t))
-      	    fputs (" ignored", file);
+      	    dummy->set_bool ("ignored", true);
 	  if (DECL_ABSTRACT_P (t))
-	    fputs (" abstract", file);
+	    dummy->set_bool ("abstract", true);
           if (DECL_EXTERNAL (t))
-            fputs (" external", file);
+            dummy->set_bool ("external", true);
 	  if (DECL_NONLOCAL (t))
-	    fputs (" nonlocal", file);
+	    dummy->set_bool ("nonlocal", true);
 	}
       if (CODE_CONTAINS_STRUCT (code, TS_DECL_WITH_VIS))
         {
-	  if (DECL_WEAK (node))
-	    fputs (" weak", file);
-	  if (DECL_IN_SYSTEM_HEADER (node))
-	    fputs (" in_system_header", file);
+	  if (DECL_WEAK (t))
+	    dummy->set_bool ("weak", true);
+	  if (DECL_IN_SYSTEM_HEADER (t))
+	    dummy->set_bool ("in_system_header", true);
         }
       if (CODE_CONTAINS_STRUCT (code, TS_DECL_WRTL)
 	  && code != LABEL_DECL
 	  && code != FUNCTION_DECL
 	  && DECL_REGISTER (t))
-	fputs (" regdecl", file);
+	dummy->set_bool ("regdecl", true);
 
-      if (code == TYPE_DECL && TYPE_DECL_SUPPRESS_DEBUG (node))
-	fputs (" suppress-debug", file);
+      if (code == TYPE_DECL && TYPE_DECL_SUPPRESS_DEBUG (t))
+	dummy->set_bool ("suppress-debug", true);
       
       if (code == FUNCTION_DECL
-	  && DECL_FUNCTION_SPECIFIC_TARGET (node))
-	fputs (" function-specific-target", file);
+	  && DECL_FUNCTION_SPECIFIC_TARGET (t))
+	dummy->set_bool ("function-specific-target", true);
       if (code == FUNCTION_DECL
-	  && DECL_FUNCTION_SPECIFIC_OPTIMIZATION (node))
-	fputs (" function-specific-opt", file);
-      if (code == FUNCTION_DECL && DECL_DECLARED_INLINE_P (node))
-	fputs (" autoinline", file);
-      if (code == FUNCTION_DECL && DECL_UNINLINABLE (node))
-	fputs (" uninlinable", file);
-      if (code == FUNCTION_DECL && fndecl_built_in_p (node))
-	fputs (" built-in", file);
-      if (code == FUNCTION_DECL && DECL_STATIC_CHAIN (node))
-	fputs (" static-chain", file);
-      if (TREE_CODE (node) == FUNCTION_DECL && decl_is_tm_clone (node))
-	fputs (" tm-clone", file);
+	  && DECL_FUNCTION_SPECIFIC_OPTIMIZATION (t))
+	dummy->set_bool ("function-specific-opt", true);
+      if (code == FUNCTION_DECL && DECL_DECLARED_INLINE_P (t))
+	dummy->set_bool ("autoinline", true);
+      if (code == FUNCTION_DECL && DECL_UNINLINABLE (t))
+	dummy->set_bool ("uninlinable", true);
+      if (code == FUNCTION_DECL && fndecl_built_in_p (t))
+	dummy->set_bool ("built-in", true);
+      if (code == FUNCTION_DECL && DECL_STATIC_CHAIN (t))
+	dummy->set_bool ("static-chain", true);
+      if (TREE_CODE (t) == FUNCTION_DECL && decl_is_tm_clone (t))
+	dummy->set_bool ("tm-clone", true);
 
-      if (code == FIELD_DECL && DECL_PACKED (node))
-	fputs (" packed", file);
-      if (code == FIELD_DECL && DECL_BIT_FIELD (node))
-	fputs (" bit-field", file);
-      if (code == FIELD_DECL && DECL_NONADDRESSABLE_P (node))
-	fputs (" nonaddressable", file);
+      if (code == FIELD_DECL && DECL_PACKED (t))
+	dummy->set_bool ("packed", true);
+      if (code == FIELD_DECL && DECL_BIT_FIELD (t))
+	dummy->set_bool ("bit-field", true);
+      if (code == FIELD_DECL && DECL_NONADDRESSABLE_P (t))
+	dummy->set_bool ("nonaddressable", true);
 
-      if (code == LABEL_DECL && EH_LANDING_PAD_NR (node))
-	fprintf (file, " landing-pad:%d", EH_LANDING_PAD_NR (node));
+      if (code == LABEL_DECL && EH_LANDING_PAD_NR (t))
+        dummy->set_integer("landing_pad", EH_LANDING_PAD_NR(t));
 
-      if (code == VAR_DECL && DECL_IN_TEXT_SECTION (node))
-	fputs (" in-text-section", file);
-      if (code == VAR_DECL && DECL_IN_CONSTANT_POOL (node))
-	fputs (" in-constant-pool", file);
-      if (code == VAR_DECL && DECL_COMMON (node))
-	fputs (" common", file);
-      if ((code == VAR_DECL || code == PARM_DECL) && DECL_READ_P (node))
-	fputs (" read", file);
-      if (code == VAR_DECL && DECL_THREAD_LOCAL_P (node))
-	{
-	  fputs (" ", file);
-	  fputs (tls_model_names[DECL_TLS_MODEL (node)], file);
-	}
+      if (code == VAR_DECL && DECL_IN_TEXT_SECTION (t))
+	dummy->set_bool ("in-text-section", true);
+      if (code == VAR_DECL && DECL_IN_CONSTANT_POOL (t))
+	dummy->set_bool ("in-constant-pool", true);
+      if (code == VAR_DECL && DECL_COMMON (t))
+	dummy->set_bool ("common", true);
+      if ((code == VAR_DECL || code == PARM_DECL) && DECL_READ_P (t))
+	dummy->set_bool ("read", true);
+      if (code == VAR_DECL && DECL_THREAD_LOCAL_P (t))
+	  dummy->set_bool (tls_model_names[DECL_TLS_MODEL (t)], true);
 
       if (CODE_CONTAINS_STRUCT (code, TS_DECL_COMMON))
 	{
-	  if (DECL_VIRTUAL_P (node))
-	    fputs (" virtual", file);
-	  if (DECL_PRESERVE_P (node))
-	    fputs (" preserve", file);
-	  if (DECL_LANG_FLAG_0 (node))
-	    fputs (" decl_0", file);
-	  if (DECL_LANG_FLAG_1 (node))
-	    fputs (" decl_1", file);
-	  if (DECL_LANG_FLAG_2 (node))
-	    fputs (" decl_2", file);
-	  if (DECL_LANG_FLAG_3 (node))
-	    fputs (" decl_3", file);
-	  if (DECL_LANG_FLAG_4 (node))
-	    fputs (" decl_4", file);
-	  if (DECL_LANG_FLAG_5 (node))
-	    fputs (" decl_5", file);
-	  if (DECL_LANG_FLAG_6 (node))
-	    fputs (" decl_6", file);
-	  if (DECL_LANG_FLAG_7 (node))
-	    fputs (" decl_7", file);
-	  if (DECL_LANG_FLAG_8 (node))
-	    fputs (" decl_8", file);
+	  if (DECL_VIRTUAL_P (t))
+	    dummy->set_bool ("virtual", true);
+	  if (DECL_PRESERVE_P (t))
+	    dummy->set_bool ("preserve", true);
+	  if (DECL_LANG_FLAG_0 (t))
+	    dummy->set_bool ("decl_0", true);
+	  if (DECL_LANG_FLAG_1 (t))
+	    dummy->set_bool ("decl_1", true);
+	  if (DECL_LANG_FLAG_2 (t))
+	    dummy->set_bool ("decl_2", true);
+	  if (DECL_LANG_FLAG_3 (t))
+	    dummy->set_bool ("decl_3", true);
+	  if (DECL_LANG_FLAG_4 (t))
+	    dummy->set_bool ("decl_4", true);
+	  if (DECL_LANG_FLAG_5 (t))
+	    dummy->set_bool ("decl_5", true);
+	  if (DECL_LANG_FLAG_6 (t))
+	    dummy->set_bool ("decl_6", true);
+	  if (DECL_LANG_FLAG_7 (t))
+	    dummy->set_bool ("decl_7", true);
+	  if (DECL_LANG_FLAG_8 (t))
+	    dummy->set_bool ("decl_8", true);
 
-	  mode = DECL_MODE (node);
-	  fprintf (file, " %s", GET_MODE_NAME (mode));
+	  dummy->set_string("mode", GET_MODE_NAME (DECL_MODE (t)));
 	}
 
 
       if ((code == VAR_DECL || code == PARM_DECL || code == RESULT_DECL)
-	  && DECL_BY_REFERENCE (node))
-	fputs (" passed-by-reference", file);
+	  && DECL_BY_REFERENCE (t))
+	dummy->set_bool ("passed-by-reference", true);
 
-      if (CODE_CONTAINS_STRUCT (code, TS_DECL_WITH_VIS)  && DECL_DEFER_OUTPUT (node))
-	fputs (" defer-output", file);
+      if (CODE_CONTAINS_STRUCT (code, TS_DECL_WITH_VIS)  && DECL_DEFER_OUTPUT (t))
+	dummy->set_bool ("defer-output", true);
 
     } //end tcc_decl flags
 
     if (TREE_CODE_CLASS(code) == tcc_type)
       {
-      if (TYPE_UNSIGNED (node))
-	fputs (" unsigned", file);
+      if (TYPE_UNSIGNED (t))
+	dummy->set_bool ("unsigned", true);
 
-      if (TYPE_NO_FORCE_BLK (node))
-	fputs (" no-force-blk", file);
+      if (TYPE_NO_FORCE_BLK (t))
+	dummy->set_bool ("no-force-blk", true);
       
-      if (code == ARRAY_TYPE && TYPE_STRING_FLAG (node))
-	fputs (" string-flag", file);
+      if (code == ARRAY_TYPE && TYPE_STRING_FLAG (t))
+	dummy->set_bool ("string-flag", true);
 
-      if (TYPE_NEEDS_CONSTRUCTING (node))
-	fputs (" needs-constructing", file);
+      if (TYPE_NEEDS_CONSTRUCTING (t))
+	dummy->set_bool ("needs-constructing", true);
 
       if ((code == RECORD_TYPE
 	   || code == UNION_TYPE
 	   || code == QUAL_UNION_TYPE
 	   || code == ARRAY_TYPE)
-	  && TYPE_REVERSE_STORAGE_ORDER (node))
-	fputs (" reverse-storage-order", file);
+	  && TYPE_REVERSE_STORAGE_ORDER (t))
+	dummy->set_bool ("reverse-storage-order", true);
 
       if ((code == RECORD_TYPE
 	   || code == UNION_TYPE)
-	  && TYPE_CXX_ODR_P (node))
-	fputs (" cxx-odr-p", file);
+	  && TYPE_CXX_ODR_P (t))
+	dummy->set_bool ("cxx-odr-p", true);
 
       if ((code == RECORD_TYPE
 	   || code == UNION_TYPE)
-	  && TYPE_CXX_ODR_P (node))
-	fputs (" cxx-odr-p", file);
+	  && TYPE_CXX_ODR_P (t))
+	dummy->set_bool ("cxx-odr-p", true);
 
       if ((code == RECORD_TYPE
 	   || code == UNION_TYPE)
-	  && TYPE_INCLUDES_FLEXARRAY (node))
-	fputs (" includes-flexarray", file);
+	  && TYPE_INCLUDES_FLEXARRAY (t))
+	dummy->set_bool ("includes-flexarray", true);
       
       if ((code == UNION_TYPE || code == RECORD_TYPE)
-	  && TYPE_TRANSPARENT_AGGR (node))
-	fputs (" transparent-aggr", file);
+	  && TYPE_TRANSPARENT_AGGR (t))
+	dummy->set_bool ("transparent-aggr", true);
       else if (code == ARRAY_TYPE
-	       && TYPE_NONALIASED_COMPONENT (node))
-	fputs (" nonaliased-component", file);
+	       && TYPE_NONALIASED_COMPONENT (t))
+	dummy->set_bool ("nonaliased-component", true);
 
-      if (TYPE_PACKED (node))
-	fputs (" packed", file);
+      if (TYPE_PACKED (t))
+	dummy->set_bool ("packed", true);
 
-      if (TYPE_RESTRICT (node))
-	fputs (" restrict", file);
+      if (TYPE_RESTRICT (t))
+	dummy->set_bool ("restrict", true);
 
-      if (TYPE_LANG_FLAG_0 (node))
-	fputs (" type_0", file);
-      if (TYPE_LANG_FLAG_1 (node))
-	fputs (" type_1", file);
-      if (TYPE_LANG_FLAG_2 (node))
-	fputs (" type_2", file);
-      if (TYPE_LANG_FLAG_3 (node))
-	fputs (" type_3", file);
-      if (TYPE_LANG_FLAG_4 (node))
-	fputs (" type_4", file);
-      if (TYPE_LANG_FLAG_5 (node))
-	fputs (" type_5", file);
-      if (TYPE_LANG_FLAG_6 (node))
-	fputs (" type_6", file);
-      if (TYPE_LANG_FLAG_7 (node))
-	fputs (" type_7", file);
-
+      if (TYPE_LANG_FLAG_0 (t))
+	dummy->set_bool ("type_0", true);
+      if (TYPE_LANG_FLAG_1 (t))
+	dummy->set_bool ("type_1", true);
+      if (TYPE_LANG_FLAG_2 (t))
+	dummy->set_bool ("type_2", true);
+      if (TYPE_LANG_FLAG_3 (t))
+	dummy->set_bool ("type_3", true);
+      if (TYPE_LANG_FLAG_4 (t))
+	dummy->set_bool ("type_4", true);
+      if (TYPE_LANG_FLAG_5 (t))
+	dummy->set_bool ("type_5", true);
+      if (TYPE_LANG_FLAG_6 (t))
+	dummy->set_bool ("type_6", true);
+      if (TYPE_LANG_FLAG_7 (t))
+	dummy->set_bool ("type_7", true);
       } //END tcc_type FLAGS
   
   // Accessors
