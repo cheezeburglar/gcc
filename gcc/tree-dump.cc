@@ -1306,14 +1306,25 @@ omp_clause_emit_json(tree t)
   return _x;
 }
 
+json::object*
+loc_emit_json (expanded_location xloc)
+{
+  json::object *xloc = new json::object(); //CHECK
+  loc_info->set_string("file", xloc.file);
+  loc_info->set_integer("line", xloc.line);
+  loc_info->set_integer("column", xloc.column);
+  return loc_info;
+}
 
-/* Here we emit data in the generic tree without traversing the tree. base on tree-pretty-print.cc */
+/* Here we emit data for GENERIC nodes. based on tree-pretty-print.cc's
+ * dump_generic_node and print-tree's debug_tree().                          */
 
 json::object* 
 node_emit_json(tree t)
 {
   tree op0, op1, type;
-  json::object* dummy;
+  expanded_location xloc;
+  json::object *dummy;
   json::array* holder;
   enum tree_code code;
   char address_buffer[sizeof(&t)] = {"\0"};
@@ -1332,7 +1343,36 @@ node_emit_json(tree t)
   dummy->set_string("addr", address_buffer);
   dummy->set_string("tree code", get_tree_code_name(TREE_CODE (t)));
 
-  //Flag handling. Perhaps move this into a flag after?
+  xloc = expand_location (DECL_SOURCE_LOCATION (t));
+ 
+  dummy->set("decl_loc", loc_emit_json(xloc));
+
+  if (EXPR_HAS_LOCATION(t))
+    {
+      xloc = expand_location (EXPR_LOCATION (t));
+      dummy->set("expr_loc", loc_emit_json(xloc);
+    }
+  if (EXPR_HAS_RANGE (t))
+    {
+      source_range r = EXPR_LOCATION_RANGE (t);
+      if (r.m_start)
+      {
+        xloc = expand_location (r.m_start);
+        dummy->set("start_loc", loc_emit_json(xloc));
+      } else {
+        dummy->set_string("start_loc", "unknown");
+      }
+      if (r.m_finish)
+      {
+        xloc = expand_location (r.m_finish);
+        dummy->set("finish_loc", loc_emit_json(xloc));
+      } else {
+        dummy->set_string("finish_loc", "unknown");
+      }
+        
+    }
+
+  //Flag handling
 
   if (TREE_ADDRESSABLE (t))
     dummy->set_bool ("addressable", true);
