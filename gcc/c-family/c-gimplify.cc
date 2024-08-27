@@ -630,6 +630,13 @@ c_genericize (tree fndecl)
   local_dump_flags = dfi->pflags;
   if (dump_orig)
     {
+      if (local_dump_flags & TDF_JSON)
+	{
+	dump_node (DECL_SAVED_TREE (fndecl),
+		   TDF_SLIM | local_dump_flags, dump_orig);
+	}
+      else
+      {
       fprintf (dump_orig, "\n;; Function %s",
 	       lang_hooks.decl_printable_name (fndecl, 2));
       fprintf (dump_orig, " (%s)\n",
@@ -645,6 +652,7 @@ c_genericize (tree fndecl)
 	print_c_tree (dump_orig, DECL_SAVED_TREE (fndecl));
       
       fprintf (dump_orig, "\n");
+      }
     }
 
   /* Dump all nested functions now.  */
