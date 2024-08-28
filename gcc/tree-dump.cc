@@ -36,6 +36,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "internal-fn.h"
 #include "cgraph.h"
 #include "predict.h"
+#include "fold-const.h"
 
 static unsigned int queue (dump_info_p, const_tree, int);
 static void dump_index (dump_info_p, unsigned int);
@@ -1793,9 +1794,9 @@ node_emit_json(tree t)
           {
    	  //pickup here
    	  unsigned int quals = TYPE_QUALS (t);
-   	  const char* type_qual;
-   
-   	  dummy->set("tree type", node_emit_json(TREE_TYPE(t)));
+          const char *type_qual;
+
+   	  dummy->set("tree_type", node_emit_json(TREE_TYPE(t)));
    	  
           if (quals & TYPE_QUAL_CONST)
    	    type_qual = "const";
@@ -1820,36 +1821,7 @@ node_emit_json(tree t)
     case MEM_REF: //TODO:  
     case TARGET_MEM_REF:
       {
-        //TDF_GIMPLE corresponds to the gimple front end - is this okay? Check later
-        if ((TREE_CODE (t) == MEM_REF
-             || TREE_CODE (t) == TARGET_MEM_REF))
-          {
-            dummy->set("__MEM_REF", node_emit_json(TREE_TYPE(t)));
-
-            if (TYPE_ALIGN (TREE_TYPE (t))
-                != TYPE_ALIGN (TYPE_MAIN_VARIANT (TREE_TYPE (t))))
-              {
-                dummy->set_integer("offset", TYPE_ALIGN (TREE_TYPE(t)));
-              }
-            dummy->set("op0", node_emit_json(TREE_TYPE(TREE_OPERAND (t, 0))));
-            if (TREE_TYPE (TREE_OPERAND (t, 0))
-                != TREE_TYPE (TREE_OPERAND (t, 1)))
-              {
-                dummy->set("op1", node_emit_json(TREE_TYPE(TREE_OPERAND (t, 1))));
-              }
-            // if (! integer_zerop (TREE_OPERAND (node, 1)))
-            if (TREE_CODE (t) == TARGET_MEM_REF)
-              {
-                if (TREE_OPERAND (t, 2))
-                  {
-                  dummy->set("op2", node_emit_json(TREE_TYPE(TREE_OPERAND (t, 2))));
-                  dummy->set("op3", node_emit_json(TREE_TYPE(TREE_OPERAND (t, 3))));
-                  }
-                if (TREE_OPERAND (t, 4))
-                  dummy->set("op4", node_emit_json(TREE_TYPE(TREE_OPERAND (t, 4))));
-              }
-          }
-        else if (TREE_CODE (t) == MEM_REF
+        if (TREE_CODE (t) == MEM_REF
                  && integer_zerop (TREE_OPERAND (t, 1))
                  && TREE_CODE (TREE_OPERAND (t, 0)) != INTEGER_CST
                  && TREE_TYPE (TREE_OPERAND (t, 0)) != NULL_TREE
@@ -1870,7 +1842,7 @@ node_emit_json(tree t)
               dummy->set("", node_emit_json(TREE_OPERAND (TREE_OPERAND (t, 0), 0)));
           }
         else
-          {
+          { //Check later
             tree type = TREE_TYPE(t);
             tree op0 = TREE_OPERAND(t, 0);
             tree op1 = TREE_OPERAND(t, 1);
@@ -1878,26 +1850,29 @@ node_emit_json(tree t)
 
             tree op0size = TYPE_SIZE(type);
             tree op1size = TYPE_SIZE (TREE_TYPE(op1type));
-            dummy->set("type", node_emit_json(type));
-            
-            holder->append(node_emit_json(op0));
-            holder->append(node_emit_json(op1type));
+
+            if (!op0size || !op1size 
+                || ! operand_equal_p(op0size, op1size, 0))
+            {
+              dummy->set("tree_type_size", node_emit_json(type));
+            }
+            dummy->set("op1_type_size", node_emit_json(op1type));
+
             if (! integer_zerop (op1))
-              holder->append(node_emit_json(op1));
+              dummy->set("op1", node_emit_json(op1));
             if (TREE_CODE(t) == TARGET_MEM_REF)
               {
                 tree temp = TMR_INDEX2 (t);
                 if (temp)
-                  holder->append(node_emit_json(temp));
+                  dummy->set("tmr_index2", node_emit_json(temp));
                 temp = TMR_INDEX (t);
                 if (temp)
                   {
-                    holder->append(node_emit_json(temp));
+                    dummy->set("tmr_index", node_emit_json(temp));
                     temp = TMR_STEP(t);
                     if (temp)
-                      holder->append(node_emit_json(temp)); //check later - missing 1 append.
+                      dummy->set("tmr_step", node_emit_json(temp));
                   }
-                dummy->set("tmf_address", holder);
               }
           }
         if (MR_DEPENDENCE_CLIQUE (t) != 0) //TDF_ALIAS usually controls
@@ -1926,11 +1901,26 @@ node_emit_json(tree t)
     case UNION_TYPE:
     case QUAL_UNION_TYPE:
       {
-      dummy->set_bool("RUQ_fallthrough", true);
+        unsigned int quals = TYPE_QUALS (t);
+        json::object *quals_buffer;
+
+        quals_buffer = new json::object ();
+
+        if (quals & TYPE_QUAL_ATOMIC)
+          quals_buffer->set_bool("atomic", true);
+        if (quals & TYPE_QUAL_CONST)
+          quals_buffer->set_bool("const", true);
+        if (quals & TYPE_QUAL_VOLATILE)
+          quals_buffer->set_bool("volatile", true);
+        
+        dummy->set("type_quals", quals_buffer);
+
+        if (TYPE_NAME(t))
+          dummy->set("type_name", node_emit_json(TYPE_NAME(t)));
       }
       break;
     case LANG_TYPE:
-
+      break;
     case INTEGER_CST:
       {
         dummy->set_bool("integer_cst", true);
@@ -3145,13 +3135,8 @@ dummy->set_bool("ssa_default_def", true);
     case BLOCK:
       {
       tree iter;
-      json::array *subblock, *chain, *vars, *fragment_chain;
+      json::array *subblock, *chain, *vars, *fragment_chain, *nlv_holder;
       dummy->set_integer ("block #", BLOCK_NUMBER (t));
-      /* Check this sort of thing later- I'm not sure what use of
-       * dumping loc here is - ask? */
-//      if (BLOCK_SOURCE_LOCATION (t)) // TODO
-//        dummy->set("block_source_location",
-//                   node_emit_json(BLOCK_SOURCE_LOCATION (t)));
       if (BLOCK_SUPERCONTEXT (t))
         dummy->set("block_supercontext",
                    node_emit_json(BLOCK_SUPERCONTEXT (t)));
@@ -3171,12 +3156,25 @@ dummy->set_bool("ssa_default_def", true);
         
         }
       if (BLOCK_VARS (t))
+        {
           vars = new json::array ();
           for (iter = BLOCK_VARS (t); iter; iter = TREE_CHAIN (t))
               vars->append(node_emit_json(iter));
-          dummy->set("block_varss", vars);
+          dummy->set("block_vars", vars);
+        }
       if (vec_safe_length (BLOCK_NONLOCALIZED_VARS (t)) > 0)
-        {}
+        {
+          unsigned i;
+          vec<tree, va_gc> *nlv = BLOCK_NONLOCALIZED_VARS (t);
+
+          nlv_holder = new json::array ();
+
+          FOR_EACH_VEC_ELT (*nlv, i, t)
+            {
+              nlv_holder->append(node_emit_json(t));
+            }
+          dummy->set("block_nonlocalized_vars", nlv_holder);
+        }
       if (BLOCK_ABSTRACT_ORIGIN (t))
         dummy->set("block_abstract_origin",
                    node_emit_json (BLOCK_ABSTRACT_ORIGIN (t)));
