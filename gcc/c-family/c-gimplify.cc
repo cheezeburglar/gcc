@@ -644,12 +644,10 @@ c_genericize (tree fndecl)
 		: IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (fndecl))));
       fprintf (dump_orig, ";; enabled by -%s\n", dump_flag_name (TDI_original));
       fprintf (dump_orig, "\n");
-
-      if (local_dump_flags & TDF_JSON)
-	dump_node (DECL_SAVED_TREE (fndecl),
+      dump_node (DECL_SAVED_TREE (fndecl),
 		   TDF_SLIM | local_dump_flags, dump_orig);
-      else
-	print_c_tree (dump_orig, DECL_SAVED_TREE (fndecl));
+//      else
+//	print_c_tree (dump_orig, DECL_SAVED_TREE (fndecl));
       
       fprintf (dump_orig, "\n");
       }
