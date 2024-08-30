@@ -43,7 +43,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "context.h"
 #include "tree-pass.h"
 #include "internal-fn.h"
-#include "tree-dump-json.h"
+#include "tree-emit-json.h"
 
 /*  The gimplification pass converts the language-dependent trees
     (ld-trees) emitted by the parser into language-independent trees
@@ -632,7 +632,7 @@ c_genericize (tree fndecl)
     {
       if (local_dump_flags & TDF_JSON)
 	{
-	dump_node (DECL_SAVED_TREE (fndecl),
+	dump_node_json (DECL_SAVED_TREE (fndecl),
 		   TDF_SLIM | local_dump_flags, dump_orig);
 	}
       else

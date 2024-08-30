@@ -43,6 +43,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "spellcheck.h"
 #include "make-unique.h"
 #include "pretty-print-format-impl.h"
+#include "tree-emit-json.h"
 
 /* If non-NULL, return one past-the-end of the matching SUBPART of
    the WHOLE string.  */
@@ -540,6 +541,13 @@ dump_context::set_json_writer (optrecord_json_writer *writer)
   delete m_json_writer;
   m_json_writer = writer;
 }
+
+//void
+//dump_context::set_json_writer (generic_tree_json_writer *writer)
+//{
+//  delete m_json_writer;
+//  m_json_writer = writer;
+//}
 
 /* Perform cleanup activity for -fsave-optimization-record.
    Currently, the file is written out here in one go, before cleaning
