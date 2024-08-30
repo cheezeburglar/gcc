@@ -21,6 +21,7 @@ along with GCC; see the file COPYING3.  If not see
 
 #include "config.h"
 #define INCLUDE_ALGORITHM
+#define INCLUDE_MEMORY
 #include "system.h"
 #include "coretypes.h"
 #include "backend.h"
@@ -1751,13 +1752,6 @@ vect_build_slp_tree (vec_info *vinfo,
       return NULL;
     }
 
-  /* Seed the bst_map with a stub node to be filled by vect_build_slp_tree_2
-     so we can pick up backedge destinations during discovery.  */
-  slp_tree res = new _slp_tree;
-  SLP_TREE_DEF_TYPE (res) = vect_internal_def;
-  SLP_TREE_SCALAR_STMTS (res) = stmts;
-  bst_map->put (stmts.copy (), res);
-
   /* Single-lane SLP doesn't have the chance of run-away, do not account
      it to the limit.  */
   if (stmts.length () > 1)
@@ -1767,17 +1761,18 @@ vect_build_slp_tree (vec_info *vinfo,
 	  if (dump_enabled_p ())
 	    dump_printf_loc (MSG_NOTE, vect_location,
 			     "SLP discovery limit exceeded\n");
-	  /* Mark the node invalid so we can detect those when still in use
-	     as backedge destinations.  */
-	  SLP_TREE_SCALAR_STMTS (res) = vNULL;
-	  SLP_TREE_DEF_TYPE (res) = vect_uninitialized_def;
-	  res->failed = XNEWVEC (bool, group_size);
-	  memset (res->failed, 0, sizeof (bool) * group_size);
 	  memset (matches, 0, sizeof (bool) * group_size);
 	  return NULL;
 	}
       --*limit;
     }
+
+  /* Seed the bst_map with a stub node to be filled by vect_build_slp_tree_2
+     so we can pick up backedge destinations during discovery.  */
+  slp_tree res = new _slp_tree;
+  SLP_TREE_DEF_TYPE (res) = vect_internal_def;
+  SLP_TREE_SCALAR_STMTS (res) = stmts;
+  bst_map->put (stmts.copy (), res);
 
   if (dump_enabled_p ())
     dump_printf_loc (MSG_NOTE, vect_location,
@@ -2087,6 +2082,8 @@ vect_build_slp_tree_2 (vec_info *vinfo, slp_tree node,
      for matching as we can succeed by means of builds from scalars
      and have no good way to "cost" one build against another.  */
   else if (is_a <loop_vec_info> (vinfo)
+	   /* Do not bother for single-lane SLP.  */
+	   && group_size > 1
 	   /* ???  We don't handle !vect_internal_def defs below.  */
 	   && STMT_VINFO_DEF_TYPE (stmt_info) == vect_internal_def
 	   /* ???  Do not associate a reduction, this will wreck REDUC_IDX
@@ -2443,6 +2440,95 @@ out:
       }
   swap = NULL;
 
+  bool has_two_operators_perm = false;
+  auto_vec<unsigned> two_op_perm_indices[2];
+  vec<stmt_vec_info> two_op_scalar_stmts[2] = {vNULL, vNULL};
+
+  if (two_operators && oprnds_info.length () == 2 && group_size > 2)
+    {
+      unsigned idx = 0;
+      hash_map<gimple *, unsigned> seen;
+      vec<slp_oprnd_info> new_oprnds_info
+	= vect_create_oprnd_info (1, group_size);
+      bool success = true;
+
+      enum tree_code code = ERROR_MARK;
+      if (oprnds_info[0]->def_stmts[0]
+	  && is_a<gassign *> (oprnds_info[0]->def_stmts[0]->stmt))
+	code = gimple_assign_rhs_code (oprnds_info[0]->def_stmts[0]->stmt);
+
+      for (unsigned j = 0; j < group_size; ++j)
+	{
+	  FOR_EACH_VEC_ELT (oprnds_info, i, oprnd_info)
+	    {
+	      stmt_vec_info stmt_info = oprnd_info->def_stmts[j];
+	      if (!stmt_info || !stmt_info->stmt
+		  || !is_a<gassign *> (stmt_info->stmt)
+		  || gimple_assign_rhs_code (stmt_info->stmt) != code
+		  || skip_args[i])
+		{
+		  success = false;
+		  break;
+		}
+
+	      bool exists;
+	      unsigned &stmt_idx
+		= seen.get_or_insert (stmt_info->stmt, &exists);
+
+	      if (!exists)
+		{
+		  new_oprnds_info[0]->def_stmts.safe_push (stmt_info);
+		  new_oprnds_info[0]->ops.safe_push (oprnd_info->ops[j]);
+		  stmt_idx = idx;
+		  idx++;
+		}
+
+	      two_op_perm_indices[i].safe_push (stmt_idx);
+	    }
+
+	  if (!success)
+	    break;
+	}
+
+      if (success && idx == group_size)
+	{
+	  if (dump_enabled_p ())
+	    {
+	      dump_printf_loc (MSG_NOTE, vect_location,
+			       "Replace two_operators operands:\n");
+
+	      FOR_EACH_VEC_ELT (oprnds_info, i, oprnd_info)
+		{
+		  dump_printf_loc (MSG_NOTE, vect_location,
+				   "Operand %u:\n", i);
+		  for (unsigned j = 0; j < group_size; j++)
+		    dump_printf_loc (MSG_NOTE, vect_location, "\tstmt %u %G",
+				     j, oprnd_info->def_stmts[j]->stmt);
+		}
+
+	      dump_printf_loc (MSG_NOTE, vect_location,
+			       "With a single operand:\n");
+	      for (unsigned j = 0; j < group_size; j++)
+		dump_printf_loc (MSG_NOTE, vect_location, "\tstmt %u %G",
+				 j, new_oprnds_info[0]->def_stmts[j]->stmt);
+	    }
+
+	  two_op_scalar_stmts[0].safe_splice (oprnds_info[0]->def_stmts);
+	  two_op_scalar_stmts[1].safe_splice (oprnds_info[1]->def_stmts);
+
+	  new_oprnds_info[0]->first_op_type = oprnds_info[0]->first_op_type;
+	  new_oprnds_info[0]->first_dt = oprnds_info[0]->first_dt;
+	  new_oprnds_info[0]->any_pattern = oprnds_info[0]->any_pattern;
+	  new_oprnds_info[0]->first_gs_p = oprnds_info[0]->first_gs_p;
+	  new_oprnds_info[0]->first_gs_info = oprnds_info[0]->first_gs_info;
+
+	  vect_free_oprnd_info (oprnds_info);
+	  oprnds_info = new_oprnds_info;
+	  nops = 1;
+	  has_two_operators_perm = true;
+	}
+    }
+
   auto_vec<slp_tree, 4> children;
 
   stmt_info = stmts[0];
@@ -2713,6 +2799,29 @@ fail:
 	 the true { a+b, a+b, a+b, a+b } ... but there we don't have
 	 explicit stmts to put in so the keying on 'stmts' doesn't
 	 work (but we have the same issue with nodes that use 'ops').  */
+
+      if (has_two_operators_perm)
+	{
+	  slp_tree child = children[0];
+	  children.truncate (0);
+	  for (i = 0; i < 2; i++)
+	    {
+	      slp_tree pnode
+		= vect_create_new_slp_node (two_op_scalar_stmts[i], 2);
+	      SLP_TREE_CODE (pnode) = VEC_PERM_EXPR;
+	      SLP_TREE_VECTYPE (pnode) = vectype;
+	      SLP_TREE_CHILDREN (pnode).quick_push (child);
+	      SLP_TREE_CHILDREN (pnode).quick_push (child);
+	      lane_permutation_t& perm = SLP_TREE_LANE_PERMUTATION (pnode);
+	      children.safe_push (pnode);
+
+	      for (unsigned j = 0; j < stmts.length (); j++)
+		perm.safe_push (std::make_pair (0, two_op_perm_indices[i][j]));
+	    }
+
+	  SLP_TREE_REF_COUNT (child) += 4;
+	}
+
       slp_tree one = new _slp_tree;
       slp_tree two = new _slp_tree;
       SLP_TREE_DEF_TYPE (one) = vect_internal_def;
@@ -2749,12 +2858,14 @@ fail:
 	  else
 	    SLP_TREE_LANE_PERMUTATION (node).safe_push (std::make_pair (0, i));
 	}
+
       SLP_TREE_CODE (one) = code0;
       SLP_TREE_CODE (two) = ocode;
       SLP_TREE_LANES (one) = stmts.length ();
       SLP_TREE_LANES (two) = stmts.length ();
       SLP_TREE_REPRESENTATIVE (one) = stmts[0];
       SLP_TREE_REPRESENTATIVE (two) = stmts[j];
+
       return node;
     }
 
@@ -2928,6 +3039,15 @@ vect_print_slp_graph (dump_flags_t dump_kind, dump_location_t loc,
 {
   hash_set<slp_tree> visited;
   vect_print_slp_graph (dump_kind, loc, entry, visited);
+}
+
+DEBUG_FUNCTION void
+debug (slp_instance instance)
+{
+  debug_dump_context ctx;
+  vect_print_slp_graph (MSG_NOTE,
+			dump_location_t::from_location_t (UNKNOWN_LOCATION),
+			SLP_INSTANCE_TREE (instance));
 }
 
 /* Mark the tree rooted at NODE with PURE_SLP.  */
@@ -3349,6 +3469,187 @@ vect_analyze_slp_instance (vec_info *vinfo,
 			   stmt_vec_info stmt_info, slp_instance_kind kind,
 			   unsigned max_tree_size, unsigned *limit);
 
+/* Build an interleaving scheme for the store sources RHS_NODES from
+   SCALAR_STMTS.  */
+
+static slp_tree
+vect_build_slp_store_interleaving (vec<slp_tree> &rhs_nodes,
+				   vec<stmt_vec_info> &scalar_stmts)
+{
+  unsigned int group_size = scalar_stmts.length ();
+  slp_tree node = vect_create_new_slp_node (scalar_stmts,
+					    SLP_TREE_CHILDREN
+					      (rhs_nodes[0]).length ());
+  SLP_TREE_VECTYPE (node) = SLP_TREE_VECTYPE (rhs_nodes[0]);
+  for (unsigned l = 0;
+       l < SLP_TREE_CHILDREN (rhs_nodes[0]).length (); ++l)
+    {
+      /* And a permute merging all RHS SLP trees.  */
+      slp_tree perm = vect_create_new_slp_node (rhs_nodes.length (),
+						VEC_PERM_EXPR);
+      SLP_TREE_CHILDREN (node).quick_push (perm);
+      SLP_TREE_LANE_PERMUTATION (perm).create (group_size);
+      SLP_TREE_VECTYPE (perm) = SLP_TREE_VECTYPE (node);
+      SLP_TREE_LANES (perm) = group_size;
+      /* ???  We should set this NULL but that's not expected.  */
+      SLP_TREE_REPRESENTATIVE (perm)
+	= SLP_TREE_REPRESENTATIVE (SLP_TREE_CHILDREN (rhs_nodes[0])[l]);
+      for (unsigned j = 0; j < rhs_nodes.length (); ++j)
+	{
+	  SLP_TREE_CHILDREN (perm)
+	    .quick_push (SLP_TREE_CHILDREN (rhs_nodes[j])[l]);
+	  SLP_TREE_CHILDREN (rhs_nodes[j])[l]->refcnt++;
+	  for (unsigned k = 0;
+	       k < SLP_TREE_SCALAR_STMTS (rhs_nodes[j]).length (); ++k)
+	    {
+	      /* ???  We should populate SLP_TREE_SCALAR_STMTS
+		 or SLP_TREE_SCALAR_OPS but then we might have
+		 a mix of both in our children.  */
+	      SLP_TREE_LANE_PERMUTATION (perm)
+		.quick_push (std::make_pair (j, k));
+	    }
+	}
+
+      /* Now we have a single permute node but we cannot code-generate
+	 the case with more than two inputs.
+	 Perform pairwise reduction, reducing the two inputs
+	 with the least number of lanes to one and then repeat until
+	 we end up with two inputs.  That scheme makes sure we end
+	 up with permutes satisfying the restriction of requiring at
+	 most two vector inputs to produce a single vector output
+	 when the number of lanes is even.  */
+      while (SLP_TREE_CHILDREN (perm).length () > 2)
+	{
+	  /* When we have three equal sized groups left the pairwise
+	     reduction does not result in a scheme that avoids using
+	     three vectors.  Instead merge the first two groups
+	     to the final size with do-not-care elements (chosen
+	     from the first group) and then merge with the third.
+		  { A0, B0,  x, A1, B1,  x, ... }
+	       -> { A0, B0, C0, A1, B1, C1, ... }
+	     This handles group size of three (and at least
+	     power-of-two multiples of that).  */
+	  if (SLP_TREE_CHILDREN (perm).length () == 3
+	      && (SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[0])
+		  == SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[1]))
+	      && (SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[0])
+		  == SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[2])))
+	    {
+	      int ai = 0;
+	      int bi = 1;
+	      slp_tree a = SLP_TREE_CHILDREN (perm)[ai];
+	      slp_tree b = SLP_TREE_CHILDREN (perm)[bi];
+	      unsigned n = SLP_TREE_LANES (perm);
+
+	      slp_tree permab = vect_create_new_slp_node (2, VEC_PERM_EXPR);
+	      SLP_TREE_LANES (permab) = n;
+	      SLP_TREE_LANE_PERMUTATION (permab).create (n);
+	      SLP_TREE_VECTYPE (permab) = SLP_TREE_VECTYPE (perm);
+	      /* ???  Should be NULL but that's not expected.  */
+	      SLP_TREE_REPRESENTATIVE (permab) = SLP_TREE_REPRESENTATIVE (perm);
+	      SLP_TREE_CHILDREN (permab).quick_push (a);
+	      for (unsigned k = 0; k < SLP_TREE_LANES (a); ++k)
+		SLP_TREE_LANE_PERMUTATION (permab)
+		  .quick_push (std::make_pair (0, k));
+	      SLP_TREE_CHILDREN (permab).quick_push (b);
+	      for (unsigned k = 0; k < SLP_TREE_LANES (b); ++k)
+		SLP_TREE_LANE_PERMUTATION (permab)
+		  .quick_push (std::make_pair (1, k));
+	      /* Push the do-not-care lanes.  */
+	      for (unsigned k = 0; k < SLP_TREE_LANES (a); ++k)
+		SLP_TREE_LANE_PERMUTATION (permab)
+		  .quick_push (std::make_pair (0, k));
+
+	      /* Put the merged node into 'perm', in place of a.  */
+	      SLP_TREE_CHILDREN (perm)[ai] = permab;
+	      /* Adjust the references to b in the permutation
+		 of perm and to the later children which we'll
+		 remove.  */
+	      for (unsigned k = 0; k < SLP_TREE_LANES (perm); ++k)
+		{
+		  std::pair<unsigned, unsigned> &p
+		    = SLP_TREE_LANE_PERMUTATION (perm)[k];
+		  if (p.first == (unsigned) bi)
+		    {
+		      p.first = ai;
+		      p.second += SLP_TREE_LANES (a);
+		    }
+		  else if (p.first > (unsigned) bi)
+		    p.first--;
+		}
+	      SLP_TREE_CHILDREN (perm).ordered_remove (bi);
+	      break;
+	    }
+
+	  /* Pick the two nodes with the least number of lanes,
+	     prefer the earliest candidate and maintain ai < bi.  */
+	  int ai = -1;
+	  int bi = -1;
+	  for (unsigned ci = 0; ci < SLP_TREE_CHILDREN (perm).length (); ++ci)
+	    {
+	      if (ai == -1)
+		ai = ci;
+	      else if (bi == -1)
+		bi = ci;
+	      else if ((SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[ci])
+			< SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[ai]))
+		       || (SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[ci])
+			   < SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[bi])))
+		{
+		  if (SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[ai])
+		      <= SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[bi]))
+		    bi = ci;
+		  else
+		    {
+		      ai = bi;
+		      bi = ci;
+		    }
+		}
+	    }
+
+	  /* Produce a merge of nodes ai and bi.  */
+	  slp_tree a = SLP_TREE_CHILDREN (perm)[ai];
+	  slp_tree b = SLP_TREE_CHILDREN (perm)[bi];
+	  unsigned n = SLP_TREE_LANES (a) + SLP_TREE_LANES (b);
+	  slp_tree permab = vect_create_new_slp_node (2, VEC_PERM_EXPR);
+	  SLP_TREE_LANES (permab) = n;
+	  SLP_TREE_LANE_PERMUTATION (permab).create (n);
+	  SLP_TREE_VECTYPE (permab) = SLP_TREE_VECTYPE (perm);
+	  /* ???  Should be NULL but that's not expected.  */
+	  SLP_TREE_REPRESENTATIVE (permab) = SLP_TREE_REPRESENTATIVE (perm);
+	  SLP_TREE_CHILDREN (permab).quick_push (a);
+	  for (unsigned k = 0; k < SLP_TREE_LANES (a); ++k)
+	    SLP_TREE_LANE_PERMUTATION (permab)
+	      .quick_push (std::make_pair (0, k));
+	  SLP_TREE_CHILDREN (permab).quick_push (b);
+	  for (unsigned k = 0; k < SLP_TREE_LANES (b); ++k)
+	    SLP_TREE_LANE_PERMUTATION (permab)
+	      .quick_push (std::make_pair (1, k));
+
+	  /* Put the merged node into 'perm', in place of a.  */
+	  SLP_TREE_CHILDREN (perm)[ai] = permab;
+	  /* Adjust the references to b in the permutation
+	     of perm and to the later children which we'll
+	     remove.  */
+	  for (unsigned k = 0; k < SLP_TREE_LANES (perm); ++k)
+	    {
+	      std::pair<unsigned, unsigned> &p
+		= SLP_TREE_LANE_PERMUTATION (perm)[k];
+	      if (p.first == (unsigned) bi)
+		{
+		  p.first = ai;
+		  p.second += SLP_TREE_LANES (a);
+		}
+	      else if (p.first > (unsigned) bi)
+		p.first--;
+	    }
+	  SLP_TREE_CHILDREN (perm).ordered_remove (bi);
+	}
+    }
+
+  return node;
+}
+
 /* Analyze an SLP instance starting from SCALAR_STMTS which are a group
    of KIND.  Return true if successful.  */
 
@@ -3363,6 +3664,10 @@ vect_build_slp_instance (vec_info *vinfo,
 			 /* ???  We need stmt_info for group splitting.  */
 			 stmt_vec_info stmt_info_)
 {
+  /* If there's no budget left bail out early.  */
+  if (*limit == 0)
+    return false;
+
   if (kind == slp_inst_kind_ctor)
     {
       if (dump_enabled_p ())
@@ -3520,7 +3825,7 @@ vect_build_slp_instance (vec_info *vinfo,
 
   stmt_vec_info stmt_info = stmt_info_;
   /* Try to break the group up into pieces.  */
-  if (kind == slp_inst_kind_store)
+  if (*limit > 0 && kind == slp_inst_kind_store)
     {
       /* ???  We could delay all the actual splitting of store-groups
 	 until after SLP discovery of the original group completed.
@@ -3654,180 +3959,11 @@ vect_build_slp_instance (vec_info *vinfo,
 		}
 	    }
 
-	  /* Now we assume we can build the root SLP node from all
-	     stores.  */
-	  node = vect_create_new_slp_node (scalar_stmts,
-					   SLP_TREE_CHILDREN
-					     (rhs_nodes[0]).length ());
-	  SLP_TREE_VECTYPE (node) = SLP_TREE_VECTYPE (rhs_nodes[0]);
-	  for (unsigned l = 0;
-	       l < SLP_TREE_CHILDREN (rhs_nodes[0]).length (); ++l)
-	    {
-	      /* And a permute merging all RHS SLP trees.  */
-	      slp_tree perm = vect_create_new_slp_node (rhs_nodes.length (),
-							VEC_PERM_EXPR);
-	      SLP_TREE_CHILDREN (node).quick_push (perm);
-	      SLP_TREE_LANE_PERMUTATION (perm).create (group_size);
-	      SLP_TREE_VECTYPE (perm) = SLP_TREE_VECTYPE (node);
-	      SLP_TREE_LANES (perm) = group_size;
-	      /* ???  We should set this NULL but that's not expected.  */
-	      SLP_TREE_REPRESENTATIVE (perm)
-		= SLP_TREE_REPRESENTATIVE (SLP_TREE_CHILDREN (rhs_nodes[0])[l]);
-	      for (unsigned j = 0; j < rhs_nodes.length (); ++j)
-		{
-		  SLP_TREE_CHILDREN (perm)
-		    .quick_push (SLP_TREE_CHILDREN (rhs_nodes[j])[l]);
-		  for (unsigned k = 0;
-		       k < SLP_TREE_SCALAR_STMTS (rhs_nodes[j]).length (); ++k)
-		    {
-		      /* ???  We should populate SLP_TREE_SCALAR_STMTS
-			 or SLP_TREE_SCALAR_OPS but then we might have
-			 a mix of both in our children.  */
-		      SLP_TREE_LANE_PERMUTATION (perm)
-			.quick_push (std::make_pair (j, k));
-		    }
-		}
+	  /* Now we assume we can build the root SLP node from all stores.  */
+	  node = vect_build_slp_store_interleaving (rhs_nodes, scalar_stmts);
 
-	      /* Now we have a single permute node but we cannot code-generate
-		 the case with more than two inputs.
-		 Perform pairwise reduction, reducing the two inputs
-		 with the least number of lanes to one and then repeat until
-		 we end up with two inputs.  That scheme makes sure we end
-		 up with permutes satisfying the restriction of requiring at
-		 most two vector inputs to produce a single vector output.  */
-	      while (SLP_TREE_CHILDREN (perm).length () > 2)
-		{
-		  /* When we have three equal sized groups left the pairwise
-		     reduction does not result in a scheme that avoids using
-		     three vectors.  Instead merge the first two groups
-		     to the final size with do-not-care elements (chosen
-		     from the first group) and then merge with the third.
-			   { A0, B0,  x, A1, B1,  x, ... }
-			-> { A0, B0, C0, A1, B1, C1, ... }
-		     This handles group size of three (and at least
-		     power-of-two multiples of that).  */
-		  if (SLP_TREE_CHILDREN (perm).length () == 3
-		      && (SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[0])
-			  == SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[1]))
-		      && (SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[0])
-			  == SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[2])))
-		    {
-		      int ai = 0;
-		      int bi = 1;
-		      slp_tree a = SLP_TREE_CHILDREN (perm)[ai];
-		      slp_tree b = SLP_TREE_CHILDREN (perm)[bi];
-		      unsigned n = SLP_TREE_LANES (perm);
-
-		      slp_tree permab
-			= vect_create_new_slp_node (2, VEC_PERM_EXPR);
-		      SLP_TREE_LANES (permab) = n;
-		      SLP_TREE_LANE_PERMUTATION (permab).create (n);
-		      SLP_TREE_VECTYPE (permab) = SLP_TREE_VECTYPE (perm);
-		      /* ???  Should be NULL but that's not expected.  */
-		      SLP_TREE_REPRESENTATIVE (permab)
-			= SLP_TREE_REPRESENTATIVE (perm);
-		      SLP_TREE_CHILDREN (permab).quick_push (a);
-		      for (unsigned k = 0; k < SLP_TREE_LANES (a); ++k)
-			SLP_TREE_LANE_PERMUTATION (permab)
-			  .quick_push (std::make_pair (0, k));
-		      SLP_TREE_CHILDREN (permab).quick_push (b);
-		      for (unsigned k = 0; k < SLP_TREE_LANES (b); ++k)
-			SLP_TREE_LANE_PERMUTATION (permab)
-			  .quick_push (std::make_pair (1, k));
-		      /* Push the do-not-care lanes.  */
-		      for (unsigned k = 0; k < SLP_TREE_LANES (a); ++k)
-			SLP_TREE_LANE_PERMUTATION (permab)
-			  .quick_push (std::make_pair (0, k));
-
-		      /* Put the merged node into 'perm', in place of a.  */
-		      SLP_TREE_CHILDREN (perm)[ai] = permab;
-		      /* Adjust the references to b in the permutation
-			 of perm and to the later children which we'll
-			 remove.  */
-		      for (unsigned k = 0; k < SLP_TREE_LANES (perm); ++k)
-			{
-			  std::pair<unsigned, unsigned> &p
-			      = SLP_TREE_LANE_PERMUTATION (perm)[k];
-			  if (p.first == (unsigned) bi)
-			    {
-			      p.first = ai;
-			      p.second += SLP_TREE_LANES (a);
-			    }
-			  else if (p.first > (unsigned) bi)
-			    p.first--;
-			}
-		      SLP_TREE_CHILDREN (perm).ordered_remove (bi);
-		      break;
-		    }
-
-		  /* Pick the two nodes with the least number of lanes,
-		     prefer the earliest candidate and maintain ai < bi.  */
-		  int ai = -1;
-		  int bi = -1;
-		  for (unsigned ci = 0;
-		       ci < SLP_TREE_CHILDREN (perm).length (); ++ci)
-		    {
-		      if (ai == -1)
-			ai = ci;
-		      else if (bi == -1)
-			bi = ci;
-		      else if ((SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[ci])
-				< SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[ai]))
-			       || (SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[ci])
-				   < SLP_TREE_LANES
-				       (SLP_TREE_CHILDREN (perm)[bi])))
-			{
-			  if (SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[ai])
-			      <= SLP_TREE_LANES (SLP_TREE_CHILDREN (perm)[bi]))
-			    bi = ci;
-			  else
-			    {
-			      ai = bi;
-			      bi = ci;
-			    }
-			}
-		    }
-
-		  /* Produce a merge of nodes ai and bi.  */
-		  slp_tree a = SLP_TREE_CHILDREN (perm)[ai];
-		  slp_tree b = SLP_TREE_CHILDREN (perm)[bi];
-		  unsigned n = SLP_TREE_LANES (a) + SLP_TREE_LANES (b);
-		  slp_tree permab = vect_create_new_slp_node (2, VEC_PERM_EXPR);
-		  SLP_TREE_LANES (permab) = n;
-		  SLP_TREE_LANE_PERMUTATION (permab).create (n);
-		  SLP_TREE_VECTYPE (permab) = SLP_TREE_VECTYPE (perm);
-		  /* ???  Should be NULL but that's not expected.  */
-		  SLP_TREE_REPRESENTATIVE (permab)
-		    = SLP_TREE_REPRESENTATIVE (perm);
-		  SLP_TREE_CHILDREN (permab).quick_push (a);
-		  for (unsigned k = 0; k < SLP_TREE_LANES (a); ++k)
-		    SLP_TREE_LANE_PERMUTATION (permab)
-		      .quick_push (std::make_pair (0, k));
-		  SLP_TREE_CHILDREN (permab).quick_push (b);
-		  for (unsigned k = 0; k < SLP_TREE_LANES (b); ++k)
-		    SLP_TREE_LANE_PERMUTATION (permab)
-		      .quick_push (std::make_pair (1, k));
-
-		  /* Put the merged node into 'perm', in place of a.  */
-		  SLP_TREE_CHILDREN (perm)[ai] = permab;
-		  /* Adjust the references to b in the permutation
-		     of perm and to the later children which we'll
-		     remove.  */
-		  for (unsigned k = 0; k < SLP_TREE_LANES (perm); ++k)
-		    {
-		      std::pair<unsigned, unsigned> &p
-			  = SLP_TREE_LANE_PERMUTATION (perm)[k];
-		      if (p.first == (unsigned) bi)
-			{
-			  p.first = ai;
-			  p.second += SLP_TREE_LANES (a);
-			}
-		      else if (p.first > (unsigned) bi)
-			p.first--;
-		    }
-		  SLP_TREE_CHILDREN (perm).ordered_remove (bi);
-		}
-	    }
+	  while (!rhs_nodes.is_empty ())
+	    vect_free_slp_tree (rhs_nodes.pop ());
 
 	  /* Create a new SLP instance.  */
 	  slp_instance new_instance = XNEW (class _slp_instance);
@@ -6554,36 +6690,13 @@ vect_slp_analyze_node_operations_1 (vec_info *vinfo, slp_tree node,
 {
   stmt_vec_info stmt_info = SLP_TREE_REPRESENTATIVE (node);
 
-  /* Calculate the number of vector statements to be created for the
-     scalar stmts in this node.  For SLP reductions it is equal to the
-     number of vector statements in the children (which has already been
-     calculated by the recursive call).  Otherwise it is the number of
-     scalar elements in one scalar iteration (DR_GROUP_SIZE) multiplied by
-     VF divided by the number of elements in a vector.  */
-  if (SLP_TREE_CODE (node) != VEC_PERM_EXPR
-      && !STMT_VINFO_DATA_REF (stmt_info)
-      && REDUC_GROUP_FIRST_ELEMENT (stmt_info))
-    {
-      for (unsigned i = 0; i < SLP_TREE_CHILDREN (node).length (); ++i)
-	if (SLP_TREE_DEF_TYPE (SLP_TREE_CHILDREN (node)[i]) == vect_internal_def)
-	  {
-	    SLP_TREE_NUMBER_OF_VEC_STMTS (node)
-	      = SLP_TREE_NUMBER_OF_VEC_STMTS (SLP_TREE_CHILDREN (node)[i]);
-	    break;
-	  }
-    }
-  else
-    {
-      poly_uint64 vf;
-      if (loop_vec_info loop_vinfo = dyn_cast <loop_vec_info> (vinfo))
-	vf = loop_vinfo->vectorization_factor;
-      else
-	vf = 1;
-      unsigned int group_size = SLP_TREE_LANES (node);
-      tree vectype = SLP_TREE_VECTYPE (node);
-      SLP_TREE_NUMBER_OF_VEC_STMTS (node)
-	= vect_get_num_vectors (vf * group_size, vectype);
-    }
+  /* Calculate the number of vector statements to be created for the scalar
+     stmts in this node.  It is the number of scalar elements in one scalar
+     iteration (DR_GROUP_SIZE) multiplied by VF divided by the number of
+     elements in a vector.  For single-defuse-cycle, lane-reducing op, and
+     PHI statement that starts reduction comprised of only lane-reducing ops,
+     the number is more than effective vector statements actually required.  */
+  SLP_TREE_NUMBER_OF_VEC_STMTS (node) = vect_get_num_copies (vinfo, node);
 
   /* Handle purely internal nodes.  */
   if (SLP_TREE_CODE (node) == VEC_PERM_EXPR)
@@ -6851,12 +6964,9 @@ vect_slp_analyze_node_operations (vec_info *vinfo, slp_tree node,
 			  && j == 1);
 	      continue;
 	    }
-	  unsigned group_size = SLP_TREE_LANES (child);
-	  poly_uint64 vf = 1;
-	  if (loop_vec_info loop_vinfo = dyn_cast <loop_vec_info> (vinfo))
-	    vf = loop_vinfo->vectorization_factor;
+
 	  SLP_TREE_NUMBER_OF_VEC_STMTS (child)
-	    = vect_get_num_vectors (vf * group_size, vector_type);
+		= vect_get_num_copies (vinfo, child);
 	  /* And cost them.  */
 	  vect_prologue_cost_for_slp (child, cost_vec);
 	}
@@ -7532,7 +7642,17 @@ next_lane:
       vect_cost_for_stmt kind;
       if (STMT_VINFO_DATA_REF (orig_stmt_info))
 	{
-	  if (DR_IS_READ (STMT_VINFO_DATA_REF (orig_stmt_info)))
+	  data_reference_p dr = STMT_VINFO_DATA_REF (orig_stmt_info);
+	  tree base = get_base_address (DR_REF (dr));
+	  /* When the scalar access is to a non-global not address-taken
+	     decl that is not BLKmode assume we can access it with a single
+	     non-load/store instruction.  */
+	  if (DECL_P (base)
+	      && !is_global_var (base)
+	      && !TREE_ADDRESSABLE (base)
+	      && DECL_MODE (base) != BLKmode)
+	    kind = scalar_stmt;
+	  else if (DR_IS_READ (STMT_VINFO_DATA_REF (orig_stmt_info)))
 	    kind = scalar_load;
 	  else
 	    kind = scalar_store;

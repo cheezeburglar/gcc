@@ -1410,6 +1410,7 @@ hppa_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
       /* If the index adds a large constant, try to scale the
 	 constant so that it can be loaded with only one insn.  */
       if (GET_CODE (XEXP (idx, 1)) == CONST_INT
+	  && INTVAL (XEXP (idx, 1)) % (1 << shift_val) == 0
 	  && VAL_14_BITS_P (INTVAL (XEXP (idx, 1))
 			    / INTVAL (XEXP (XEXP (idx, 0), 1)))
 	  && INTVAL (XEXP (idx, 1)) % INTVAL (XEXP (XEXP (idx, 0), 1)) == 0)
@@ -4516,7 +4517,7 @@ load_reg (int reg, HOST_WIDE_INT disp, int base)
       rtx tmpreg = gen_rtx_REG (Pmode, 1);
 
       emit_move_insn (tmpreg, delta);
-      if (TARGET_DISABLE_INDEXING)
+      if (!TARGET_NO_SPACE_REGS || TARGET_DISABLE_INDEXING)
 	{
 	  emit_move_insn (tmpreg, gen_rtx_PLUS (Pmode, tmpreg, basereg));
 	  src = gen_rtx_MEM (word_mode, tmpreg);
@@ -11008,17 +11009,13 @@ pa_legitimate_address_p (machine_mode mode, rtx x, bool strict, code_helper)
 	}
 
       if (!TARGET_DISABLE_INDEXING
-	  /* Only accept the "canonical" INDEX+BASE operand order
-	     on targets with non-equivalent space registers.  */
-	  && (TARGET_NO_SPACE_REGS
-	      ? REG_P (index)
-	      : (base == XEXP (x, 1) && REG_P (index)
-		 && (reload_completed
-		     || (reload_in_progress && HARD_REGISTER_P (base))
-		     || REG_POINTER (base))
-		 && (reload_completed
-		     || (reload_in_progress && HARD_REGISTER_P (index))
-		     || !REG_POINTER (index))))
+	  /* Currently, the REG_POINTER flag is not set in a variety
+	     of situations (e.g., call arguments and pointer arithmetic).
+	     As a result, we can't reliably determine when unscaled
+	     addresses are legitimate on targets that need space register
+	     selection.  */
+	  && TARGET_NO_SPACE_REGS
+	  && REG_P (index)
 	  && MODE_OK_FOR_UNSCALED_INDEXING_P (mode)
 	  && (strict ? STRICT_REG_OK_FOR_INDEX_P (index)
 		     : REG_OK_FOR_INDEX_P (index))

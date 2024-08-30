@@ -23,6 +23,7 @@
 #define IN_TARGET_CODE 1
 
 #include "config.h"
+#define INCLUDE_MEMORY
 #define INCLUDE_STRING
 #include "system.h"
 #include "coretypes.h"
@@ -34332,7 +34333,7 @@ arm_expand_divmod_libfunc (rtx libfunc, machine_mode mode,
     gcc_assert (!TARGET_IDIV);
 
   scalar_int_mode libval_mode
-    = smallest_int_mode_for_size (2 * GET_MODE_BITSIZE (mode));
+    = smallest_int_mode_for_size (2 * GET_MODE_BITSIZE (mode)).require ();
 
   rtx libval = emit_library_call_value (libfunc, NULL_RTX, LCT_CONST,
 					libval_mode, op0, mode, op1, mode);

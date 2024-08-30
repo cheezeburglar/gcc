@@ -2824,7 +2824,7 @@ expand_arith_overflow (enum tree_code code, gimple *stmt)
       if (orig_precres == precres && precop <= BITS_PER_WORD)
 	{
 	  int p = MAX (min_precision, precop);
-	  scalar_int_mode m = smallest_int_mode_for_size (p);
+	  scalar_int_mode m = smallest_int_mode_for_size (p).require ();
 	  tree optype = build_nonstandard_integer_type (GET_MODE_PRECISION (m),
 							uns0_p && uns1_p
 							&& unsr_p);
@@ -2867,7 +2867,7 @@ expand_arith_overflow (enum tree_code code, gimple *stmt)
       if (orig_precres == precres)
 	{
 	  int p = MAX (prec0, prec1);
-	  scalar_int_mode m = smallest_int_mode_for_size (p);
+	  scalar_int_mode m = smallest_int_mode_for_size (p).require ();
 	  tree optype = build_nonstandard_integer_type (GET_MODE_PRECISION (m),
 							uns0_p && uns1_p
 							&& unsr_p);
@@ -4164,6 +4164,45 @@ direct_internal_fn_optab (internal_fn fn)
   gcc_unreachable ();
 }
 
+/* Return true if TYPE's mode has the same format as TYPE, and if there is
+   a 1:1 correspondence between the values that the mode can store and the
+   values that the type can store.  */
+
+static bool
+type_strictly_matches_mode_p (const_tree type)
+{
+  /* The masked vector operations have both vector data operands and vector
+     boolean operands.  The vector data operands are expected to have a vector
+     mode,  but the vector boolean operands can be an integer mode rather than
+     a vector mode,  depending on how TARGET_VECTORIZE_GET_MASK_MODE is
+     defined.  PR116103.  */
+  if (VECTOR_BOOLEAN_TYPE_P (type)
+      && SCALAR_INT_MODE_P (TYPE_MODE (type))
+      && TYPE_PRECISION (TREE_TYPE (type)) == 1)
+    return true;
+
+  if (VECTOR_TYPE_P (type))
+    return VECTOR_MODE_P (TYPE_MODE (type));
+
+  if (INTEGRAL_TYPE_P (type))
+    return type_has_mode_precision_p (type);
+
+  if (SCALAR_FLOAT_TYPE_P (type) || COMPLEX_FLOAT_TYPE_P (type))
+    return true;
+
+  return false;
+}
+
+/* Returns true if both types of TYPE_PAIR strictly match their modes,
+   else returns false.  */
+
+static bool
+type_pair_strictly_matches_mode_p (tree_pair type_pair)
+{
+  return type_strictly_matches_mode_p (type_pair.first)
+    && type_strictly_matches_mode_p (type_pair.second);
+}
+
 /* Return true if FN is supported for the types in TYPES when the
    optimization type is OPT_TYPE.  The types are those associated with
    the "type0" and "type1" fields of FN's direct_internal_fn_info
@@ -4173,6 +4212,9 @@ bool
 direct_internal_fn_supported_p (internal_fn fn, tree_pair types,
 				optimization_type opt_type)
 {
+  if (!type_pair_strictly_matches_mode_p (types))
+    return false;
+
   switch (fn)
     {
 #define DEF_INTERNAL_FN(CODE, FLAGS, FNSPEC) \
@@ -5269,6 +5311,7 @@ expand_POPCOUNT (internal_fn fn, gcall *stmt)
   bool nonzero_arg = integer_zerop (gimple_call_arg (stmt, 1));
   tree type = TREE_TYPE (arg);
   machine_mode mode = TYPE_MODE (type);
+  machine_mode lhsmode = TYPE_MODE (TREE_TYPE (lhs));
   do_pending_stack_adjust ();
   start_sequence ();
   expand_unary_optab_fn (fn, stmt, popcount_optab);
@@ -5276,7 +5319,7 @@ expand_POPCOUNT (internal_fn fn, gcall *stmt)
   end_sequence ();
   start_sequence ();
   rtx plhs = expand_normal (lhs);
-  rtx pcmp = emit_store_flag (NULL_RTX, EQ, plhs, const1_rtx, mode, 0, 0);
+  rtx pcmp = emit_store_flag (NULL_RTX, EQ, plhs, const1_rtx, lhsmode, 0, 0);
   if (pcmp == NULL_RTX)
     {
     fail:
@@ -5289,11 +5332,11 @@ expand_POPCOUNT (internal_fn fn, gcall *stmt)
   start_sequence ();
   rtx op0 = expand_normal (arg);
   rtx argm1 = expand_simple_binop (mode, PLUS, op0, constm1_rtx, NULL_RTX,
-				   1, OPTAB_DIRECT);
+				   1, OPTAB_WIDEN);
   if (argm1 == NULL_RTX)
     goto fail;
   rtx argxorargm1 = expand_simple_binop (mode, nonzero_arg ? AND : XOR, op0,
-					 argm1, NULL_RTX, 1, OPTAB_DIRECT);
+					 argm1, NULL_RTX, 1, OPTAB_WIDEN);
   if (argxorargm1 == NULL_RTX)
     goto fail;
   rtx cmp;
@@ -5308,6 +5351,11 @@ expand_POPCOUNT (internal_fn fn, gcall *stmt)
   unsigned popcount_cost = (seq_cost (popcount_insns, speed_p)
 			    + seq_cost (popcount_cmp_insns, speed_p));
   unsigned cmp_cost = seq_cost (cmp_insns, speed_p);
+
+  if (dump_file && (dump_flags & TDF_DETAILS))
+    fprintf(dump_file, "popcount == 1: popcount cost: %u; cmp cost: %u\n",
+	    popcount_cost, cmp_cost);
+
   if (popcount_cost <= cmp_cost)
     emit_insn (popcount_insns);
   else

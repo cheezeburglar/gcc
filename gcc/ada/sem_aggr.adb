@@ -468,6 +468,12 @@ package body Sem_Aggr is
       --  corresponding to the same dimension are static and found to differ,
       --  then emit a warning, and mark N as raising Constraint_Error.
 
+      procedure Retrieve_Aggregate_Bounds (This_Range : Node_Id);
+      --  In some cases, an appropriate list of aggregate bounds has been
+      --  created during resolution. Populate Aggr_Range with that list, and
+      --  remove the elements from the list so they can be added to another
+      --  list later.
+
       -------------------------
       -- Collect_Aggr_Bounds --
       -------------------------
@@ -563,10 +569,9 @@ package body Sem_Aggr is
                end if;
 
             --  For null aggregates, build the bounds of their inner dimensions
-            --  (if not previously done). They are required for building the
-            --  aggregate itype.
+            --  since they are required for building the aggregate itype.
 
-            elsif No (Aggr_Range (Dim + 1)) then
+            else
                declare
                   Loc        : constant Source_Ptr := Sloc (N);
                   Typ        : constant Entity_Id := Etype (N);
@@ -616,7 +621,6 @@ package body Sem_Aggr is
                      Null_Range := Make_Range (Loc, New_Copy_Tree (Lo), Hi);
                      Analyze_And_Resolve (Null_Range, Index_Typ);
 
-                     pragma Assert (No (Aggr_Range (Num_Dim)));
                      Aggr_Low (Num_Dim)   := Low_Bound (Null_Range);
                      Aggr_High (Num_Dim)  := High_Bound (Null_Range);
                      Aggr_Range (Num_Dim) := Null_Range;
@@ -630,6 +634,24 @@ package body Sem_Aggr is
             end if;
          end if;
       end Collect_Aggr_Bounds;
+
+      -------------------------------
+      -- Retrieve_Aggregate_Bounds --
+      -------------------------------
+
+      procedure Retrieve_Aggregate_Bounds (This_Range : Node_Id) is
+         R : Node_Id := This_Range;
+      begin
+         for J in 1 .. Aggr_Dimension loop
+            Aggr_Range (J) := R;
+            Next_Index (R);
+
+            --  Remove bounds from the list, so they can be reattached as
+            --  the First_Index/Next_Index again.
+
+            Remove (Aggr_Range (J));
+         end loop;
+      end Retrieve_Aggregate_Bounds;
 
       --  Array_Aggr_Subtype variables
 
@@ -655,25 +677,17 @@ package body Sem_Aggr is
 
       Set_Parent (Index_Constraints, N);
 
+      if Is_Rewrite_Substitution (N)
+        and then Present (Component_Associations (Original_Node (N)))
+      then
+         Retrieve_Aggregate_Bounds (First_Index (Etype (Original_Node (N))));
+
       --  When resolving a null aggregate we created a list of aggregate bounds
       --  for the consecutive dimensions. The bounds for the first dimension
       --  are attached as the Aggregate_Bounds of the aggregate node.
 
-      if Is_Null_Aggregate (N) then
-         declare
-            This_Range : Node_Id := Aggregate_Bounds (N);
-         begin
-            for J in 1 .. Aggr_Dimension loop
-               Aggr_Range (J) := This_Range;
-               Next_Index (This_Range);
-
-               --  Remove bounds from the list, so they can be reattached as
-               --  the First_Index/Next_Index again by the code that also
-               --  handles non-null aggregates.
-
-               Remove (Aggr_Range (J));
-            end loop;
-         end;
+      elsif Is_Null_Aggregate (N) then
+         Retrieve_Aggregate_Bounds (Aggregate_Bounds (N));
       else
          Collect_Aggr_Bounds (N, 1);
       end if;
@@ -1378,6 +1392,7 @@ package body Sem_Aggr is
            and then Is_OK_Static_Subtype (Component_Type (Typ))
            and then Base_Type (Etype (First_Index (Typ))) =
                       Base_Type (Standard_Integer)
+           and then not Has_Static_Empty_Array_Bounds (Typ)
          then
             declare
                Expr : Node_Id;
@@ -2197,6 +2212,15 @@ package body Sem_Aggr is
 
          if Operating_Mode /= Check_Semantics then
             Remove_References (Expr);
+            declare
+               Loop_Action : Node_Id;
+            begin
+               Loop_Action := First (Loop_Actions (N));
+               while Present (Loop_Action) loop
+                  Remove_References (Loop_Action);
+                  Next (Loop_Action);
+               end loop;
+            end;
          end if;
 
          --  An iterated_component_association may appear in a nested
@@ -2518,6 +2542,66 @@ package body Sem_Aggr is
          null;
 
       elsif Present (Component_Associations (N)) then
+         Assoc := First (Component_Associations (N));
+
+         --  Loop over associations to identify any iterated associations that
+         --  need to be converted from the form with a Defining_Identifer and
+         --  Discrete_Choices list to the form with an Iterator_Specification.
+
+         if Nkind (Assoc) = N_Iterated_Component_Association then
+            while Present (Assoc) loop
+               if Nkind (Assoc) = N_Iterated_Component_Association
+                 and then No (Iterator_Specification (Assoc))
+               then
+                  declare
+                     Choice : constant Node_Id :=
+                       First (Discrete_Choices (Assoc));
+                     Copy   : Node_Id;
+                  begin
+
+                     --  A copy of Choice is made before it's analyzed,
+                     --  to preserve prefixed calls in their original form,
+                     --  because otherwise the analysis of Choice can transform
+                     --  such calls to normal form, and the later analysis of
+                     --  the iterator_specification created below may trigger
+                     --  an error on the call (in the case where the function
+                     --  is not directly visible).
+
+                     Copy := Copy_Separate_Tree (Choice);
+
+                     --  This is an association with a Defining_Identifier and
+                     --  Discrete_Choice_List, but if the latter has a single
+                     --  choice denoting an object (including a function call)
+                     --  of an iterator type, then it's a stand-in for an
+                     --  Iterator_Specification, and so we transform the
+                     --  association accordingly.
+
+                     if No (Next (Choice)) then
+                        Analyze (Choice);
+
+                        if Is_Object_Reference (Choice)
+                          and then Is_Iterator (Etype (Choice))
+                        then
+                           Set_Iterator_Specification
+                             (Assoc,
+                              Make_Iterator_Specification (Sloc (N),
+                                Defining_Identifier =>
+                                  Relocate_Node (Defining_Identifier (Assoc)),
+                                Name                => Copy,
+                                Reverse_Present     => Reverse_Present (Assoc),
+                                Iterator_Filter     => Empty,
+                                Subtype_Indication  => Empty));
+
+                           Set_Defining_Identifier (Assoc, Empty);
+                           Set_Discrete_Choices (Assoc, No_List);
+                        end if;
+                     end if;
+                  end;
+               end if;
+
+               Next (Assoc);
+            end loop;
+         end if;
 
          --  Verify that all or none of the component associations
          --  include an iterator specification.
@@ -2720,15 +2804,9 @@ package body Sem_Aggr is
             -----------------
 
             function Empty_Range (A : Node_Id) return Boolean is
-               R : Node_Id;
+               R : constant Node_Id := First (Choice_List (A));
 
             begin
-               if Nkind (A) = N_Iterated_Component_Association then
-                  R := First (Discrete_Choices (A));
-               else
-                  R := First (Choices (A));
-               end if;
-
                return No (Next (R))
                  and then Nkind (R) = N_Range
                  and then Compile_Time_Compare
@@ -3595,10 +3673,12 @@ package body Sem_Aggr is
       --  If the aggregate already has bounds attached to it, it means this is
       --  a positional aggregate created as an optimization by
       --  Exp_Aggr.Convert_To_Positional, so we don't want to change those
-      --  bounds.
+      --  bounds, unless they depend on discriminants. If they do, we have to
+      --  perform analysis in the current context.
 
       if Present (Aggregate_Bounds (N))
-        and then not Others_Allowed
+        and then No (Others_N)
+        and then not Depends_On_Discriminant (Aggregate_Bounds (N))
         and then not Comes_From_Source (N)
       then
          Aggr_Low  := Low_Bound  (Aggregate_Bounds (N));
@@ -3794,14 +3874,14 @@ package body Sem_Aggr is
             then
                null;
 
-            elsif Nkind (Choice) = N_Function_Call then
+            elsif Is_Object_Reference (Choice) then
                declare
                   I_Spec : constant Node_Id :=
                     Make_Iterator_Specification (Sloc (N),
                       Defining_Identifier =>
                         Relocate_Node (Defining_Identifier (Comp)),
                       Name                => Copy,
-                      Reverse_Present     => False,
+                      Reverse_Present     => Reverse_Present (Comp),
                       Iterator_Filter     => Empty,
                       Subtype_Indication  => Empty);
                begin
