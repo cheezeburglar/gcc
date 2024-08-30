@@ -18,8 +18,8 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
-#ifndef GCC_TREE_DUMP_H
-#define GCC_TREE_DUMP_H
+#ifndef GCC_TREE_JSON_H
+#define GCC_TREE_JSON_H
 
 #include "splay-tree.h"
 #include "dumpfile.h"
@@ -82,6 +82,18 @@ struct dump_info
   json::array* tree_json_debug;
 };
 
+class generic_tree_json_writer
+{
+public:
+  generic_tree_json_writer ();
+  ~generic_tree_json_writer();
+  void write (json::object *t);
+  void flush ();
+
+private:
+  auto_vec<json::object *> buffer;
+};
+
 /* Dump the CHILD and its children.  */
 #define dump_child(field, child) \
   queue_and_dump_index (di, field, child, DUMP_NONE)
@@ -94,4 +106,5 @@ extern void queue_and_dump_index (dump_info_p, const char *, const_tree, int);
 extern void queue_and_dump_type (dump_info_p, const_tree);
 extern int dump_flag (dump_info_p, dump_flags_t, const_tree);
 extern json::object* node_emit_json(tree t);
-#endif /* ! GCC_TREE_DUMP_H */
+extern void dump_node_json (const_tree t, dump_flags_t flags, FILE *stream);
+#endif /* ! GCC_TREE_JSON_H */

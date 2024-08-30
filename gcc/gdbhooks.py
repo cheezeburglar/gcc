@@ -167,6 +167,22 @@ tcc_declaration = tree_code_class_dict['tcc_declaration']
 def intptr(gdbval):
     return long(gdbval) if sys.version_info.major == 2 else int(gdbval)
 
+##class std_err_tee ():
+##    def __init__:
+##
+##    def write(self, data):
+        
+import subprocess
+
+def foo():
+    tee = subprocess.Popen(["tee", "foo.txt"], stdin=subprocess.PIPE)
+    os.dup2(tee.stdin.fileno(), sys.stdout.fileno())
+    os.dup2(tee.stdin.fileno(), sys.stderr.fileno())
+    print("std_err", flush=True)
+    print("std_out", sys.stdout, flush=True)
+
+
+
 class Tree:
     """
     Wrapper around a gdb.Value for a tree, with various methods
