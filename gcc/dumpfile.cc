@@ -43,7 +43,14 @@ along with GCC; see the file COPYING3.  If not see
 #include "spellcheck.h"
 #include "make-unique.h"
 #include "pretty-print-format-impl.h"
+<<<<<<< HEAD
 #include "tree-emit-json.h"
+=======
+<<<<<<< HEAD
+#include "tree-emit-json.h"
+=======
+>>>>>>> gcc-upstream-mirror/master
+>>>>>>> 77c3f9fd01d31317633b26ab4459536f350523ef
 
 /* If non-NULL, return one past-the-end of the matching SUBPART of
    the WHOLE string.  */
