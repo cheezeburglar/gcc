@@ -1,3 +1,422 @@
+2024-09-03  YunQiang Su  <syq@gcc.gnu.org>
+
+	* config/mips/mips-msa.md: (MSA_NO_HADD): we have HADD for
+	S8/U8/S16/U16/S32/U32 only.
+	(reduc_smin_scal_<mode>): New define pattern.
+	(reduc_smax_scal_<mode>): Ditto.
+	(reduc_umin_scal_<mode>): Ditto.
+	(reduc_umax_scal_<mode>): Ditto.
+	(reduc_plus_scal_<mode>): Ditto.
+	(reduc_plus_scal_v4si): Ditto.
+	(reduc_plus_scal_v8hi): Ditto.
+	(reduc_plus_scal_v16qi): Ditto.
+	(reduc_<optab>_scal_<mode>): Ditto.
+	* config/mips/mips-protos.h: New function mips_expand_msa_reduc.
+	* config/mips/mips.cc: New function mips_expand_msa_reduc.
+	* config/mips/mips.md: Define any_bitwise iterator.
+
+2024-09-02  Alexandre Oliva  <oliva@adacore.com>
+
+	PR d/115295
+	* doc/sourcebuild.texi (dg-additional-sources): Add linkonly.
+
+2024-09-02  Andrew Stubbs  <ams@baylibre.com>
+
+	* config/gcn/gcn-opts.h (TARGET_GCN5_PLUS): Delete.
+	(TARGET_GLOBAL_ADDRSPACE): Delete.
+	(TARGET_FLAT_OFFSETS): Delete.
+	(TARGET_EXPLICIT_CARRY): Delete.
+	(TARGET_MULTIPLY_IMMEDIATE): Delete.
+	* config/gcn/gcn-valu.md (*mov<mode>): Rename "gcn_version" to "cdna".
+	(*mov<mode>_4reg): Likewise.
+	(@mov<mode>_sgprbase): Likwise.
+	(gather<mode>_insn_1offset<exec>): Likewise.
+	(gather<mode>_insn_1offset_ds<exec>): Likewise.
+	(gather<mode>_insn_2offsets<exec>): Likewise.
+	(scatter<mode>_insn_1offset<exec_scatter>): Likewise.
+	(scatter<mode>_insn_1offset_ds<exec_scatter>): Likewise.
+	(scatter<mode>_insn_2offsets<exec_scatter>): Likewise.
+	(gather<mode>_insn_1offset<exec>): Remove TARGET_FLAT_OFFSETS
+	conditionals.
+	(scatter<mode>_insn_1offset<exec_scatter>): Likewise.
+	(scatter<mode>_insn_1offset<exec_scatter>): Likewise.
+	(add<mode>3<exec_clobber>): Use "_co" instead of "%^".
+	(add<mode>3_dup<exec_clobber>): Likewise.
+	(add<mode>3_vcc<exec_vcc>): Likewise.
+	(add<mode>3_vcc_dup<exec_vcc>): Likewise.
+	(addc<mode>3<exec_vcc>): Likewise.
+	(sub<mode>3<exec_clobber>): Likewise.
+	(sub<mode>3_vcc<exec_vcc>): Likewise.
+	(subc<mode>3<exec_vcc>): Likewise.
+	(*plus_carry_dpp_shr_<mode>): Likewise.
+	(*plus_carry_in_dpp_shr_<mode>): Likewise.
+	* config/gcn/gcn.cc (gcn_flat_address_p): Remove TARGET_FLAT_OFFSETS
+	conditionals.
+	(gcn_addr_space_legitimate_address_p): Likewise.
+	(gcn_addr_space_legitimize_address): Likewise.
+	(gcn_expand_scalar_to_vector_address): Likewise.
+	(print_operand_address): Likewise, and TARGET_GLOBAL_ADDRSPACE also.
+	(print_operand): Remove "%^" operand code.
+	Remove TARGET_GLOBAL_ADDRSPACE assertion.
+	* config/gcn/gcn.h (STACK_ADDR_SPACE): Remove GCN5 conditional.
+	* config/gcn/gcn.md (gcn_version): Rename attribute ...
+	(cdna): ... to this, and remove the gcn3 and gcn5 values.
+	(enabled): Replace old "gcn_version" logic with new "cdna" logic.
+	(*mov<mode>_insn): Rename "gcn_version" to "cdna".
+	(*movti_insn): Likewise.
+	(addsi3): Use "_co" instead of "%^".
+	(addsi3_scalar_carry): Likewise.
+	(addsi3_scalar_carry_cst): Likewise.
+	(addcsi3_scalar): Likewise.
+	(addcsi3_scalar_zero): Likewise.
+	(addptrdi3): Likewise.
+	(subsi3): Likewise.
+	(<su>mulsi3_highpart): Remove TARGET_MULTIPLY_IMMEDIATE conditions.
+	(<su>mulsi3_highpart_reg): Remove "gcn_version" attribute.
+	(muldi3): Likewise.
+	(atomic_fetch_<bare_mnemonic><mode>): Likewise.
+	(atomic_<bare_mnemonic><mode>): Likewise.
+	(sync_compare_and_swap<mode>_insn): Likewise.
+	(atomic_load<mode>): Likewise.
+	(atomic_store<mode>): Likewise.
+	(atomic_exchange<mode>): Likewise.
+	(<su>mulsi3_highpart_imm): Remove both TARGET_MULTIPLY_IMMEDIATE and
+	"gcn_version".
+	(<su>mulsidi3): Likewise.
+	(<su>mulsidi3_imm): Likewise.
+
+2024-09-02  Andrew Stubbs  <ams@baylibre.com>
+
+	* config/gcn/gcn-opts.h (enum gcn_isa): Delete ISA_GCN3.
+	(TARGET_GCN3): Delete.
+	(TARGET_GCN3_PLUS): Delete.
+	(TARGET_M0_LDS_LIMIT): Delete.
+	* config/gcn/gcn-valu.md
+	(gather<mode>_insn_1offset<exec>): Remove TARGET_GCN3 from conditions.
+	(*<reduc_op>_dpp_shr_<mode>): Likewise.
+	* config/gcn/gcn.cc (enum gcn_isa): Change default to ISA_GCN5.
+	(gcn_expand_prologue): Remove TARGET_M0_LDS_LIMIT feature.
+	(gcn_expand_reduc_scalar): Remove TARGET_GCN3 conditions.
+	* config/gcn/gcn.h (TARGET_CPU_CPP_BUILTINS): Remove TARGET_GCN3.
+
+2024-09-02  Andrew Stubbs  <ams@baylibre.com>
+
+	* config.gcc (amdgcn-*-*): Remove "fiji" from with_arch checks.
+	* config/gcn/gcn-hsa.h (ABI_VERSION_SPEC): Remove fiji alternative.
+	(NO_XNACK): Likewise.
+	(NO_SRAM_ECC): Likewise.
+	(ASM_SPEC): Remove "%{}" around ABI_VERSION_SPEC.
+	* config/gcn/gcn-opts.h (enum processor_type): Remove PROCESSOR_FIJI.
+	(TARGET_FIJI): Delete.
+	* config/gcn/gcn.cc (gcn_option_override): Remove Fiji.
+	(gcn_omp_device_kind_arch_isa): Likewise.
+	(output_file_start): Likewise.
+	* config/gcn/gcn.h (TARGET_CPU_CPP_BUILTINS): Likewise.
+	* config/gcn/gcn.opt (gpu_type): Likewise.
+	(march, mtune): Change default to PROCESSOR_VEGA10.
+	* config/gcn/mkoffload.cc (EF_AMDGPU_MACH_AMDGCN_GFX803): Delete.
+	(copy_early_debug_info): Remove elf_flags_actual.
+	Use ELFABIVERSION_AMDGPU_HSA_V4 unconditionally.
+	(get_arch): Remove Fiji.
+	(main): Remove gfx803.
+	* config/gcn/t-omp-device
+	(omp-device-properties-gcn): Remove fiji and gfx803.
+	* doc/install.texi (amdgcn*-*-*): Remove fiji and special instructions.
+	* doc/invoke.texi: Remove fiji.
+
+2024-09-02  Richard Sandiford  <richard.sandiford@arm.com>
+
+	* doc/gimple.texi (gimple_asm_basic_p): Document.
+	(gimple_asm_set_basic): Likewise.
+	* gimple.h (GF_ASM_INPUT): Rename to...
+	(GF_ASM_BASIC): ...this.
+	(gimple_asm_set_input): Rename to...
+	(gimple_asm_set_basic): ...this.
+	(gimple_asm_input_p): Rename to...
+	(gimple_asm_basic_p): ...this.
+	* cfgexpand.cc (expand_asm_stmt): Update after above renaming.
+	* gimple.cc (gimple_asm_clobbers_memory_p): Likewise.
+	* gimplify.cc (gimplify_asm_expr): Likewise.
+	* ipa-icf-gimple.cc (func_checker::compare_gimple_asm): Likewise.
+	* tree-cfg.cc (stmt_can_terminate_bb_p): Likewise.
+
+2024-09-02  Richard Sandiford  <richard.sandiford@arm.com>
+
+	* doc/generic.texi (ASM_BASIC_P): Document.
+	* tree.h (ASM_INPUT_P): Rename to...
+	(ASM_BASIC_P): ...this.
+	(ASM_VOLATILE_P, ASM_INLINE_P): Reindent.
+	* gimplify.cc (gimplify_asm_expr): Update after above renaming.
+	* tree-core.h (tree_base): Likewise.
+
+2024-09-02  Tobias Burnus  <tburnus@baylibre.com>
+
+	* lto-wrapper.cc (run_gcc): Honor -save-temps for
+	makefile name.
+
+2024-09-02  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/116486
+	* gimple-range-op.cc (cfn_clz::fold_range): If lh is [0,0]
+	and mini is -1, return [-1,-1] range rather than [prec-1,prec-1].
+
+2024-09-02  Richard Biener  <rguenther@suse.de>
+
+	* tree-vectorizer.h (_slp_tree::ldst_lanes): New flag to mark
+	load, store and permute nodes.
+	* tree-vect-slp.cc (_slp_tree::_slp_tree): Initialize ldst_lanes.
+	(vect_build_slp_instance): For stores iff the target prefers
+	store-lanes discover single-lane sub-groups, do not perform
+	interleaving lowering but mark the node with ldst_lanes.
+	Also allow i == 0 - fatal failure - for splitting up a store group
+	when we're not doing single-lane discovery already.
+	(vect_lower_load_permutations): When the target supports
+	load lanes and the loads all fit the pattern split out
+	a single level of permutes only and mark the load and
+	permute nodes with ldst_lanes.
+	(vectorizable_slp_permutation_1): Handle the load-lane permute
+	forwarding of vector defs.
+	(vect_analyze_slp): After SLP pattern recog is finished see if
+	there are any SLP instances that would benefit from using
+	load/store-lanes and re-discover those with forced single lanes.
+	* tree-vect-stmts.cc (get_group_load_store_type): Support
+	load/store-lanes for SLP.
+	(vectorizable_store): Support SLP code generation for store-lanes.
+	(vectorizable_load): Support SLP code generation for load-lanes.
+	* tree-vect-loop.cc (vect_analyze_loop_2): Do not cancel SLP
+	when store-lanes can be used.
+
+2024-09-02  Richard Biener  <rguenther@suse.de>
+
+	* tree-vect-slp.cc (vect_build_slp_tree_1): Handle NULL stmt.
+	(vect_build_slp_tree_2): Likewise.  Release load permutation
+	when there's a NULL in SLP_TREE_SCALAR_STMTS and assert there's
+	no actual permutation in that case.
+	(vllp_cmp): New function.
+	(vect_lower_load_permutations): Likewise.
+	(vect_analyze_slp): Call it.
+
+2024-09-02  Xianmiao Qu  <cooper.qu@linux.alibaba.com>
+
+	* config/riscv/riscv.cc (riscv_rtx_costs): Optimize the cost of the
+	DFmode register move for RV32.
+
+2024-09-02  Jeff Law  <jlaw@ventanamicro.com>
+
+	PR rtl-optimization/116544
+	* ext-dce.cc (ext_dce_process_uses): Fix thinko in promoted subreg
+	handling.
+
+2024-09-02  Levy Hsu  <admin@levyhsu.com>
+
+	* config/i386/i386-expand.cc (ix86_use_mask_cmp_p): Add BFmode
+	for int mask cmp.
+	* config/i386/sse.md (vec_cmp<mode><avx512fmaskmodelower>): New
+	vec_cmp expand for VBF modes.
+
+2024-09-02  Levy Hsu  <admin@levyhsu.com>
+
+	* config/i386/sse.md: Expand VF2H to VF2HB with VBF modes.
+
+2024-09-02  Levy Hsu  <admin@levyhsu.com>
+
+	* config/i386/sse.md
+	(<code><mode>3): New define expand pattern for BF smaxmin.
+
+2024-09-02  Levy Hsu  <admin@levyhsu.com>
+
+	* config/i386/sse.md: Add V8BF/V16BF/V32BF to mode iterator FMAMODEM.
+
+2024-09-02  Levy Hsu  <admin@levyhsu.com>
+
+	* config/i386/sse.md (div<mode>3): New expander for BFmode div.
+	(VF_BHSD): New mode iterator with vector BFmodes.
+	(<insn><mode>3<mask_name><round_name>): Change mode to VF_BHSD.
+	(mul<mode>3<mask_name><round_name>): Likewise.
+
+2024-09-02  Hu, Lin1  <lin1.hu@intel.com>
+
+	* config/i386/i386-expand.cc (ix86_expand_fp_compare): Add UNSPEC to
+	support the optimization.
+	* config/i386/i386.cc (ix86_fp_compare_code_to_integer): Add NE/EQ.
+	* config/i386/i386.md (*cmpx<unord><MODEF:mode>): New define_insn.
+	(*cmpx<unord>hf): Ditto.
+	* config/i386/predicates.md (ix86_trivial_fp_comparison_operator):
+	Add ne/eq.
+
+2024-09-02  Hu, Lin1  <lin1.hu@intel.com>
+
+	* match.pd: Optimize (and ordered non-equal) to
+	(not (or unordered  equal))
+
+2024-09-02  Haochen Jiang  <haochen.jiang@intel.com>
+
+	* config/i386/sse.md (VI1_AVX512VNNIBW): New.
+	(VI2_AVX10_2): Ditto.
+	(sdot_prod<mode>): Add AVX10.2
+	to auto vectorize and combine 512 bit part.
+	(udot_prod<mode>): Ditto.
+	(sdot_prodv64qi): Removed.
+	(udot_prodv64qi): Ditto.
+	(usdot_prod<mode>): Add AVX10.2 to auto vectorize.
+	(udot_prod<mode>): Ditto.
+
+2024-09-02  Pan Li  <pan2.li@intel.com>
+
+	* config/riscv/riscv.cc (riscv_gen_zero_extend_rtx): Merge
+	the zero_extend handing from func riscv_gen_unsigned_xmode_reg.
+	(riscv_gen_unsigned_xmode_reg): Remove.
+	(riscv_expand_ussub): Leverage riscv_gen_zero_extend_rtx
+	instead of riscv_gen_unsigned_xmode_reg.
+
+2024-09-01  Andrew Pinski  <quic_apinski@quicinc.com>
+
+	PR tree-optimization/116554
+	* gimple-ssa-strength-reduction.cc: Include tree-ssa-dce.h.
+	(replace_mult_candidate): Add sdce_worklist argument, mark
+	the rhs1/rhs2 for maybe dceing.
+	(replace_unconditional_candidate): Add sdce_worklist argument,
+	Update call to replace_mult_candidate.
+	(replace_conditional_candidate): Add sdce_worklist argument,
+	update call to replace_mult_candidate.
+	(replace_uncond_cands_and_profitable_phis): Add sdce_worklist argument,
+	update call to replace_conditional_candidate,
+	replace_unconditional_candidate, and replace_uncond_cands_and_profitable_phis.
+	(replace_one_candidate): Add sdce_worklist argument, mark
+	the orig_rhs1/orig_rhs2 for maybe dceing.
+	(replace_profitable_candidates): Add sdce_worklist argument,
+	update call to replace_one_candidate and replace_profitable_candidates.
+	(analyze_candidates_and_replace): Call simple_dce_from_worklist and
+	update calls to replace_profitable_candidates, and
+	replace_uncond_cands_and_profitable_phis.
+
+2024-08-31  Roger Sayle  <roger@nextmovesoftware.com>
+
+	* config/i386/i386-features.cc (timode_scalar_to_vector_candidate_p):
+	Support the first operand of AND, IOR and XOR being MEM_P, i.e. a
+	read-modify-write insn.
+
+2024-08-31  Georg-Johann Lay  <avr@gjlay.de>
+
+	* config/avr/avr-passes.cc (avr_pass_fuse_add) <clone>: Override.
+	* config/avr/avr-passes.def (avr_pass_fuse_add): Run again
+	after pass_cprop_hardreg.
+
+2024-08-31  Georg-Johann Lay  <avr@gjlay.de>
+
+	* config/avr/avr-protos.h (avr_split_tiny_move): Rename to
+	avr_split_fake_addressing_move.
+	* config/avr/avr-passes.def: Same.
+	* config/avr/avr-passes.cc: Same.
+	(avr_pass_data_fuse_add) <tv_id>: Set to TV_MACH_DEP.
+	* config/avr/avr.md (split-lpmx): Remove a define_split.  Such
+	splits are performed by avr_split_fake_addressing_move.
+
+2024-08-31  John David Anglin  <danglin@gcc.gnu.org>
+
+	* config/pa/pa.cc (pa_emit_move_sequence): Remove symbolic
+	memory work arounds for TARGET_ELF32.
+	(pa_legitimate_address_p): Likewise.  Allow symbolic
+	operands.  Adjust comment.
+	* config/pa/pa.md: Replace reg_or_0_or_nonsymb_mem_operand
+	with reg_or_0_or_mem_operand predicate in various unnamed
+	move insns.
+	* config/pa/predicates.md (floating_point_store_memory_operand):
+	Update comment.  Remove symbolic memory work arounds for
+	TARGET_ELF32.
+	(nonsymb_mem_operand): Rename to mem_operand.  Allow
+	symbolic memory operands.
+	(reg_or_0_or_nonsymb_mem_operand): Rename to
+	reg_or_0_or_mem_operand.  Allow symbolic memory operands.
+
+2024-08-31  Andrew Pinski  <quic_apinski@quicinc.com>
+
+	PR tree-optimization/116098
+	* tree-ssa-phiopt.cc (factor_out_conditional_operation): Ignore
+	nops, labels and predicts for heuristic for conversion with a constant.
+
+2024-08-31  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/116130
+	* doc/extend.texi (unsequenced, reproducible): Document new function
+	type attributes.
+	* calls.cc (flags_from_decl_or_type): Handle "unsequenced noptr" and
+	"reproducible noptr" attributes.
+
+2024-08-31  Georg-Johann Lay  <avr@gjlay.de>
+
+	* config/avr/avr.cc: Follow the convention to not add a space
+	after comma when printing instructions.
+
+2024-08-31  Alexandre Oliva  <oliva@adacore.com>
+
+	* expr.cc (categorize_ctor_elements_1): Change p_complete to
+	int, to distinguish complete initialization in presence or
+	absence of uninitialized padding bits.
+	(categorize_ctor_elements): Likewise.  Adjust all callers...
+	* expr.h (categorize_ctor_elements): ... and declaration.
+	(type_has_padding_at_level_p): New.
+	* gimple-fold.cc (type_has_padding_at_level_p): New.
+	* fold-const.cc (native_encode_constructor): New.
+	(native_encode_expr): Call it.
+	* gimplify.cc (gimplify_init_constructor): Clear small
+	non-addressable non-volatile objects with padding or
+	other uninitialized fields as an optimization.
+
+2024-08-30  Alex Coplan  <alex.coplan@arm.com>
+
+	* gdbhooks.py (VEC_KIND_EMBED): New.
+	(VEC_KIND_PTR): New.
+	(get_vec_kind): New.
+	(VecPrinter.children): Also handle vectors with vl_ptr layout.
+
+2024-08-30  Andrew Pinski  <quic_apinski@quicinc.com>
+
+	PR driver/104707
+	PR driver/97304
+	* gcc.cc (is_directory): Don't not include /usr/lib and /lib
+	for library directory pathes. Remove library argument.
+	(add_to_obstack): Update call to is_directory.
+	(driver_handle_option): Likewise.
+	(spec_path): Likewise.
+
+2024-08-30  Andrew Pinski  <quic_apinski@quicinc.com>
+
+	PR middle-end/116537
+	* tree-core.h (enum tree_index): Remove TI_INTEGER_THREE
+	* tree-ssa-loop-prefetch.cc (issue_prefetch_ref): Call build_int_cst
+	instead of using integer_three_node.
+	* tree.cc (build_common_tree_nodes): Remove initialization
+	of integer_three_node.
+	* tree.h (integer_three_node): Delete.
+
+2024-08-30  Andrew Pinski  <quic_apinski@quicinc.com>
+
+	* builtins.cc (expand_builtin_prefetch): Rewrite expansion of the optional
+	arguments to not expand known constants.
+
+2024-08-30  Richard Biener  <rguenther@suse.de>
+
+	* tree-vect-stmts.cc (get_group_load_store_type): Check
+	known_ne (remain, 0u) before doing constant_multiple_p.
+	(vectorizable_load): Likewise.
+
+2024-08-30  Richard Biener  <rguenther@suse.de>
+
+	* tree-vect-slp.cc (vect_build_slp_tree_2): Disable SLP
+	reassociation for single-lane.
+
+2024-08-30  liuhongt  <hongtao.liu@intel.com>
+
+	PR target/116512
+	* config/i386/i386.cc (ix86_check_avx_upper_register): Iterate
+	subrtx to scan for avx upper register.
+	(ix86_check_avx_upper_stores): Inline old
+	ix86_check_avx_upper_register.
+	(ix86_avx_u128_mode_needed): Ditto, and replace
+	FOR_EACH_SUBRTX with call to new
+	ix86_check_avx_upper_register.
+
 2024-08-29  David Malcolm  <dmalcolm@redhat.com>
 
 	PR other/116419

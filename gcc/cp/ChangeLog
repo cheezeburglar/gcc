@@ -1,3 +1,34 @@
+2024-09-02  Richard Sandiford  <richard.sandiford@arm.com>
+
+	* pt.cc (tsubst_stmt): Rename ASM_INPUT_P to ASM_BASIC_P.
+	* parser.cc (cp_parser_asm_definition): Likewise.
+
+2024-08-31  Iain Sandoe  <iain@sandoe.co.uk>
+
+	* coroutines.cc (coro_build_frame_access_expr): New.
+	(transform_await_expr): Use coro_build_frame_access_expr.
+	(transform_local_var_uses): Likewise.
+	(build_actor_fn): Likewise.
+	(build_destroy_fn): Likewise.
+	(cp_coroutine_transform::build_ramp_function): Likewise.
+
+2024-08-30  Jason Merrill  <jason@redhat.com>
+
+	* decl2.cc (c_parse_final_cleanups): Also check
+	DECL_FRIEND_PSEUDO_TEMPLATE_INSTANTIATION.
+
+2024-08-30  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/110345
+	* parser.cc (make_array_declarator): Add STD_ATTRS argument, set
+	declarator->std_attributes to it.
+	(cp_parser_new_type_id): Warn on non-ignored std_attributes on the
+	array declarator which is being omitted.
+	(cp_parser_direct_new_declarator): Parse standard attributes after
+	closing square bracket, pass it to make_array_declarator.
+	(cp_parser_direct_declarator): Pass std_attrs to make_array_declarator
+	instead of setting declarator->std_attributes manually.
+
 2024-08-29  David Malcolm  <dmalcolm@redhat.com>
 
 	* error.cc: Include "make-unique.h".
