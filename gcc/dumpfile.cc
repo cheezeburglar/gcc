@@ -44,6 +44,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "make-unique.h"
 #include "pretty-print-format-impl.h"
 #include "tree-emit-json.h"
+#include "tree-emit-json.h"
 
 /* If non-NULL, return one past-the-end of the matching SUBPART of
    the WHOLE string.  */
