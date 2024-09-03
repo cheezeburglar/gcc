@@ -23,13 +23,10 @@ along with GCC; see the file COPYING3.  If not see
 
 #include "splay-tree.h"
 #include "dumpfile.h"
+#define INCLUDE_MEMORY
 #include "json.h"
 
 typedef struct dump_info *dump_info_p;
-
-/* Flags used with queue functions.  */
-#define DUMP_NONE     0
-#define DUMP_BINFO    1
 
 /* Information about a node to be dumped.  */
 
@@ -98,13 +95,8 @@ private:
 #define dump_child(field, child) \
   queue_and_dump_index (di, field, child, DUMP_NONE)
 
-extern void dump_pointer (dump_info_p, const char *, void *);
-extern void dump_int (dump_info_p, const char *, int);
-extern void dump_string (dump_info_p, const char *);
-extern void dump_string_field (dump_info_p, const char *, const char *);
-extern void queue_and_dump_index (dump_info_p, const char *, const_tree, int);
-extern void queue_and_dump_type (dump_info_p, const_tree);
-extern int dump_flag (dump_info_p, dump_flags_t, const_tree);
+//extern void queue_and_dump_index (dump_info_p, const char *, const_tree, int);
+//extern void queue_and_dump_type (dump_info_p, const_tree);
 extern json::object* node_emit_json(tree t);
 extern void dump_node_json (const_tree t, dump_flags_t flags, FILE *stream);
 #endif /* ! GCC_TREE_JSON_H */

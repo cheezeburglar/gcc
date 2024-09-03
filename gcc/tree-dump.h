@@ -23,7 +23,6 @@ along with GCC; see the file COPYING3.  If not see
 
 #include "splay-tree.h"
 #include "dumpfile.h"
-#include "json.h"
 
 typedef struct dump_info *dump_info_p;
 
@@ -76,10 +75,6 @@ struct dump_info
      keys are the addresses of the nodes; the values are the integer
      indices we assigned them.  */
   splay_tree nodes;
-  /* JSON tree holder. Carries everything, each node is a sub-array */
-  json::array* tree_json;
-
-  json::array* tree_json_debug;
 };
 
 /* Dump the CHILD and its children.  */
@@ -93,5 +88,5 @@ extern void dump_string_field (dump_info_p, const char *, const char *);
 extern void queue_and_dump_index (dump_info_p, const char *, const_tree, int);
 extern void queue_and_dump_type (dump_info_p, const_tree);
 extern int dump_flag (dump_info_p, dump_flags_t, const_tree);
-extern json::object* node_emit_json(tree t);
+
 #endif /* ! GCC_TREE_DUMP_H */

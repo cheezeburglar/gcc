@@ -19,6 +19,7 @@ along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
 #define INCLUDE_STRING
+#define INCLUDE_MEMORY
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -39,17 +40,22 @@ along with GCC; see the file COPYING3.  If not see
 #include "fold-const.h"
 #include "vec.h"
 
-static unsigned int queue (dump_info_p, const_tree, int);
-static void dump_index (dump_info_p, unsigned int);
-static void dequeue_and_dump (dump_info_p);
-static void dump_new_line (dump_info_p);
-static void dump_maybe_newline (dump_info_p);
-
+static unsigned int queue (dump_info_p, const_tree);
+static json::array* function_decl_emit_json (tree);
+static void identifier_node_add_json (tree, json::object*);
+static void decl_node_add_json (tree, json::object*);
+static void function_name_json (tree, json::object*);
+static void omp_iterator_add_json (tree, json::object*);
+static void omp_clause_add_json(tree, json::object*);
+static void omp_atomic_memory_order_add_json (json::object*, enum omp_memory_order);
+static json::object* omp_atomic_memory_order_emit_json(omp_memory_order mo);
+static json::object* omp_clause_emit_json (tree);
+static json::object* loc_emit_json(expanded_location);
 /* Add T to the end of the queue of nodes to dump.  Returns the index
    assigned to T.  */
 
 static unsigned int
-queue (dump_info_p di, const_tree t, int flags)
+queue (dump_info_p di, const_tree t)
 {
   dump_queue_p dq;
   dump_node_info_p dni;
@@ -70,7 +76,6 @@ queue (dump_info_p di, const_tree t, int flags)
   /* Create a new entry in the splay-tree.  */
   dni = XNEW (struct dump_node_info);
   dni->index = index;
-  dni->binfo_p = ((flags & DUMP_BINFO) != 0);
   dq->node = splay_tree_insert (di->nodes, (splay_tree_key) t,
 				(splay_tree_value) dni);
 
@@ -86,175 +91,9 @@ queue (dump_info_p di, const_tree t, int flags)
   return index;
 }
 
-static void
-dump_index (dump_info_p di, unsigned int index, bool parent)
-{
-  json::object* node;
-  node = new json::object ();
-  //DANGER, type cast implicit
-    node->set_integer("index", index);
-  if (parent == true)
-    node->set_bool("has child", true);
-  else
-    node->set_bool("has child", false);
-  di->tree_json->append(node);
-}
-
 /* If T has not already been output, queue it for subsequent output.
    FIELD is a string to print before printing the index.  Then, the
    index of T is printed.  */
-
-void
-queue_and_dump_index (dump_info_p di, const char *field, const_tree t, int flags)
-{
-  unsigned int index;
-  splay_tree_node n;
-  json::array* child;
-  json::object* dummy;
-  /* If there's no node, just return.  This makes for fewer checks in
-     our callers.  */
-  if (!t)
-    return;
-
-  /* See if we've already queued or dumped this node.  */
-  n = splay_tree_lookup (di->nodes, (splay_tree_key) t);
-  if (n) {
-    index = ((dump_node_info_p) n->value)->index;
-    //DO RECURSION STUFF HERE
-  } else {
-    /* If we haven't, add it to the queue.  */
-    index = queue (di, t, flags);
-  }
-  /* Print the index of the node.  */
-  if (n) {
-    child = new json::array ();
-    dummy = new json::object ();
-    dummy->set_integer("index", index);
-    //This is hacky and should be fixed
-    dummy->set_bool(field, true);
-    child->append(dummy);
-    di->tree_json->append(child);
-  } else {
-    dump_index (di, index, false);
-  }
-}
-
-/* Dump the type of T.  */
-
-void
-queue_and_dump_type (dump_info_p di, const_tree t)
-{
-  queue_and_dump_index (di, "type", TREE_TYPE (t), DUMP_NONE);
-}
-
-/* Dump column control */
-#define SOL_COLUMN 25		/* Start of line column.  */
-#define EOL_COLUMN 55		/* End of line column.  */
-#define COLUMN_ALIGNMENT 15	/* Alignment.  */
-
-/* Insert a new line in the dump output, and indent to an appropriate
-   place to start printing more fields.  */
-
-static void
-dump_new_line (dump_info_p di)
-{
-  fprintf (di->stream, "\n%*s", SOL_COLUMN, "");
-  di->column = SOL_COLUMN;
-}
-
-/* If necessary, insert a new line.  */
-
-static void
-dump_maybe_newline (dump_info_p di)
-{
-  int extra;
-
-  /* See if we need a new line.  */
-  if (di->column > EOL_COLUMN)
-    dump_new_line (di);
-  /* See if we need any padding.  */
-  else if ((extra = (di->column - SOL_COLUMN) % COLUMN_ALIGNMENT) != 0)
-    {
-      fprintf (di->stream, "%*s", COLUMN_ALIGNMENT - extra, "");
-      di->column += COLUMN_ALIGNMENT - extra;
-    }
-}
-
-/* Dump pointer PTR using FIELD to identify it.  */
-
-void
-dump_pointer (dump_info_p di, const char *field, void *ptr)
-{
-  json::object* dummy;
-  dummy = new json::object ();
-  dummy->set_integer(field, (uintptr_t) ptr);
-  di->tree_json->append(dummy);
-}
-
-/* Dump integer I using FIELD to identify it.  */
-
-void
-dump_int (dump_info_p di, const char *field, int i)
-{
-  json::object* dummy;
-  dummy = new json::object ();
-  dummy->set_integer(field, i);
-  di->tree_json->append(dummy);
-}
-
-/* Dump the floating point value R, using FIELD to identify it.  */
-
-static void
-dump_real (dump_info_p di, const char *field, const REAL_VALUE_TYPE *r)
-{
-  json::object* dummy;
-  char buf[32];
-  dummy = new json::object ();
-  real_to_decimal (buf, r, sizeof (buf), 0, true);
-  dummy->set_string(field, buf);
-  di->tree_json->append(dummy);
-}
-
-/* Dump the fixed-point value F, using FIELD to identify it.  */
-
-static void
-dump_fixed (dump_info_p di, const char *field, const FIXED_VALUE_TYPE *f)
-{
-  json::object* dummy;
-  char buf[32];
-  dummy = new json::object ();
-  fixed_to_decimal (buf, f, sizeof (buf));
-  dummy->set_string(field, buf);
-  di->tree_json->append(dummy);
-}
-
-
-/* Dump the string S.  */
-// CHECK LATER
-void
-dump_string (dump_info_p di, const char *string)
-{
-  dump_maybe_newline (di);
-  fprintf (di->stream, "%-13s ", string);
-  if (strlen (string) > 13)
-    di->column += strlen (string) + 1;
-  else
-    di->column += 14;
-}
-
-/* Dump the string field S.  */
-
-void
-dump_string_field (dump_info_p di, const char *field, const char *string)
-{
-  json::object* dummy;
-  dummy = new json::object ();
-  dummy->set_string(field, string);
-  di->tree_json->append(dummy);
-}
-
-
-/* Helper for emitting function_decl information. Called iff TREE_CODE is FUNCTION_TYPE */
 
 json::array*
 function_decl_emit_json (tree t)
@@ -278,7 +117,7 @@ function_decl_emit_json (tree t)
     }
 
   if (arg == void_list_node && !wrote_arg)
-    {
+{
       arg_json->set_bool("void_list_node", true);
       arg_holder->append(arg_json);
     }
@@ -1887,15 +1726,12 @@ node_emit_json(tree t)
     case ARRAY_TYPE:
       {
         unsigned int quals = TYPE_QUALS (t);
-        tree temp;
-
 	if (quals & TYPE_QUAL_ATOMIC)
 	  dummy->set_bool("atomic", true);
 	if (quals & TYPE_QUAL_CONST)
 	  dummy->set_bool("const", true);
 	if (quals & TYPE_QUAL_VOLATILE)
 	  dummy->set_bool("volatile", true);
-
       }
       break;
     case RECORD_TYPE:
@@ -1948,11 +1784,9 @@ node_emit_json(tree t)
         else
           {
             wide_int val = wi::to_wide (t);
-            unsigned int len;
             char buff[WIDE_INT_PRINT_BUFFER_SIZE];
         
             print_dec(wi::to_wide (t), buff, TYPE_SIGN (TREE_TYPE (t)));
-
             dummy->set_string("val", buff);
         }
       if (TREE_OVERFLOW (t))
@@ -3234,26 +3068,8 @@ dequeue_and_dump (dump_info_p di)
   di->free_list = dq;
 
   dummy = node_emit_json(t);
-  dummy->set_integer("index", index);
   di->tree_json_debug->append(dummy);
 }
-
-/* Return nonzero if FLAG has been specified for the dump, and NODE
-   is not the root node of the dump.  */
-
-int dump_flag (dump_info_p di, dump_flags_t flag, const_tree node)
-{
-  return (di->flags & flag) && (node != di->node);
-}
-
-//generic_tree_json_writer::generic_tree_json_writer()
-//  : buffer()
-//{
-//  buffer = new json::array ();
-//auto_vec
-//
-//}
-
 
 /* Dump T, and all its children, on STREAM.  */
 
@@ -3279,7 +3095,7 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
   di.tree_json_debug = new json::array ();
 /*TEST
   /* Queue up the first node.  */
-  queue (&di, t, DUMP_NONE);
+  queue (&di, t);
 
   /* Until the queue is empty, keep dumping nodes.  */
   while (di.queue)
