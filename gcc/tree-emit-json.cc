@@ -2,6 +2,10 @@
    Copyright (C) 1999-2024 Free Software Foundation, Inc.
    Written by Mark Mitchell <mark@codesourcery.com>
 
+
+  Dumping functionality for GENERIC Trees as JSON. Both for 
+  -fdump-tree-original-json and a new debug function.
+
 This file is part of GCC.
 
 GCC is free software; you can redistribute it and/or modify it under
