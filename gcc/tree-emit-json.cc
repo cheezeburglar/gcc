@@ -41,6 +41,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "vec.h"
 
 static unsigned int queue (dump_info_p, const_tree);
+static void dequeue_and_dump (dump_info_p);
 static json::array* function_decl_emit_json (tree);
 static void identifier_node_add_json (tree, json::object*);
 static void decl_node_add_json (tree, json::object*);
@@ -51,6 +52,7 @@ static void omp_atomic_memory_order_add_json (json::object*, enum omp_memory_ord
 static json::object* omp_atomic_memory_order_emit_json(omp_memory_order mo);
 static json::object* omp_clause_emit_json (tree);
 static json::object* loc_emit_json(expanded_location);
+
 /* Add T to the end of the queue of nodes to dump.  Returns the index
    assigned to T.  */
 
@@ -3105,7 +3107,7 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
 
 
   di.tree_json_debug->dump(stream, true);
-
+  fputs("\n", stream);
   /* Now, clean up.  */
   for (dq = di.free_list; dq; dq = next_dq)
     {
