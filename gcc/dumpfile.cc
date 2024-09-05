@@ -543,13 +543,6 @@ dump_context::set_json_writer (optrecord_json_writer *writer)
   m_json_writer = writer;
 }
 
-//void
-//dump_context::set_json_writer (generic_tree_json_writer *writer)
-//{
-//  delete m_json_writer;
-//  m_json_writer = writer;
-//}
-
 /* Perform cleanup activity for -fsave-optimization-record.
    Currently, the file is written out here in one go, before cleaning
    up.  */
