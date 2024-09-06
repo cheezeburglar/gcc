@@ -52,7 +52,8 @@ static void decl_node_add_json (tree, json::object*);
 static void function_name_json (tree, json::object*);
 static void omp_iterator_add_json (tree, json::object*);
 static void omp_clause_add_json(tree, json::object*);
-static void omp_atomic_memory_order_add_json (json::object*, enum omp_memory_order);
+static void omp_atomic_memory_order_add_json (json::object*,
+                                              enum omp_memory_order);
 static json::object* omp_atomic_memory_order_emit_json(omp_memory_order mo);
 static json::object* omp_clause_emit_json (tree);
 static json::object* loc_emit_json(expanded_location);
@@ -97,10 +98,6 @@ queue (dump_info_p di, const_tree t)
   return index;
 }
 
-/* If T has not already been output, queue it for subsequent output.
-   FIELD is a string to print before printing the index.  Then, the
-   index of T is printed.  */
-
 json::array*
 function_decl_emit_json (tree t)
 {
@@ -131,10 +128,6 @@ function_decl_emit_json (tree t)
   return arg_holder;
 }
 
-/* Helper for emitting _DECL node information
-    See the qualms in dump_decl_name of tree-pretty-print.cc -
-     maybe ask to see if everything is okay here.*/
-
 /* Adds Identifier information to JSON object. Make sensitive to translate ID? */
 
 void
@@ -154,7 +147,7 @@ decl_node_add_json (tree t, json::object* dummy)
     
   if (name)
       {
-        if (HAS_DECL_ASSEMBLER_NAME_P(t) //flag later
+        if (HAS_DECL_ASSEMBLER_NAME_P(t)
             && DECL_ASSEMBLER_NAME_SET_P(t))
           identifier_node_add_json(DECL_ASSEMBLER_NAME_RAW(t), dummy);
         else if (DECL_NAMELESS(t)
@@ -163,8 +156,6 @@ decl_node_add_json (tree t, json::object* dummy)
         else 
           identifier_node_add_json(name, dummy);
       }
-    //Need account for flags later
-    
     if (name == NULL_TREE)
       {
         if (TREE_CODE (t) == LABEL_DECL && LABEL_DECL_UID (t) != -1)
@@ -177,7 +168,8 @@ decl_node_add_json (tree t, json::object* dummy)
           }
         else 
           {
-            const char* c = TREE_CODE (t) == CONST_DECL ? "Const_UID" : "Decl_UID";
+            const char* c = TREE_CODE (t) == CONST_DECL ? "Const_UID" 
+                                                        : "Decl_UID";
             dummy->set_integer(c, DECL_UID(t));
           }
       }
@@ -193,7 +185,8 @@ void
 function_name_json (tree t, json::object* dummy)
 {
   if (CONVERT_EXPR_P (t))
-    decl_node_add_json(t, dummy);
+    t = TREE_OPERAND (t, 0);
+  decl_node_add_json(t, dummy);
 }
 
 /* */
@@ -328,7 +321,8 @@ omp_clause_add_json(tree clause, json::object* dummy)
       break;
 
     case OMP_CLAUSE_NUM_THREADS:
-      dummy->set("omp_num_threads", node_emit_json (OMP_CLAUSE_NUM_THREADS_EXPR(clause)));
+      dummy->set("omp_num_threads",
+                 node_emit_json (OMP_CLAUSE_NUM_THREADS_EXPR(clause)));
       break;
 
     case OMP_CLAUSE_NOWAIT:
@@ -336,7 +330,8 @@ omp_clause_add_json(tree clause, json::object* dummy)
       break;
 
     case OMP_CLAUSE_ORDERED:
-      dummy->set("omp_ordered", node_emit_json (OMP_CLAUSE_ORDERED_EXPR (clause)));
+      dummy->set("omp_ordered",
+                 node_emit_json (OMP_CLAUSE_ORDERED_EXPR (clause)));
       break;
 
     case OMP_CLAUSE_DEFAULT:
@@ -401,7 +396,8 @@ omp_clause_add_json(tree clause, json::object* dummy)
 	default:
 	  gcc_unreachable ();
 	}
-      dummy->set(buffer, node_emit_json(OMP_CLAUSE_SCHEDULE_CHUNK_EXPR(clause)));
+      dummy->set(buffer,
+                 node_emit_json(OMP_CLAUSE_SCHEDULE_CHUNK_EXPR(clause)));
       break;
 
     case OMP_CLAUSE_UNTIED:
@@ -409,7 +405,8 @@ omp_clause_add_json(tree clause, json::object* dummy)
       break;
 
     case OMP_CLAUSE_COLLAPSE:
-      dummy->set("omp_collapse_collapse", node_emit_json (OMP_CLAUSE_COLLAPSE_EXPR (clause)));
+      dummy->set("omp_collapse_collapse",
+                 node_emit_json (OMP_CLAUSE_COLLAPSE_EXPR (clause)));
       break;
 
     case OMP_CLAUSE_FINAL:
@@ -527,7 +524,7 @@ omp_clause_add_json(tree clause, json::object* dummy)
 	    && TREE_PURPOSE (t)
 	    && TREE_CODE (TREE_PURPOSE (t)) == TREE_VEC)
 	  {
-	    omp_iterator_add_json(TREE_PURPOSE (t), dummy); //consider annotating or adding string arg
+	    omp_iterator_add_json(TREE_PURPOSE (t), dummy);
 	    t = TREE_VALUE (t);
 	  }
 	if (t == null_pointer_node)
@@ -989,7 +986,8 @@ omp_clause_add_json(tree clause, json::object* dummy)
 	  if (OMP_CLAUSE_GANG_STATIC_EXPR (clause)
 	      == integer_minus_one_node)
 	    strcat (buffer, "*"); 
-          dummy->set(buffer, node_emit_json (OMP_CLAUSE_GANG_STATIC_EXPR (clause)));
+          dummy->set(buffer,
+                     node_emit_json (OMP_CLAUSE_GANG_STATIC_EXPR (clause)));
 	}
       break;
 
@@ -1068,7 +1066,8 @@ omp_clause_add_json(tree clause, json::object* dummy)
       dummy->set ("omp_tile", node_emit_json (OMP_CLAUSE_TILE_LIST (clause)));
       break;
     case OMP_CLAUSE_PARTIAL:
-      dummy->set ("omp_partial", node_emit_json (OMP_CLAUSE_PARTIAL_EXPR (clause)));
+      dummy->set ("omp_partial",
+                  node_emit_json (OMP_CLAUSE_PARTIAL_EXPR (clause)));
       break;
     case OMP_CLAUSE_FULL:
       dummy->set_bool("full", true);
@@ -1182,17 +1181,12 @@ node_emit_json(tree t)
   holder = new json::array ();
 
   code = TREE_CODE (t);
-  // Some things we emit for all trees - address in memory, corresponding location in file, type, and 
-  // tree code class, and tree code name?
-
-//  if (TREE_CODE(t) == ERROR_MARK)
-//    dummy->set_bool("error_mark", true);
   
   sprintf(address_buffer, HOST_PTR_PRINTF, t);
   dummy->set_string("addr", address_buffer);
 
   if (TREE_CODE_CLASS (code) == tcc_declaration
-      && code != TRANSLATION_UNIT_DECL) //CHECK LATER
+      && code != TRANSLATION_UNIT_DECL)
     {
     xloc = expand_location (DECL_SOURCE_LOCATION (t));
     dummy->set("decl_loc", loc_emit_json(xloc));
@@ -1460,7 +1454,6 @@ node_emit_json(tree t)
     case TREE_BINFO:
       holder->append(node_emit_json(BINFO_TYPE(t)));
       break;
-    //Make sure this actually goes through all the elements - cf dump_generic_node
     case TREE_VEC:
       {
         size_t i;
@@ -1511,7 +1504,6 @@ node_emit_json(tree t)
 	    dummy->set_string("decl", "<unnamed type decl>");
 	  }
 	else if (tclass == tcc_type)
-        // Throw type attributes here?
 	  {
 	    if (TYPE_NAME (t))
 	    {  
@@ -1520,14 +1512,15 @@ node_emit_json(tree t)
 	      else if (TREE_CODE (TYPE_NAME (t)) == TYPE_DECL
 	               && DECL_NAME (TYPE_NAME (t)))
                 decl_node_add_json( TYPE_NAME (t), dummy);
-                //dummy->set_bool("type_decl", true);
-	      else // unnamed 
+	      else 
                 dummy->set_string("type_name", "unnamed");
 	    }
             else if (TREE_CODE (t) == VECTOR_TYPE)
     	      {
-              //Handle recursion here later	  
+//              char* buff [WIDE_INT_PRINT_BUFFER_SIZE];
+//              print_dec (TYPE_VECTOR_SUBPARTS (t), buff);
 	      holder->append(node_emit_json(TREE_TYPE (t)));
+//              dummy->set_string("vector_subparts", buff);
               dummy->set("vector", holder);
     	      }
             else if (TREE_CODE (t) == INTEGER_TYPE)
