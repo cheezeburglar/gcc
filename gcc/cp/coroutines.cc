@@ -305,6 +305,7 @@ find_coro_traits_template_decl (location_t kw)
     {
       if (!traits_error_emitted)
 	{
+	  auto_diagnostic_group d;
 	  gcc_rich_location richloc (kw);
 	  error_at (&richloc, "coroutines require a traits template; cannot"
 		    " find %<%E::%E%>", std_node, coro_traits_identifier);
@@ -632,6 +633,7 @@ coro_promise_type_found_p (tree fndecl, location_t loc)
 					tf_none);
       if (has_ret_void && has_ret_val)
 	{
+	  auto_diagnostic_group d;
 	  location_t ploc = DECL_SOURCE_LOCATION (fndecl);
 	  if (!coro_info->coro_co_return_error_emitted)
 	    error_at (ploc, "the coroutine promise type %qT declares both"
@@ -1025,6 +1027,7 @@ coro_diagnose_throwing_fn (tree fndecl)
 {
   if (!TYPE_NOTHROW_P (TREE_TYPE (fndecl)))
     {
+      auto_diagnostic_group d;
       location_t f_loc = cp_expr_loc_or_loc (fndecl,
 					     DECL_SOURCE_LOCATION (fndecl));
       error_at (f_loc, "the expression %qE is required to be non-throwing",
@@ -4893,16 +4896,12 @@ cp_coroutine_transform::build_ramp_function ()
   tree p = build_class_member_access_expr (deref_fp, promise_m, NULL_TREE,
 					   false, tf_warning_or_error);
 
-  tree promise_dtor = NULL_TREE;
   if (type_build_ctor_call (promise_type))
     {
-      /* Do a placement new constructor for the promise type (we never call
-	 the new operator, just the constructor on the object in place in the
-	 frame).
+      /* Construct the promise object [dcl.fct.def.coroutine] / 5.7.
 
-	 First try to find a constructor with the same parameter list as the
-	 original function (if it has params), failing that find a constructor
-	 with no parameter list.  */
+	 First try to find a constructor with an argument list comprised of
+	 the parameter copies.  */
 
       if (DECL_ARGUMENTS (orig_fn_decl))
 	{
@@ -4914,19 +4913,27 @@ cp_coroutine_transform::build_ramp_function ()
       else
 	r = NULL_TREE;
 
+      /* If that fails then the promise constructor argument list is empty.  */
       if (r == NULL_TREE || r == error_mark_node)
 	r = build_special_member_call (p, complete_ctor_identifier, NULL,
 				       promise_type, LOOKUP_NORMAL,
 				       tf_warning_or_error);
 
-      finish_expr_stmt (r);
+      /* If type_build_ctor_call() encounters deprecated implicit CTORs it will
+	 return true, and therefore we will execute this code path.  However,
+	 we might well not actually require a CTOR and under those conditions
+	 the build call above will not return a call expression, but the
+	 original instance object.  Do not attempt to add the statement unless
+	 it has side-effects.  */
+      if (r && r != error_mark_node && TREE_SIDE_EFFECTS (r))
+	finish_expr_stmt (r);
+    }
 
-      r = build_modify_expr (loc, coro_promise_live, boolean_type_node,
-			     INIT_EXPR, loc, boolean_true_node,
-			     boolean_type_node);
+  tree promise_dtor = cxx_maybe_build_cleanup (p, tf_warning_or_error);;
+  if (flag_exceptions && promise_dtor)
+    {
+      r = cp_build_init_expr (coro_promise_live, boolean_true_node);
       finish_expr_stmt (r);
-
-      promise_dtor = cxx_maybe_build_cleanup (p, tf_warning_or_error);
     }
 
   tree get_ro
