@@ -1,10 +1,9 @@
-/* Tree-dumping functionality for intermediate representation.
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
-   Written by Mark Mitchell <mark@codesourcery.com>
-
-
-  Dumping functionality for GENERIC Trees as JSON. Both for 
-  -fdump-tree-original-json and a new debug function.
+/* Dumping functionality for GENERIC Trees as JSON. Both for 
+   the dump -fdump-tree-original-json and a new debug 
+   function.
+   Copyright (C) 2024 Thor Preimesberger <tcpreimesberger@gmail.com>
+   Adapted from tree-pretty-print.cc, tree-dump.cc, and 
+   print-tree.cc.
 
 This file is part of GCC.
 
@@ -35,8 +34,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "dumpfile.h"
 #include "json.h"
 #include "tm.h"
-#include "wide-int-print.h" //for print_hex
+#include "wide-int-print.h"
 #include "real.h" //for real printing
+#include "poly-int.h"
 #include "gomp-constants.h"
 #include "internal-fn.h"
 #include "cgraph.h"
@@ -49,14 +49,14 @@ static void dequeue_and_dump (dump_info_p);
 static json::array* function_decl_emit_json (tree);
 static void identifier_node_add_json (tree, json::object*);
 static void decl_node_add_json (tree, json::object*);
-static void function_name_json (tree, json::object*);
+static void function_name_add_json (tree, json::object*);
 static void omp_iterator_add_json (tree, json::object*);
 static void omp_clause_add_json(tree, json::object*);
 static void omp_atomic_memory_order_add_json (json::object*,
                                               enum omp_memory_order);
 static json::object* omp_atomic_memory_order_emit_json(omp_memory_order mo);
 static json::object* omp_clause_emit_json (tree);
-static json::object* loc_emit_json(expanded_location);
+static json::array* loc_emit_json(expanded_location);
 
 /* Add T to the end of the queue of nodes to dump.  Returns the index
    assigned to T.  */
@@ -98,6 +98,15 @@ queue (dump_info_p di, const_tree t)
   return index;
 }
 
+void
+address_add_json (const void* t, json::object* dummy, char* address_buffer)
+{
+  sprintf(address_buffer, HOST_PTR_PRINTF, t);
+  dummy->set_string("addr", address_buffer);
+}
+
+/* Return args of a function declaration */
+
 json::array*
 function_decl_emit_json (tree t)
 {
@@ -128,12 +137,11 @@ function_decl_emit_json (tree t)
   return arg_holder;
 }
 
-/* Adds Identifier information to JSON object. Make sensitive to translate ID? */
+/* Adds Identifier information to JSON object */
 
 void
 identifier_node_add_json (tree t, json::object* dummy)
   {
-    //ID_to_local flag here later
     const char* buff = IDENTIFIER_POINTER (t);
     dummy->set_string("id_to_locale", identifier_to_locale(buff));
     buff = IDENTIFIER_POINTER (t);
@@ -182,14 +190,79 @@ decl_node_add_json (tree t, json::object* dummy)
 /* Function call */
 
 void
-function_name_json (tree t, json::object* dummy)
+function_name_add_json (tree t, json::object* dummy)
 {
   if (CONVERT_EXPR_P (t))
     t = TREE_OPERAND (t, 0);
-  decl_node_add_json(t, dummy);
+  if (DECL_NAME (t))
+    {
+      dummy->set_string("decl_name", lang_hooks.decl_printable_name (t, 1));
+      dummy->set_integer("uid", DECL_UID(t));
+    }
+  else
+    decl_node_add_json(t, dummy);
 }
 
-/* */
+/* Adds the name of a call. Enter iff t is CALL_EXPR_FN */
+
+void
+call_name_add_json (tree t, json::object* dummy)
+{
+  tree op0 = t;
+
+  if (TREE_CODE (op0) == NON_LVALUE_EXPR)
+    op0 = TREE_OPERAND (op0, 0);
+  again:
+    switch (TREE_CODE (op0))
+      {
+      case VAR_DECL:
+      case PARM_DECL:
+      case FUNCTION_DECL:
+        function_name_add_json (op0, dummy);
+        break;
+  
+      case ADDR_EXPR:
+      case INDIRECT_REF:
+      CASE_CONVERT:
+        op0 = TREE_OPERAND (op0, 0);
+        goto again;
+  
+      case COND_EXPR:
+        {
+          json::object *_x;
+          _x = new json::object ();
+          _x->set("if", node_emit_json(TREE_OPERAND(op0, 0)));
+          _x->set("then", node_emit_json(TREE_OPERAND(op0, 1)));
+          _x->set("else", node_emit_json(TREE_OPERAND(op0, 2)));
+          dummy->set("call_name", _x);
+        }
+        break;
+  
+      case ARRAY_REF:
+        if (VAR_P (TREE_OPERAND (op0, 0)))
+  	function_name_add_json (TREE_OPERAND (op0, 0), dummy);
+        else
+  	dummy->set("call_name", node_emit_json (op0));
+        break;
+  
+      case MEM_REF:
+        if (integer_zerop (TREE_OPERAND (op0, 1)))
+  	{
+  	  op0 = TREE_OPERAND (op0, 0);
+  	  goto again;
+  	}
+        /* Fallthrough  */
+      case COMPONENT_REF:
+      case SSA_NAME:
+      case OBJ_TYPE_REF:
+        dummy->set("call_name", node_emit_json (op0));
+        break;
+      default:
+        break;
+    }
+}
+
+/* OMP helper. */
 void
 omp_iterator_add_json(tree iter, json::object* dummy)
 {
@@ -206,9 +279,7 @@ omp_iterator_add_json(tree iter, json::object* dummy)
     }
   dummy->set("omp_iter", iter_holder);
 }
-
-/* C-style string handling alright? seems consistent with the rest of the codebase */
-
+/* Omp helper. */
 void
 omp_clause_add_json(tree clause, json::object* dummy)
 {
@@ -326,7 +397,6 @@ omp_clause_add_json(tree clause, json::object* dummy)
       break;
 
     case OMP_CLAUSE_NOWAIT:
-      dummy->set_bool("omp_nowait", true);
       break;
 
     case OMP_CLAUSE_ORDERED:
@@ -557,19 +627,20 @@ omp_clause_add_json(tree clause, json::object* dummy)
               dummy->set_bool(buffer, true);
 	      break;
 	    }
-	  for (tree t = OMP_CLAUSE_DECL (clause); t; t = TREE_CHAIN (t)) //TODO
+	  for (tree t = OMP_CLAUSE_DECL (clause); t; t = TREE_CHAIN (t))
 	    if (TREE_CODE (t) == TREE_LIST)
 	      {
 		iter_holder->append(node_emit_json(TREE_VALUE (t)));
 		if (TREE_PURPOSE (t) != integer_zero_node)
 		  {
+                    json::object *_x;
+                    _x = new json::object ();
 		    if (OMP_CLAUSE_DOACROSS_SINK_NEGATIVE (t))
-                    {}
+                      _x->set("-", node_emit_json(TREE_PURPOSE (t)));
 		    else
-                    {}
+                      _x->set("+", node_emit_json(TREE_PURPOSE (t)));
+                    iter_holder->append(_x);
 		  }
-		if (TREE_CHAIN (t))
-                {}
 	      }
 	    else
 	      gcc_unreachable ();
@@ -804,8 +875,6 @@ omp_clause_add_json(tree clause, json::object* dummy)
       switch (OMP_CLAUSE_PROC_BIND_KIND (clause))
 	{
 	case OMP_CLAUSE_PROC_BIND_MASTER:
-	  /* Same enum value: case OMP_CLAUSE_PROC_BIND_PRIMARY: */
-	  /* TODO: Change to 'primary' for OpenMP 5.1.  */
 	  strcat (buffer, "_master");
 	  break;
 	case OMP_CLAUSE_PROC_BIND_CLOSE:
@@ -1129,6 +1198,7 @@ omp_atomic_memory_order_add_json (json::object* dummy, enum omp_memory_order mo)
       dummy->set_string ("omp_memory_order", "fail(acquire)");
       break;
     case OMP_FAIL_MEMORY_ORDER_UNSPECIFIED:
+      dummy->set_string ("omp_memory_order", "fail(unspecified)");
       break;
     default:
       gcc_unreachable ();
@@ -1153,19 +1223,22 @@ omp_clause_emit_json(tree t)
   return _x;
 }
 
-json::object*
+json::array*
 loc_emit_json (expanded_location xloc)
 {
+  json::array *loc_holder;
   json::object *loc_info;
-  loc_info = new json::object (); //CHECK
+  loc_info = new json::object ();
   loc_info->set_string("file", xloc.file);
   loc_info->set_integer("line", xloc.line);
   loc_info->set_integer("column", xloc.column);
-  return loc_info;
+  loc_holder = new json::array ();
+  loc_holder->append(loc_info);
+  return loc_holder;
 }
 
-/* Here we emit data for GENERIC nodes. based on tree-pretty-print.cc's
- * dump_generic_node and print-tree's debug_tree().                          */
+/* Here we emit JSON data for a GENERIC node and children. 
+ * c.f. dump_generic_node and print-tree's debug_tree().   */
 
 json::object* 
 node_emit_json(tree t)
@@ -1181,9 +1254,8 @@ node_emit_json(tree t)
   holder = new json::array ();
 
   code = TREE_CODE (t);
-  
-  sprintf(address_buffer, HOST_PTR_PRINTF, t);
-  dummy->set_string("addr", address_buffer);
+
+  address_add_json(t, dummy, address_buffer);
 
   if (TREE_CODE_CLASS (code) == tcc_declaration
       && code != TRANSLATION_UNIT_DECL)
@@ -1432,7 +1504,7 @@ node_emit_json(tree t)
 	dummy->set_bool ("type_6", true);
       if (TYPE_LANG_FLAG_7 (t))
 	dummy->set_bool ("type_7", true);
-      } //END tcc_type FLAGS
+      } //end tcc_type flags
   
   // Accessors
   switch (code)
@@ -1481,15 +1553,20 @@ node_emit_json(tree t)
       {
 	unsigned int quals = TYPE_QUALS (t);
 	enum tree_code_class tclass;
+        json::object* _x;
+
+        _x = new json::object ();
 
 	if (quals & TYPE_QUAL_ATOMIC)
-	  dummy->set_string("qual", "atomic");
+	  _x->set_bool("atomic", true);
 	if (quals & TYPE_QUAL_CONST)
-	  dummy->set_string("qual", "const");
+	  _x->set_bool("const", true);
 	if (quals & TYPE_QUAL_VOLATILE)
-	  dummy->set_string("qual", "volatile");
+	  _x->set_bool("volatile", true);
 	if (quals & TYPE_QUAL_RESTRICT)
-	  dummy->set_string("qual", "restrict");
+	  _x->set_bool("restrict", true);
+      
+        dummy->set("quals", _x);
 
 	if (!ADDR_SPACE_GENERIC_P (TYPE_ADDR_SPACE (t)))
 	    dummy->set_integer("address space", TYPE_ADDR_SPACE(t));
@@ -1517,11 +1594,12 @@ node_emit_json(tree t)
 	    }
             else if (TREE_CODE (t) == VECTOR_TYPE)
     	      {
-//              char* buff [WIDE_INT_PRINT_BUFFER_SIZE];
-//              print_dec (TYPE_VECTOR_SUBPARTS (t), buff);
-	      holder->append(node_emit_json(TREE_TYPE (t)));
-//              dummy->set_string("vector_subparts", buff);
-              dummy->set("vector", holder);
+              for (long unsigned int i = 0; i < NUM_POLY_INT_COEFFS; i++)
+                {
+                  poly_int _x = TYPE_VECTOR_SUBPARTS(t);
+                  dummy->set_integer("foo", _x.coeffs[i]);
+                }
+              dummy->set("vector_subparts", holder);
     	      }
             else if (TREE_CODE (t) == INTEGER_TYPE)
     	      {
@@ -1609,17 +1687,14 @@ node_emit_json(tree t)
    	      _id->set("type identifier", node_emit_json(TYPE_NAME(t)));
             else 
               {
-//	        This needs to be HEX.
                 char* buff;
                 buff = new char ();
                 print_hex(TYPE_UID(t), buff);
    	        _id->set_string("uid", buff);
               }
             dummy->set("function decl", function_decl_emit_json(function_node));
-            //Argument iteration
             if (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
 	      it_args = new json::object();
-            //Fix this later.
             while (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
    	      {
 	        it_args = node_emit_json(arg_node);
@@ -1631,25 +1706,26 @@ node_emit_json(tree t)
           }
         else
           {
-   	  //pickup here
    	  unsigned int quals = TYPE_QUALS (t);
-          const char *type_qual;
-
+          char buffer[30];
    	  dummy->set("tree_type", node_emit_json(TREE_TYPE(t)));
    	  
-          if (quals & TYPE_QUAL_CONST)
-   	    type_qual = "const";
-   	  if (quals & TYPE_QUAL_VOLATILE)
-   	    type_qual = "volatile";
-   	  if (quals & TYPE_QUAL_RESTRICT)
-   	    type_qual = "restrict";
-   	  
+          _x = new json::object ();
+  
+  	  if (quals & TYPE_QUAL_ATOMIC)
+  	    _x->set_bool("atomic", true);
+  	  if (quals & TYPE_QUAL_CONST)
+  	    _x->set_bool("const", true);
+  	  if (quals & TYPE_QUAL_VOLATILE)
+  	    _x->set_bool("volatile", true);
+  	  if (quals & TYPE_QUAL_RESTRICT)
+  	    _x->set_bool("restrict", true);
+        
+          dummy->set("quals", _x);
    	  if (!ADDR_SPACE_GENERIC_P (TYPE_ADDR_SPACE (t)))
-   	      dummy->set_integer("address space", TYPE_ADDR_SPACE (t));
-   	  
+   	    dummy->set_integer("address space", TYPE_ADDR_SPACE (t));
    	  if (TYPE_REF_CAN_ALIAS_ALL (t))
    	    dummy->set_bool("ref can alias all", true);
-   	  
           }
       }
       break;
@@ -1657,7 +1733,7 @@ node_emit_json(tree t)
     case OFFSET_TYPE:
       break;
 
-    case MEM_REF: //TODO:  
+    case MEM_REF:
     case TARGET_MEM_REF:
       {
         if (TREE_CODE (t) == MEM_REF
@@ -1675,15 +1751,14 @@ node_emit_json(tree t)
           {
             if (TREE_CODE (TREE_OPERAND (t, 0)) != ADDR_EXPR)
               {
-                dummy->set("op0", node_emit_json(TREE_OPERAND (t, 0)));
+                dummy->set("base", node_emit_json(TREE_OPERAND (t, 0)));
               }
             else
-              dummy->set("", node_emit_json(TREE_OPERAND (TREE_OPERAND (t, 0), 0)));
+              dummy->set("base", node_emit_json(TREE_OPERAND (TREE_OPERAND (t, 0), 0)));
           }
         else
           { //Check later
             tree type = TREE_TYPE(t);
-            tree op0 = TREE_OPERAND(t, 0);
             tree op1 = TREE_OPERAND(t, 1);
             tree op1type = TYPE_MAIN_VARIANT (TREE_TYPE (op1));
 
@@ -1697,8 +1772,8 @@ node_emit_json(tree t)
             }
             dummy->set("op1_type_size", node_emit_json(op1type));
 
-            if (! integer_zerop (op1))
-              dummy->set("op1", node_emit_json(op1));
+            if (!integer_zerop (op1))
+              dummy->set("offset", node_emit_json(op1));
             if (TREE_CODE(t) == TARGET_MEM_REF)
               {
                 tree temp = TMR_INDEX2 (t);
@@ -1714,7 +1789,7 @@ node_emit_json(tree t)
                   }
               }
           }
-        if (MR_DEPENDENCE_CLIQUE (t) != 0) //TDF_ALIAS usually controls
+        if (MR_DEPENDENCE_CLIQUE (t) != 0)
           {
             dummy->set_integer("clique", MR_DEPENDENCE_CLIQUE(t));
             dummy->set_integer("base", MR_DEPENDENCE_BASE(t));
@@ -1722,6 +1797,8 @@ node_emit_json(tree t)
       }
     break;
 
+    /* FIXME : As in tree-pretty-print.cc, the following four codes are
+     *         incomplete. See print_struct_decl therein the above. */
     case ARRAY_TYPE:
       {
         unsigned int quals = TYPE_QUALS (t);
@@ -1738,18 +1815,18 @@ node_emit_json(tree t)
     case QUAL_UNION_TYPE:
       {
         unsigned int quals = TYPE_QUALS (t);
-        json::object *quals_buffer;
+        json::object *_x;
 
-        quals_buffer = new json::object ();
+        _x = new json::object ();
 
         if (quals & TYPE_QUAL_ATOMIC)
-          quals_buffer->set_bool("atomic", true);
+          _x->set_bool("atomic", true);
         if (quals & TYPE_QUAL_CONST)
-          quals_buffer->set_bool("const", true);
+          _x->set_bool("const", true);
         if (quals & TYPE_QUAL_VOLATILE)
-          quals_buffer->set_bool("volatile", true);
+          _x->set_bool("volatile", true);
         
-        dummy->set("type_quals", quals_buffer);
+        dummy->set("type_quals", _x);
 
         if (TYPE_NAME(t))
           dummy->set("type_name", node_emit_json(TYPE_NAME(t)));
@@ -1794,7 +1871,6 @@ node_emit_json(tree t)
       break;
 
     case POLY_INT_CST:
-      dummy->set_string("code", "poly_int_cst");
       for (unsigned int i = 1; i < NUM_POLY_INT_COEFFS; i++)
         holder->append(node_emit_json(POLY_INT_CST_COEFF(t, i)));
       dummy->set("poly_int_cst", holder);
@@ -1873,7 +1949,6 @@ node_emit_json(tree t)
    	  dummy->set_string("uid", buff);
         }
       dummy->set("function_decl", function_decl_emit_json(t));
-      //TODO handle function_decl
       break;
 
 
@@ -1946,7 +2021,6 @@ node_emit_json(tree t)
           //
           op0 = TREE_OPERAND (op0, 0);
         }
-      dummy->set_string("tree_code", "component_ref");
       dummy->set("expr", node_emit_json(op0));
       dummy->set("field", node_emit_json(op1));
       if (DECL_P (op1))
@@ -1992,9 +2066,7 @@ node_emit_json(tree t)
                    node_emit_json (TREE_OPERAND (t, 3)));
       break;
   
-    //TODO
     case OMP_ARRAY_SECTION:
-      dummy->set_bool("omp_array_section", true);
       dummy->set("op0",
                  node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set("op1",
@@ -2046,7 +2118,7 @@ node_emit_json(tree t)
             json::object* cst_elt;
             json::object* _val_json;
             cst_elt = new json::object ();
-            //cst_elt->set_integer("", ix); //fix
+            cst_elt->set_integer("", ix); //fix
             if (field)
               {
                 if (is_struct_init)
@@ -2056,7 +2128,7 @@ node_emit_json(tree t)
                              || curidx != wi::to_widest (field)))
                   {
                     json::array* _array_init_json;
-                    if (TREE_CODE (field) == RANGE_EXPR) //CHECK LATER
+                    if (TREE_CODE (field) == RANGE_EXPR)
                       {
                         _array_init_json = new json::array ();
                         _array_init_json->append( node_emit_json( TREE_OPERAND( field, 0)));
@@ -2073,7 +2145,7 @@ node_emit_json(tree t)
               if (TREE_CODE (TREE_OPERAND (val, 0)) == FUNCTION_DECL)
                 val = TREE_OPERAND (val, 0);
             if (val && TREE_CODE (val) == FUNCTION_DECL)
-              { //This workaround is ugly; refactor or fix later
+              {
                 _val_json = new json::object ();
                 decl_node_add_json (val, _val_json);
                 cst_elt->set("val", _val_json);
@@ -2119,9 +2191,6 @@ node_emit_json(tree t)
 
     case MODIFY_EXPR:
     case INIT_EXPR:
-      dummy->set_string("tree_code",
-                        TREE_CODE(t) == MODIFY_EXPR ? "modify_expr"
-                                                    : "init_expr");
       dummy->set("op0",
                  node_emit_json( TREE_OPERAND (t, 0)));
       dummy->set("op1",
@@ -2129,7 +2198,6 @@ node_emit_json(tree t)
       break;
 
     case TARGET_EXPR:
-      dummy->set_string("tree_code", "target_expr");
       dummy->set("slot", node_emit_json (TARGET_EXPR_SLOT(t)));
       dummy->set("initial", node_emit_json (TARGET_EXPR_INITIAL(t)));
       break;
@@ -2139,12 +2207,6 @@ node_emit_json(tree t)
       break;
 
     case COND_EXPR:
-    /* I don't think we account for lowering this to GIMPLE. */
-//      if (TREE_TYPE (t) == NULL || TREE_TYPE (t) == void_type_node)
-//        {
-//          
-//        }
-      dummy->set_bool("cond_expr", true);
       dummy->set("if",
                  node_emit_json (TREE_OPERAND (t, 0)));
       if (COND_EXPR_THEN(t))
@@ -2164,7 +2226,6 @@ node_emit_json(tree t)
         {
           for (op0 = BIND_EXPR_VARS (t); op0; op0 = DECL_CHAIN (op0))
             {
-              // TODO c.f. tree-pretty print's impl
               holder->append(node_emit_json (op0));
             }
           dummy->set("bind_expr_vars", holder);
@@ -2175,12 +2236,12 @@ node_emit_json(tree t)
 
     case CALL_EXPR:
       {
+        if (CALL_EXPR_FN (t) != NULL_TREE)
+          call_name_add_json (CALL_EXPR_FN(t), dummy);
+        else
+          dummy->set_string("internal_fn", internal_fn_name (CALL_EXPR_IFN (t)));
         dummy->set_bool("return_slot_optimization", CALL_EXPR_RETURN_SLOT_OPT(t));
         dummy->set_bool("tail_call", CALL_EXPR_TAILCALL(t));
-        if (CALL_EXPR_FN (t) != NULL_TREE)
-          /* TODO ()*/ ;
-        else
-          dummy->set_string("", internal_fn_name (CALL_EXPR_IFN (t)));
 
         tree arg;
         call_expr_arg_iterator iter;
@@ -2194,11 +2255,11 @@ node_emit_json(tree t)
           dummy->set("call_expr_arg", holder);
 
         if (CALL_EXPR_VA_ARG_PACK (t))
-          dummy->set_bool("__builtin_va_arg_pack", true); //check later
+          dummy->set_bool("__builtin_va_arg_pack", true);
         
         op1 = CALL_EXPR_STATIC_CHAIN (t);
         if (op1)
-          dummy->set("", node_emit_json(op1));
+          dummy->set("static_chain", node_emit_json(op1));
       }
       break;
     case WITH_CLEANUP_EXPR:
@@ -2315,7 +2376,7 @@ node_emit_json(tree t)
     case FIXED_CONVERT_EXPR:
     case FIX_TRUNC_EXPR:
     case FLOAT_EXPR:
-    CASE_CONVERT: //Check this later
+    CASE_CONVERT: 
       type = TREE_TYPE (t);
       op0 = TREE_OPERAND (t, 0);
       if (type != TREE_TYPE(op0))
@@ -2470,8 +2531,6 @@ node_emit_json(tree t)
             else
               dummy->set("return_expr", node_emit_json (op0));
           }
-        else //it MIGHT be okay to dump out the null tree in this case?
-          dummy->set_bool("return_expr", true);
       }
       break;
 
@@ -2525,7 +2584,7 @@ node_emit_json(tree t)
         dummy->set("ssa_name_identifier",
                    node_emit_json (SSA_NAME_IDENTIFIER (t)));
       if (SSA_NAME_IS_DEFAULT_DEF (t))
-dummy->set_bool("ssa_default_def", true);
+        dummy->set_bool("ssa_default_def", true);
       if (SSA_NAME_OCCURS_IN_ABNORMAL_PHI (t))
 	dummy->set_bool("abnormal_phi", true);
       }
@@ -2537,11 +2596,7 @@ dummy->set_bool("ssa_default_def", true);
       break;
 
     case SCEV_KNOWN:
-      dummy->set_bool("scev_known", true);
-      break;
-
     case SCEV_NOT_KNOWN:
-      dummy->set_bool("scev_not_known", true);
       break;
 
     case POLYNOMIAL_CHREC:
@@ -2552,14 +2607,12 @@ dummy->set_bool("ssa_default_def", true);
       break;
 
     case REALIGN_LOAD_EXPR:
-      dummy->set_bool("realign_load_expr", true); //verbose?
       dummy->set("input_0", node_emit_json(TREE_OPERAND (t, 0)));
       dummy->set("input_1", node_emit_json(TREE_OPERAND (t, 1)));
       dummy->set("offset", node_emit_json(TREE_OPERAND (t, 2)));
       break;
 
     case VEC_COND_EXPR:
-      dummy->set_bool("vec_cond_expr", true);
       dummy->set("if",
                  node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set("then",
@@ -2569,7 +2622,6 @@ dummy->set_bool("ssa_default_def", true);
       break;
 
     case VEC_PERM_EXPR:
-      dummy->set_bool("vec_perm_expr", true);
       dummy->set("v0",
                  node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set("v1",
@@ -2579,7 +2631,6 @@ dummy->set_bool("ssa_default_def", true);
       break;
 
     case DOT_PROD_EXPR: //check later
-      dummy->set_bool("dot_prod_expr", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set("arg2",
@@ -2589,7 +2640,6 @@ dummy->set_bool("ssa_default_def", true);
       break;
 
     case WIDEN_MULT_PLUS_EXPR:
-      dummy->set_bool("widen_mult_plus_expr", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set("arg2",
@@ -2599,7 +2649,6 @@ dummy->set_bool("ssa_default_def", true);
       break;
 
     case WIDEN_MULT_MINUS_EXPR:
-      dummy->set_bool("widen_mult_minus_expr", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set("arg2",
@@ -2615,7 +2664,6 @@ dummy->set_bool("ssa_default_def", true);
     case VEC_WIDEN_LSHIFT_HI_EXPR:
     case VEC_WIDEN_LSHIFT_LO_EXPR:
       //check later - why do we use this trick only here?
-      dummy->set_bool (get_tree_code_name (code), true);
       dummy->set ("arg1", 
                   node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set ("arg2",
@@ -2623,49 +2671,41 @@ dummy->set_bool("ssa_default_def", true);
       break;
 
     case VEC_DUPLICATE_EXPR:
-      dummy->set_bool("dot_prod_expr", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       break;
 
     case VEC_UNPACK_HI_EXPR:
-      dummy->set_bool("vec_unpack_hi", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       break;
 
     case VEC_UNPACK_LO_EXPR:
-      dummy->set_bool("vec_unpack_lo", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       break;
 
     case VEC_UNPACK_FLOAT_HI_EXPR:
-      dummy->set_bool("vec_unpack_float_hi", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       break;
 
     case VEC_UNPACK_FLOAT_LO_EXPR:
-      dummy->set_bool("vec_unpack_float_lo", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       break;
 
     case VEC_UNPACK_FIX_TRUNC_HI_EXPR:
-      dummy->set_bool("vec_unpack_fix_trunc_hi", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       break;
 
     case VEC_UNPACK_FIX_TRUNC_LO_EXPR:
-      dummy->set_bool("vec_unpack_fix_trunc_hi", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       break;
 
     case VEC_PACK_TRUNC_EXPR:
-      dummy->set_bool("vec_pack_trunc", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set("arg2",
@@ -2673,7 +2713,6 @@ dummy->set_bool("ssa_default_def", true);
       break;
 
     case VEC_PACK_SAT_EXPR:
-      dummy->set_bool("vec_pack_sat", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set("arg2",
@@ -2681,7 +2720,6 @@ dummy->set_bool("ssa_default_def", true);
       break;
 
     case VEC_PACK_FIX_TRUNC_EXPR:
-      dummy->set_bool("vec_pack_fix_trunc", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set("arg2",
@@ -2689,7 +2727,6 @@ dummy->set_bool("ssa_default_def", true);
       break;
 
     case VEC_PACK_FLOAT_EXPR:
-      dummy->set_bool("vec_pack_float", true);
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set("arg2",
@@ -2875,6 +2912,7 @@ dummy->set_bool("ssa_default_def", true);
     case OMP_MASTER:
       dummy->set("omp_master_body",
                  omp_clause_emit_json (OMP_MASTER_BODY(t)));
+      break;
 
     case OMP_MASKED:
       dummy->set("omp_masked_body",
@@ -2924,6 +2962,7 @@ dummy->set_bool("ssa_default_def", true);
                  omp_atomic_memory_order_emit_json (OMP_ATOMIC_MEMORY_ORDER(t)));
       dummy->set("op0",
                  node_emit_json (TREE_OPERAND(t, 0)));
+      break;
 
     case OMP_ATOMIC_CAPTURE_OLD:
     case OMP_ATOMIC_CAPTURE_NEW:
@@ -2965,6 +3004,7 @@ dummy->set_bool("ssa_default_def", true);
 	dummy->set_bool ("transaction_expr_relaxed", true);
       dummy->set("omp_transaction_body", 
                  node_emit_json (TRANSACTION_EXPR_BODY(t)));
+      break;
 
     case BLOCK:
       {
@@ -3030,7 +3070,6 @@ dummy->set_bool("ssa_default_def", true);
       dummy->set_bool("debug_begin", true);
       break;
     default:
-
       dummy->set_bool("unsupported code", true);
       dummy->set_string("fallthrough", get_tree_code_name(code));
       break;
@@ -3045,9 +3084,8 @@ dequeue_and_dump (dump_info_p di)
 {
   dump_queue_p dq;
   splay_tree_node stn;
-  dump_node_info_p dni;
+//  dump_node_info_p dni;
   tree t;
-  unsigned int index;
   json::object* dummy;
 
   dummy = new json::object ();
@@ -3056,8 +3094,7 @@ dequeue_and_dump (dump_info_p di)
   dq = di->queue;
   stn = dq->node;
   t = (tree) stn->key;
-  dni = (dump_node_info_p) stn->value;
-  index = dni->index;
+//  dni = (dump_node_info_p) stn->value;
 
   /* Remove the node from the queue, and put it on the free list.  */
   di->queue = dq->next;
@@ -3067,7 +3104,7 @@ dequeue_and_dump (dump_info_p di)
   di->free_list = dq;
 
   dummy = node_emit_json(t);
-  di->tree_json_debug->append(dummy);
+  di->json_dump->append(dummy);
 }
 
 /* Dump T, and all its children, on STREAM.  */
@@ -3090,9 +3127,7 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
   di.node = t;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
-  di.tree_json = new json::array ();
-  di.tree_json_debug = new json::array ();
-/*TEST
+  di.json_dump = new json::array ();
   /* Queue up the first node.  */
   queue (&di, t);
 
@@ -3100,10 +3135,7 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
   while (di.queue)
     dequeue_and_dump (&di);
 
-  /*  */
-
-
-  di.tree_json_debug->dump(stream, true);
+  di.json_dump->dump(stream, true);
   fputs("\n", stream);
   /* Now, clean up.  */
   for (dq = di.free_list; dq; dq = next_dq)

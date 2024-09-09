@@ -74,29 +74,9 @@ struct dump_info
      indices we assigned them.  */
   splay_tree nodes;
   /* JSON tree holder. Carries everything, each node is a sub-array */
-  json::array* tree_json;
-
-  json::array* tree_json_debug;
+  json::array* json_dump;
 };
 
-class generic_tree_json_writer
-{
-public:
-  generic_tree_json_writer ();
-  ~generic_tree_json_writer();
-  void write (json::object *t);
-  void flush ();
-
-private:
-  auto_vec<json::object *> buffer;
-};
-
-/* Dump the CHILD and its children.  */
-#define dump_child(field, child) \
-  queue_and_dump_index (di, field, child, DUMP_NONE)
-
-//extern void queue_and_dump_index (dump_info_p, const char *, const_tree, int);
-//extern void queue_and_dump_type (dump_info_p, const_tree);
 extern json::object* node_emit_json(tree t);
 extern void dump_node_json (const_tree t, dump_flags_t flags, FILE *stream);
 #endif /* ! GCC_TREE_JSON_H */
