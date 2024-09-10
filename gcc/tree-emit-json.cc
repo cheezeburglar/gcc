@@ -1707,9 +1707,9 @@ node_emit_json(tree t)
         else
           {
    	  unsigned int quals = TYPE_QUALS (t);
-          char buffer[30];
    	  dummy->set("tree_type", node_emit_json(TREE_TYPE(t)));
-   	  
+   	  json::object *_x; 
+
           _x = new json::object ();
   
   	  if (quals & TYPE_QUAL_ATOMIC)
