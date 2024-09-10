@@ -1596,8 +1596,8 @@ node_emit_json(tree t)
     	      {
               for (long unsigned int i = 0; i < NUM_POLY_INT_COEFFS; i++)
                 {
-                  poly_int _x = TYPE_VECTOR_SUBPARTS(t);
-                  dummy->set_integer("foo", _x.coeffs[i]);
+                  poly_int _poly_int = TYPE_VECTOR_SUBPARTS(t);
+                  dummy->set_integer("foo", _poly_int.coeffs[i]);
                 }
               dummy->set("vector_subparts", holder);
     	      }
