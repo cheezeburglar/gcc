@@ -1596,7 +1596,7 @@ node_emit_json(tree t)
     	      {
               for (long unsigned int i = 0; i < NUM_POLY_INT_COEFFS; i++)
                 {
-                  poly_int _x = TYPE_VECTOR_SUBPARTS(t);
+                  poly_uint64 _x = TYPE_VECTOR_SUBPARTS (t);
                   dummy->set_integer("foo", _x.coeffs[i]);
                 }
               dummy->set("vector_subparts", holder);
@@ -1707,9 +1707,9 @@ node_emit_json(tree t)
         else
           {
    	  unsigned int quals = TYPE_QUALS (t);
-          char buffer[30];
    	  dummy->set("tree_type", node_emit_json(TREE_TYPE(t)));
-   	  
+   	  json::object *_x; 
+
           _x = new json::object ();
   
   	  if (quals & TYPE_QUAL_ATOMIC)
