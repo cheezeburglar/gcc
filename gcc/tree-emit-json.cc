@@ -44,7 +44,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "fold-const.h"
 #include "vec.h"
 
-static unsigned int queue (dump_info_p, const_tree);
+static void queue (dump_info_p, const_tree);
 static void dequeue_and_dump (dump_info_p);
 static json::array* function_decl_emit_json (tree);
 static void identifier_node_add_json (tree, json::object*);
@@ -61,15 +61,11 @@ static json::array* loc_emit_json(expanded_location);
 /* Add T to the end of the queue of nodes to dump.  Returns the index
    assigned to T.  */
 
-static unsigned int
+static void
 queue (dump_info_p di, const_tree t)
 {
   dump_queue_p dq;
   dump_node_info_p dni;
-  unsigned int index;
-
-  /* Assign the next available index to T.  */
-  index = ++di->index;
 
   /* Obtain a new queue node.  */
   if (di->free_list)
@@ -82,7 +78,6 @@ queue (dump_info_p di, const_tree t)
 
   /* Create a new entry in the splay-tree.  */
   dni = XNEW (struct dump_node_info);
-  dni->index = index;
   dq->node = splay_tree_insert (di->nodes, (splay_tree_key) t,
 				(splay_tree_value) dni);
 
@@ -94,8 +89,6 @@ queue (dump_info_p di, const_tree t)
     di->queue_end->next = dq;
   di->queue_end = dq;
 
-  /* Return the index.  */
-  return index;
 }
 
 void
@@ -1596,8 +1589,11 @@ node_emit_json(tree t)
     	      {
               for (long unsigned int i = 0; i < NUM_POLY_INT_COEFFS; i++)
                 {
+                  json::object* coeffs;
+                  coeffs = new json::object ();
                   auto _poly_int = TYPE_VECTOR_SUBPARTS(t);
-                  dummy->set_integer("foo", _poly_int.coeffs[i]);
+                  coeffs->set_integer("poly_int_coeff", _poly_int.coeffs[i]);
+                  holder->append(coeffs);
                 }
               dummy->set("vector_subparts", holder);
     	      }
@@ -2118,7 +2114,7 @@ node_emit_json(tree t)
             json::object* cst_elt;
             json::object* _val_json;
             cst_elt = new json::object ();
-            cst_elt->set_integer("", ix); //fix
+            cst_elt->set_integer("cst_elt_index", ix);
             if (field)
               {
                 if (is_struct_init)
@@ -2318,7 +2314,7 @@ node_emit_json(tree t)
     case ORDERED_EXPR:
     case UNORDERED_EXPR:
       {
-        const char* c = op_symbol_code(TREE_CODE(t), TDF_NONE); //ugly
+        const char* c = op_symbol_code(TREE_CODE(t), TDF_NONE); 
         op0 = TREE_OPERAND(t, 0);
         op1 = TREE_OPERAND(t, 1);
         
@@ -2496,7 +2492,7 @@ node_emit_json(tree t)
     case ANNOTATE_EXPR:
       {
       switch ((enum annot_expr_kind) TREE_INT_CST_LOW (TREE_OPERAND(t,1)))
-        { //Is this expensive? ask later
+        { 
           case annot_expr_ivdep_kind:
             dummy->set("ivdep", node_emit_json(TREE_OPERAND (t, 0)));
             break;
@@ -2568,7 +2564,6 @@ node_emit_json(tree t)
         dummy->set_string("case", "default");
       break;
 
-    // check later - okay?
     case OBJ_TYPE_REF:
       dummy->set("obj_type_ref_expr",
                  node_emit_json(OBJ_TYPE_REF_EXPR(t)));
@@ -2578,7 +2573,7 @@ node_emit_json(tree t)
                  node_emit_json(OBJ_TYPE_REF_TOKEN(t)));
       break;
 
-    case SSA_NAME: //check later- augment with more accesssors?
+    case SSA_NAME:
       {
       if (SSA_NAME_IDENTIFIER (t))
         dummy->set("ssa_name_identifier",
@@ -2630,7 +2625,7 @@ node_emit_json(tree t)
                  node_emit_json (TREE_OPERAND (t, 2)));
       break;
 
-    case DOT_PROD_EXPR: //check later
+    case DOT_PROD_EXPR:
       dummy->set("arg1",
                  node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set("arg2",
@@ -2657,13 +2652,12 @@ node_emit_json(tree t)
                  node_emit_json (TREE_OPERAND (t, 2)));
       break;
 
-//    case VEC_SERIES_EXPR:
+    case VEC_SERIES_EXPR:
     case VEC_WIDEN_MULT_HI_EXPR:
     case VEC_WIDEN_MULT_LO_EXPR:
     case VEC_WIDEN_MULT_ODD_EXPR:
     case VEC_WIDEN_LSHIFT_HI_EXPR:
     case VEC_WIDEN_LSHIFT_LO_EXPR:
-      //check later - why do we use this trick only here?
       dummy->set ("arg1", 
                   node_emit_json (TREE_OPERAND (t, 0)));
       dummy->set ("arg2",
@@ -3084,7 +3078,6 @@ dequeue_and_dump (dump_info_p di)
 {
   dump_queue_p dq;
   splay_tree_node stn;
-//  dump_node_info_p dni;
   tree t;
   json::object* dummy;
 
@@ -3094,7 +3087,6 @@ dequeue_and_dump (dump_info_p di)
   dq = di->queue;
   stn = dq->node;
   t = (tree) stn->key;
-//  dni = (dump_node_info_p) stn->value;
 
   /* Remove the node from the queue, and put it on the free list.  */
   di->queue = dq->next;
@@ -3107,7 +3099,7 @@ dequeue_and_dump (dump_info_p di)
   di->json_dump->append(dummy);
 }
 
-/* Dump T, and all its children, on STREAM.  */
+/* Dump T, and all its children, on STREAM as JSON array. */
 
 void
 dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
@@ -3118,8 +3110,6 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
   pretty_printer pp;
   /* Initialize the dump-information structure.  */
   di.stream = stream;
-  di.index = 0;
-  di.column = 0;
   di.queue = 0;
   di.queue_end = 0;
   di.free_list = 0;
@@ -3128,6 +3118,7 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
   di.json_dump = new json::array ();
+
   /* Queue up the first node.  */
   queue (&di, t);
 
@@ -3145,6 +3136,8 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
     }
   splay_tree_delete (di.nodes);
 }
+
+/* c.f. debug_tree() */
 
 DEBUG_FUNCTION void
 debug_tree_json (tree t)

@@ -31,12 +31,7 @@ typedef struct dump_info *dump_info_p;
 /* Information about a node to be dumped.  */
 
 typedef struct dump_node_info
-{
-  /* The index for the node.  */
-  unsigned int index;
-  /* Nonzero if the node is a binfo.  */
-  unsigned int binfo_p : 1;
-} *dump_node_info_p;
+{} *dump_node_info_p;
 
 /* A dump_queue is a link in the queue of things to be dumped.  */
 
@@ -60,10 +55,6 @@ struct dump_info
   /* User flags.  */
   dump_flags_t flags;
   /* The next unused node index.  */
-  unsigned int index;
-  /* The next column.  */
-  unsigned int column;
-  /* The first node in the queue of nodes to be written out.  */
   dump_queue_p queue;
   /* The last node in the queue.  */
   dump_queue_p queue_end;

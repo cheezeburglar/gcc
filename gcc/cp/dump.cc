@@ -22,7 +22,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "cp-tree.h"
-#define INCLUDE_MEMORY
 #include "tree-dump.h"
 
 /* Dump a representation of the accessibility information associated
