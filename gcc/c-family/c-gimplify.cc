@@ -44,7 +44,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "context.h"
 #include "tree-pass.h"
 #include "internal-fn.h"
-#include "tree-emit-json.h"
 
 /*  The gimplification pass converts the language-dependent trees
     (ld-trees) emitted by the parser into language-independent trees
