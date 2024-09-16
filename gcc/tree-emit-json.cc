@@ -47,23 +47,24 @@ along with GCC; see the file COPYING3.  If not see
 
 static void queue (dump_info_p, const_tree);
 static void dequeue_and_dump (dump_info_p);
-static json::array* function_decl_emit_json (tree);
-static void identifier_node_add_json (tree, json::object*);
-static void decl_node_add_json (tree, json::object*);
-static void function_name_add_json (tree, json::object*);
-static void omp_iterator_add_json (tree, json::object*);
-static void omp_clause_add_json(tree, json::object*);
-static void omp_atomic_memory_order_add_json (json::object*,
+static std::unique_ptr<json::array> function_decl_emit_json (tree);
+static void identifier_node_add_json (tree, std::unique_ptr<json::object> &);
+static void decl_node_add_json (tree, std::unique_ptr<json::object> &);
+static void function_name_add_json (tree, std::unique_ptr<json::object> &);
+static void omp_iterator_add_json (tree, std::unique_ptr<json::object> &);
+static void omp_clause_add_json(tree, std::unique_ptr<json::object> &);
+static void omp_atomic_memory_order_add_json (std::unique_ptr<json::object> &,
                                               enum omp_memory_order);
-static json::object* omp_atomic_memory_order_emit_json(omp_memory_order mo);
-static json::object* omp_clause_emit_json (tree);
-static json::array* loc_emit_json(expanded_location);
+static std::unique_ptr<json::object> omp_atomic_memory_order_emit_json(
+                                         omp_memory_order mo);
+static std::unique_ptr<json::object> omp_clause_emit_json (tree);
+static json::array * loc_emit_json(expanded_location);
 
 /* Add T to the end of the queue of nodes to dump.  Returns the index
    assigned to T.  */
 
 std::unique_ptr<json::object>
-foo(json::object *json_obj)
+foo()
 {
   auto new_json_obj = make_unique<json::object> ();
   new_json_obj->set_string("foo", "bar");
@@ -101,48 +102,57 @@ queue (dump_info_p di, const_tree t)
 }
 
 void
-address_add_json (const void* t, json::object* json_obj, char* address_buffer)
+address_add_json (const void* t, std::unique_ptr<json::object> & json_obj)
 {
+  char address_buffer[sizeof(&t)] = {"\0"};
   sprintf(address_buffer, HOST_PTR_PRINTF, t);
   json_obj->set_string("addr", address_buffer);
 }
 
+void
+address_add_json (const void* t,
+                  std::unique_ptr<json::object> & json_obj,
+                  bool ref)
+{
+  const char* addr = ref ? "ref_addr" : "addr";
+  char address_buffer[sizeof(&t)] = {"\0"};
+  sprintf(address_buffer, HOST_PTR_PRINTF, t);
+  json_obj->set_string(addr, address_buffer);
+}
+
 /* Return args of a function declaration */
 
-json::array*
+std::unique_ptr<json::array>
 function_decl_emit_json (tree t)
 {
   bool wrote_arg = false;
   tree arg;
-  json::array* arg_holder;
-  json::object* arg_json;
 
-  arg_json = new json::object ();
-  arg_holder = new json::array ();
+  auto arg_holder = make_unique<json::array> ();
 
   arg = TYPE_ARG_TYPES (t);
 
   while (arg && arg != void_list_node && arg != error_mark_node)
     {
       wrote_arg = true;
-      arg_json = node_emit_json(TREE_VALUE (arg));
-      arg_holder->append(arg_json);
+      arg_holder->append(node_emit_json(TREE_VALUE (arg)));
       arg = TREE_CHAIN (arg);
     }
 
   if (arg == void_list_node && !wrote_arg)
-{
+    {
+      auto arg_json = new json::object ();
       arg_json->set_bool("void_list_node", true);
       arg_holder->append(arg_json);
+      delete (arg_json);
     }
-
   return arg_holder;
 }
 
 /* Adds Identifier information to JSON object */
 
 void
-identifier_node_add_json (tree t, json::object* json_obj)
+identifier_node_add_json (tree t, std::unique_ptr<json::object> & json_obj)
   {
     const char* buff = IDENTIFIER_POINTER (t);
     json_obj->set_string("id_to_locale", identifier_to_locale(buff));
@@ -151,7 +161,7 @@ identifier_node_add_json (tree t, json::object* json_obj)
   }
 
 void
-decl_node_add_json (tree t, json::object* json_obj)
+decl_node_add_json (tree t, std::unique_ptr<json::object> & json_obj)
 {
   tree name = DECL_NAME (t);
     
@@ -192,7 +202,7 @@ decl_node_add_json (tree t, json::object* json_obj)
 /* Function call */
 
 void
-function_name_add_json (tree t, json::object* json_obj)
+function_name_add_json (tree t, std::unique_ptr<json::object> & json_obj)
 {
   if (CONVERT_EXPR_P (t))
     t = TREE_OPERAND (t, 0);
@@ -208,7 +218,7 @@ function_name_add_json (tree t, json::object* json_obj)
 /* Adds the name of a call. Enter iff t is CALL_EXPR_FN */
 
 void
-call_name_add_json (tree t, json::object* json_obj)
+call_name_add_json (tree t, std::unique_ptr<json::object> & json_obj)
 {
   tree op0 = t;
 
@@ -231,12 +241,11 @@ call_name_add_json (tree t, json::object* json_obj)
   
       case COND_EXPR:
         {
-          json::object *_x;
-          _x = new json::object ();
-          _x->set("if", node_emit_json(TREE_OPERAND(op0, 0)));
-          _x->set("then", node_emit_json(TREE_OPERAND(op0, 1)));
-          _x->set("else", node_emit_json(TREE_OPERAND(op0, 2)));
-          json_obj->set("call_name", _x);
+          auto x = new json::object ();
+          x->set("if", node_emit_json(TREE_OPERAND(op0, 0)));
+          x->set("then", node_emit_json(TREE_OPERAND(op0, 1)));
+          x->set("else", node_emit_json(TREE_OPERAND(op0, 2)));
+          json_obj->set("call_name", x);
         }
         break;
   
@@ -266,10 +275,9 @@ call_name_add_json (tree t, json::object* json_obj)
 
 /* OMP helper. */
 void
-omp_iterator_add_json(tree iter, json::object* json_obj)
+omp_iterator_add_json(tree iter, std::unique_ptr<json::object> & json_obj)
 {
-  json::array* iter_holder;
-  iter_holder = new json::array ();
+  auto iter_holder = new json::array ();
 
   for (tree it = iter; it; it = TREE_CHAIN (it))
     {
@@ -280,10 +288,11 @@ omp_iterator_add_json(tree iter, json::object* json_obj)
         }
     }
   json_obj->set("omp_iter", iter_holder);
+  delete iter_holder;
 }
-/* Omp helper. */
+/* OMP helper. */
 void
-omp_clause_add_json(tree clause, json::object* json_obj)
+omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj)
 {
   char buffer[100] = {'\0'};
   const char* name;
@@ -635,22 +644,23 @@ omp_clause_add_json(tree clause, json::object* json_obj)
 		iter_holder->append(node_emit_json(TREE_VALUE (t)));
 		if (TREE_PURPOSE (t) != integer_zero_node)
 		  {
-                    json::object *_x;
-                    _x = new json::object ();
+                    auto x = new json::object ();
 		    if (OMP_CLAUSE_DOACROSS_SINK_NEGATIVE (t))
-                      _x->set("-", node_emit_json(TREE_PURPOSE (t)));
+                      x->set("-", node_emit_json(TREE_PURPOSE (t)));
 		    else
-                      _x->set("+", node_emit_json(TREE_PURPOSE (t)));
-                    iter_holder->append(_x);
+                      x->set("+", node_emit_json(TREE_PURPOSE (t)));
+                    iter_holder->append(x);
 		  }
 	      }
 	    else
 	      gcc_unreachable ();
-	  break;
+	  delete iter_holder;
+          break;
 	default:
 	  gcc_unreachable ();
 	}
       break;
+
     case OMP_CLAUSE_MAP:
       strcat (buffer, "omp_map");
       if (OMP_CLAUSE_MAP_READONLY (clause))
@@ -1164,7 +1174,7 @@ omp_clause_add_json(tree clause, json::object* json_obj)
 }
 
 void
-omp_atomic_memory_order_add_json (json::object* json_obj, enum omp_memory_order mo)
+omp_atomic_memory_order_add_json (std::unique_ptr<json::object> & json_obj, enum omp_memory_order mo)
 {
   switch (mo & OMP_MEMORY_ORDER_MASK)
     {
@@ -1191,104 +1201,104 @@ omp_atomic_memory_order_add_json (json::object* json_obj, enum omp_memory_order 
   switch (mo & OMP_FAIL_MEMORY_ORDER_MASK)
     {
     case OMP_FAIL_MEMORY_ORDER_RELAXED:
-      json_obj->set_string ("omp_memory_order", "fail(relaxed)");
+      json_obj->set_string ("omp_fail_memory_order", "fail(relaxed)");
       break;
     case OMP_FAIL_MEMORY_ORDER_SEQ_CST:
-      json_obj->set_string ("omp_memory_order", "fail(seq_cst)");
+      json_obj->set_string ("omp_fail_memory_order", "fail(seq_cst)");
       break;
     case OMP_FAIL_MEMORY_ORDER_ACQUIRE:
-      json_obj->set_string ("omp_memory_order", "fail(acquire)");
+      json_obj->set_string ("omp_fail_memory_order", "fail(acquire)");
       break;
     case OMP_FAIL_MEMORY_ORDER_UNSPECIFIED:
-      json_obj->set_string ("omp_memory_order", "fail(unspecified)");
+      json_obj->set_string ("omp_fail_memory_order", "fail(unspecified)");
       break;
     default:
       gcc_unreachable ();
     }
 }
 
-json::object*
+std::unique_ptr<json::object>
 omp_atomic_memory_order_emit_json(omp_memory_order mo)
 {
-  json::object* _x;
-  _x = new json::object ();
-  omp_atomic_memory_order_add_json(_x, mo);
-  return _x;
+  auto x = make_unique<json::object> ();
+  omp_atomic_memory_order_add_json(x, mo);
+  return x;
 }
 
-json::object*
+std::unique_ptr<json::object>
 omp_clause_emit_json(tree t)
 {
-  json::object* _x;
-  _x = new json::object ();
-  omp_clause_add_json(t, _x);
-  return _x;
+  auto x = make_unique<json::object> ();
+  omp_clause_add_json(t, x);
+  return x;
 }
 
 json::array*
 loc_emit_json (expanded_location xloc)
 {
-  json::array *loc_holder;
-  json::object *loc_info;
-  loc_info = new json::object ();
+  auto loc_holder = new json::array ();
+  auto loc_info = new json::object ();
   loc_info->set_string("file", xloc.file);
   loc_info->set_integer("line", xloc.line);
   loc_info->set_integer("column", xloc.column);
-  loc_holder = new json::array ();
   loc_holder->append(loc_info);
   return loc_holder;
+  delete loc_holder;
+  delete loc_info;
 }
 
 /* Here we emit JSON data for a GENERIC node and children. 
  * c.f. dump_generic_node and print-tree's debug_tree().   */
 
-json::object* 
+std::unique_ptr<json::object> 
 node_emit_json(tree t)
 {
   tree op0, op1, type;
   enum tree_code code;
   expanded_location xloc;
-  json::object *json_obj;
   json::array* holder;
-  char address_buffer[sizeof(&t)] = {"\0"};
 
-  json_obj = new json::object ();
+  auto json_obj = make_unique<json::object> ();
   holder = new json::array ();
-
   code = TREE_CODE (t);
+  const char* code_name = get_tree_code_name(code);
 
-  address_add_json(t, json_obj, address_buffer);
+//  address_add_json(t, json_obj);
+  json_obj.get()->set_string("tree_code", code_name);
 
-  if (TREE_CODE_CLASS (code) == tcc_declaration
-      && code != TRANSLATION_UNIT_DECL)
-    {
-    xloc = expand_location (DECL_SOURCE_LOCATION (t));
-    json_obj->set("decl_loc", loc_emit_json(xloc));
-    }
-  if (EXPR_HAS_LOCATION(t))
-    {
-      xloc = expand_location (EXPR_LOCATION (t));
-      json_obj->set("expr_loc", loc_emit_json(xloc));
-    }
-  if (EXPR_HAS_RANGE (t))
-    {
-      source_range r = EXPR_LOCATION_RANGE (t);
-      if (r.m_start)
-      {
-        xloc = expand_location (r.m_start);
-        json_obj->set("start_loc", loc_emit_json(xloc));
-      } else {
-        json_obj->set_string("start_loc", "unknown");
-      }
-      if (r.m_finish)
-      {
-        xloc = expand_location (r.m_finish);
-        json_obj->set("finish_loc", loc_emit_json(xloc));
-      } else {
-        json_obj->set_string("finish_loc", "unknown");
-      }
-    }
-  json_obj->set_string("tree code", get_tree_code_name(TREE_CODE (t)));
+//  if (flags && TDF_LINENO)
+//  {
+//    if (TREE_CODE_CLASS (code) == tcc_declaration
+//        && code != TRANSLATION_UNIT_DECL)
+//      {
+//      xloc = expand_location (DECL_SOURCE_LOCATION (t));
+//      json_obj->set("decl_loc", loc_emit_json(xloc));
+//      }
+//    if (EXPR_HAS_LOCATION(t))
+//      {
+//        xloc = expand_location (EXPR_LOCATION (t));
+//        json_obj->set("expr_loc", loc_emit_json(xloc));
+//      }
+//    if (EXPR_HAS_RANGE (t))
+//      {
+//        source_range r = EXPR_LOCATION_RANGE (t);
+//        if (r.m_start)
+//        {
+//          xloc = expand_location (r.m_start);
+//          json_obj->set("start_loc", loc_emit_json(xloc));
+//        } else {
+//          json_obj->set_string("start_loc", "unknown");
+//        }
+//        if (r.m_finish)
+//        {
+//          xloc = expand_location (r.m_finish);
+//          json_obj->set("finish_loc", loc_emit_json(xloc));
+//        } else {
+//          json_obj->set_string("finish_loc", "unknown");
+//        }
+//      }
+//  }
+
   //Flag handling
   if (TREE_ADDRESSABLE (t))
     json_obj->set_bool ("addressable", true);
@@ -1555,20 +1565,19 @@ node_emit_json(tree t)
       {
 	unsigned int quals = TYPE_QUALS (t);
 	enum tree_code_class tclass;
-        json::object* _x;
 
-        _x = new json::object ();
+        auto x = new json::object ();
 
 	if (quals & TYPE_QUAL_ATOMIC)
-	  _x->set_bool("atomic", true);
+	  x->set_bool("atomic", true);
 	if (quals & TYPE_QUAL_CONST)
-	  _x->set_bool("const", true);
+	  x->set_bool("const", true);
 	if (quals & TYPE_QUAL_VOLATILE)
-	  _x->set_bool("volatile", true);
+	  x->set_bool("volatile", true);
 	if (quals & TYPE_QUAL_RESTRICT)
-	  _x->set_bool("restrict", true);
+	  x->set_bool("restrict", true);
       
-        json_obj->set("quals", _x);
+        json_obj->set("quals", x);
 
 	if (!ADDR_SPACE_GENERIC_P (TYPE_ADDR_SPACE (t)))
 	    json_obj->set_integer("address space", TYPE_ADDR_SPACE(t));
@@ -1598,11 +1607,11 @@ node_emit_json(tree t)
     	      {
               for (long unsigned int i = 0; i < NUM_POLY_INT_COEFFS; i++)
                 {
-                  json::object* coeffs;
-                  coeffs = new json::object ();
+                  auto coeffs = new json::object ();
                   auto _poly_int = TYPE_VECTOR_SUBPARTS(t);
                   coeffs->set_integer("poly_int_coeff", _poly_int.coeffs[i]);
                   holder->append(coeffs);
+                  delete coeffs;
                 }
               json_obj->set("vector_subparts", holder);
     	      }
@@ -1629,7 +1638,7 @@ node_emit_json(tree t)
     	          				   ? "unsigned long long"
     	          				   : "signed long long"));
     	        else if (TYPE_PRECISION (t) == CHAR_TYPE_SIZE
- && pow2p_hwi (TYPE_PRECISION (t)))
+                         && pow2p_hwi (TYPE_PRECISION (t)))
     	            json_obj->set_integer(TYPE_UNSIGNED(t) ? "uint": "int",
 	                               TYPE_PRECISION(t));
 	        else
@@ -1692,41 +1701,42 @@ node_emit_json(tree t)
    	      _id->set("type identifier", node_emit_json(TYPE_NAME(t)));
             else 
               {
-                char* buff;
-                buff = new char ();
+                char * buff;
                 print_hex(TYPE_UID(t), buff);
    	        _id->set_string("uid", buff);
               }
             json_obj->set("function decl", function_decl_emit_json(function_node));
             if (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
-	      it_args = new json::object();
+	      auto it_args = make_unique<json::object> ();
             while (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
    	      {
-	        it_args = node_emit_json(arg_node);
+	        it_args = node_emit_json(arg_node).get();
 	        args_holder->append(it_args);
    	        arg_node = TREE_CHAIN (arg_node);
    	      }
    	    json_obj->set("type_uid", _id);
    	    json_obj->set("args", args_holder);
+            delete _id;
+            delete it_args;
+            delete args_holder;
           }
         else
           {
    	  unsigned int quals = TYPE_QUALS (t);
    	  json_obj->set("tree_type", node_emit_json(TREE_TYPE(t)));
-   	  json::object *_x; 
 
-          _x = new json::object ();
+          auto x = new json::object ();
   
   	  if (quals & TYPE_QUAL_ATOMIC)
-  	    _x->set_bool("atomic", true);
+  	    x->set_bool("atomic", true);
   	  if (quals & TYPE_QUAL_CONST)
-  	    _x->set_bool("const", true);
+  	    x->set_bool("const", true);
   	  if (quals & TYPE_QUAL_VOLATILE)
-  	    _x->set_bool("volatile", true);
+  	    x->set_bool("volatile", true);
   	  if (quals & TYPE_QUAL_RESTRICT)
-  	    _x->set_bool("restrict", true);
+  	    x->set_bool("restrict", true);
         
-          json_obj->set("quals", _x);
+          json_obj->set("quals", x);
    	  if (!ADDR_SPACE_GENERIC_P (TYPE_ADDR_SPACE (t)))
    	    json_obj->set_integer("address space", TYPE_ADDR_SPACE (t));
    	  if (TYPE_REF_CAN_ALIAS_ALL (t))
@@ -1803,7 +1813,7 @@ node_emit_json(tree t)
     break;
 
     /* FIXME : As in tree-pretty-print.cc, the following four codes are
-     *         incomplete. See print_struct_decl therein the above. */
+     *         incomplete. See print_struct_decl therein.              */
     case ARRAY_TYPE:
       {
         unsigned int quals = TYPE_QUALS (t);
@@ -1820,18 +1830,17 @@ node_emit_json(tree t)
     case QUAL_UNION_TYPE:
       {
         unsigned int quals = TYPE_QUALS (t);
-        json::object *_x;
 
-        _x = new json::object ();
+        auto x = new json::object ();
 
         if (quals & TYPE_QUAL_ATOMIC)
-          _x->set_bool("atomic", true);
+          x->set_bool("atomic", true);
         if (quals & TYPE_QUAL_CONST)
-          _x->set_bool("const", true);
+          x->set_bool("const", true);
         if (quals & TYPE_QUAL_VOLATILE)
-          _x->set_bool("volatile", true);
-        
-        json_obj->set("type_quals", _x);
+          x->set_bool("volatile", true);
+
+        json_obj->set("type_quals", x);
 
         if (TYPE_NAME(t))
           json_obj->set("type_name", node_emit_json(TYPE_NAME(t)));
@@ -2120,9 +2129,8 @@ node_emit_json(tree t)
           }
         FOR_EACH_CONSTRUCTOR_ELT (CONSTRUCTOR_ELTS (t), ix, field, val)
           {
-            json::object* cst_elt;
-            json::object* _val_json;
-            cst_elt = new json::object ();
+            auto cst_elt = make_unique<json::object> ();
+            auto _val_json = make_unique<json::object> ();
             cst_elt->set_integer("cst_elt_index", ix);
             if (field)
               {
@@ -2139,6 +2147,7 @@ node_emit_json(tree t)
                         _array_init_json->append( node_emit_json( TREE_OPERAND( field, 0)));
                         _array_init_json->append( node_emit_json( TREE_OPERAND( field, 1)));
                         cst_elt->set("field", _array_init_json);
+                        delete _array_init_json;
                       }
                     else 
                       cst_elt->set ("field", node_emit_json (field));
@@ -2151,16 +2160,15 @@ node_emit_json(tree t)
                 val = TREE_OPERAND (val, 0);
             if (val && TREE_CODE (val) == FUNCTION_DECL)
               {
-                _val_json = new json::object ();
                 decl_node_add_json (val, _val_json);
-                cst_elt->set("val", _val_json);
+                cst_elt->set("val", _val_json.get());
               }
             else
               cst_elt->set("val", node_emit_json(val));
 
             if (TREE_CODE (field) == INTEGER_CST)
               curidx = wi::to_widest (field);
-            holder->append(cst_elt);
+            holder->append(cst_elt.get());
           }
         json_obj->set("ctor_elts", holder);
       }
@@ -3023,6 +3031,7 @@ node_emit_json(tree t)
           for (iter = BLOCK_SUBBLOCKS (t); iter; iter = BLOCK_CHAIN (t))
             subblock->append(node_emit_json(iter));
           json_obj->set("block_subblocks", subblock);
+          delete subblock;
         }
       if (BLOCK_CHAIN (t))
         {
@@ -3030,6 +3039,7 @@ node_emit_json(tree t)
           for (iter = BLOCK_SUBBLOCKS (t); iter; iter = BLOCK_CHAIN (t))
               chain->append(node_emit_json(iter));
           json_obj->set("block_chain", chain);
+          delete chain;
         
         }
       if (BLOCK_VARS (t))
@@ -3038,6 +3048,7 @@ node_emit_json(tree t)
           for (iter = BLOCK_VARS (t); iter; iter = TREE_CHAIN (t))
               vars->append(node_emit_json(iter));
           json_obj->set("block_vars", vars);
+          delete vars;
         }
       if (vec_safe_length (BLOCK_NONLOCALIZED_VARS (t)) > 0)
         {
@@ -3051,6 +3062,7 @@ node_emit_json(tree t)
               nlv_holder->append(node_emit_json(t));
             }
           json_obj->set("block_nonlocalized_vars", nlv_holder);
+          delete nlv_holder;
         }
       if (BLOCK_ABSTRACT_ORIGIN (t))
         json_obj->set("block_abstract_origin",
@@ -3080,6 +3092,17 @@ node_emit_json(tree t)
   return json_obj;
 }
 
+/* For some referenced nodes that may be too verbose */
+
+static std::unique_ptr<json::object>
+node_to_json_brief(tree t)
+{
+  auto json_obj = make_unique<json::object> ();
+  address_add_json (t, json_obj, true);
+  json_obj->set_string("tree_code", get_tree_code_name(TREE_CODE (t)));
+  return json_obj;
+}
+
 /* Dump the next node in the queue.  */
 
 static void
@@ -3088,9 +3111,6 @@ dequeue_and_dump (dump_info_p di)
   dump_queue_p dq;
   splay_tree_node stn;
   tree t;
-  json::object* dummy;
-
-  dummy = new json::object ();
 
   /* Get the next node from the queue.  */
   dq = di->queue;
@@ -3104,8 +3124,10 @@ dequeue_and_dump (dump_info_p di)
   dq->next = di->free_list;
   di->free_list = dq;
 
-  dummy = node_emit_json(t);
-  di->json_dump->append(dummy);
+  auto dummy = node_emit_json(t);
+  if (di->flags & TDF_JSON)
+
+  di->json_dump->append(dummy.release());
 }
 
 /* Dump T, and all its children, on STREAM as JSON array. */
@@ -3151,7 +3173,7 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
 DEBUG_FUNCTION void
 debug_tree_json (tree t)
 {
-  json::object* _x = node_emit_json(t);
-  _x->dump(stderr, true);
+  std::unique_ptr<json::object> x = node_emit_json(t);
+  x->dump(stderr, true);
   fprintf(stderr, "\n");
 }
