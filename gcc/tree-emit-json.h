@@ -68,6 +68,6 @@ struct dump_info
   json::array* json_dump;
 };
 
-extern std::unique_ptr<json::object> node_emit_json(tree t);
+extern std::unique_ptr<json::object> node_emit_json(tree t, dump_info_p di);
 extern void dump_node_json (const_tree t, dump_flags_t flags, FILE *stream);
 #endif /* ! GCC_TREE_JSON_H */
