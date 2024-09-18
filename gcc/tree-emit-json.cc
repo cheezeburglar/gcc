@@ -1248,8 +1248,8 @@ node_to_json_brief(tree t, dump_info_p & di)
   queue (di, t);
   json::object * json_obj = new json::object ();
 
-  char address_buffer [sizeof(&t)+100] = {"\0"}; //ASK RICHARD - segfaults unexpectedly without 8
-  sprintf(address_buffer, HOST_PTR_PRINTF, std::addressof(t));
+  char address_buffer [20] = {"\0"}; //ASK RICHARD - segfaults unexpectedly without 8
+  sprintf(address_buffer, HOST_PTR_PRINTF, t);
 
   json_obj->set_string("ref_addr", address_buffer);
   json_obj->set_string("tree_code", get_tree_code_name(TREE_CODE (t)));
@@ -1274,8 +1274,8 @@ node_emit_json(tree t, dump_info_p di)
   code = TREE_CODE (t);
   const char* code_name = get_tree_code_name(code);
 
-  char address_buffer[sizeof(&t)+32] = {"\0"};
-  sprintf(address_buffer, HOST_PTR_PRINTF, std::addressof(t));
+  char address_buffer[20] = {"\0"};            // How alloc good? can't find const
+  sprintf(address_buffer, HOST_PTR_PRINTF, (void *)t); // ASK This emits a warning during bootstrap - supress OK
 
   json_obj->set_string("addr", address_buffer);
   json_obj->set_string("tree_code", code_name);
