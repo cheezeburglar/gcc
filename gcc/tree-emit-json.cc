@@ -1227,20 +1227,22 @@ loc_emit_json (expanded_location xloc)
  * should only be called by node_to_json and contained in another 
  * json::object, and so we need not worry about memory leaks. */
 
-//json::object *
-//node_to_json_brief(tree t)
-//{
-//  json::object * json_obj = new json::object ();
-//
-//  char address_buffer [sizeof(&t)+100] = {"\0"}; //ASK RICHARD - segfaults unexpectedly without 8
-//  sprintf(address_buffer, HOST_PTR_PRINTF, std::addressof(t));
-//
-//  json_obj->set_string("ref_addr", address_buffer);
-//  json_obj->set_string("tree_code", get_tree_code_name(TREE_CODE (t)));
-//  return json_obj;
-//}
 
-/* Same as above, but our nodes for additional dumping queue */
+json::object *
+node_to_json_brief(tree t)
+{
+  json::object * json_obj = new json::object ();
+
+  char address_buffer [sizeof(&t)+100] = {"\0"}; //ASK RICHARD - segfaults unexpectedly without 8
+  sprintf(address_buffer, HOST_PTR_PRINTF, std::addressof(t));
+
+  json_obj->set_string("ref_addr", address_buffer);
+  json_obj->set_string("tree_code", get_tree_code_name(TREE_CODE (t)));
+  return json_obj;
+}
+
+/* Same as above, but we keep track of di nodes for additional dumping queue
+ * to append them to our dumping queue.*/
 
 json::object *
 node_to_json_brief(tree t, dump_info_p & di)
@@ -1253,7 +1255,7 @@ node_to_json_brief(tree t, dump_info_p & di)
 
   json_obj->set_string("ref_addr", address_buffer);
   json_obj->set_string("tree_code", get_tree_code_name(TREE_CODE (t)));
-  return json_obj;
+  return node_to_json_brief(t);
 }
 
 /* Here we emit JSON data for a GENERIC node and children. 
