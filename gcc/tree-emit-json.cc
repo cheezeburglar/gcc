@@ -1177,16 +1177,16 @@ omp_atomic_memory_order_add_json (std::unique_ptr<json::object> & json_obj, enum
   switch (mo & OMP_FAIL_MEMORY_ORDER_MASK)
     {
     case OMP_FAIL_MEMORY_ORDER_RELAXED:
-      json_obj->set_string ("omp_fail_memory_order", "fail(relaxed)");
+      json_obj->set_string ("omp_fail_memory_order", "relaxed");
       break;
     case OMP_FAIL_MEMORY_ORDER_SEQ_CST:
-      json_obj->set_string ("omp_fail_memory_order", "fail(seq_cst)");
+      json_obj->set_string ("omp_fail_memory_order", "seq_cst");
       break;
     case OMP_FAIL_MEMORY_ORDER_ACQUIRE:
-      json_obj->set_string ("omp_fail_memory_order", "fail(acquire)");
+      json_obj->set_string ("omp_fail_memory_order", "acquire");
       break;
     case OMP_FAIL_MEMORY_ORDER_UNSPECIFIED:
-      json_obj->set_string ("omp_fail_memory_order", "fail(unspecified)");
+      json_obj->set_string ("omp_fail_memory_order", "unspecified");
       break;
     default:
       gcc_unreachable ();
@@ -1682,7 +1682,7 @@ node_emit_json(tree t, dump_info_p di)
    	      _id->set("type identifier", node_to_json_brief(TYPE_NAME(t), di));
             else 
               {
-                char * buff; //ASK RICHARD
+                char buff [20];
                 print_hex(TYPE_UID(t), buff);
    	        _id->set_string("uid", buff);
               }
