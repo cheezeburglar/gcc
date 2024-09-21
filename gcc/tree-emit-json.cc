@@ -1233,8 +1233,8 @@ node_to_json_brief(tree t)
 {
   json::object * json_obj = new json::object ();
 
-  char address_buffer [sizeof(&t)+100] = {"\0"}; //ASK RICHARD - segfaults unexpectedly without 8
-  sprintf(address_buffer, HOST_PTR_PRINTF, std::addressof(t));
+  char address_buffer [20] = {"\0"};
+  sprintf(address_buffer, HOST_PTR_PRINTF, (void *)t);
 
   json_obj->set_string("ref_addr", address_buffer);
   json_obj->set_string("tree_code", get_tree_code_name(TREE_CODE (t)));
@@ -1248,13 +1248,6 @@ json::object *
 node_to_json_brief(tree t, dump_info_p & di)
 {
   queue (di, t);
-  json::object * json_obj = new json::object ();
-
-  char address_buffer [20] = {"\0"}; //ASK RICHARD - segfaults unexpectedly without 8
-  sprintf(address_buffer, HOST_PTR_PRINTF, t);
-
-  json_obj->set_string("ref_addr", address_buffer);
-  json_obj->set_string("tree_code", get_tree_code_name(TREE_CODE (t)));
   return node_to_json_brief(t);
 }
 
@@ -1276,8 +1269,8 @@ node_emit_json(tree t, dump_info_p di)
   code = TREE_CODE (t);
   const char* code_name = get_tree_code_name(code);
 
-  char address_buffer[20] = {"\0"};            // How alloc good? can't find const
-  sprintf(address_buffer, HOST_PTR_PRINTF, (void *)t); // ASK This emits a warning during bootstrap - supress OK
+  char address_buffer[20] = {"\0"};
+  sprintf(address_buffer, HOST_PTR_PRINTF, (void *)t);
 
   json_obj->set_string("addr", address_buffer);
   json_obj->set_string("tree_code", code_name);
@@ -1339,8 +1332,8 @@ node_emit_json(tree t, dump_info_p di)
 	    json_obj->set_bool ("abstract", true);
           if (DECL_EXTERNAL (t))
             json_obj->set_bool ("external", true);
-	  if (DECL_NONLOCAL (t))
-	    json_obj->set_bool ("nonlocal", true);
+          if (DECL_NONLOCAL (t))
+            json_obj->set_bool ("nonlocal", true);
 	}
       if (CODE_CONTAINS_STRUCT (code, TS_DECL_WITH_VIS))
         {
@@ -3137,7 +3130,7 @@ dequeue_and_dump (dump_info_p di)
   dq->next = di->free_list;
   di->free_list = dq;
 
-  if (di->flags && TDF_NONE)
+  if (di->flags & TDF_LINENO)
     {
       auto dummy = node_emit_json_loc(t, di).release();
       di->json_dump->append(dummy);
@@ -3183,15 +3176,33 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
       free (dq);
     }
   splay_tree_delete (di.nodes);
+  delete di.json_dump;
 }
 
 /* c.f. debug_tree() */
 
 DEBUG_FUNCTION void
-debug_tree_json (tree t)
+debug_dump_node_json (tree t, FILE *stream)
 {
-  dump_info_p di;
-  std::unique_ptr<json::object> x = node_emit_json(t, di);
-  x->dump(stderr, true);
-  fprintf(stderr, "\n");
+  dump_info di;
+
+  di.stream = stream;
+  di.queue = 0;
+  di.queue_end = 0;
+  di.free_list = 0;
+  di.flags = TDF_LINENO;
+  di.node = t;
+  di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
+			     splay_tree_delete_pointers);
+  di.json_dump = new json::array ();
+  
+  queue (&di, t);
+
+  while (di.queue)
+    dequeue_and_dump (&di);
+
+  di.json_dump->dump(stream, true);
+  
+  splay_tree_delete (di.nodes);
+  delete di.json_dump;
 }
