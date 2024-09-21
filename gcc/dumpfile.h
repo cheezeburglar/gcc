@@ -202,6 +202,9 @@ enum dump_flag : uint32_t
 
   /* For error.  */
   TDF_ERROR = ((uint32_t)1 << 30),
+
+  /* Tree JSON dumping */
+  TDF_JSON = ((uint32_t)1 << 31),
 };
 
 /* Dump flags type.  */
@@ -651,6 +654,9 @@ extern bool enable_rtl_dump_file (void);
 
 /* In tree-dump.cc  */
 extern void dump_node (const_tree, dump_flags_t, FILE *);
+
+/* In tree-emit-json.cc */
+extern void dump_node_json(const_tree, dump_flags_t, FILE *);
 
 /* In cfghooks.cc  */
 extern void dump_bb (FILE *, basic_block, int, dump_flags_t);
