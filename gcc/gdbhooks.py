@@ -143,6 +143,7 @@ import os.path
 import re
 import sys
 import tempfile
+import json
 
 import gdb
 import gdb.printing
@@ -889,6 +890,116 @@ class DotFn(gdb.Command):
 
 DotFn()
 
+# Quick and dirty way to turn a tree as JSON object into HTML.
+# Used in treeToHtml.
+
+def jsonNodeToHtml(node_list, html_doc):
+    for node in node_list:
+        id = node["addr"]
+        html_doc.write("<div id=%s>" % id)
+        for key, value in node.items():
+            if (key == "addr"):
+                html_doc.write("addr:")
+                html_doc.write(f"<a href=#{value}>")
+                html_doc.write(f"{value}")
+                html_doc.write(f"</a><br>")
+            if (type(value) == dict):
+                html_doc.write(f"{key}:")
+                sub = value
+                if "ref_addr" in sub.keys():
+                    html_doc.write(f"<p style=\"margin-left: 10px\">") 
+                    subAddress = sub["ref_addr"]
+                    subCode = sub["tree_code"]
+                    html_doc.write(f"ref_addr: <a href=#{subAddress}>{subAddress}</a><br>")
+                    html_doc.write(f"tree_code: {subCode}")
+                    html_doc.write("</p>")
+                # Currently, child tree nodes that are referred to by OMP
+                # accsessors are not dumped recursively by
+                # dump_generic_node_json, i.e. they have no corresponding
+                # entry in node_list. So we just read it out key-value pairs.
+                else:
+                    html_doc.write(f"<p> style=\"margin-left: 10 px\">") 
+                    for key, value in sub.items():
+                        html_doc.write(f"{key}: {value}<br>")
+                    html_doc.write("</span>")
+            elif (type(value) == list):
+                html_doc.write(f"{key}:<br>")
+                html_doc.write(f"<p style=\"margin-left: 10px;\">") 
+                for i in value:
+                    for key, value in i.items():
+                        if (key == "ref_addr"):
+                            html_doc.write("ref_addr:")
+                            html_doc.write(f"<a href=#{value}>")
+                            html_doc.write(f"{value}")
+                            html_doc.write(f"</a><br>")
+                        else:
+                            html_doc.write(f"{key}: {value}<br>")
+                html_doc.write("</p>")
+            elif (key != "addr"):
+                html_doc.write(f"{key}: {value}<br>")
+        html_doc.write("<br></div>")
+
+class GCChtml (gdb.Parameter):
+    """
+    This parameter defines what program is used to view HTML files
+    by the html-tree command. It will be invoked as gcc-html <html-file>.
+    """
+    def __init__(self):
+        super(GCChtml, self).__init__('gcc-html',
+                gdb.COMMAND_NONE, gdb.PARAM_STRING)
+        self.value = "firefox"
+
+gcc_html_cmd = GCChtml()
+
+class treeToHtml (gdb.Command):
+    """
+    A custom command that converts a tree to html after it is
+    first parsed to JSON. The html is saved in cwd as <treename> + ".html".
+    It then opens the html with the program specified
+    by the GCChtml parameter, which is firefox by default.
+
+    Examples of use:
+      (gdb) html-tree current_tree
+    """
+
+    def __init__(self):
+        gdb.Command.__init__(self, 'html-tree', gdb.COMMAND_USER)
+
+    def invoke(self, arg, file):
+
+        args = gdb.string_to_argv(arg)
+        if len(args) >= 2:
+            print ("Error: Too many arguments")
+            return
+
+        if len(args) >= 1:
+            treeName = args[0]
+            print(treeName)
+
+        # We call a function within GCC to dump the JSON
+        # and create a tempfile to store the JSON before we pass it into our
+        # Python shell.
+        f = tempfile.NamedTemporaryFile(delete=False)
+        filename = f.name
+        print("filename: %s" % filename)
+        gdb.execute('set $%s = fopen (\"%s\", \"w\")' % ("jsonTemp", filename))
+        gdb.execute("call debug_dump_node_json (%s, $%s)"
+                    % (treeName, "jsonTemp"))
+        gdb.execute("call fclose($%s)" % "jsonTemp")
+        with open(filename, "r") as foobar:
+            obj = json.loads(foobar.read())
+        print(obj)
+
+        # Create an html file in cwd, and dump our tree as HTML.
+        htmlFile = open(treeName + ".html", "w")
+        with open(htmlFile.name, "w") as _:
+            jsonNodeToHtml(obj, _)
+        
+        # Open the HTML.
+        html_cmd = gcc_html_cmd.value
+        os.system("%s \"%s\"" % (html_cmd, htmlFile.name))
+
+treeToHtml()
 # Try and invoke the user-defined command "on-gcc-hooks-load".  Doing
 # this allows users to customize the GCC extensions once they've been
 # loaded by defining the hook in their .gdbinit.

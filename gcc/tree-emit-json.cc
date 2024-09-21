@@ -48,16 +48,19 @@ along with GCC; see the file COPYING3.  If not see
 static void queue (dump_info_p, const_tree);
 static void dequeue_and_dump (dump_info_p);
 static std::unique_ptr<json::array> function_decl_emit_json (tree, dump_info_p );
-static void identifier_node_add_json (tree, std::unique_ptr<json::object> &, dump_info_p );
-static void decl_node_add_json (tree, std::unique_ptr<json::object> &, dump_info_p );
-static void function_name_add_json (tree, std::unique_ptr<json::object> &, dump_info_p );
+static void identifier_node_add_json (tree, std::unique_ptr<json::object> &);
+static void decl_node_add_json (tree, std::unique_ptr<json::object> &);
+static void function_name_add_json (tree t, std::unique_ptr<json::object> & json_obj);
+static void call_name_add_json (tree t, std::unique_ptr<json::object> & json_obj,
+                                dump_info_p di);
 static void omp_iterator_add_json (tree, std::unique_ptr<json::object> &, dump_info_p );
-static void omp_clause_add_json(tree,
-                                std::unique_ptr<json::object> );
+static void omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
+                                dump_info_p di);
 static void omp_atomic_memory_order_add_json (std::unique_ptr<json::object> &,
                                               enum omp_memory_order);
 static std::unique_ptr<json::object> omp_atomic_memory_order_emit_json(
                                          omp_memory_order mo);
+static std::unique_ptr<json::object> omp_clause_emit_json(tree t, dump_info_p di);
 static std::unique_ptr<json::object> omp_clause_emit_json (tree, dump_info_p );
 static json::array * loc_emit_json(expanded_location);
 
@@ -133,6 +136,8 @@ identifier_node_add_json (tree t, std::unique_ptr<json::object> & json_obj)
     json_obj->set_string("id_point", buff);
   }
 
+/* Ditto - adds declaration info to JSON object */
+
 void
 decl_node_add_json (tree t, std::unique_ptr<json::object> & json_obj)
 {
@@ -172,7 +177,7 @@ decl_node_add_json (tree t, std::unique_ptr<json::object> & json_obj)
       }
 }
 
-/* Function call */
+/* Helper for function calls in call_name_add_json. */
 
 void
 function_name_add_json (tree t, std::unique_ptr<json::object> & json_obj)
@@ -248,6 +253,7 @@ call_name_add_json (tree t, std::unique_ptr<json::object> & json_obj,
 }
 
 /* OMP helper. */
+
 void
 omp_iterator_add_json(tree iter, std::unique_ptr<json::object> & json_obj,
                       dump_info_p di)
@@ -265,7 +271,9 @@ omp_iterator_add_json(tree iter, std::unique_ptr<json::object> & json_obj,
   json_obj->set("omp_iter", iter_holder);
   delete iter_holder;
 }
+
 /* OMP helper. */
+
 void
 omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
                     dump_info_p di)
@@ -1252,7 +1260,8 @@ node_to_json_brief(tree t, dump_info_p & di)
 }
 
 /* Here we emit JSON data for a GENERIC node and children. 
- * c.f. dump_generic_node and print-tree's debug_tree().   */
+ * c.f. dump_generic_node and print-tree's debug_tree().   
+ * We need pass di inorder to queue child nodes.*/
 
 std::unique_ptr<json::object> 
 node_emit_json(tree t, dump_info_p di)
@@ -1261,9 +1270,15 @@ node_emit_json(tree t, dump_info_p di)
   enum tree_code code;
   json::array* holder;
 
+
   auto json_obj = ::make_unique<json::object> ();
 
-  //For multiple referred nodes
+  /* Sometimes the operands for some codes are null.
+  *  Don't dereference them. */
+  if (!t)
+    return json_obj;
+
+  // For multiple referred nodes
   holder = new json::array ();
 
   code = TREE_CODE (t);
@@ -1275,7 +1290,7 @@ node_emit_json(tree t, dump_info_p di)
   json_obj->set_string("addr", address_buffer);
   json_obj->set_string("tree_code", code_name);
 
-  //Flag handling
+  // Flag handling
   if (TREE_ADDRESSABLE (t))
     json_obj->set_bool ("addressable", true);
   if (TREE_THIS_VOLATILE (t))
@@ -3068,6 +3083,8 @@ node_emit_json(tree t, dump_info_p di)
   return json_obj;
 }
 
+/* Same as node_emit_json, but we also have the location info at end. */
+
 std::unique_ptr<json::object>
 node_emit_json_loc (tree t, dump_info_p di)
 {
@@ -3130,6 +3147,8 @@ dequeue_and_dump (dump_info_p di)
   dq->next = di->free_list;
   di->free_list = dq;
 
+  /* Convert the node to JSON and store it to be dumped later. */
+
   if (di->flags & TDF_LINENO)
     {
       auto dummy = node_emit_json_loc(t, di).release();
@@ -3179,7 +3198,7 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
   delete di.json_dump;
 }
 
-/* c.f. debug_tree() */
+/* c.f. debug_tree(). Logic is same as the above fucntion. */
 
 DEBUG_FUNCTION void
 debug_dump_node_json (tree t, FILE *stream)
