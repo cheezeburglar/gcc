@@ -947,18 +947,14 @@ class GCChtml (gdb.Parameter):
     def __init__(self):
         super(GCChtml, self).__init__('gcc-html',
                 gdb.COMMAND_NONE, gdb.PARAM_STRING)
-        self.value = "firefox"
+        self.value = "xdg-open"
 
 gcc_html_cmd = GCChtml()
 
 class treeToHtml (gdb.Command):
     """
     A custom command that converts a tree to html after it is
-    first parsed to JSON. The html is saved in cwd as <treename> + ".html".
-    
-    TODO : It'd be nice if we then open the html with the program specified
-    by the GCChtml parameter, but there's an error thrown whenever I try
-    to do this while attached to cc1/cc1plus.
+    first parsed to JSON. The html is saved in a temporary file.
 
     Examples of use:
       (gdb) html-tree current_tree
@@ -983,23 +979,23 @@ class treeToHtml (gdb.Command):
         # Python shell.
         f = tempfile.NamedTemporaryFile(delete=False)
         filename = f.name
-        gdb.execute('set $%s = fopen (\"%s\", \"w\")' % ("jsonTemp", filename))
+        gdb.execute('set $%s = (FILE *) fopen (\"%s\", \"w\")' % ("jsonTemp", filename))
         gdb.execute("call debug_dump_node_json (%s, $%s)"
                     % (treeName, "jsonTemp"))
-        gdb.execute("call fclose($%s)" % "jsonTemp")
+        gdb.execute("p (int) fclose($%s)" % "jsonTemp")
         with open(filename, "r") as foobar:
             obj = json.loads(foobar.read())
 
-        # Create an html file in cwd, and dump our tree as HTML.
-        htmlFile = open(treeName + ".html", "w")
+        # Create an html file, and dump our tree as HTML.
+        htmlFile = open(filename + ".html", "w")
         with open(htmlFile.name, "w") as _:
             jsonNodeToHtml(obj, _)
         
-        print(f"HTML written to {htmlFile.name} in cwd.")
+        print(f"HTML written to {htmlFile.name}")
 
         # FIX : Open the HTML.
-        # html_cmd = gcc_html_cmd.value
-        # os.system("%s \"%s\"" % (html_cmd, htmlFile.name))
+        html_cmd = gcc_html_cmd.value
+        os.system("%s \"%s\"" % (html_cmd, htmlFile.name))
 
 treeToHtml()
 # Try and invoke the user-defined command "on-gcc-hooks-load".  Doing
