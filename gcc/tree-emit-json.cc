@@ -1508,7 +1508,11 @@ node_emit_json(tree t, dump_info_p di)
       if (TYPE_LANG_FLAG_7 (t))
 	json_obj->set_bool ("type_7", true);
       } //end tcc_type flags
-  
+
+  // For nodes with a type output a reference to it
+  if (CODE_CONTAINS_STRUCT (code, TS_TYPED) && TREE_TYPE (t))
+    json_obj->set("tree_type", node_to_json_brief(TREE_TYPE(t), di));
+
   // Accessors
   switch (code)
   {
@@ -1675,42 +1679,6 @@ node_emit_json(tree t, dump_info_p di)
       {
         if (TREE_TYPE (t) == NULL)
    	  json_obj->set_bool("null type", true);
-        else if (TREE_CODE (TREE_TYPE (t)) == FUNCTION_TYPE)
-          {
-            tree function_node = TREE_TYPE(t);
-   	    tree arg_node = TYPE_ARG_TYPES(function_node);
-   	    json::array* args_holder;
-	    json::object* it_args;
-   	    json::object* _id;
-
-	    args_holder = new json::array ();
-	    _id = new json::object ();
-	    
-            json_obj->set("fnode", node_to_json_brief(function_node, di));
-   
-   	    if (TYPE_IDENTIFIER (t))
-   	      _id->set("type identifier", node_to_json_brief(TYPE_NAME(t), di));
-            else 
-              {
-                char buff [20];
-                print_hex(TYPE_UID(t), buff);
-   	        _id->set_string("uid", buff);
-              }
-            json_obj->set("function decl", function_decl_emit_json(function_node, di));
-            if (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
-	      auto it_args = ::make_unique<json::object> ();
-            while (arg_node && arg_node != void_list_node && arg_node != error_mark_node)
-   	      {
-	        it_args = node_to_json_brief(arg_node, di);
-	        args_holder->append(it_args);
-   	        arg_node = TREE_CHAIN (arg_node);
-   	      }
-   	    json_obj->set("type_uid", _id);
-   	    json_obj->set("args", args_holder);
-            delete _id;
-            delete it_args;
-            delete args_holder;
-          }
         else
           {
    	  unsigned int quals = TYPE_QUALS (t);
@@ -3100,28 +3068,31 @@ node_emit_json_loc (tree t, dump_info_p di)
       xloc = expand_location (DECL_SOURCE_LOCATION (t));
       json_obj->set("decl_loc", loc_emit_json(xloc));
     }
-  if (EXPR_HAS_LOCATION(t))
+  else if (EXPR_P (t))
     {
-      xloc = expand_location (EXPR_LOCATION (t));
-      json_obj->set("expr_loc", loc_emit_json(xloc));
-    }
-  if (EXPR_HAS_RANGE (t))
-    {
-      source_range r = EXPR_LOCATION_RANGE (t);
-      if (r.m_start)
-        {
-        xloc = expand_location (r.m_start);
-        json_obj->set("start_loc", loc_emit_json(xloc));
-      } else {
-        json_obj->set_string("start_loc", "unknown");
-      }
-      if (r.m_finish)
-      {
-        xloc = expand_location (r.m_finish);
-        json_obj->set("finish_loc", loc_emit_json(xloc));
-      } else {
-        json_obj->set_string("finish_loc", "unknown");
-      }
+      if (EXPR_HAS_LOCATION(t))
+	{
+	  xloc = expand_location (EXPR_LOCATION (t));
+	  json_obj->set("expr_loc", loc_emit_json(xloc));
+	}
+      if (EXPR_HAS_RANGE (t))
+	{
+	  source_range r = EXPR_LOCATION_RANGE (t);
+	  if (r.m_start)
+	    {
+	      xloc = expand_location (r.m_start);
+	      json_obj->set("start_loc", loc_emit_json(xloc));
+	    } else {
+		json_obj->set_string("start_loc", "unknown");
+	    }
+	  if (r.m_finish)
+	    {
+	      xloc = expand_location (r.m_finish);
+	      json_obj->set("finish_loc", loc_emit_json(xloc));
+	    } else {
+		json_obj->set_string("finish_loc", "unknown");
+	    }
+	}
     }
   return json_obj;
 }
