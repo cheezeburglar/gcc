@@ -2999,7 +2999,6 @@ node_emit_json(tree t, dump_info_p di)
               chain->append(node_emit_json(iter, di));
           json_obj->set("block_chain", chain);
           delete chain;
-        
         }
       if (BLOCK_VARS (t))
         {
