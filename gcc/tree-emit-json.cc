@@ -47,25 +47,23 @@ along with GCC; see the file COPYING3.  If not see
 
 static void queue (dump_info_p, const_tree);
 static void dequeue_and_dump (dump_info_p);
-static std::unique_ptr<json::array> function_decl_emit_json (tree, dump_info_p );
-static void identifier_node_add_json (tree, std::unique_ptr<json::object> &);
-static void decl_node_add_json (tree, std::unique_ptr<json::object> &);
-static void function_name_add_json (tree t, std::unique_ptr<json::object> & json_obj);
-static void call_name_add_json (tree t, std::unique_ptr<json::object> & json_obj,
-                                dump_info_p di);
-static void omp_iterator_add_json (tree, std::unique_ptr<json::object> &, dump_info_p );
-static void omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
-                                dump_info_p di);
-static void omp_atomic_memory_order_add_json (std::unique_ptr<json::object> &,
+static json::array * function_decl_emit_json (tree, dump_info_p );
+static void identifier_node_add_json (tree, json::object &);
+static void decl_node_add_json (tree, json::object &);
+static void function_name_add_json (tree, json::object &);
+static void call_name_add_json (tree, json::object &,
+                                dump_info_p);
+static void omp_iterator_add_json (tree, json::object &, dump_info_p );
+static void omp_clause_add_json(tree, json::object &,
+                                dump_info_p);
+static void omp_atomic_memory_order_add_json (json::object &,
                                               enum omp_memory_order);
-static std::unique_ptr<json::object> omp_atomic_memory_order_emit_json(
-                                         omp_memory_order mo);
-static std::unique_ptr<json::object> omp_clause_emit_json(tree t, dump_info_p di);
-static std::unique_ptr<json::object> omp_clause_emit_json (tree, dump_info_p );
+static json::object * omp_atomic_memory_order_emit_json(
+                                         omp_memory_order);
+static json::object * omp_clause_emit_json(tree, dump_info_p);
 static json::array * loc_emit_json(expanded_location);
 
-/* Add T to the end of the queue of nodes to dump.  Returns the index
-   assigned to T.  */
+/* Add tree to the splay tree contained in di. */ 
 
 static void
 queue (dump_info_p di, const_tree t)
@@ -98,13 +96,13 @@ queue (dump_info_p di, const_tree t)
 
 /* Return args of a function declaration */
 
-std::unique_ptr<json::array>
+json::array *
 function_decl_emit_json (tree t, dump_info_p di)
 {
   bool wrote_arg = false;
   tree arg;
 
-  auto arg_holder = ::make_unique<json::array> ();
+  auto arg_holder = new json::array ();
 
   arg = TYPE_ARG_TYPES (t);
 
@@ -120,7 +118,7 @@ function_decl_emit_json (tree t, dump_info_p di)
       auto arg_json = new json::object ();
       arg_json->set_bool("void_list_node", true);
       arg_holder->append(arg_json);
-      delete (arg_json);
+//      delete (arg_json);
     }
   return arg_holder;
 }
@@ -128,21 +126,21 @@ function_decl_emit_json (tree t, dump_info_p di)
 /* Adds Identifier information to JSON object */
 
 void
-identifier_node_add_json (tree t, std::unique_ptr<json::object> & json_obj)
-  {
-    const char* buff = IDENTIFIER_POINTER (t);
-    json_obj->set_string("id_to_locale", identifier_to_locale(buff));
-    buff = IDENTIFIER_POINTER (t);
-    json_obj->set_string("id_point", buff);
-  }
+identifier_node_add_json (tree t, json::object & json_obj)
+{
+  const char* buff = IDENTIFIER_POINTER (t);
+  json_obj->set_string("id_to_locale", identifier_to_locale(buff));
+  buff = IDENTIFIER_POINTER (t);
+  json_obj->set_string("id_point", buff);
+}
 
 /* Ditto - adds declaration info to JSON object */
 
 void
-decl_node_add_json (tree t, std::unique_ptr<json::object> & json_obj)
+decl_node_add_json (tree t, json::object & json_obj)
 {
   tree name = DECL_NAME (t);
-    
+
   if (name)
       {
         if (HAS_DECL_ASSEMBLER_NAME_P(t)
@@ -180,7 +178,7 @@ decl_node_add_json (tree t, std::unique_ptr<json::object> & json_obj)
 /* Helper for function calls in call_name_add_json. */
 
 void
-function_name_add_json (tree t, std::unique_ptr<json::object> & json_obj)
+function_name_add_json (tree t, json::object & json_obj)
 {
   if (CONVERT_EXPR_P (t))
     t = TREE_OPERAND (t, 0);
@@ -196,7 +194,7 @@ function_name_add_json (tree t, std::unique_ptr<json::object> & json_obj)
 /* Adds the name of a call. Enter iff t is CALL_EXPR_FN */
 
 void
-call_name_add_json (tree t, std::unique_ptr<json::object> & json_obj,
+call_name_add_json (tree t, json::object & json_obj,
                     dump_info_p di)
 {
   tree op0 = t;
@@ -224,7 +222,7 @@ call_name_add_json (tree t, std::unique_ptr<json::object> & json_obj,
           x->set("if", node_emit_json(TREE_OPERAND(op0, 0), di));
           x->set("then", node_emit_json(TREE_OPERAND(op0, 1), di));
           x->set("else", node_emit_json(TREE_OPERAND(op0, 2), di));
-          json_obj->set("call_name", x);
+          json_obj.set("call_name", x);
         }
         break;
   
@@ -232,7 +230,7 @@ call_name_add_json (tree t, std::unique_ptr<json::object> & json_obj,
         if (VAR_P (TREE_OPERAND (op0, 0)))
   	function_name_add_json (TREE_OPERAND (op0, 0), json_obj);
         else
-  	json_obj->set("call_name", node_emit_json (op0, di));
+  	json_obj.set("call_name", node_emit_json (op0, di));
         break;
   
       case MEM_REF:
@@ -245,7 +243,7 @@ call_name_add_json (tree t, std::unique_ptr<json::object> & json_obj,
       case COMPONENT_REF:
       case SSA_NAME:
       case OBJ_TYPE_REF:
-        json_obj->set("call_name", node_emit_json (op0, di));
+        json_obj.set("call_name", node_emit_json (op0, di));
         break;
       default:
         break;
@@ -255,7 +253,7 @@ call_name_add_json (tree t, std::unique_ptr<json::object> & json_obj,
 /* OMP helper. */
 
 void
-omp_iterator_add_json(tree iter, std::unique_ptr<json::object> & json_obj,
+omp_iterator_add_json(tree iter, json::object & json_obj,
                       dump_info_p di)
 {
   auto iter_holder = new json::array ();
@@ -268,14 +266,13 @@ omp_iterator_add_json(tree iter, std::unique_ptr<json::object> & json_obj,
             iter_holder->append (node_emit_json (TREE_VEC_ELT (it, 0), di));
         }
     }
-  json_obj->set("omp_iter", iter_holder);
-  delete iter_holder;
+  json_obj.set("omp_iter", iter_holder);
 }
 
 /* OMP helper. */
 
 void
-omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
+omp_clause_add_json(tree clause, json::object & json_obj,
                     dump_info_p di)
 {
   char buffer[100] = {'\0'};
@@ -354,7 +351,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
       strcpy(buffer, name);
       if (modifier)
         strcat(buffer, modifier);
-      json_obj->set (buffer, node_emit_json (OMP_CLAUSE_DECL (clause), di));
+      json_obj.set (buffer, node_emit_json (OMP_CLAUSE_DECL (clause), di));
       break;
 
     case OMP_CLAUSE_TASK_REDUCTION:
@@ -379,24 +376,25 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
         case OMP_TARGET_EXIT_DATA: strcat(buffer, "_target_exit_data"); break;
         default: gcc_unreachable ();
         }
-      json_obj->set(buffer, node_emit_json (OMP_CLAUSE_IF_EXPR (clause), di));
+      json_obj.set(buffer, node_emit_json (OMP_CLAUSE_IF_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_SELF:
-      json_obj->set("omp_self", node_emit_json (OMP_CLAUSE_SELF_EXPR(clause), di));
+      json_obj.set("omp_self",
+                   node_emit_json (OMP_CLAUSE_SELF_EXPR(clause), di));
       break;
 
     case OMP_CLAUSE_NUM_THREADS:
-      json_obj->set("omp_num_threads",
-                 node_emit_json (OMP_CLAUSE_NUM_THREADS_EXPR(clause), di));
+      json_obj.set("omp_num_threads",
+                   node_emit_json (OMP_CLAUSE_NUM_THREADS_EXPR(clause), di));
       break;
 
     case OMP_CLAUSE_NOWAIT:
       break;
 
     case OMP_CLAUSE_ORDERED:
-      json_obj->set("omp_ordered",
-                 node_emit_json (OMP_CLAUSE_ORDERED_EXPR (clause), di));
+      json_obj.set("omp_ordered",
+                   node_emit_json (OMP_CLAUSE_ORDERED_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_DEFAULT:
@@ -423,7 +421,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	default:
 	  gcc_unreachable ();
         }
-      json_obj->set_bool(buffer, true);
+      json_obj.set_bool(buffer, true);
       break;
 
     case OMP_CLAUSE_SCHEDULE:
@@ -461,25 +459,26 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	default:
 	  gcc_unreachable ();
 	}
-      json_obj->set(buffer,
-                 node_emit_json(OMP_CLAUSE_SCHEDULE_CHUNK_EXPR(clause), di));
+      json_obj.set(buffer,
+                   node_emit_json(OMP_CLAUSE_SCHEDULE_CHUNK_EXPR(clause), di));
       break;
 
     case OMP_CLAUSE_UNTIED:
-      json_obj->set_bool("omp_clause_untied", true);
+      json_obj.set_bool("omp_clause_untied", true);
       break;
 
     case OMP_CLAUSE_COLLAPSE:
-      json_obj->set("omp_collapse_collapse",
-                 node_emit_json (OMP_CLAUSE_COLLAPSE_EXPR (clause), di));
+      json_obj.set("omp_collapse_collapse",
+                   node_emit_json (OMP_CLAUSE_COLLAPSE_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_FINAL:
-      json_obj->set("omp_final", node_emit_json (OMP_CLAUSE_FINAL_EXPR (clause), di));
+      json_obj.set("omp_final",
+                   node_emit_json (OMP_CLAUSE_FINAL_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_MERGEABLE:
-      json_obj->set_bool("omp_clause_mergeable", true);
+      json_obj.set_bool("omp_clause_mergeable", true);
       break;
 
     case OMP_CLAUSE_LINEAR:
@@ -501,7 +500,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	  default:
 	    gcc_unreachable ();
 	  }
-      json_obj->set(buffer, node_emit_json (OMP_CLAUSE_DECL (clause), di));
+      json_obj.set(buffer, node_emit_json (OMP_CLAUSE_DECL (clause), di));
       if (!OMP_CLAUSE_LINEAR_OLD_LINEAR_MODIFIER (clause)
 	  && OMP_CLAUSE_LINEAR_KIND (clause) != OMP_CLAUSE_LINEAR_DEFAULT)
 	switch (OMP_CLAUSE_LINEAR_KIND (clause))
@@ -518,27 +517,28 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	    default:
 	      gcc_unreachable ();
 	  }
-      json_obj->set(buffer, node_emit_json (OMP_CLAUSE_LINEAR_STEP (clause), di));
+      json_obj.set(buffer,
+                   node_emit_json (OMP_CLAUSE_LINEAR_STEP (clause), di));
       break;
 
     case OMP_CLAUSE_ALIGNED:
-      json_obj->set("omp_aligned", node_emit_json (OMP_CLAUSE_DECL(clause), di));
+      json_obj.set("omp_aligned", node_emit_json (OMP_CLAUSE_DECL(clause), di));
       if (OMP_CLAUSE_ALIGNED_ALIGNMENT (clause))
 	{
-          json_obj->set("omp_aligned_alignment",
-                     node_emit_json (OMP_CLAUSE_ALIGNED_ALIGNMENT (clause), di));
+          json_obj.set("omp_aligned_alignment",
+                       node_emit_json (OMP_CLAUSE_ALIGNED_ALIGNMENT (clause), di));
 	}
       break;
 
     case OMP_CLAUSE_ALLOCATE:
       if (OMP_CLAUSE_ALLOCATE_ALLOCATOR (clause))
-          json_obj->set("omp_allocator",
-                     node_emit_json (OMP_CLAUSE_ALLOCATE_ALLOCATOR (clause), di));
+          json_obj.set("omp_allocator",
+                       node_emit_json (OMP_CLAUSE_ALLOCATE_ALLOCATOR (clause), di));
       if (OMP_CLAUSE_ALLOCATE_ALIGN (clause))
-          json_obj->set("omp_allocate_align",
-                     node_emit_json (OMP_CLAUSE_ALLOCATE_ALIGN (clause), di));
-      json_obj->set("omp_allocate",
-                 node_emit_json (OMP_CLAUSE_DECL (clause), di));
+          json_obj.set("omp_allocate_align",
+                       node_emit_json (OMP_CLAUSE_ALLOCATE_ALIGN (clause), di));
+      json_obj.set("omp_allocate",
+                   node_emit_json (OMP_CLAUSE_DECL (clause), di));
       break;
 
     case OMP_CLAUSE_AFFINITY:
@@ -551,7 +551,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
             omp_iterator_add_json(TREE_PURPOSE (t), json_obj, di);
 	    t = TREE_VALUE (t);
 	  }
-        json_obj->set("omp_affinity", node_emit_json(t, di));
+        json_obj.set("omp_affinity", node_emit_json(t, di));
       }
       break;
 
@@ -593,9 +593,9 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	    t = TREE_VALUE (t);
 	  }
 	if (t == null_pointer_node)
-	  json_obj->set_bool("omp_all_memory", true);
+	  json_obj.set_bool("omp_all_memory", true);
 	else
-          json_obj->set(buffer, node_emit_json(t, di));
+          json_obj.set(buffer, node_emit_json(t, di));
       }
       break;
 
@@ -609,7 +609,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	    strcat (buffer, "_source");
 	  else
 	    strcat (buffer, "_source:");
-          json_obj->set_bool(buffer, true);
+          json_obj.set_bool(buffer, true);
 	  break;
         
 	case OMP_CLAUSE_DOACROSS_SINK:
@@ -619,7 +619,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	  if (OMP_CLAUSE_DECL (clause) == NULL_TREE)
 	    {
 	      strcat (buffer, "_omp_cur_iteration-1");
-              json_obj->set_bool(buffer, true);
+              json_obj.set_bool(buffer, true);
 	      break;
 	    }
 	  for (tree t = OMP_CLAUSE_DECL (clause); t; t = TREE_CHAIN (t))
@@ -762,7 +762,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	default:
 	  gcc_unreachable ();
 	}
-      json_obj->set (buffer, node_emit_json (OMP_CLAUSE_DECL (clause), di));
+      json_obj.set (buffer, node_emit_json (OMP_CLAUSE_DECL (clause), di));
      print_clause_size:
       if (OMP_CLAUSE_SIZE (clause))
 	{
@@ -801,49 +801,49 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	      strcpy (buffer, "len");
 	      break;
 	    }
-          json_obj->set (buffer, node_emit_json (OMP_CLAUSE_SIZE (clause), di));
+          json_obj.set (buffer, node_emit_json (OMP_CLAUSE_SIZE (clause), di));
 	}
       if (OMP_CLAUSE_CODE (clause) == OMP_CLAUSE_MAP
 	  && OMP_CLAUSE_MAP_RUNTIME_IMPLICIT_P (clause))
-        json_obj->set_bool("implicit", true);
+        json_obj.set_bool("implicit", true);
       break;
 
     case OMP_CLAUSE_FROM:
       strcat (buffer, "omp_from");
       if (OMP_CLAUSE_MOTION_PRESENT (clause))
 	strcat (buffer, "_present");
-      json_obj->set(buffer, node_emit_json (OMP_CLAUSE_DECL (clause), di));
+      json_obj.set(buffer, node_emit_json (OMP_CLAUSE_DECL (clause), di));
       goto print_clause_size;
 
     case OMP_CLAUSE_TO:
       strcpy (buffer, "omp_to");
       if (OMP_CLAUSE_MOTION_PRESENT (clause))
 	strcat (buffer, "_present");
-      json_obj->set(buffer, node_emit_json (OMP_CLAUSE_DECL (clause), di));
+      json_obj.set(buffer, node_emit_json (OMP_CLAUSE_DECL (clause), di));
       goto print_clause_size;
 
     case OMP_CLAUSE__CACHE_:
       strcat (buffer, "omp__cache__");
       if (OMP_CLAUSE__CACHE__READONLY (clause))
 	strcat (buffer, "_readonly");
-      json_obj->set(buffer, node_emit_json (OMP_CLAUSE_DECL (clause), di));
+      json_obj.set(buffer, node_emit_json (OMP_CLAUSE_DECL (clause), di));
       goto print_clause_size;
 
     case OMP_CLAUSE_NUM_TEAMS:
       strcat (buffer, "omp_num_teams");
       if (OMP_CLAUSE_NUM_TEAMS_LOWER_EXPR (clause))
 	{
-          json_obj->set("omp_num_teams_lower",
+          json_obj.set("omp_num_teams_lower",
                      node_emit_json (OMP_CLAUSE_NUM_TEAMS_LOWER_EXPR (clause), di));
           strcat (buffer, "_upper");
 	}
       else
-        json_obj->set(buffer,
+        json_obj.set(buffer,
                    node_emit_json (OMP_CLAUSE_NUM_TEAMS_UPPER_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_THREAD_LIMIT:
-      json_obj->set("omp_thread_limit",
+      json_obj.set("omp_thread_limit",
                  node_emit_json (OMP_CLAUSE_THREAD_LIMIT_EXPR (clause), di));
       break;
 
@@ -851,7 +851,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
       strcpy (buffer, "omp_device(");
       if (OMP_CLAUSE_DEVICE_ANCESTOR (clause))
 	strcat (buffer, "_ancestor:");
-      json_obj->set(buffer,
+      json_obj.set(buffer,
                  node_emit_json (OMP_CLAUSE_DEVICE_ID (clause), di));
       break;
 
@@ -859,11 +859,11 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
       strcat (buffer, "omp_dist_schedule(static)");
       if (OMP_CLAUSE_DIST_SCHEDULE_CHUNK_EXPR (clause))
 	{
-          json_obj->set(buffer,
+          json_obj.set(buffer,
                      node_emit_json (OMP_CLAUSE_DIST_SCHEDULE_CHUNK_EXPR (clause), di));
 	}
       else
-        json_obj->set_bool(buffer, true);
+        json_obj.set_bool(buffer, true);
       break;
 
     case OMP_CLAUSE_PROC_BIND:
@@ -882,7 +882,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	default:
 	  gcc_unreachable ();
 	}
-      json_obj->set_bool(buffer, true);
+      json_obj.set_bool(buffer, true);
       break;
 
     case OMP_CLAUSE_DEVICE_TYPE:
@@ -901,21 +901,21 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	default:
 	  gcc_unreachable ();
 	}
-      json_obj->set_bool(buffer, true);
+      json_obj.set_bool(buffer, true);
       break;
 
     case OMP_CLAUSE_SAFELEN:
-      json_obj->set("omp_safelen",
+      json_obj.set("omp_safelen",
                  node_emit_json (OMP_CLAUSE_SAFELEN_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_SIMDLEN:
-      json_obj->set("omp_simdlen",
+      json_obj.set("omp_simdlen",
                  node_emit_json (OMP_CLAUSE_SIMDLEN_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_PRIORITY:
-      json_obj->set("omp_priority",
+      json_obj.set("omp_priority",
                  node_emit_json (OMP_CLAUSE_PRIORITY_EXPR (clause), di));
       break;
 
@@ -923,7 +923,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
       strcpy (buffer, "omp_grainsize");
       if (OMP_CLAUSE_GRAINSIZE_STRICT (clause))
         strcat (buffer, "_strict");
-      json_obj->set(buffer,
+      json_obj.set(buffer,
                  node_emit_json (OMP_CLAUSE_GRAINSIZE_EXPR (clause), di));
       break;
 
@@ -931,17 +931,17 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
       strcpy (buffer, "omp_num_tasks");
       if (OMP_CLAUSE_NUM_TASKS_STRICT (clause))
 	strcat (buffer, "_strict");
-      json_obj->set(buffer,
+      json_obj.set(buffer,
                  node_emit_json (OMP_CLAUSE_NUM_TASKS_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_HINT:
-      json_obj->set("omp_hint",
+      json_obj.set("omp_hint",
                  node_emit_json (OMP_CLAUSE_HINT_EXPR(clause), di));
       break;
 
     case OMP_CLAUSE_FILTER:
-      json_obj->set("omp_filter",
+      json_obj.set("omp_filter",
                  node_emit_json (OMP_CLAUSE_FILTER_EXPR(clause), di));
       break;
 
@@ -999,7 +999,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	default:
 	  gcc_unreachable ();
 	}
-      json_obj->set_bool(buffer, true);
+      json_obj.set_bool(buffer, true);
       break;
 
     case OMP_CLAUSE_ORDER:
@@ -1009,7 +1009,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
       else if (OMP_CLAUSE_ORDER_REPRODUCIBLE (clause))
 	strcat (buffer, "reproducible:");
       strcat (buffer, "concurrent)");
-      json_obj->set_bool(buffer, true);
+      json_obj.set_bool(buffer, true);
       break;
 
     case OMP_CLAUSE_BIND:
@@ -1028,129 +1028,133 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 	default:
 	  gcc_unreachable ();
 	}
-      json_obj->set_bool(buffer, true);
+      json_obj.set_bool(buffer, true);
       break;
 
     case OMP_CLAUSE__SIMDUID_:
-      json_obj->set("omp__simduid__", 
+      json_obj.set("omp__simduid__", 
                  node_emit_json(OMP_CLAUSE__SIMDUID__DECL (clause), di));
       break;
 
     case OMP_CLAUSE__SIMT_:
-      json_obj->set_bool("omp__simt__", true);
+      json_obj.set_bool("omp__simt__", true);
       break;
 
     //In our current implementation, we dump exprs etc even if not NULL.
     case OMP_CLAUSE_GANG: 
-      json_obj->set_bool ("omp_gang", true);
+      json_obj.set_bool ("omp_gang", true);
       if (OMP_CLAUSE_GANG_EXPR (clause) != NULL_TREE)
-          json_obj->set("num", node_emit_json (OMP_CLAUSE_GANG_EXPR (clause), di));
+          json_obj.set("num",
+                       node_emit_json (OMP_CLAUSE_GANG_EXPR (clause), di));
       if (OMP_CLAUSE_GANG_STATIC_EXPR (clause) != NULL_TREE)
 	{
 	  strcpy (buffer, "static");
 	  if (OMP_CLAUSE_GANG_STATIC_EXPR (clause)
 	      == integer_minus_one_node)
 	    strcat (buffer, "*"); 
-          json_obj->set(buffer,
-                     node_emit_json (OMP_CLAUSE_GANG_STATIC_EXPR (clause), di));
+          json_obj.set(buffer,
+                       node_emit_json (OMP_CLAUSE_GANG_STATIC_EXPR (clause), di));
 	}
       break;
 
     case OMP_CLAUSE_ASYNC:
-      json_obj->set("omp_async", 
-                 node_emit_json (OMP_CLAUSE_ASYNC_EXPR (clause), di));
+      json_obj.set("omp_async", 
+                   node_emit_json (OMP_CLAUSE_ASYNC_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_AUTO:
     case OMP_CLAUSE_SEQ:
       strcpy (buffer, omp_clause_code_name[OMP_CLAUSE_CODE (clause)]);
-      json_obj->set_bool(buffer, true);
+      json_obj.set_bool(buffer, true);
       break;
 
     case OMP_CLAUSE_WAIT:
-      json_obj->set("omp_wait",
-                 node_emit_json (OMP_CLAUSE_WAIT_EXPR (clause), di));
+      json_obj.set("omp_wait",
+                   node_emit_json (OMP_CLAUSE_WAIT_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_WORKER:
-      json_obj->set("omp_worker",
-                 node_emit_json (OMP_CLAUSE_WORKER_EXPR (clause), di));
+      json_obj.set("omp_worker",
+                   node_emit_json (OMP_CLAUSE_WORKER_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_VECTOR:
-      json_obj->set("omp_vector",
-                 node_emit_json (OMP_CLAUSE_VECTOR_EXPR (clause), di));
+      json_obj.set("omp_vector",
+                   node_emit_json (OMP_CLAUSE_VECTOR_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_NUM_GANGS:
-      json_obj->set("omp_num_gangs",
-                 node_emit_json (OMP_CLAUSE_NUM_GANGS_EXPR (clause), di));
+      json_obj.set("omp_num_gangs",
+                   node_emit_json (OMP_CLAUSE_NUM_GANGS_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_NUM_WORKERS:
-      json_obj->set("omp_num_workers",
-                 node_emit_json (OMP_CLAUSE_NUM_WORKERS_EXPR (clause), di));
+      json_obj.set("omp_num_workers",
+                   node_emit_json (OMP_CLAUSE_NUM_WORKERS_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_VECTOR_LENGTH:
-      json_obj->set("omp_vector_length",
-                 node_emit_json (OMP_CLAUSE_VECTOR_LENGTH_EXPR (clause), di));
+      json_obj.set("omp_vector_length",
+                   node_emit_json (OMP_CLAUSE_VECTOR_LENGTH_EXPR (clause), di));
       break;
 
     case OMP_CLAUSE_INBRANCH:
-      json_obj->set_bool ("inbranch", true);
+      json_obj.set_bool ("inbranch", true);
       break;
     case OMP_CLAUSE_NOTINBRANCH:
-      json_obj->set_bool ("notinbranch", true);
+      json_obj.set_bool ("notinbranch", true);
       break;
     case OMP_CLAUSE_FOR:
-      json_obj->set_bool ("for", true);
+      json_obj.set_bool ("for", true);
       break;
     case OMP_CLAUSE_PARALLEL:
-      json_obj->set_bool ("parallel", true);
+      json_obj.set_bool ("parallel", true);
       break;
     case OMP_CLAUSE_SECTIONS:
-      json_obj->set_bool ("sections", true);
+      json_obj.set_bool ("sections", true);
       break;
     case OMP_CLAUSE_TASKGROUP:
-      json_obj->set_bool ("taskgroup", true);
+      json_obj.set_bool ("taskgroup", true);
       break;
     case OMP_CLAUSE_NOGROUP:
-      json_obj->set_bool ("nogroup", true);
+      json_obj.set_bool ("nogroup", true);
       break;
     case OMP_CLAUSE_THREADS:
-      json_obj->set_bool ("threads", true);
+      json_obj.set_bool ("threads", true);
       break;
     case OMP_CLAUSE_SIMD:
-      json_obj->set_bool ("simd", true);
+      json_obj.set_bool ("simd", true);
       break;
     case OMP_CLAUSE_INDEPENDENT:
-      json_obj->set_bool ("independent", true);
+      json_obj.set_bool ("independent", true);
       break;
     case OMP_CLAUSE_TILE:
-      json_obj->set ("omp_tile", node_emit_json (OMP_CLAUSE_TILE_LIST (clause), di));
+      json_obj.set ("omp_tile",
+                    node_emit_json (OMP_CLAUSE_TILE_LIST (clause), di));
       break;
     case OMP_CLAUSE_PARTIAL:
-      json_obj->set ("omp_partial",
-                  node_emit_json (OMP_CLAUSE_PARTIAL_EXPR (clause), di));
+      json_obj.set ("omp_partial",
+                    node_emit_json (OMP_CLAUSE_PARTIAL_EXPR (clause), di));
       break;
     case OMP_CLAUSE_FULL:
-      json_obj->set_bool("full", true);
+      json_obj.set_bool("full", true);
       break;
     case OMP_CLAUSE_SIZES:
-      json_obj->set("omp_sizes", node_emit_json (OMP_CLAUSE_SIZES_LIST (clause), di));
+      json_obj.set("omp_sizes",
+                   node_emit_json (OMP_CLAUSE_SIZES_LIST (clause), di));
       break;
     case OMP_CLAUSE_IF_PRESENT:
-      json_obj->set_bool("if_present", true);
+      json_obj.set_bool("if_present", true);
       break;
     case OMP_CLAUSE_FINALIZE:
-      json_obj->set_bool("finalize", true);
+      json_obj.set_bool("finalize", true);
       break;
     case OMP_CLAUSE_NOHOST:
-      json_obj->set_bool("nohost", true);
+      json_obj.set_bool("nohost", true);
       break;
     case OMP_CLAUSE_DETACH:
-      json_obj->set("omp_detach", node_emit_json (OMP_CLAUSE_DECL (clause), di));
+      json_obj.set("omp_detach",
+                   node_emit_json (OMP_CLAUSE_DECL (clause), di));
       break;
     default:
       gcc_unreachable();
@@ -1158,7 +1162,7 @@ omp_clause_add_json(tree clause, std::unique_ptr<json::object> & json_obj,
 }
 
 void
-omp_atomic_memory_order_add_json (std::unique_ptr<json::object> & json_obj, enum omp_memory_order mo)
+omp_atomic_memory_order_add_json (json::object & json_obj, enum omp_memory_order mo)
 {
   switch (mo & OMP_MEMORY_ORDER_MASK)
     {
@@ -1201,7 +1205,7 @@ omp_atomic_memory_order_add_json (std::unique_ptr<json::object> & json_obj, enum
     }
 }
 
-std::unique_ptr<json::object>
+json::object
 omp_atomic_memory_order_emit_json(omp_memory_order mo)
 {
   auto x = ::make_unique<json::object> ();
@@ -1209,7 +1213,7 @@ omp_atomic_memory_order_emit_json(omp_memory_order mo)
   return x;
 }
 
-std::unique_ptr<json::object>
+json::object
 omp_clause_emit_json(tree t, dump_info_p di)
 {
   auto x = ::make_unique<json::object> ();
@@ -1217,7 +1221,7 @@ omp_clause_emit_json(tree t, dump_info_p di)
   return x;
 }
 
-json::array*
+json::array *
 loc_emit_json (expanded_location xloc)
 {
   auto loc_holder = new json::array ();
@@ -3147,7 +3151,7 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
   di.node = t;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
-  di.json_dump = new json::array ();
+  di.json_dump = ::make_unique<json::array> ();
 
   /* Queue up the first node.  */
   queue (&di, t);
@@ -3165,7 +3169,6 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
       free (dq);
     }
   splay_tree_delete (di.nodes);
-  delete di.json_dump;
 }
 
 /* c.f. debug_tree(). Logic is same as the above fucntion. */
@@ -3183,7 +3186,7 @@ debug_dump_node_json (tree t, FILE *stream)
   di.node = t;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
-  di.json_dump = new json::array ();
+  di.json_dump = make_unique<json::array> ();
   
   queue (&di, t);
 

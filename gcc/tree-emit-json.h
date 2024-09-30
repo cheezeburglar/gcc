@@ -65,7 +65,7 @@ struct dump_info
      indices we assigned them.  */
   splay_tree nodes;
   /* JSON tree holder. Carries everything, each node is a sub-array */
-  json::array* json_dump;
+  std::unique_ptr<json::array> json_dump;
 };
 
 extern std::unique_ptr<json::object> node_emit_json(tree t, dump_info_p di);
