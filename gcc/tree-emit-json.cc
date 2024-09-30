@@ -129,9 +129,9 @@ void
 identifier_node_add_json (tree t, json::object & json_obj)
 {
   const char* buff = IDENTIFIER_POINTER (t);
-  json_obj->set_string("id_to_locale", identifier_to_locale(buff));
+  json_obj.set_string("id_to_locale", identifier_to_locale(buff));
   buff = IDENTIFIER_POINTER (t);
-  json_obj->set_string("id_point", buff);
+  json_obj.set_string("id_point", buff);
 }
 
 /* Ditto - adds declaration info to JSON object */
@@ -156,22 +156,22 @@ decl_node_add_json (tree t, json::object & json_obj)
       {
         if (TREE_CODE (t) == LABEL_DECL && LABEL_DECL_UID (t) != -1)
           {
-            json_obj->set_integer("Label_UID", LABEL_DECL_UID(t));
+            json_obj.set_integer("Label_UID", LABEL_DECL_UID(t));
           }
         else if (TREE_CODE (t) == DEBUG_EXPR_DECL)
           {
-            json_obj->set_integer("Debug_UID", DEBUG_TEMP_UID (t));
+            json_obj.set_integer("Debug_UID", DEBUG_TEMP_UID (t));
           }
         else 
           {
             const char* c = TREE_CODE (t) == CONST_DECL ? "Const_UID" 
                                                         : "Decl_UID";
-            json_obj->set_integer(c, DECL_UID(t));
+            json_obj.set_integer(c, DECL_UID(t));
           }
       }
     if (DECL_PT_UID (t) != DECL_UID (t))
       {
-        json_obj->set_integer("ptDecl", DECL_PT_UID(t));
+        json_obj.set_integer("ptDecl", DECL_PT_UID(t));
       }
 }
 
@@ -184,8 +184,8 @@ function_name_add_json (tree t, json::object & json_obj)
     t = TREE_OPERAND (t, 0);
   if (DECL_NAME (t))
     {
-      json_obj->set_string("decl_name", lang_hooks.decl_printable_name (t, 1));
-      json_obj->set_integer("uid", DECL_UID(t));
+      json_obj.set_string("decl_name", lang_hooks.decl_printable_name (t, 1));
+      json_obj.set_integer("uid", DECL_UID(t));
     }
   else
     decl_node_add_json(t, json_obj);
@@ -1167,19 +1167,19 @@ omp_atomic_memory_order_add_json (json::object & json_obj, enum omp_memory_order
   switch (mo & OMP_MEMORY_ORDER_MASK)
     {
     case OMP_MEMORY_ORDER_RELAXED:
-      json_obj->set_string ("omp_memory_order", "relaxed");
+      json_obj.set_string ("omp_memory_order", "relaxed");
       break;
     case OMP_MEMORY_ORDER_SEQ_CST:
-      json_obj->set_string ("omp_memory_order", "seq_cst");
+      json_obj.set_string ("omp_memory_order", "seq_cst");
       break;
     case OMP_MEMORY_ORDER_ACQ_REL:
-      json_obj->set_string ("omp_memory_order", "acq_rel");
+      json_obj.set_string ("omp_memory_order", "acq_rel");
       break;
     case OMP_MEMORY_ORDER_ACQUIRE:
-      json_obj->set_string ("omp_memory_order", "acquire");
+      json_obj.set_string ("omp_memory_order", "acquire");
       break;
     case OMP_MEMORY_ORDER_RELEASE:
-      json_obj->set_string ("omp_memory_order", "release");
+      json_obj.set_string ("omp_memory_order", "release");
       break;
     case OMP_MEMORY_ORDER_UNSPECIFIED:
       break;
@@ -1189,35 +1189,35 @@ omp_atomic_memory_order_add_json (json::object & json_obj, enum omp_memory_order
   switch (mo & OMP_FAIL_MEMORY_ORDER_MASK)
     {
     case OMP_FAIL_MEMORY_ORDER_RELAXED:
-      json_obj->set_string ("omp_fail_memory_order", "relaxed");
+      json_obj.set_string ("omp_fail_memory_order", "relaxed");
       break;
     case OMP_FAIL_MEMORY_ORDER_SEQ_CST:
-      json_obj->set_string ("omp_fail_memory_order", "seq_cst");
+      json_obj.set_string ("omp_fail_memory_order", "seq_cst");
       break;
     case OMP_FAIL_MEMORY_ORDER_ACQUIRE:
-      json_obj->set_string ("omp_fail_memory_order", "acquire");
+      json_obj.set_string ("omp_fail_memory_order", "acquire");
       break;
     case OMP_FAIL_MEMORY_ORDER_UNSPECIFIED:
-      json_obj->set_string ("omp_fail_memory_order", "unspecified");
+      json_obj.set_string ("omp_fail_memory_order", "unspecified");
       break;
     default:
       gcc_unreachable ();
     }
 }
 
-json::object
+json::object *
 omp_atomic_memory_order_emit_json(omp_memory_order mo)
 {
-  auto x = ::make_unique<json::object> ();
-  omp_atomic_memory_order_add_json(x, mo);
+  auto x = new json::object ();
+  omp_atomic_memory_order_add_json(*x, mo);
   return x;
 }
 
-json::object
+json::object *
 omp_clause_emit_json(tree t, dump_info_p di)
 {
-  auto x = ::make_unique<json::object> ();
-  omp_clause_add_json(t, x, di);
+  auto x = new json::object ();
+  omp_clause_add_json(t, *x, di);
   return x;
 }
 
@@ -1238,7 +1238,6 @@ loc_emit_json (expanded_location xloc)
 /* For some referenced nodes that may be too verbose. This
  * should only be called by node_to_json and contained in another 
  * json::object, and so we need not worry about memory leaks. */
-
 
 json::object *
 node_to_json_brief(tree t)
@@ -1586,7 +1585,7 @@ node_emit_json(tree t, dump_info_p di)
 	if (tclass == tcc_declaration)
 	  {
 	  if (DECL_NAME (t))
-            decl_node_add_json(t, json_obj);
+            decl_node_add_json(t, *json_obj.get());
 	  else
 	    json_obj->set_string("decl", "<unnamed type decl>");
 	  }
@@ -1598,7 +1597,7 @@ node_emit_json(tree t, dump_info_p di)
                 json_obj->set("identifier", node_to_json_brief(TYPE_NAME(t), di));
 	      else if (TREE_CODE (TYPE_NAME (t)) == TYPE_DECL
 	               && DECL_NAME (TYPE_NAME (t)))
-                decl_node_add_json( TYPE_NAME (t), json_obj);
+                decl_node_add_json(TYPE_NAME (t), *json_obj.get());
 	      else 
                 json_obj->set_string("type_name", "unnamed");
 	    }
@@ -1917,7 +1916,7 @@ node_emit_json(tree t, dump_info_p di)
       if (TYPE_IDENTIFIER (t))
         json_obj->set("type_identifier", node_to_json_brief (TYPE_NAME(t), di));
       else if ( TYPE_NAME (t) && DECL_NAME (TYPE_NAME (t)) )
-        decl_node_add_json( TYPE_NAME(t), json_obj);
+        decl_node_add_json( TYPE_NAME(t), *json_obj.get());
       else //TDF_NOUID
         {
           char* buff;
@@ -1931,11 +1930,11 @@ node_emit_json(tree t, dump_info_p di)
 
     case FUNCTION_DECL:
     case CONST_DECL:
-      decl_node_add_json(t, json_obj);
+      decl_node_add_json(t, *json_obj.get());
       break;
     case LABEL_DECL:
       if (DECL_NAME (t))
-        decl_node_add_json(t, json_obj);
+        decl_node_add_json(t, *json_obj.get());
       else if (LABEL_DECL_UID (t) != -1)
         json_obj->set_integer("LabelDeclUID", LABEL_DECL_UID (t));
       else 
@@ -1946,7 +1945,7 @@ node_emit_json(tree t, dump_info_p di)
       if (DECL_IS_UNDECLARED_BUILTIN (t)) //parity w/ dump_generic_node
         break;
       if (DECL_NAME (t))
-        decl_node_add_json(t, json_obj);
+        decl_node_add_json(t, *json_obj.get());
       else if (TYPE_NAME (TREE_TYPE (t)) != t)
         {
           json_obj->set(TREE_CODE (TREE_TYPE (t)) == UNION_TYPE ? "union"
@@ -1963,7 +1962,7 @@ node_emit_json(tree t, dump_info_p di)
     case DEBUG_EXPR_DECL:
     case NAMESPACE_DECL:
     case NAMELIST_DECL:
-      decl_node_add_json(t, json_obj);
+      decl_node_add_json(t, *json_obj.get());
       break;
       
     case RESULT_DECL:
@@ -2092,8 +2091,8 @@ node_emit_json(tree t, dump_info_p di)
           }
         FOR_EACH_CONSTRUCTOR_ELT (CONSTRUCTOR_ELTS (t), ix, field, val)
           {
-            auto cst_elt = ::make_unique<json::object> ();
-            auto _val_json = ::make_unique<json::object> ();
+            auto cst_elt = new json::object ();
+            auto val_json = new json::object ();
             cst_elt->set_integer("cst_elt_index", ix);
             if (field)
               {
@@ -2103,14 +2102,13 @@ node_emit_json(tree t, dump_info_p di)
                          && (TREE_CODE (field) != INTEGER_CST
                              || curidx != wi::to_widest (field)))
                   {
-                    json::array* _array_init_json;
+                    json::array* array_init_json;
                     if (TREE_CODE (field) == RANGE_EXPR)
                       {
-                        _array_init_json = new json::array ();
-                        _array_init_json->append( node_to_json_brief( TREE_OPERAND( field, 0), di));
-                        _array_init_json->append( node_to_json_brief( TREE_OPERAND( field, 1), di));
-                        cst_elt->set("field", _array_init_json);
-                        delete _array_init_json;
+                        array_init_json = new json::array ();
+                        array_init_json->append(node_to_json_brief(TREE_OPERAND(field, 0), di));
+                        array_init_json->append(node_to_json_brief(TREE_OPERAND(field, 1), di));
+                        cst_elt->set("field", array_init_json);
                       }
                     else 
                       cst_elt->set ("field", node_to_json_brief (field, di));
@@ -2123,15 +2121,15 @@ node_emit_json(tree t, dump_info_p di)
                 val = TREE_OPERAND (val, 0);
             if (val && TREE_CODE (val) == FUNCTION_DECL)
               {
-                decl_node_add_json (val, _val_json);
-                cst_elt->set("val", _val_json.get());
+                decl_node_add_json (val, *val_json);
+                cst_elt->set("val", val_json);
               }
             else
               cst_elt->set("val", node_to_json_brief(val, di));
 
             if (TREE_CODE (field) == INTEGER_CST)
               curidx = wi::to_widest (field);
-            holder->append(cst_elt.get());
+            holder->append(cst_elt);
           }
         json_obj->set("ctor_elts", holder);
       }
@@ -2140,14 +2138,12 @@ node_emit_json(tree t, dump_info_p di)
    case COMPOUND_EXPR:
      {
         tree *tp;
-        holder->append( node_to_json_brief( TREE_OPERAND (t, 0), di));
+        holder->append(node_to_json_brief(TREE_OPERAND(t, 0), di));
 
         for (tp = &TREE_OPERAND (t, 1);
              TREE_CODE (*tp) == COMPOUND_EXPR;
              tp = &TREE_OPERAND (*tp, 1))
-          {
-          holder->append( node_to_json_brief ( TREE_OPERAND (*tp, 0), di));
-          }
+          holder->append(node_to_json_brief(TREE_OPERAND(*tp, 0), di));
 
         json_obj->set("compound_expr", holder);
       }
@@ -2179,7 +2175,7 @@ node_emit_json(tree t, dump_info_p di)
       break;
 
     case DECL_EXPR:
-      decl_node_add_json(DECL_EXPR_DECL(t), json_obj);
+      decl_node_add_json(DECL_EXPR_DECL(t), *json_obj.get());
       break;
 
     case COND_EXPR:
@@ -2213,7 +2209,7 @@ node_emit_json(tree t, dump_info_p di)
     case CALL_EXPR:
       {
         if (CALL_EXPR_FN (t) != NULL_TREE)
-          call_name_add_json (CALL_EXPR_FN(t), json_obj, di);
+          call_name_add_json (CALL_EXPR_FN(t), *json_obj.get(), di);
         else
           json_obj->set_string("internal_fn", internal_fn_name (CALL_EXPR_IFN (t)));
         json_obj->set_bool("return_slot_optimization", CALL_EXPR_RETURN_SLOT_OPT(t));
@@ -2454,7 +2450,7 @@ node_emit_json(tree t, dump_info_p di)
       break;
 
     case LABEL_EXPR:
-      decl_node_add_json (TREE_OPERAND (t, 0), json_obj);
+      decl_node_add_json (TREE_OPERAND (t, 0), *json_obj.get());
       break;
 
     case LOOP_EXPR:
@@ -3196,5 +3192,4 @@ debug_dump_node_json (tree t, FILE *stream)
   di.json_dump->dump(stream, true);
   
   splay_tree_delete (di.nodes);
-  delete di.json_dump;
 }
