@@ -2528,6 +2528,16 @@ duplicate_decls (tree newdecl, tree olddecl, bool hiding, bool was_hidden)
 	    }
 	}
 
+      /* Propagate purviewness and importingness as with
+	 set_instantiating_module.  */
+      if (modules_p ())
+	{
+	  if (DECL_MODULE_PURVIEW_P (new_result))
+	    DECL_MODULE_PURVIEW_P (old_result) = true;
+	  if (!DECL_MODULE_IMPORT_P (new_result))
+	    DECL_MODULE_IMPORT_P (old_result) = false;
+	}
+
       /* If the new declaration is a definition, update the file and
 	 line information on the declaration, and also make
 	 the old declaration the same definition.  */
@@ -8156,6 +8166,11 @@ initialize_local_var (tree decl, tree init, bool decomp)
 	     bases, those will have CLEANUP_POINT_EXPR at the end of
 	     code emitted by cp_finish_decomp.  */
 	  if (decomp)
+	    current_stmt_tree ()->stmts_are_full_exprs_p = 0;
+	  /* P2718R0 - avoid CLEANUP_POINT_EXPR for range-for-initializer,
+	     temporaries from there should have lifetime extended.  */
+	  else if (DECL_NAME (decl) == for_range__identifier
+		   && flag_range_for_ext_temps)
 	    current_stmt_tree ()->stmts_are_full_exprs_p = 0;
 	  else
 	    current_stmt_tree ()->stmts_are_full_exprs_p = 1;

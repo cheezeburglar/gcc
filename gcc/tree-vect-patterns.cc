@@ -183,6 +183,17 @@ append_pattern_def_seq (vec_info *vinfo,
 				      new_stmt);
 }
 
+
+/* Add NEW_STMT to VINFO's invariant pattern definition statements.  These
+   statements are not vectorized but are materialized as scalar in the loop
+   preheader.  */
+
+static inline void
+append_inv_pattern_def_seq (vec_info *vinfo, gimple *new_stmt)
+{
+  gimple_seq_add_stmt_without_update (&vinfo->inv_pattern_def_seq, new_stmt);
+}
+
 /* The caller wants to perform new operations on vect_external variable
    VAR, so that the result of the operations would also be vect_external.
    Return the edge on which the operations can be performed, if one exists.
@@ -243,6 +254,35 @@ vect_supportable_direct_optab_p (vec_info *vinfo, tree otype, tree_code code,
   insn_code icode = optab_handler (optab, TYPE_MODE (vecitype));
   if (icode == CODE_FOR_nothing
       || insn_data[icode].operand[0].mode != TYPE_MODE (vecotype))
+    return false;
+
+  *vecotype_out = vecotype;
+  if (vecitype_out)
+    *vecitype_out = vecitype;
+  return true;
+}
+
+/* Return true if the target supports a vector version of CODE,
+   where CODE is known to map to a conversion optab with the given SUBTYPE.
+   ITYPE specifies the type of (some of) the scalar inputs and OTYPE
+   specifies the type of the scalar result.
+
+   When returning true, set *VECOTYPE_OUT to the vector version of OTYPE.
+   Also set *VECITYPE_OUT to the vector version of ITYPE if VECITYPE_OUT
+   is nonnull.  */
+
+static bool
+vect_supportable_conv_optab_p (vec_info *vinfo, tree otype, tree_code code,
+				 tree itype, tree *vecotype_out,
+				 tree *vecitype_out = NULL,
+				 enum optab_subtype subtype = optab_default)
+{
+  tree vecitype = get_vectype_for_scalar_type (vinfo, itype);
+  tree vecotype = get_vectype_for_scalar_type (vinfo, otype);
+  if (!vecitype || !vecotype)
+    return false;
+
+  if (!directly_supported_p (code, vecotype, vecitype, subtype))
     return false;
 
   *vecotype_out = vecotype;
@@ -1271,13 +1311,13 @@ vect_recog_dot_prod_pattern (vec_info *vinfo,
     half_type = signed_type_for (half_type);
 
   tree half_vectype;
-  if (!vect_supportable_direct_optab_p (vinfo, type, DOT_PROD_EXPR, half_type,
+  if (!vect_supportable_conv_optab_p (vinfo, type, DOT_PROD_EXPR, half_type,
 					type_out, &half_vectype, subtype))
     {
       /* We can emulate a mixed-sign dot-product using a sequence of
 	 signed dot-products; see vect_emulate_mixed_dot_prod for details.  */
       if (subtype != optab_vector_mixed_sign
-	  || !vect_supportable_direct_optab_p (vinfo, signed_type_for (type),
+	  || !vect_supportable_conv_optab_p (vinfo, signed_type_for (type),
 					       DOT_PROD_EXPR, half_type,
 					       type_out, &half_vectype,
 					       optab_vector))
@@ -6051,16 +6091,41 @@ vect_recog_bool_pattern (vec_info *vinfo,
       if (get_vectype_for_scalar_type (vinfo, type) == NULL_TREE)
 	return NULL;
 
+      enum vect_def_type dt;
       if (check_bool_pattern (var, vinfo, bool_stmts))
 	var = adjust_bool_stmts (vinfo, bool_stmts, type, stmt_vinfo);
       else if (integer_type_for_mask (var, vinfo))
 	return NULL;
+      else if (TREE_CODE (TREE_TYPE (var)) == BOOLEAN_TYPE
+	       && vect_is_simple_use (var, vinfo, &dt)
+	       && (dt == vect_external_def
+		   || dt == vect_constant_def))
+	{
+	  /* If the condition is already a boolean then manually convert it to a
+	     mask of the given integer type but don't set a vectype.  */
+	  tree lhs_ivar = vect_recog_temp_ssa_var (type, NULL);
+	  pattern_stmt = gimple_build_assign (lhs_ivar, COND_EXPR, var,
+					      build_all_ones_cst (type),
+					      build_zero_cst (type));
+	  append_inv_pattern_def_seq (vinfo, pattern_stmt);
+	  var = lhs_ivar;
+	}
+
+      tree lhs_var = vect_recog_temp_ssa_var (boolean_type_node, NULL);
+      pattern_stmt = gimple_build_assign (lhs_var, NE_EXPR, var,
+					  build_zero_cst (TREE_TYPE (var)));
+
+      tree new_vectype = get_mask_type_for_scalar_type (vinfo, TREE_TYPE (var));
+      if (!new_vectype)
+	return NULL;
+
+      new_vectype = truth_type_for (new_vectype);
+      append_pattern_def_seq (vinfo, stmt_vinfo, pattern_stmt, new_vectype,
+			      TREE_TYPE (var));
 
       lhs = vect_recog_temp_ssa_var (TREE_TYPE (lhs), NULL);
       pattern_stmt 
-	= gimple_build_assign (lhs, COND_EXPR,
-			       build2 (NE_EXPR, boolean_type_node,
-				       var, build_int_cst (TREE_TYPE (var), 0)),
+	= gimple_build_assign (lhs, COND_EXPR, lhs_var,
 			       gimple_assign_rhs2 (last_stmt),
 			       gimple_assign_rhs3 (last_stmt));
       *type_out = vectype;

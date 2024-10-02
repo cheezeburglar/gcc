@@ -1978,15 +1978,15 @@ proc check_effective_target_riscv_v { } {
 
 proc check_effective_target_rvv_zvl256b_ok { } {
     # Check if the target has a VLENB of 32.
-    set gcc_march [regsub {[[:alnum:]]*} [riscv_get_arch] &v]
+    set gcc_march [riscv_get_arch]
     return [check_runtime ${gcc_march}_exec {
 	int main()
 	{
 	  int vlenb = 0;
 	  asm ("csrr %0,vlenb" : "=r" (vlenb) : : );
 	  if (vlenb == 32)
-	    return 1;
-	  return 0;
+	    return 0;
+	  return 1;
 	}
       } "-march=${gcc_march}"]
 }
@@ -1996,15 +1996,15 @@ proc check_effective_target_rvv_zvl256b_ok { } {
 
 proc check_effective_target_rvv_zvl512b_ok { } {
     # Check if the target has a VLENB of 64.
-    set gcc_march [regsub {[[:alnum:]]*} [riscv_get_arch] &v]
+    set gcc_march [riscv_get_arch]
     return [check_runtime ${gcc_march}_exec {
 	int main()
 	{
 	  int vlenb = 0;
 	  asm ("csrr %0,vlenb" : "=r" (vlenb) : : );
 	  if (vlenb == 64)
-	    return 1;
-	  return 0;
+	    return 0;
+	  return 1;
 	}
       } "-march=${gcc_march}"]
 }
@@ -4292,6 +4292,15 @@ proc check_effective_target_vect_int { } {
 # Return 1 if the target supports vector integer division, 0 otherwise.
 proc check_effective_target_vect_int_div { } {
     return [check_effective_target_aarch64_sve]
+}
+
+# Return 1 if the target supports two-way dot products on inpus of hi mode
+# producing si outputs, 0 otherwise.
+
+proc check_effective_target_vect_dotprod_hisi { } {
+    return [check_cached_effective_target_indexed aarch64_sme2 {
+	expr { [check_effective_target_aarch64_sme2]
+    }}]
 }
 
 # Return 1 if the target supports vectorization of early breaks,

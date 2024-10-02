@@ -1507,19 +1507,15 @@ check_load_store_for_partial_vectors (loop_vec_info loop_vinfo, tree vectype,
   if (memory_access_type == VMAT_INVARIANT)
     return;
 
-  unsigned int nvectors;
-  if (slp_node)
-    /* ???  Incorrect for multi-lane lanes.  */
-    nvectors = SLP_TREE_NUMBER_OF_VEC_STMTS (slp_node) / group_size;
-  else
-    nvectors = vect_get_num_copies (loop_vinfo, vectype);
-
+  unsigned int nvectors = vect_get_num_copies (loop_vinfo, slp_node, vectype);
   vec_loop_masks *masks = &LOOP_VINFO_MASKS (loop_vinfo);
   vec_loop_lens *lens = &LOOP_VINFO_LENS (loop_vinfo);
   machine_mode vecmode = TYPE_MODE (vectype);
   bool is_load = (vls_type == VLS_LOAD);
   if (memory_access_type == VMAT_LOAD_STORE_LANES)
     {
+      if (slp_node)
+	nvectors /= group_size;
       internal_fn ifn
 	= (is_load ? vect_load_lanes_supported (vectype, group_size, true)
 		   : vect_store_lanes_supported (vectype, group_size, true));
@@ -1711,11 +1707,11 @@ vect_truncate_gather_scatter_offset (stmt_vec_info stmt_info,
     count = max_iters.to_shwi ();
 
   /* Try scales of 1 and the element size.  */
-  int scales[] = { 1, vect_get_scalar_dr_size (dr_info) };
+  unsigned int scales[] = { 1, vect_get_scalar_dr_size (dr_info) };
   wi::overflow_type overflow = wi::OVF_NONE;
   for (int i = 0; i < 2; ++i)
     {
-      int scale = scales[i];
+      unsigned int scale = scales[i];
       widest_int factor;
       if (!wi::multiple_of_p (wi::to_widest (step), scale, SIGNED, &factor))
 	continue;
@@ -2190,12 +2186,23 @@ get_group_load_store_type (vec_info *vinfo, stmt_vec_info stmt_info,
 	      && single_element_p
 	      && maybe_gt (group_size, TYPE_VECTOR_SUBPARTS (vectype)))
 	    {
-	      *memory_access_type = VMAT_ELEMENTWISE;
-	      if (dump_enabled_p ())
-		dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
-				 "single-element interleaving not supported "
-				 "for not adjacent vector loads, using "
-				 "elementwise access\n");
+	      if (SLP_TREE_LANES (slp_node) == 1)
+		{
+		  *memory_access_type = VMAT_ELEMENTWISE;
+		  if (dump_enabled_p ())
+		    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+				     "single-element interleaving not supported "
+				     "for not adjacent vector loads, using "
+				     "elementwise access\n");
+		}
+	      else
+		{
+		  if (dump_enabled_p ())
+		    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+				     "single-element interleaving not supported "
+				     "for not adjacent vector loads\n");
+		  return false;
+		}
 	    }
 	}
     }
@@ -2253,21 +2260,21 @@ get_group_load_store_type (vec_info *vinfo, stmt_vec_info stmt_info,
 		}
 	    }
 	}
-
-      /* As a last resort, trying using a gather load or scatter store.
-
-	 ??? Although the code can handle all group sizes correctly,
-	 it probably isn't a win to use separate strided accesses based
-	 on nearby locations.  Or, even if it's a win over scalar code,
-	 it might not be a win over vectorizing at a lower VF, if that
-	 allows us to use contiguous accesses.  */
-      if (*memory_access_type == VMAT_ELEMENTWISE
-	  && single_element_p
-	  && loop_vinfo
-	  && vect_use_strided_gather_scatters_p (stmt_info, loop_vinfo,
-						 masked_p, gs_info))
-	*memory_access_type = VMAT_GATHER_SCATTER;
     }
+
+  /* As a last resort, trying using a gather load or scatter store.
+
+     ??? Although the code can handle all group sizes correctly,
+     it probably isn't a win to use separate strided accesses based
+     on nearby locations.  Or, even if it's a win over scalar code,
+     it might not be a win over vectorizing at a lower VF, if that
+     allows us to use contiguous accesses.  */
+  if (*memory_access_type == VMAT_ELEMENTWISE
+      && single_element_p
+      && loop_vinfo
+      && vect_use_strided_gather_scatters_p (stmt_info, loop_vinfo,
+					     masked_p, gs_info))
+    *memory_access_type = VMAT_GATHER_SCATTER;
 
   if (*memory_access_type == VMAT_GATHER_SCATTER
       || *memory_access_type == VMAT_ELEMENTWISE)
@@ -6528,7 +6535,8 @@ vectorizable_operation (vec_info *vinfo,
   poly_uint64 nunits_in;
   poly_uint64 nunits_out;
   tree vectype_out;
-  int ncopies, vec_num;
+  unsigned int ncopies;
+  int vec_num;
   int i;
   vec<tree> vec_oprnds0 = vNULL;
   vec<tree> vec_oprnds1 = vNULL;
@@ -9787,15 +9795,15 @@ permute_vec_elements (vec_info *vinfo,
    definitions of all SSA uses, it would be false when we are costing.  */
 
 static bool
-hoist_defs_of_uses (stmt_vec_info stmt_info, class loop *loop, bool hoist_p)
+hoist_defs_of_uses (gimple *stmt, class loop *loop, bool hoist_p)
 {
   ssa_op_iter i;
-  tree op;
-  bool any = false;
+  use_operand_p use_p;
+  auto_vec<use_operand_p, 8> to_hoist;
 
-  FOR_EACH_SSA_TREE_OPERAND (op, stmt_info->stmt, i, SSA_OP_USE)
+  FOR_EACH_SSA_USE_OPERAND (use_p, stmt, i, SSA_OP_USE)
     {
-      gimple *def_stmt = SSA_NAME_DEF_STMT (op);
+      gimple *def_stmt = SSA_NAME_DEF_STMT (USE_FROM_PTR (use_p));
       if (!gimple_nop_p (def_stmt)
 	  && flow_bb_inside_loop_p (loop, gimple_bb (def_stmt)))
 	{
@@ -9805,7 +9813,9 @@ hoist_defs_of_uses (stmt_vec_info stmt_info, class loop *loop, bool hoist_p)
 	     dependencies within them.  */
 	  tree op2;
 	  ssa_op_iter i2;
-	  if (gimple_code (def_stmt) == GIMPLE_PHI)
+	  if (gimple_code (def_stmt) == GIMPLE_PHI
+	      || (single_ssa_def_operand (def_stmt, SSA_OP_DEF)
+		  == NULL_DEF_OPERAND_P))
 	    return false;
 	  FOR_EACH_SSA_TREE_OPERAND (op2, def_stmt, i2, SSA_OP_USE)
 	    {
@@ -9814,26 +9824,31 @@ hoist_defs_of_uses (stmt_vec_info stmt_info, class loop *loop, bool hoist_p)
 		  && flow_bb_inside_loop_p (loop, gimple_bb (def_stmt2)))
 		return false;
 	    }
-	  any = true;
+	  to_hoist.safe_push (use_p);
 	}
     }
 
-  if (!any)
+  if (to_hoist.is_empty ())
     return true;
 
   if (!hoist_p)
     return true;
 
-  FOR_EACH_SSA_TREE_OPERAND (op, stmt_info->stmt, i, SSA_OP_USE)
+  /* Instead of moving defs we copy them so we can zero their UID to not
+     confuse dominance queries in the preheader.  */
+  gimple_stmt_iterator gsi = gsi_for_stmt (stmt);
+  for (use_operand_p use_p : to_hoist)
     {
-      gimple *def_stmt = SSA_NAME_DEF_STMT (op);
-      if (!gimple_nop_p (def_stmt)
-	  && flow_bb_inside_loop_p (loop, gimple_bb (def_stmt)))
-	{
-	  gimple_stmt_iterator gsi = gsi_for_stmt (def_stmt);
-	  gsi_remove (&gsi, false);
-	  gsi_insert_on_edge_immediate (loop_preheader_edge (loop), def_stmt);
-	}
+      gimple *def_stmt = SSA_NAME_DEF_STMT (USE_FROM_PTR (use_p));
+      gimple *copy = gimple_copy (def_stmt);
+      gimple_set_uid (copy, 0);
+      def_operand_p def_p = single_ssa_def_operand (def_stmt, SSA_OP_DEF);
+      tree new_def = duplicate_ssa_name (DEF_FROM_PTR (def_p), copy);
+      update_stmt (copy);
+      def_p = single_ssa_def_operand (copy, SSA_OP_DEF);
+      SET_DEF (def_p, new_def);
+      SET_USE (use_p, new_def);
+      gsi_insert_before (&gsi, copy, GSI_SAME_STMT);
     }
 
   return true;
@@ -10055,7 +10070,8 @@ vectorizable_load (vec_info *vinfo,
      get_group_load_store_type.  */
   if (slp
       && SLP_TREE_LOAD_PERMUTATION (slp_node).exists ()
-      && !(memory_access_type == VMAT_ELEMENTWISE
+      && !((memory_access_type == VMAT_ELEMENTWISE
+	    || memory_access_type == VMAT_GATHER_SCATTER)
 	   && SLP_TREE_LANES (slp_node) == 1))
     {
       slp_perm = true;
@@ -10206,7 +10222,7 @@ vectorizable_load (vec_info *vinfo,
 	 transform time.  */
       bool hoist_p = (LOOP_VINFO_NO_DATA_DEPENDENCIES (loop_vinfo)
 		      && !nested_in_vect_loop
-		      && hoist_defs_of_uses (stmt_info, loop, !costing_p));
+		      && hoist_defs_of_uses (stmt_info->stmt, loop, false));
       if (costing_p)
 	{
 	  enum vect_cost_model_location cost_loc
@@ -10243,6 +10259,7 @@ vectorizable_load (vec_info *vinfo,
 	  gimple *new_stmt = gimple_build_assign (scalar_dest, rhs);
 	  gimple_set_vuse (new_stmt, vuse);
 	  gsi_insert_on_edge_immediate (pe, new_stmt);
+	  hoist_defs_of_uses (new_stmt, loop, true);
 	}
       /* These copies are all equivalent.  */
       if (hoist_p)
@@ -12736,11 +12753,7 @@ vectorizable_comparison_1 (vec_info *vinfo, tree vectype,
   /* Invariant comparison.  */
   if (!vectype)
     {
-      if (VECT_SCALAR_BOOLEAN_TYPE_P (TREE_TYPE (rhs1)))
-	vectype = mask_type;
-      else
-	vectype = get_vectype_for_scalar_type (vinfo, TREE_TYPE (rhs1),
-					       slp_node);
+      vectype = get_vectype_for_scalar_type (vinfo, TREE_TYPE (rhs1), slp_node);
       if (!vectype || maybe_ne (TYPE_VECTOR_SUBPARTS (vectype), nunits))
 	return false;
     }
@@ -13287,6 +13300,12 @@ vect_analyze_stmt (vec_info *vinfo,
           if (dump_enabled_p ())
             dump_printf_loc (MSG_NOTE, vect_location, "irrelevant.\n");
 
+	  if (node)
+	    return opt_result::failure_at (stmt_info->stmt,
+					   "not vectorized:"
+					   " irrelevant stmt as SLP node %p "
+					   "representative.\n",
+					   (void *)node);
           return opt_result::success ();
         }
     }
@@ -14780,8 +14799,10 @@ supportable_indirect_convert_operation (code_helper code,
 		 In the future, if it is supported, changes may need to be made
 		 to this part, such as checking the RANGE of each element
 		 in the vector.  */
-	      if ((TREE_CODE (op0) == SSA_NAME && !SSA_NAME_RANGE_INFO (op0))
-		  || !vect_get_range_info (op0, &op_min_value, &op_max_value))
+	      if (TREE_CODE (op0) != SSA_NAME
+		  || !SSA_NAME_RANGE_INFO (op0)
+		  || !vect_get_range_info (op0, &op_min_value,
+					   &op_max_value))
 		break;
 
 	      if (cvt_type == NULL_TREE

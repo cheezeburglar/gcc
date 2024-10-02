@@ -730,14 +730,14 @@ coro_get_destroy_function (tree decl)
 
 /* Given a CO_AWAIT_EXPR AWAIT_EXPR, return its resume call.  */
 
-tree*
+tree
 co_await_get_resume_call (tree await_expr)
 {
   gcc_checking_assert (TREE_CODE (await_expr) == CO_AWAIT_EXPR);
   tree vec = TREE_OPERAND (await_expr, 3);
   if (!vec)
     return nullptr;
-  return &TREE_VEC_ELT (vec, 2);
+  return TREE_VEC_ELT (vec, 2);
 }
 
 
@@ -1258,7 +1258,7 @@ build_co_await (location_t loc, tree a, suspend_point_kind suspend_kind,
   if (TREE_CODE (awrs_call) == TARGET_EXPR)
     {
       te = awrs_call;
-      awrs_call = TREE_OPERAND (awrs_call, 1);
+      awrs_call = TARGET_EXPR_INITIAL (awrs_call);
     }
   TREE_VEC_ELT (awaiter_calls, 2) = awrs_call; /* await_resume().  */
 
@@ -1447,9 +1447,9 @@ finish_co_yield_expr (location_t kw, tree expr)
 	 its contained await.  Otherwise, just build the CO_YIELD_EXPR.  */
       if (TREE_CODE (op) == TARGET_EXPR)
 	{
-	  tree t = TREE_OPERAND (op, 1);
+	  tree t = TARGET_EXPR_INITIAL (op);
 	  t = build2_loc (kw, CO_YIELD_EXPR, TREE_TYPE (t), expr, t);
-	  TREE_OPERAND (op, 1) = t;
+	  TARGET_EXPR_INITIAL (op) = t;
 	}
       else
 	op = build2_loc (kw, CO_YIELD_EXPR, TREE_TYPE (op), expr, op);
@@ -2063,7 +2063,9 @@ await_statement_expander (tree *stmt, int *do_subtree, void *d)
   tree res = NULL_TREE;
 
   /* Process a statement at a time.  */
-  if (STATEMENT_CLASS_P (*stmt) || TREE_CODE (*stmt) == BIND_EXPR)
+  if (STATEMENT_CLASS_P (*stmt)
+      || TREE_CODE (*stmt) == BIND_EXPR
+      || TREE_CODE (*stmt) == CLEANUP_POINT_EXPR)
     return NULL_TREE; /* Just process the sub-trees.  */
   else if (TREE_CODE (*stmt) == STATEMENT_LIST)
     {
@@ -2711,7 +2713,7 @@ register_awaits (tree *stmt, int *, void *d)
   tree v = TREE_OPERAND (aw_expr, 3);
   tree o = TREE_VEC_ELT (v, 1);
   if (TREE_CODE (o) == TARGET_EXPR)
-    TREE_VEC_ELT (v, 1) = get_target_expr (TREE_OPERAND (o, 1));
+    TREE_VEC_ELT (v, 1) = get_target_expr (TARGET_EXPR_INITIAL (o));
   return NULL_TREE;
 }
 
@@ -2734,7 +2736,7 @@ tmp_target_expr_p (tree t)
 {
   if (TREE_CODE (t) != TARGET_EXPR)
     return false;
-  tree v = TREE_OPERAND (t, 0);
+  tree v = TARGET_EXPR_SLOT (t);
   if (!DECL_ARTIFICIAL (v))
     return false;
   if (DECL_NAME (v))
@@ -2941,7 +2943,7 @@ flatten_await_stmt (var_nest_node *n, hash_set<tree> *promoted,
 		    {
 		      temps_used->add (inner);
 		      gcc_checking_assert
-			(TREE_CODE (TREE_OPERAND (inner, 1)) != COND_EXPR);
+			(TREE_CODE (TARGET_EXPR_INITIAL (inner)) != COND_EXPR);
 		    }
 		}
 		break;
@@ -2972,7 +2974,7 @@ flatten_await_stmt (var_nest_node *n, hash_set<tree> *promoted,
 	  free (buf);
 	  bool already_present = promoted->add (var);
 	  gcc_checking_assert (!already_present);
-	  tree inner = TREE_OPERAND (init, 1);
+	  tree inner = TARGET_EXPR_INITIAL (init);
 	  gcc_checking_assert (TREE_CODE (inner) != COND_EXPR);
 	  init = cp_build_modify_expr (input_location, var, INIT_EXPR, init,
 				       tf_warning_or_error);
@@ -2981,7 +2983,7 @@ flatten_await_stmt (var_nest_node *n, hash_set<tree> *promoted,
 	  if (t == n->init && n->var == NULL_TREE)
 	    {
 	      n->var = var;
-	      proxy_replace pr = {TREE_OPERAND (t, 0), var};
+	      proxy_replace pr = {TARGET_EXPR_SLOT (t), var};
 	      cp_walk_tree (&init, replace_proxy, &pr, NULL);
 	      n->init = init;
 	      if (replace_in)
@@ -2995,7 +2997,7 @@ flatten_await_stmt (var_nest_node *n, hash_set<tree> *promoted,
 	      /* We have to replace the target expr... */
 	      *v.entry = var;
 	      /* ... and any uses of its var.  */
-	      proxy_replace pr = {TREE_OPERAND (t, 0), var};
+	      proxy_replace pr = {TARGET_EXPR_SLOT (t), var};
 	      cp_walk_tree (&n->init, replace_proxy, &pr, NULL);
 	      /* Compiler-generated temporaries can also have uses in
 		 following arms of compound expressions, which will be listed
@@ -3203,7 +3205,13 @@ maybe_promote_temps (tree *stmt, void *d)
 	 to run the initializer.
 	 If the initializer is a conditional expression, we need to collect
 	 and declare any promoted variables nested within it.  DTORs for such
-	 variables must be run conditionally too.  */
+	 variables must be run conditionally too.
+
+	 Since here we're synthetically processing code here, we've already
+	 emitted any Wunused-result warnings.  Below, however, we call
+	 finish_expr_stmt, which will convert its operand to void, and could
+	 result in such a diagnostic being emitted.  To avoid that, convert to
+	 void ahead of time.  */
       if (t->var)
 	{
 	  tree var = t->var;
@@ -3213,7 +3221,7 @@ maybe_promote_temps (tree *stmt, void *d)
 	  if (TREE_CODE (t->init) == COND_EXPR)
 	    process_conditional (t, vlist);
 	  else
-	    finish_expr_stmt (t->init);
+	    finish_expr_stmt (convert_to_void (t->init, ICV_STATEMENT, tf_none));
 	  if (tree cleanup = cxx_maybe_build_cleanup (var, tf_warning_or_error))
 	    {
 	      tree cl = build_stmt (sloc, CLEANUP_STMT, expr_list, cleanup, var);
@@ -3232,7 +3240,7 @@ maybe_promote_temps (tree *stmt, void *d)
 	  if (TREE_CODE (t->init) == COND_EXPR)
 	    process_conditional (t, vlist);
 	  else
-	    finish_expr_stmt (t->init);
+	    finish_expr_stmt (convert_to_void (t->init, ICV_STATEMENT, tf_none));
 	  if (expr_list)
 	    {
 	      if (TREE_CODE (expr_list) != STATEMENT_LIST)

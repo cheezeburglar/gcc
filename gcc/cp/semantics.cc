@@ -1637,6 +1637,33 @@ finish_for_expr (tree expr, tree for_stmt)
   FOR_EXPR (for_stmt) = expr;
 }
 
+/* During parsing of the body, range for uses "__for_{range,begin,end} "
+   decl names to make those unaccessible by code in the body.
+   Find those decls and store into RANGE_FOR_DECL array, so that they
+   can be changed later to ones with underscore instead of space, so that
+   it can be inspected in the debugger.  */
+
+void
+find_range_for_decls (tree range_for_decl[3])
+{
+  gcc_assert (CPTI_FOR_BEGIN__IDENTIFIER == CPTI_FOR_RANGE__IDENTIFIER + 1
+	      && CPTI_FOR_END__IDENTIFIER == CPTI_FOR_RANGE__IDENTIFIER + 2
+	      && CPTI_FOR_RANGE_IDENTIFIER == CPTI_FOR_RANGE__IDENTIFIER + 3
+	      && CPTI_FOR_BEGIN_IDENTIFIER == CPTI_FOR_BEGIN__IDENTIFIER + 3
+	      && CPTI_FOR_END_IDENTIFIER == CPTI_FOR_END__IDENTIFIER + 3);
+  for (int i = 0; i < 3; i++)
+    {
+      tree id = cp_global_trees[CPTI_FOR_RANGE__IDENTIFIER + i];
+      if (IDENTIFIER_BINDING (id)
+	  && IDENTIFIER_BINDING (id)->scope == current_binding_level)
+	{
+	  range_for_decl[i] = IDENTIFIER_BINDING (id)->value;
+	  gcc_assert (VAR_P (range_for_decl[i])
+		      && DECL_ARTIFICIAL (range_for_decl[i]));
+	}
+    }
+}
+
 /* Finish the body of a for-statement, which may be given by
    FOR_STMT.  The increment-EXPR for the loop must be
    provided.
@@ -1670,21 +1697,20 @@ finish_for_stmt (tree for_stmt)
      Change it to ones with underscore instead of space, so that it can
      be inspected in the debugger.  */
   tree range_for_decl[3] = { NULL_TREE, NULL_TREE, NULL_TREE };
-  gcc_assert (CPTI_FOR_BEGIN__IDENTIFIER == CPTI_FOR_RANGE__IDENTIFIER + 1
-	      && CPTI_FOR_END__IDENTIFIER == CPTI_FOR_RANGE__IDENTIFIER + 2
-	      && CPTI_FOR_RANGE_IDENTIFIER == CPTI_FOR_RANGE__IDENTIFIER + 3
-	      && CPTI_FOR_BEGIN_IDENTIFIER == CPTI_FOR_BEGIN__IDENTIFIER + 3
-	      && CPTI_FOR_END_IDENTIFIER == CPTI_FOR_END__IDENTIFIER + 3);
-  for (int i = 0; i < 3; i++)
+  find_range_for_decls (range_for_decl);
+
+  /* P2718R0 - Add CLEANUP_POINT_EXPR so that temporaries in
+     for-range-initializer whose lifetime is extended are destructed
+     here.  */
+  if (flag_range_for_ext_temps
+      && range_for_decl[0]
+      && FOR_INIT_STMT (for_stmt))
     {
-      tree id = cp_global_trees[CPTI_FOR_RANGE__IDENTIFIER + i];
-      if (IDENTIFIER_BINDING (id)
-	  && IDENTIFIER_BINDING (id)->scope == current_binding_level)
-	{
-	  range_for_decl[i] = IDENTIFIER_BINDING (id)->value;
-	  gcc_assert (VAR_P (range_for_decl[i])
-		      && DECL_ARTIFICIAL (range_for_decl[i]));
-	}
+      tree stmt = pop_stmt_list (FOR_INIT_STMT (for_stmt));
+      FOR_INIT_STMT (for_stmt) = NULL_TREE;
+      stmt = build_stmt (EXPR_LOCATION (for_stmt), EXPR_STMT, stmt);
+      stmt = maybe_cleanup_point_expr_void (stmt);
+      add_stmt (stmt);
     }
 
   add_stmt (do_poplevel (scope));
@@ -10420,7 +10446,7 @@ finish_omp_target_clauses (location_t loc, tree body, tree *clauses_ptr)
     {
       tree lobj = *i;
       if (TREE_CODE (lobj) == TARGET_EXPR)
-	lobj = TREE_OPERAND (lobj, 0);
+	lobj = TARGET_EXPR_SLOT (lobj);
 
       tree lt = TREE_TYPE (lobj);
       gcc_assert (LAMBDA_TYPE_P (lt) && CLASS_TYPE_P (lt));
@@ -12906,6 +12932,11 @@ trait_expr_value (cp_trait_kind kind, tree type1, tree type2)
     case CPTK_IS_UNION:
       return type_code1 == UNION_TYPE;
 
+    case CPTK_IS_VIRTUAL_BASE_OF:
+      return (NON_UNION_CLASS_TYPE_P (type1) && NON_UNION_CLASS_TYPE_P (type2)
+	      && lookup_base (type2, type1, ba_require_virtual,
+			      NULL, tf_none) != NULL_TREE);
+
     case CPTK_IS_VOLATILE:
       return CP_TYPE_VOLATILE_P (type1);
 
@@ -13123,6 +13154,13 @@ finish_trait_expr (location_t loc, cp_trait_kind kind, tree type1, tree type2)
     case CPTK_IS_POINTER_INTERCONVERTIBLE_BASE_OF:
       if (NON_UNION_CLASS_TYPE_P (type1) && NON_UNION_CLASS_TYPE_P (type2)
 	  && !same_type_ignoring_top_level_qualifiers_p (type1, type2)
+	  && !complete_type_or_else (type2, NULL_TREE))
+	/* We already issued an error.  */
+	return error_mark_node;
+      break;
+
+    case CPTK_IS_VIRTUAL_BASE_OF:
+      if (NON_UNION_CLASS_TYPE_P (type1) && NON_UNION_CLASS_TYPE_P (type2)
 	  && !complete_type_or_else (type2, NULL_TREE))
 	/* We already issued an error.  */
 	return error_mark_node;
