@@ -80,18 +80,20 @@ queue (dump_info_p di, const_tree t)
   else
     dq = XNEW (struct dump_queue);
 
-  /* Create a new entry in the splay-tree.  */
+  /* Create a new entry in the splay-tree and insert into queue iff new.
+   * Else, end.*/
   dni = XNEW (struct dump_node_info);
-  dq->node = splay_tree_insert (di->nodes, (splay_tree_key) t,
-				(splay_tree_value) dni);
-
-  /* Add it to the end of the queue.  */
-  dq->next = 0;
-  if (!di->queue_end)
-    di->queue = dq;
-  else
-    di->queue_end->next = dq;
-  di->queue_end = dq;
+  if (!splay_tree_lookup (di->nodes, (splay_tree_key) t))
+  {
+    dq->node = splay_tree_insert (di->nodes, (splay_tree_key) t,
+          			(splay_tree_value) dni);
+    dq->next = 0;
+    if (!di->queue_end)
+      di->queue = dq;
+    else
+      di->queue_end->next = dq;
+    di->queue_end = dq;
+  }
 }
 
 /* Return args of a function declaration */
@@ -638,7 +640,6 @@ omp_clause_add_json(tree clause, json::object & json_obj,
 	      }
 	    else
 	      gcc_unreachable ();
-	  delete iter_holder;
           break;
 	default:
 	  gcc_unreachable ();
@@ -1231,8 +1232,6 @@ loc_emit_json (expanded_location xloc)
   loc_info->set_integer("column", xloc.column);
   loc_holder->append(loc_info);
   return loc_holder;
-  delete loc_holder;
-  delete loc_info;
 }
 
 /* For some referenced nodes that may be too verbose. This
@@ -1609,7 +1608,6 @@ node_emit_json(tree t, dump_info_p di)
                   auto _poly_int = TYPE_VECTOR_SUBPARTS(t);
                   coeffs->set_integer("poly_int_coeff", _poly_int.coeffs[i]);
                   holder->append(coeffs);
-                  delete coeffs;
                 }
               json_obj->set("vector_subparts", holder);
     	      }
@@ -2217,7 +2215,7 @@ node_emit_json(tree t, dump_info_p di)
 
         tree arg;
         call_expr_arg_iterator iter;
-        bool call;
+        bool call = false;
         FOR_EACH_CALL_EXPR_ARG(arg, iter, t)
           {
             call = true;
@@ -2990,7 +2988,6 @@ node_emit_json(tree t, dump_info_p di)
           for (iter = BLOCK_SUBBLOCKS (t); iter; iter = BLOCK_CHAIN (t))
             subblock->append(node_emit_json(iter, di));
           json_obj->set("block_subblocks", subblock);
-          delete subblock;
         }
       if (BLOCK_CHAIN (t))
         {
@@ -2998,7 +2995,6 @@ node_emit_json(tree t, dump_info_p di)
           for (iter = BLOCK_SUBBLOCKS (t); iter; iter = BLOCK_CHAIN (t))
               chain->append(node_emit_json(iter, di));
           json_obj->set("block_chain", chain);
-          delete chain;
         }
       if (BLOCK_VARS (t))
         {
@@ -3006,7 +3002,6 @@ node_emit_json(tree t, dump_info_p di)
           for (iter = BLOCK_VARS (t); iter; iter = TREE_CHAIN (t))
               vars->append(node_emit_json(iter, di));
           json_obj->set("block_vars", vars);
-          delete vars;
         }
       if (vec_safe_length (BLOCK_NONLOCALIZED_VARS (t)) > 0)
         {
@@ -3020,7 +3015,6 @@ node_emit_json(tree t, dump_info_p di)
               nlv_holder->append(node_emit_json(t, di));
             }
           json_obj->set("block_nonlocalized_vars", nlv_holder);
-          delete nlv_holder;
         }
       if (BLOCK_ABSTRACT_ORIGIN (t))
         json_obj->set("block_abstract_origin",
