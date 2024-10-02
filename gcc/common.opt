@@ -2399,6 +2399,10 @@ fopt-info-
 Common Joined RejectNegative Var(common_deferred_options) Defer
 -fopt-info[-<type>=filename]	Dump compiler optimization details.
 
+fsave-tree-record
+Common RejectNegative Var(flag_save_tree_record) 
+Test for JSON dumping of data structures as GCC progresses.
+
 fsave-optimization-record
 Common Var(flag_save_optimization_record) Optimization
 Write a SRCFILE.opt-record.json file detailing what optimizations were performed.

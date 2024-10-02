@@ -2142,6 +2142,11 @@ do_compile ()
 	  dump_context::get ().set_json_writer (new optrecord_json_writer ());
 	}
 
+      if (flag_save_tree_record)
+        {
+	  printf("YAY!");
+        }
+
       /* This must be run always, because it is needed to compute the FP
 	 predefined macros, such as __LDBL_MAX__, for targets using non
 	 default FP formats.  */
