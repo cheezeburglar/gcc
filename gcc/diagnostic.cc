@@ -23,6 +23,7 @@ along with GCC; see the file COPYING3.  If not see
    message module.  */
 
 #include "config.h"
+#define INCLUDE_MEMORY
 #define INCLUDE_VECTOR
 #include "system.h"
 #include "coretypes.h"
@@ -38,6 +39,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "diagnostic-client-data-hooks.h"
 #include "diagnostic-diagram.h"
 #include "diagnostic-format.h"
+#include "diagnostic-format-sarif.h"
 #include "diagnostic-format-text.h"
 #include "edit-context.h"
 #include "selftest.h"
@@ -165,11 +167,13 @@ diagnostic_option_classifier::pch_save (FILE *f)
   unsigned int lengths[2] = { m_classification_history.length (),
 			      m_push_list.length () };
   if (fwrite (lengths, sizeof (lengths), 1, f) != 1
-      || fwrite (m_classification_history.address (),
-		 sizeof (diagnostic_classification_change_t),
-		 lengths[0], f) != lengths[0]
-      || fwrite (m_push_list.address (), sizeof (int),
-		 lengths[1], f) != lengths[1])
+      || (lengths[0]
+	  && fwrite (m_classification_history.address (),
+		     sizeof (diagnostic_classification_change_t),
+		     lengths[0], f) != lengths[0])
+      || (lengths[1]
+	  && fwrite (m_push_list.address (), sizeof (int),
+		     lengths[1], f) != lengths[1]))
     return -1;
   return 0;
 }
@@ -187,11 +191,13 @@ diagnostic_option_classifier::pch_restore (FILE *f)
   gcc_checking_assert (m_push_list.is_empty ());
   m_classification_history.safe_grow (lengths[0]);
   m_push_list.safe_grow (lengths[1]);
-  if (fread (m_classification_history.address (),
-	     sizeof (diagnostic_classification_change_t),
-	     lengths[0], f) != lengths[0]
-      || fread (m_push_list.address (), sizeof (int),
-		lengths[1], f) != lengths[1])
+  if ((lengths[0]
+       && fread (m_classification_history.address (),
+		 sizeof (diagnostic_classification_change_t),
+		 lengths[0], f) != lengths[0])
+      || (lengths[1]
+	  && fread (m_push_list.address (), sizeof (int),
+		    lengths[1], f) != lengths[1]))
     return -1;
   return 0;
 }
@@ -1204,6 +1210,47 @@ diagnostic_context::warning_enabled_at (location_t loc,
   return diagnostic_enabled (&diagnostic);
 }
 
+/* Emit a diagnostic within a diagnostic group on this context.  */
+
+bool
+diagnostic_context::emit_diagnostic (diagnostic_t kind,
+				     rich_location &richloc,
+				     const diagnostic_metadata *metadata,
+				     diagnostic_option_id option_id,
+				     const char *gmsgid, ...)
+{
+  begin_group ();
+
+  va_list ap;
+  va_start (ap, gmsgid);
+  bool ret = emit_diagnostic_va (kind, richloc, metadata, option_id,
+				 gmsgid, &ap);
+  va_end (ap);
+
+  end_group ();
+
+  return ret;
+}
+
+/* As above, but taking a va_list *.  */
+
+bool
+diagnostic_context::emit_diagnostic_va (diagnostic_t kind,
+					rich_location &richloc,
+					const diagnostic_metadata *metadata,
+					diagnostic_option_id option_id,
+					const char *gmsgid, va_list *ap)
+{
+  begin_group ();
+
+  bool ret = diagnostic_impl (&richloc, metadata, option_id,
+			      gmsgid, ap, kind);
+
+  end_group ();
+
+  return ret;
+}
+
 /* Report a diagnostic message (an error or a warning) as specified by
    this diagnostic_context.
    front-end independent format specifiers are exactly those described
@@ -1625,7 +1672,8 @@ diagnostic_output_format_init (diagnostic_context &context,
       diagnostic_output_format_init_sarif_stderr (context,
 						  line_table,
 						  main_input_filename_,
-						  json_formatting);
+						  json_formatting,
+						  sarif_version::v2_1_0);
       break;
 
     case DIAGNOSTICS_OUTPUT_FORMAT_SARIF_FILE:
@@ -1633,7 +1681,17 @@ diagnostic_output_format_init (diagnostic_context &context,
 						line_table,
 						main_input_filename_,
 						json_formatting,
+						sarif_version::v2_1_0,
 						base_file_name);
+      break;
+    case DIAGNOSTICS_OUTPUT_FORMAT_SARIF_FILE_2_2_PRERELEASE:
+      diagnostic_output_format_init_sarif_file
+	(context,
+	 line_table,
+	 main_input_filename_,
+	 json_formatting,
+	 sarif_version::v2_2_prerelease_2024_08_08,
+	 base_file_name);
       break;
     }
 }

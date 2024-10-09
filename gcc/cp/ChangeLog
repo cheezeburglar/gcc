@@ -1,3 +1,85 @@
+2024-10-07  Jason Merrill  <jason@redhat.com>
+
+	* decl.cc (duplicate_decls): Only check PURVIEW_P if
+	DECL_LANG_SPECIFIC.
+
+2024-10-07  Jason Merrill  <jason@redhat.com>
+
+	* decl2.cc (mark_used): Always check require_deduced_type.
+
+2024-10-07  Jason Merrill  <jason@redhat.com>
+
+	* module.cc (init_modules): Don't warn about -M.
+
+2024-10-04  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/113266
+	PR c++/116911
+	* parser.cc (cp_parser_template_argument): Allow
+	internal-linkage variables since C++11.
+
+2024-10-04  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/116913
+	* name-lookup.cc (update_binding): Return the strip_using'd old
+	decl rather than the binding.
+
+2024-10-04  Jason Merrill  <jason@redhat.com>
+	    Richard Biener  <rguenther@suse.de>
+
+	* cp-tree.h (spec_entry::hash): New member.
+	* pt.cc (spec_hasher::hash): Set it and return it.
+	(maybe_process_partial_specialization): Clear it when
+	changing tmpl/args.
+	(lookup_template_class): Likewise, don't pass hash to find.
+	(retrieve_specialization): Set it, don't pass hash to find.
+	(register_specialization): Don't pass hash to find.
+	(reregister_specialization): Likewise.
+	(match_mergeable_specialization): Likewise.
+	(add_mergeable_specialization): Likewise.
+
+2024-10-03  Jason Merrill  <jason@redhat.com>
+	    Richard Biener  <rguenther@suse.de>
+
+	* pt.cc (coerce_template_parms): Free garbage vecs.
+
+2024-10-03  Jason Merrill  <jason@redhat.com>
+
+	Revert:
+	2024-10-03  Jason Merrill  <jason@redhat.com>
+		    Richard Biener   <rguenther@suse.de>
+
+	* pt.cc (struct free_if_changed_proxy): New.
+	(coerce_template_parms): Use it.
+
+2024-10-03  Jason Merrill  <jason@redhat.com>
+
+	* parser.cc (location_between): New.
+	(cp_parser_operator): Handle -Wdeprecated-literal-operator.
+
+2024-10-03  Jason Merrill  <jason@redhat.com>
+	    Richard Biener   <rguenther@suse.de>
+
+	* pt.cc (struct free_if_changed_proxy): New.
+	(coerce_template_parms): Use it.
+
+2024-10-02  Simon Martin  <simon@nasilyan.com>
+
+	PR c++/116722
+	* constexpr.cc (cxx_bind_parameters_in_call): When !ctx->quiet,
+	emit error before bailing out due to a call to {con,de}structor
+	for a class with virtual bases.
+
+2024-10-02  Richard Biener  <rguenther@suse.de>
+
+	* pt.cc (iterative_hash_template_arg): Use iterative_hash_hashval_t
+	to hash TYPE_HASH.
+
+2024-10-02  Richard Biener  <rguenther@suse.de>
+
+	* pt.cc (iterative_hash_template_arg): Avoid using
+	iterative_hash_object.
+
 2024-10-01  Giuseppe D'Angelo  <giuseppe.dangelo@kdab.com>
 
 	* constraint.cc (diagnose_trait_expr): New diagnostic.

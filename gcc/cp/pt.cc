@@ -1161,6 +1161,7 @@ maybe_process_partial_specialization (tree type)
 		  elt.tmpl = tmpl;
 		  CLASSTYPE_TI_ARGS (inst)
 		    = elt.args = INNERMOST_TEMPLATE_ARGS (elt.args);
+		  elt.hash = 0; /* Recalculate after changing tmpl/args.  */
 
 		  spec_entry **slot
 		    = type_specializations->find_slot (&elt, INSERT);
@@ -1282,7 +1283,7 @@ retrieve_specialization (tree tmpl, tree args, hashval_t hash)
   spec_entry elt;
   elt.tmpl = tmpl;
   elt.args = args;
-  elt.spec = NULL_TREE;
+  elt.hash = hash;
 
   spec_hash_table *specializations;
   if (DECL_CLASS_TEMPLATE_P (tmpl))
@@ -1290,9 +1291,7 @@ retrieve_specialization (tree tmpl, tree args, hashval_t hash)
   else
     specializations = decl_specializations;
 
-  if (hash == 0)
-    hash = spec_hasher::hash (&elt);
-  if (spec_entry *found = specializations->find_with_hash (&elt, hash))
+  if (spec_entry *found = specializations->find (&elt))
     return found->spec;
 
   return NULL_TREE;
@@ -1551,7 +1550,7 @@ register_specialization (tree spec, tree tmpl, tree args, bool is_friend,
   if (hash == 0)
     hash = spec_hasher::hash (&elt);
 
-  spec_entry **slot = decl_specializations->find_slot_with_hash (&elt, hash, INSERT);
+  spec_entry **slot = decl_specializations->find_slot (&elt, INSERT);
   if (*slot)
     fn = (*slot)->spec;
   else
@@ -1739,7 +1738,9 @@ spec_hasher::hash (tree tmpl, tree args)
 hashval_t
 spec_hasher::hash (spec_entry *e)
 {
-  return spec_hasher::hash (e->tmpl, e->args);
+  if (e->hash == 0)
+    e->hash = hash (e->tmpl, e->args);
+  return e->hash;
 }
 
 /* Recursively calculate a hash value for a template argument ARG, for use
@@ -1751,7 +1752,7 @@ hashval_t
 iterative_hash_template_arg (tree arg, hashval_t val)
 {
   if (arg == NULL_TREE)
-    return iterative_hash_object (arg, val);
+    return iterative_hash_hashval_t (0, val);
 
   if (!TYPE_P (arg))
     /* Strip nop-like things, but not the same as STRIP_NOPS.  */
@@ -1762,7 +1763,7 @@ iterative_hash_template_arg (tree arg, hashval_t val)
 
   enum tree_code code = TREE_CODE (arg);
 
-  val = iterative_hash_object (code, val);
+  val = iterative_hash_hashval_t (code, val);
 
   switch (code)
     {
@@ -1777,7 +1778,7 @@ iterative_hash_template_arg (tree arg, hashval_t val)
       return val;
 
     case IDENTIFIER_NODE:
-      return iterative_hash_object (IDENTIFIER_HASH_VALUE (arg), val);
+      return iterative_hash_hashval_t (IDENTIFIER_HASH_VALUE (arg), val);
 
     case TREE_VEC:
       for (tree elt : tree_vec_range (arg))
@@ -1936,7 +1937,7 @@ iterative_hash_template_arg (tree arg, hashval_t val)
 
 	default:
 	  if (tree canonical = TYPE_CANONICAL (arg))
-	    val = iterative_hash_object (TYPE_HASH (canonical), val);
+	    val = iterative_hash_hashval_t (TYPE_HASH (canonical), val);
 	  else if (tree ti = TYPE_TEMPLATE_INFO (arg))
 	    {
 	      val = iterative_hash_template_arg (TI_TEMPLATE (ti), val);
@@ -1973,7 +1974,6 @@ reregister_specialization (tree spec, tree tinfo, tree new_spec)
 
   elt.tmpl = most_general_template (TI_TEMPLATE (tinfo));
   elt.args = TI_ARGS (tinfo);
-  elt.spec = NULL_TREE;
 
   entry = decl_specializations->find (&elt);
   if (entry != NULL)
@@ -9275,6 +9275,7 @@ coerce_template_parms (tree parms,
 	    {
 	      /* We don't know how many args we have yet, just use the
 		 unconverted (and still packed) ones for now.  */
+	      ggc_free (new_inner_args);
 	      new_inner_args = orig_inner_args;
 	      arg_idx = nargs;
 	      break;
@@ -9329,7 +9330,8 @@ coerce_template_parms (tree parms,
 		  = make_pack_expansion (conv, complain);
 
               /* We don't know how many args we have yet, just
-                 use the unconverted ones for now.  */
+		 use the unconverted (but unpacked) ones for now.  */
+	      ggc_free (new_inner_args);
               new_inner_args = inner_args;
 	      arg_idx = nargs;
               break;
@@ -9441,6 +9443,12 @@ coerce_template_parms (tree parms,
   if (CHECKING_P && !NON_DEFAULT_TEMPLATE_ARGS_COUNT (new_inner_args))
     SET_NON_DEFAULT_TEMPLATE_ARGS_COUNT (new_inner_args,
 					 TREE_VEC_LENGTH (new_inner_args));
+
+  /* If we expanded packs in inner_args and aren't returning it now, the
+     expanded vec is garbage.  */
+  if (inner_args != new_inner_args
+      && inner_args != orig_inner_args)
+    ggc_free (inner_args);
 
   return return_full_args ? new_args : new_inner_args;
 }
@@ -10011,8 +10019,6 @@ lookup_template_class (tree d1, tree arglist, tree in_decl, tree context,
   tree t;
   spec_entry **slot;
   spec_entry *entry;
-  spec_entry elt;
-  hashval_t hash;
 
   if (identifier_p (d1))
     {
@@ -10228,11 +10234,10 @@ lookup_template_class (tree d1, tree arglist, tree in_decl, tree context,
 	}
 
       /* If we already have this specialization, return it.  */
+      spec_entry elt;
       elt.tmpl = gen_tmpl;
       elt.args = arglist;
-      elt.spec = NULL_TREE;
-      hash = spec_hasher::hash (&elt);
-      entry = type_specializations->find_with_hash (&elt, hash);
+      entry = type_specializations->find (&elt);
 
       if (entry)
 	return entry->spec;
@@ -10295,7 +10300,7 @@ lookup_template_class (tree d1, tree arglist, tree in_decl, tree context,
 		    {
 		      /* Completion could have caused us to register the desired
 			 specialization already, so check the table again.  */
-		      entry = type_specializations->find_with_hash (&elt, hash);
+		      entry = type_specializations->find (&elt);
 		      if (entry)
 			return entry->spec;
 		    }
@@ -10516,7 +10521,7 @@ lookup_template_class (tree d1, tree arglist, tree in_decl, tree context,
 		 use it for hash table lookup.  */
 	      elt.tmpl = found;
 	      elt.args = arglist = INNERMOST_TEMPLATE_ARGS (arglist);
-	      hash = spec_hasher::hash (&elt);
+	      elt.hash = 0; /* Recalculate after changing tmpl/args.  */
 	    }
 	}
 
@@ -10524,7 +10529,7 @@ lookup_template_class (tree d1, tree arglist, tree in_decl, tree context,
       SET_TYPE_TEMPLATE_INFO (t, build_template_info (found, arglist));
 
       elt.spec = t;
-      slot = type_specializations->find_slot_with_hash (&elt, hash, INSERT);
+      slot = type_specializations->find_slot (&elt, INSERT);
       gcc_checking_assert (*slot == NULL);
       entry = ggc_alloc<spec_entry> ();
       *entry = elt;
@@ -31646,8 +31651,7 @@ match_mergeable_specialization (bool decl_p, spec_entry *elt)
 {
   hash_table<spec_hasher> *specializations
     = decl_p ? decl_specializations : type_specializations;
-  hashval_t hash = spec_hasher::hash (elt);
-  auto *slot = specializations->find_slot_with_hash (elt, hash, NO_INSERT);
+  auto *slot = specializations->find_slot (elt, NO_INSERT);
 
   if (slot)
     return (*slot)->spec;
@@ -31695,10 +31699,9 @@ void
 add_mergeable_specialization (bool decl_p, spec_entry *elt, tree decl,
 			      unsigned flags)
 {
-  hashval_t hash = spec_hasher::hash (elt);
   if (decl_p)
     {
-      auto *slot = decl_specializations->find_slot_with_hash (elt, hash, INSERT);
+      auto *slot = decl_specializations->find_slot (elt, INSERT);
 
       gcc_checking_assert (!*slot);
       auto entry = ggc_alloc<spec_entry> ();
@@ -31707,7 +31710,7 @@ add_mergeable_specialization (bool decl_p, spec_entry *elt, tree decl,
     }
   else
     {
-      auto *slot = type_specializations->find_slot_with_hash (elt, hash, INSERT);
+      auto *slot = type_specializations->find_slot (elt, INSERT);
 
       /* We don't distinguish different constrained partial type
 	 specializations, so there could be duplicates.  Everything else

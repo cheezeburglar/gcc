@@ -3269,7 +3269,7 @@
      u = UNSPEC_IEEE_MAX;
 
    if (MEM_P (operands[2]))
-     force_reg (<MODE>mode, operands[2]);
+     operands[2] = force_reg (<MODE>mode, operands[2]);
    rtvec v = gen_rtvec (2, operands[2], operands[1]);
    rtx tmp = gen_rtx_UNSPEC (<MODE>mode, v, u);
    emit_move_insn (operands[0], tmp);
@@ -30803,7 +30803,7 @@
 	  UNSPEC_VAESDEC))]
   "TARGET_VAES"
 {
-  if (which_alternative == 0 && <MODE>mode == V16QImode)
+  if (!TARGET_AES && <MODE>mode == V16QImode)
     return "%{evex%} vaesdec\t{%2, %1, %0|%0, %1, %2}";
   else
     return "vaesdec\t{%2, %1, %0|%0, %1, %2}";
@@ -30817,7 +30817,7 @@
 	  UNSPEC_VAESDECLAST))]
   "TARGET_VAES"
 {
-  if (which_alternative == 0 && <MODE>mode == V16QImode)
+  if (!TARGET_AES && <MODE>mode == V16QImode)
     return "%{evex%} vaesdeclast\t{%2, %1, %0|%0, %1, %2}";
   else
     return "vaesdeclast\t{%2, %1, %0|%0, %1, %2}";
@@ -30831,7 +30831,7 @@
 	  UNSPEC_VAESENC))]
   "TARGET_VAES"
 {
-  if (which_alternative == 0 && <MODE>mode == V16QImode)
+  if (!TARGET_AES && <MODE>mode == V16QImode)
     return "%{evex%} vaesenc\t{%2, %1, %0|%0, %1, %2}";
   else
     return "vaesenc\t{%2, %1, %0|%0, %1, %2}";
@@ -30845,7 +30845,7 @@
 	  UNSPEC_VAESENCLAST))]
   "TARGET_VAES"
 {
-  if (which_alternative == 0 && <MODE>mode == V16QImode)
+  if (!TARGET_AES && <MODE>mode == V16QImode)
     return "%{evex%} vaesenclast\t{%2, %1, %0|%0, %1, %2}";
   else
     return "vaesenclast\t{%2, %1, %0|%0, %1, %2}";

@@ -1,3 +1,138 @@
+2024-10-08  Jakub Jelinek  <jakub@redhat.com>
+
+	* include/bits/unicode.h (std::__unicode::__v15_1_0): Rename inline
+	namespace to ...
+	(std::__unicode::__v16_0_0): ... this.
+	(_GLIBCXX_GET_UNICODE_DATA): Change from 150100 to 160000.
+	* include/bits/unicode-data.h: Regenerated.
+	* testsuite/ext/unicode/properties.cc: Check for _Gcb_SpacingMark
+	on U+11F03 rather than U+1D16D as the latter lost SpacingMark property
+	in Unicode 16.0.
+
+2024-10-05  Giuseppe D'Angelo  <giuseppe.dangelo@kdab.com>
+
+	* include/bits/version.def: Added the feature-testing macro.
+	* include/bits/version.h: Regenerated.
+	* include/std/type_traits: Add support for
+	std::is_virtual_base_of and std::is_virtual_base_of_v,
+	implemented in terms of the compiler builtin.
+	* testsuite/20_util/is_virtual_base_of/value.cc: New test.
+
+2024-10-05  Patrick Palka  <ppalka@redhat.com>
+
+	* include/bits/ranges_base.h (__distance_fn::operator()):
+	Adjust iterator/sentinel overloads as per LWG 3664.
+	* testsuite/24_iterators/range_operations/distance.cc:
+	Test LWG 3664 example.
+
+2024-10-04  Patrick Palka  <ppalka@redhat.com>
+
+	* include/std/ranges (single_view::empty): Define as per LWG 4035.
+	(iota_view::empty): Define as per LWG 4001.
+	(lazy_split_view::_OuterIter::value_type): Remove default
+	constructor and make other constructor private as per LWG 4013.
+	(common_view::begin): Disable non-const overload for simple
+	views as per LWG 4012.
+	(common_view::end): Likewise.
+	(adjacent_view::base): Define as per LWG 3848.
+	(adjacent_transform_view::base): Likewise.
+	(chunk_view::_InnerIter::iter_move): Define as per LWG 3851.
+	(chunk_view::_InnerIter::itep_swap): Likewise.
+	(slide_view::base): Define as per LWG 3848.
+	(repeat_view): Adjust deduction guide as per LWG 4053.
+	(_Repeat::operator()): Adjust single-parameter overload as per
+	LWG 4054.
+	* testsuite/std/ranges/adaptors/adjacent/1.cc: Verify existence
+	of base member function.
+	* testsuite/std/ranges/adaptors/adjacent_transform/1.cc: Likewise.
+	* testsuite/std/ranges/adaptors/chunk/1.cc: Test LWG 3851 example.
+	* testsuite/std/ranges/adaptors/slide/1.cc: Verify existence of
+	base member function.
+	* testsuite/std/ranges/iota/iota_view.cc: Test LWG 4001 example.
+	* testsuite/std/ranges/repeat/1.cc: Test LWG 4053/4054 examples.
+
+2024-10-04  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/parallel/algobase.h (search): Use sequential algorithm
+	for constant evaluation.
+	* include/parallel/algorithmfwd.h (search): Add
+	_GLIBCXX20_CONSTEXPR.
+	* include/parallel/multiway_merge.h: Remove stray semi-colon.
+	* include/parallel/multiseq_selection.h: Add diagnostic pragmas
+	for -Wlong-long warning.
+	* include/parallel/quicksort.h: Likewise.
+	* include/parallel/random_number.h: Likewise.
+	* include/parallel/settings.h: Likewise.
+	* include/parallel/workstealing.h: Replace ++ and -- on volatile
+	variables.
+	* testsuite/17_intro/names.cc: Skip names defined by
+	<tr1/random>.
+	* testsuite/20_util/pair/dangling_ref.cc: Skip test if Parallel
+	Mode is enabled.
+	* testsuite/20_util/tuple/dangling_ref.cc: Likewise.
+
+2024-10-04  Jonathan Wakely  <jwakely@redhat.com>
+
+	PR libstdc++/116964
+	* include/std/shared_mutex (__shared_mutex_cv): Use [this] for
+	lambda captures.
+	(shared_timed_mutex) [!_GLIBCXX_USE_PTHREAD_RWLOCK_T]: Likewise.
+
+2024-10-03  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/bits/unicode.h (__unicode::__is_incb_linker): Use
+	_GLIBCXX_STD_A namespace for std::find.
+
+2024-10-03  Jonathan Wakely  <jwakely@redhat.com>
+
+	PR libstdc++/116944
+	* include/parallel/base.h: Move diagnostic pragmas earlier.
+
+2024-10-03  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/bits/locale_facets_nonio.tcc (money_put::__do_get):
+	Ignore -Wformat warning for __ibm128 arguments.
+	* include/tr1/tuple (ignore): Ignore -Wunused warning.
+
+2024-10-03  François Dumont  <fdumont@gcc.gnu.org>
+
+	* include/bits/hashtable_policy.h (_NodeBuilder<>::_S_build): Remove
+	const qualification on _NodeGenerator instance.
+	(_ReuseOrAllocNode<>::operator()(_Args&&...)): Remove const qualification.
+	(_ReuseOrAllocNode<>::_M_nodes): Remove mutable.
+	(_Insert_base<>::_M_insert_range): Remove _NodeGetter const qualification.
+	(_Hash_code_base<>::_M_bucket_index(const _Hash_node_value<>&, size_t)):
+	Simplify noexcept declaration, we already static_assert that _RangeHash functor
+	is noexcept.
+	* include/bits/hashtable.h: Rework comments. Remove const qualifier on
+	_NodeGenerator& arguments.
+
+2024-10-02  Jonathan Wakely  <jwakely@redhat.com>
+
+	* config/locale/dragonfly/time_members.cc
+	(__timepunct<char>::_M_initialize_timepunc)
+	(__timepunct<wchar_t>::_M_initialize_timepunc): Set
+	_M_date_time_format for C locale. Set %Ex formats to the same
+	values as the %x formats.
+	* config/locale/generic/time_members.cc: Likewise.
+	* config/locale/gnu/time_members.cc: Likewise.
+	* testsuite/22_locale/time_get/get/char/5.cc: New test.
+	* testsuite/22_locale/time_get/get/wchar_t/5.cc: New test.
+
+2024-10-02  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/bits/chrono_io.h (__detail::__use_floor): New
+	function.
+	(__detail::__round): New function.
+	(from_stream): Use __detail::__round.
+	* testsuite/std/time/clock/file/io.cc: Check for expected
+	rounding in parse.
+	* testsuite/std/time/clock/gps/io.cc: Likewise.
+
+2024-10-02  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/bits/postypes.h: Fix -Wlong-long warning.
+
 2024-10-01  Hans-Peter Nilsson  <hp@axis.com>
 
 	PR libstdc++/116895

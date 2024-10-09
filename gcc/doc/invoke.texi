@@ -395,8 +395,8 @@ Objective-C and Objective-C++ Dialects}.
 -Wpacked  -Wno-packed-bitfield-compat  -Wpacked-not-aligned  -Wpadded
 -Wparentheses  -Wno-pedantic-ms-format
 -Wpointer-arith  -Wno-pointer-compare  -Wno-pointer-to-int-cast
--Wno-pragmas  -Wno-prio-ctor-dtor  -Wredundant-decls
--Wrestrict  -Wno-return-local-addr  -Wreturn-type
+-Wno-pragmas  -Wno-pragma-once-outside-header  -Wno-prio-ctor-dtor
+-Wredundant-decls  -Wrestrict  -Wno-return-local-addr  -Wreturn-type
 -Wno-scalar-storage-order  -Wsequence-point
 -Wshadow  -Wshadow=global  -Wshadow=local  -Wshadow=compatible-local
 -Wno-shadow-ivar
@@ -1071,7 +1071,7 @@ Objective-C and Objective-C++ Dialects}.
 -mcmodel=@var{code-model} -mrelax -mpass-mrelax-to-as
 -mrecip  -mrecip=@var{opt} -mfrecipe -mno-frecipe -mdiv32 -mno-div32
 -mlam-bh -mno-lam-bh -mlamcas -mno-lamcas -mld-seq-sa -mno-ld-seq-sa
--mtls-dialect=@var{opt}}
+-mtls-dialect=@var{opt} -mannotate-tablejump -mno-annotate-tablejump}
 
 @emph{M32R/D Options}
 @gccoptlist{-m32r2  -m32rx  -m32r
@@ -3864,8 +3864,10 @@ for code that is not valid in C++23 but used to be valid but deprecated
 in C++20 with a pedantic warning that can be disabled with
 @option{-Wno-comma-subscript}.
 
-Enabled by default with @option{-std=c++20} unless @option{-Wno-deprecated},
-and with @option{-std=c++23} regardless of @option{-Wno-deprecated}.
+Enabled by default with @option{-std=c++20} unless
+@option{-Wno-deprecated}, and after @option{-std=c++23} regardless of
+@option{-Wno-deprecated}.  Before @option{-std=c++20}, enabled with
+explicit @option{-Wdeprecated}.
 
 This warning is upgraded to an error by @option{-pedantic-errors} in
 C++23 mode or later.
@@ -4012,7 +4014,7 @@ int k = f - e;
 
 @option{-Wdeprecated-enum-enum-conversion} is enabled by default with
 @option{-std=c++20}.  In pre-C++20 dialects, this warning can be enabled
-by @option{-Wenum-conversion}.
+by @option{-Wenum-conversion} or @option{-Wdeprecated}.
 
 @opindex Wdeprecated-enum-float-conversion
 @opindex Wno-deprecated-enum-float-conversion
@@ -4030,7 +4032,19 @@ bool b = e <= 3.7;
 
 @option{-Wdeprecated-enum-float-conversion} is enabled by default with
 @option{-std=c++20}.  In pre-C++20 dialects, this warning can be enabled
-by @option{-Wenum-conversion}.
+by @option{-Wenum-conversion} or @option{-Wdeprecated}.
+
+@opindex Wdeprecated-literal-operator
+@opindex Wno-deprecated-literal-operator
+@item -Wdeprecated-literal-operator @r{(C++ and Objective-C++ only)}
+Warn that the declaration of a user-defined literal operator with a
+space before the suffix is deprecated.  This warning is enabled by
+default in C++23, or with explicit @option{-Wdeprecated}.
+
+@smallexample
+string operator "" _i18n(const char*, std::size_t); // deprecated
+string operator ""_i18n(const char*, std::size_t); // preferred
+@end smallexample
 
 @opindex Welaborated-enum-base
 @opindex Wno-elaborated-enum-base
@@ -4728,7 +4742,8 @@ non-class type, @code{volatile}-qualified function return type,
 @code{volatile}-qualified parameter type, and structured bindings of a
 @code{volatile}-qualified type.  This usage was deprecated in C++20.
 
-Enabled by default with @option{-std=c++20}.
+Enabled by default with @option{-std=c++20}.  Before
+@option{-std=c++20}, enabled with explicit @option{-Wdeprecated}.
 
 @opindex Wzero-as-null-pointer-constant
 @opindex Wno-zero-as-null-pointer-constant
@@ -8132,6 +8147,12 @@ Do not warn about misuses of pragmas, such as incorrect parameters,
 invalid syntax, or conflicts between pragmas.  See also
 @option{-Wunknown-pragmas}.
 
+@opindex Wno-pragma-once-outside-header
+@opindex Wpragma-once-outside-header
+@item -Wno-pragma-once-outside-header
+Do not warn when @code{#pragma once} is used in a file that is not a header
+file, such as a main file.
+
 @opindex Wno-prio-ctor-dtor
 @opindex Wprio-ctor-dtor
 @item -Wno-prio-ctor-dtor
@@ -10376,6 +10397,13 @@ disable the error when compiled with @option{-Werror} flag.
 @opindex Wdeprecated
 @item -Wno-deprecated
 Do not warn about usage of deprecated features.  @xref{Deprecated Features}.
+
+In C++, explicitly specifying @option{-Wdeprecated} also enables
+warnings about some features that are deprecated in later language
+standards, specifically @option{-Wcomma-subscript},
+@option{-Wvolatile}, @option{-Wdeprecated-enum-float-conversion},
+@option{-Wdeprecated-enum-enum-conversion}, and
+@option{-Wdeprecated-literal-operator}.
 
 @opindex Wno-deprecated-declarations
 @opindex Wdeprecated-declarations
@@ -27490,6 +27518,17 @@ Whether a load-load barrier (@code{dbar 0x700}) is needed.  When build with
 This option controls which tls dialect may be used for general dynamic and
 local dynamic TLS models.
 
+@opindex mannotate-tablejump
+@opindex mno-annotate-tablejump
+@item -mannotate-tablejump
+@itemx -mno-annotate-tablejump
+Create an annotation section @code{.discard.tablejump_annotate} to
+correlate the @code{jirl} instruction and the jump table when a jump
+table is used to optimize the @code{switch} statement.  Some external
+tools, for example @file{objtool} of the Linux kernel building system,
+need the annotation to analysis the control flow.  The default is
+@option{-mno-annotate-tablejump}.
+
 @table @samp
 @item trad
 Use traditional TLS. This is the default.
@@ -38184,13 +38223,12 @@ Whether a particular directive is translated is controlled by the
 module mapper.  Header unit names are canonicalized during
 preprocessing.
 
-Dependency information can be emitted for macro import, extending the
-functionality of @option{-MD} and @option{-MMD} options.  Detection of
-import declarations also requires phase 4 preprocessing, and thus
-requires full preprocessing (or compilation).
-
-The @option{-M}, @option{-MM} and @option{-E -fdirectives-only} options halt
-preprocessing before phase 4.
+Dependency information can be emitted for module import, extending the
+functionality of the various @option{-M} options.  Detection of import
+declarations requires phase 4 handling of preprocessor directives, but
+does not require macro expansion, so it is not necessary to use
+@option{-MD}.  See also @option{-fdeps-*} for an alternate format for
+module dependency information.
 
 The @option{-save-temps} option uses @option{-fdirectives-only} for
 preprocessing, and preserve the macro definitions in the preprocessed

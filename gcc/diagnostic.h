@@ -76,7 +76,11 @@ enum diagnostics_output_format
   DIAGNOSTICS_OUTPUT_FORMAT_SARIF_STDERR,
 
   /* SARIF-based output, to a file.  */
-  DIAGNOSTICS_OUTPUT_FORMAT_SARIF_FILE
+  DIAGNOSTICS_OUTPUT_FORMAT_SARIF_FILE,
+
+  /* Undocumented, for use by test suite.
+     SARIF-based output, to a file, using a prerelease of the 2.2 schema.  */
+  DIAGNOSTICS_OUTPUT_FORMAT_SARIF_FILE_2_2_PRERELEASE
 };
 
 /* An enum for controlling how diagnostic_paths should be printed.  */
@@ -500,6 +504,19 @@ public:
   {
     return m_option_classifier.option_unspecified_p (option_id);
   }
+
+  bool emit_diagnostic (diagnostic_t kind,
+			rich_location &richloc,
+			const diagnostic_metadata *metadata,
+			diagnostic_option_id option_id,
+			const char *gmsgid, ...)
+    ATTRIBUTE_GCC_DIAG(6,7);
+  bool emit_diagnostic_va (diagnostic_t kind,
+			   rich_location &richloc,
+			   const diagnostic_metadata *metadata,
+			   diagnostic_option_id option_id,
+			   const char *gmsgid, va_list *ap)
+    ATTRIBUTE_GCC_DIAG(6,0);
 
   bool report_diagnostic (diagnostic_info *);
 

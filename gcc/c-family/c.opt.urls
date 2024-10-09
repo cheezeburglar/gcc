@@ -301,6 +301,9 @@ UrlSuffix(gcc/C_002b_002b-Dialect-Options.html#index-Wdeprecated-enum-enum-conve
 Wdeprecated-enum-float-conversion
 UrlSuffix(gcc/C_002b_002b-Dialect-Options.html#index-Wdeprecated-enum-float-conversion)
 
+Wdeprecated-literal-operator
+UrlSuffix(gcc/C_002b_002b-Dialect-Options.html#index-Wdeprecated-literal-operator)
+
 Wdesignated-init
 UrlSuffix(gcc/Warning-Options.html#index-Wdesignated-init)
 
@@ -680,6 +683,9 @@ UrlSuffix(gcc/Warning-Options.html#index-Wno-pointer-to-int-cast)
 
 Wpragmas
 UrlSuffix(gcc/Warning-Options.html#index-Wno-pragmas)
+
+Wpragma-once-outside-header
+UrlSuffix(gcc/Warning-Options.html#index-Wno-pragma-once-outside-header)
 
 Wprio-ctor-dtor
 UrlSuffix(gcc/Warning-Options.html#index-Wno-prio-ctor-dtor)

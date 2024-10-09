@@ -1737,7 +1737,8 @@ vect_compute_single_scalar_iteration_cost (loop_vec_info loop_vinfo)
      niter could be analyzed under some assumptions.  */
 
 opt_result
-vect_analyze_loop_form (class loop *loop, vect_loop_form_info *info)
+vect_analyze_loop_form (class loop *loop, gimple *loop_vectorized_call,
+			vect_loop_form_info *info)
 {
   DUMP_VECT_SCOPE ("vect_analyze_loop_form");
 
@@ -1747,6 +1748,18 @@ vect_analyze_loop_form (class loop *loop, vect_loop_form_info *info)
 				   "not vectorized:"
 				   " could not determine main exit from"
 				   " loop with multiple exits.\n");
+  if (loop_vectorized_call)
+    {
+      tree arg = gimple_call_arg (loop_vectorized_call, 1);
+      class loop *scalar_loop = get_loop (cfun, tree_to_shwi (arg));
+      edge scalar_exit_e = vec_init_loop_exit_info (scalar_loop);
+      if (!scalar_exit_e)
+	return opt_result::failure_at (vect_location,
+				       "not vectorized:"
+				       " could not determine main exit from"
+				       " loop with multiple exits.\n");
+    }
+
   info->loop_exit = exit_e;
   if (dump_enabled_p ())
       dump_printf_loc (MSG_NOTE, vect_location,
@@ -1754,9 +1767,8 @@ vect_analyze_loop_form (class loop *loop, vect_loop_form_info *info)
 		       exit_e->src->index, exit_e->dest->index, exit_e->aux);
 
   /* Check if we have any control flow that doesn't leave the loop.  */
-  class loop *v_loop = loop->inner ? loop->inner : loop;
-  basic_block *bbs = get_loop_body (v_loop);
-  for (unsigned i = 0; i < v_loop->num_nodes; i++)
+  basic_block *bbs = get_loop_body (loop);
+  for (unsigned i = 0; i < loop->num_nodes; i++)
     if (EDGE_COUNT (bbs[i]->succs) != 1
 	&& (EDGE_COUNT (bbs[i]->succs) != 2
 	    || !loop_exits_from_bb_p (bbs[i]->loop_father, bbs[i])))
@@ -1819,7 +1831,7 @@ vect_analyze_loop_form (class loop *loop, vect_loop_form_info *info)
 
       /* Analyze the inner-loop.  */
       vect_loop_form_info inner;
-      opt_result res = vect_analyze_loop_form (loop->inner, &inner);
+      opt_result res = vect_analyze_loop_form (loop->inner, NULL, &inner);
       if (!res)
 	{
 	  if (dump_enabled_p ())
@@ -3275,6 +3287,9 @@ again:
 	}
     }
 
+  /* Roll back state appropriately.  Degrade SLP this time.  From multi-
+     to single-lane to disabled.  */
+  --slp;
   if (dump_enabled_p ())
     {
       if (slp)
@@ -3285,9 +3300,6 @@ again:
 			 "re-trying with SLP disabled\n");
     }
 
-  /* Roll back state appropriately.  Degrade SLP this time.  From multi-
-     to single-lane to disabled.  */
-  --slp;
   /* Restore vectorization factor as it were without SLP.  */
   LOOP_VINFO_VECT_FACTOR (loop_vinfo) = saved_vectorization_factor;
   /* Free the SLP instances.  */
@@ -3357,6 +3369,8 @@ again:
   LOOP_VINFO_CAN_USE_PARTIAL_VECTORS_P (loop_vinfo)
     = saved_can_use_partial_vectors_p;
   LOOP_VINFO_USING_PARTIAL_VECTORS_P (loop_vinfo) = false;
+  if (loop_vinfo->scan_map)
+    loop_vinfo->scan_map->empty ();
 
   goto start_over;
 }
@@ -3520,7 +3534,8 @@ vect_analyze_loop_1 (class loop *loop, vec_info_shared *shared,
    for it.  The different analyses will record information in the
    loop_vec_info struct.  */
 opt_loop_vec_info
-vect_analyze_loop (class loop *loop, vec_info_shared *shared)
+vect_analyze_loop (class loop *loop, gimple *loop_vectorized_call,
+		   vec_info_shared *shared)
 {
   DUMP_VECT_SCOPE ("analyze_loop_nest");
 
@@ -3538,7 +3553,8 @@ vect_analyze_loop (class loop *loop, vec_info_shared *shared)
 
   /* Analyze the loop form.  */
   vect_loop_form_info loop_form_info;
-  opt_result res = vect_analyze_loop_form (loop, &loop_form_info);
+  opt_result res = vect_analyze_loop_form (loop, loop_vectorized_call,
+					   &loop_form_info);
   if (!res)
     {
       if (dump_enabled_p ())
@@ -10278,7 +10294,7 @@ vectorizable_induction (loop_vec_info loop_vinfo,
   tree vec_def;
   edge pe = loop_preheader_edge (loop);
   basic_block new_bb;
-  tree new_vec, vec_init, vec_step, t;
+  tree new_vec, vec_init = NULL_TREE, vec_step, t;
   tree new_name;
   gimple *new_stmt;
   gphi *induction_phi;

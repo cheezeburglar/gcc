@@ -1,3 +1,27 @@
+2024-10-07  Jason Merrill  <jason@redhat.com>
+
+	* c-ppoutput.cc (preprocess_file): For modules,
+	use directives-only scan even with flag_no_output.
+	(directives_only_cb): Respect flag_no_output.
+
+2024-10-03  Jason Merrill  <jason@redhat.com>
+
+	* c-opts.cc (c_common_post_options): Explicit -Wdeprecated enables
+	deprecations from later standards.
+
+2024-10-03  Jason Merrill  <jason@redhat.com>
+
+	* c.opt: Add -Wdeprecated-literal-operator.
+	* c-opts.cc (c_common_post_options): Default on in C++23.
+	* c.opt.urls: Regenerate.
+
+2024-10-02  Jakub Jelinek  <jakub@redhat.com>
+
+	PR preprocessor/96842
+	* c.opt (Wheader-guard): New option.
+	* c.opt.urls: Regenerated.
+	* c-ppoutput.cc (init_pp_output): Initialize also cb->get_suggestion.
+
 2024-10-01  Jason Merrill  <jason@redhat.com>
 
 	* c-cppbuiltin.cc (c_cpp_builtins): Don't define __cpp_concepts

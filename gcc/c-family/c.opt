@@ -664,6 +664,10 @@ C++ ObjC++ Var(warn_deprecated_enum_float_conv) Warning
 Warn about deprecated arithmetic conversions on operands where one is of enumeration
 type and the other is of a floating-point type.
 
+Wdeprecated-literal-operator
+C++ ObjC++ Var(warn_deprecated_literal_operator) Warning
+Warn about deprecated space between "" and suffix in a user-defined literal operator.
+
 Wdesignated-init
 C ObjC Var(warn_designated_init) Init(1) Warning
 Warn about positional initialization of structs requiring designated initializers.
@@ -1209,6 +1213,10 @@ Warn when a pointer is cast to an integer of a different size.
 Wpragmas
 C ObjC C++ ObjC++ Var(warn_pragmas) Init(1) Warning
 Warn about misuses of pragmas.
+
+Wpragma-once-outside-header
+C ObjC C++ ObjC++ Var(warn_pragma_once_outside_header) CppReason(CPP_W_PRAGMA_ONCE_OUTSIDE_HEADER) Init(1) Warning
+Warn about #pragma once outside of a header.
 
 Wprio-ctor-dtor
 C ObjC C++ ObjC++ Var(warn_prio_ctor_dtor) Init(1) Warning
