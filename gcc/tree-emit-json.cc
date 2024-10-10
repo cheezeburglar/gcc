@@ -61,7 +61,6 @@ static void omp_atomic_memory_order_add_json (json::object &,
 static json::object * omp_atomic_memory_order_emit_json(
                                          omp_memory_order);
 static json::object * omp_clause_emit_json(tree, dump_info_p);
-static json::array * loc_emit_json(expanded_location);
 
 /* Add tree to the splay tree contained in di. */ 
 
@@ -120,7 +119,6 @@ function_decl_emit_json (tree t, dump_info_p di)
       auto arg_json = new json::object ();
       arg_json->set_bool("void_list_node", true);
       arg_holder->append(arg_json);
-//      delete (arg_json);
     }
   return arg_holder;
 }
@@ -1206,6 +1204,18 @@ omp_atomic_memory_order_add_json (json::object & json_obj, enum omp_memory_order
     }
 }
 
+// 
+
+static void
+set_xloc_as (json::object & json_obj, expanded_location xloc, const char *label)
+{
+  int buff_length = 1 + snprintf(nullptr, 0, "%s:%d:%d", 
+                           xloc.file, xloc.line, xloc.column);
+  char * buff = new char[buff_length];
+  snprintf(buff, buff_length, "%s:%d:%d", xloc.file, xloc.line, xloc.column);
+  json_obj.set_string(label, buff);
+}
+
 json::object *
 omp_atomic_memory_order_emit_json(omp_memory_order mo)
 {
@@ -1218,20 +1228,9 @@ json::object *
 omp_clause_emit_json(tree t, dump_info_p di)
 {
   auto x = new json::object ();
-  omp_clause_add_json(t, *x, di);
+  if (t)
+    omp_clause_add_json(t, *x, di);
   return x;
-}
-
-json::array *
-loc_emit_json (expanded_location xloc)
-{
-  auto loc_holder = new json::array ();
-  auto loc_info = new json::object ();
-  loc_info->set_string("file", xloc.file);
-  loc_info->set_integer("line", xloc.line);
-  loc_info->set_integer("column", xloc.column);
-  loc_holder->append(loc_info);
-  return loc_holder;
 }
 
 /* For some referenced nodes that may be too verbose. This
@@ -1970,29 +1969,24 @@ node_emit_json(tree t, dump_info_p di)
     case COMPONENT_REF:
       op0 = TREE_OPERAND (t, 0);
       op1 = TREE_OPERAND (t, 1);
-      //Check if the following is okay later
       if (op0
           && (TREE_CODE (op0) == INDIRECT_REF
               || (TREE_CODE (op0) == MEM_REF
                   && TREE_CODE (TREE_OPERAND (op0, 0)) != ADDR_EXPR
                   && integer_zerop (TREE_OPERAND (op0, 1))
-                  //We want to be explicit about Integer_CSTs
                   && TREE_CODE (TREE_OPERAND (op0, 0)) != INTEGER_CST
-                  // To play nice with SSA
                   && TREE_TYPE (TREE_OPERAND (op0, 0)) != NULL_TREE
-                  // I don't understand what the qualm is here
                   && (TREE_TYPE (TREE_TYPE (TREE_OPERAND (op0, 0)))
                       == (TREE_TYPE (TREE_TYPE (TREE_OPERAND (op0, 1)))))
                   && (TYPE_MODE (TREE_TYPE (TREE_OPERAND (op0, 0)))
                       == (TYPE_MODE (TREE_TYPE (TREE_OPERAND (op0, 1)))))
                   && (TYPE_REF_CAN_ALIAS_ALL (TREE_TYPE (TREE_OPERAND (op0, 0)))
                       == (TYPE_REF_CAN_ALIAS_ALL (TREE_TYPE (TREE_OPERAND (op0, 1)))))
-                  // Understand this later too
                   && (TYPE_MAIN_VARIANT (TREE_TYPE (op0))
-                      == TYPE_MAIN_VARIANT (TREE_TYPE (TREE_TYPE (TREE_OPERAND (op0, 1)))))
+                      == TYPE_MAIN_VARIANT (
+                            TREE_TYPE (TREE_TYPE (TREE_OPERAND (op0, 1)))))
                   && MR_DEPENDENCE_CLIQUE (op0) == 0)))
         {
-          //
           op0 = TREE_OPERAND (op0, 0);
         }
       json_obj->set("expr", node_to_json_brief(op0, di));
@@ -2209,8 +2203,10 @@ node_emit_json(tree t, dump_info_p di)
         if (CALL_EXPR_FN (t) != NULL_TREE)
           call_name_add_json (CALL_EXPR_FN(t), *json_obj.get(), di);
         else
-          json_obj->set_string("internal_fn", internal_fn_name (CALL_EXPR_IFN (t)));
-        json_obj->set_bool("return_slot_optimization", CALL_EXPR_RETURN_SLOT_OPT(t));
+          json_obj->set_string("internal_fn",
+                               internal_fn_name (CALL_EXPR_IFN (t)));
+        json_obj->set_bool("return_slot_optimization",
+                           CALL_EXPR_RETURN_SLOT_OPT(t));
         json_obj->set_bool("tail_call", CALL_EXPR_TAILCALL(t));
 
         tree arg;
@@ -3041,51 +3037,44 @@ node_emit_json(tree t, dump_info_p di)
       json_obj->set_string("fallthrough", get_tree_code_name(code));
       break;
   }
-  return json_obj;
-}
 
-/* Same as node_emit_json, but we also have the location info at end. */
-
-std::unique_ptr<json::object>
-node_emit_json_loc (tree t, dump_info_p di)
-{
-  expanded_location xloc;
-  enum tree_code code;
-
-  code = TREE_CODE(t);
-  std::unique_ptr<json::object> json_obj = node_emit_json(t, di);
-
-  if (TREE_CODE_CLASS (code) == tcc_declaration
-      && code != TRANSLATION_UNIT_DECL)
+  // Logic for handling location information. Typically like: 
+  // "expr_loc": "file.cc:line:column"
+  if (di->flags & TDF_LINENO)
     {
-      xloc = expand_location (DECL_SOURCE_LOCATION (t));
-      json_obj->set("decl_loc", loc_emit_json(xloc));
-    }
-  else if (EXPR_P (t))
-    {
-      if (EXPR_HAS_LOCATION(t))
-	{
-	  xloc = expand_location (EXPR_LOCATION (t));
-	  json_obj->set("expr_loc", loc_emit_json(xloc));
-	}
-      if (EXPR_HAS_RANGE (t))
-	{
-	  source_range r = EXPR_LOCATION_RANGE (t);
-	  if (r.m_start)
-	    {
-	      xloc = expand_location (r.m_start);
-	      json_obj->set("start_loc", loc_emit_json(xloc));
-	    } else {
-		json_obj->set_string("start_loc", "unknown");
-	    }
-	  if (r.m_finish)
-	    {
-	      xloc = expand_location (r.m_finish);
-	      json_obj->set("finish_loc", loc_emit_json(xloc));
-	    } else {
-		json_obj->set_string("finish_loc", "unknown");
-	    }
-	}
+    expanded_location xloc;
+    if (TREE_CODE_CLASS (code) == tcc_declaration
+        && code != TRANSLATION_UNIT_DECL)
+      {
+        xloc = expand_location (DECL_SOURCE_LOCATION (t));
+        set_xloc_as(*json_obj.get(), xloc, "decl_source_loc");
+      }
+    else if (EXPR_P (t))
+      {
+        if (EXPR_HAS_LOCATION(t))
+          {
+            xloc = expand_location (EXPR_LOCATION (t));
+            set_xloc_as(*json_obj.get(), xloc, "expr_loc");
+          }
+        if (EXPR_HAS_RANGE (t))
+          {
+            source_range r = EXPR_LOCATION_RANGE (t);
+            if (r.m_start)
+              {
+//                xloc = expand_location (r.m_start);
+//                set_xloc_as(*json_obj.get(), xloc, "start_loc");
+              } else {
+          	json_obj->set_string("start_loc", "unknown");
+              }
+            if (r.m_finish)
+              {
+                xloc = expand_location (r.m_finish);
+                set_xloc_as(*json_obj.get(), xloc, "finish_loc");
+              } else {
+                json_obj->set_string("finish_loc", "unknown");
+              }
+          }
+      }
     }
   return json_obj;
 }
@@ -3112,15 +3101,8 @@ dequeue_and_dump (dump_info_p di)
   di->free_list = dq;
 
   /* Convert the node to JSON and store it to be dumped later. */
-
-  if (di->flags & TDF_LINENO)
-    {
-      auto dummy = node_emit_json_loc(t, di).release();
-      di->json_dump->append(dummy);
-    } else {
-      auto dummy = node_emit_json(t, di).release();
-      di->json_dump->append(dummy);
-    }
+  auto dummy = node_emit_json(t, di).release();
+  di->json_dump->append(dummy);
 }
 
 /* Dump T, and all its children, on STREAM as JSON array. */
@@ -3141,7 +3123,7 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
   di.node = t;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
-  di.json_dump = ::make_unique<json::array> ();
+  di.json_dump = make_unique<json::array> ();
 
   /* Queue up the first node.  */
   queue (&di, t);
