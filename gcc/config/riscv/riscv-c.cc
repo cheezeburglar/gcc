@@ -59,7 +59,12 @@ riscv_pragma_intrinsic_flags_pollute (struct pragma_intrinsic_flags *flags)
   riscv_zvl_flags = riscv_zvl_flags
     | MASK_ZVL32B
     | MASK_ZVL64B
-    | MASK_ZVL128B;
+    | MASK_ZVL128B
+    | MASK_ZVL256B
+    | MASK_ZVL512B
+    | MASK_ZVL1024B
+    | MASK_ZVL2048B
+    | MASK_ZVL4096B;
 
   riscv_vector_elen_flags = riscv_vector_elen_flags
     | MASK_VECTOR_ELEN_32
@@ -123,7 +128,7 @@ riscv_cpu_cpp_builtins (cpp_reader *pfile)
   if (TARGET_ATOMIC)
     builtin_define ("__riscv_atomic");
 
-  if (TARGET_ZMMUL)
+  if (TARGET_MUL)
     builtin_define ("__riscv_mul");
   if (TARGET_DIV)
     builtin_define ("__riscv_div");

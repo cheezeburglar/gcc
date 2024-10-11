@@ -3461,7 +3461,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
   }
   (if (wi::eq_p (trunc_max, int_cst_1) && wi::eq_p (max, int_cst_2))))))
 
-/* Signed saturation truncate, case 1, sizeof (WT) > sizeof (NT).
+/* Signed saturation truncate, case 1 and case 2, sizeof (WT) > sizeof (NT).
    SAT_S_TRUNC(X) = (unsigned)X + NT_MAX + 1  > Unsigned_MAX ? (NT)X.  */
 (match (signed_integer_sat_trunc @0)
  (cond^ (gt (plus:c (convert@4 @0) INTEGER_CST@1) INTEGER_CST@2)
@@ -3471,17 +3471,26 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
       && !TYPE_UNSIGNED (TREE_TYPE (@0)) && TYPE_UNSIGNED (TREE_TYPE (@4)))
  (with
   {
-   unsigned itype_precision = TYPE_PRECISION (TREE_TYPE (@0));
-   unsigned otype_precision = TYPE_PRECISION (type);
-   wide_int offset = wi::uhwi (HOST_WIDE_INT_1U << (otype_precision - 1), itype_precision);
-   wide_int trunc_max = wi::mask (otype_precision, false, itype_precision);
-   wide_int max = wi::mask (otype_precision - 1, false, otype_precision);
+   unsigned itype_prec = TYPE_PRECISION (TREE_TYPE (@0));
+   unsigned otype_prec = TYPE_PRECISION (type);
+   wide_int offset = wi::uhwi (HOST_WIDE_INT_1U << (otype_prec - 1),
+			       itype_prec); // Aka 128 for int8_t
+   wide_int limit_0 = wi::mask (otype_prec, false, itype_prec); // Aka 255
+   wide_int limit_1 = wi::uhwi ((HOST_WIDE_INT_1U << otype_prec) - 3,
+				itype_prec); // Aka 253
+   wide_int limit_2 = wi::uhwi ((HOST_WIDE_INT_1U << otype_prec) - 2,
+				itype_prec); // Aka 254
+   wide_int otype_max = wi::mask (otype_prec - 1, false, otype_prec);
+   wide_int itype_max = wi::mask (otype_prec - 1, false, itype_prec);
    wide_int int_cst_1 = wi::to_wide (@1);
    wide_int int_cst_2 = wi::to_wide (@2);
    wide_int int_cst_3 = wi::to_wide (@3);
   }
-  (if (wi::eq_p (int_cst_1, offset) && wi::eq_p (int_cst_2, trunc_max)
-       && wi::eq_p (int_cst_3, max))))))
+  (if (((wi::eq_p (int_cst_1, offset) && wi::eq_p (int_cst_2, limit_0))
+	 || (wi::eq_p (int_cst_1, itype_max) && wi::eq_p (int_cst_2, limit_2))
+	 || (wi::eq_p (int_cst_1, offset) && wi::eq_p (int_cst_2, limit_2))
+	 || (wi::eq_p (int_cst_1, itype_max) && wi::eq_p (int_cst_2, limit_1)))
+       && wi::eq_p (int_cst_3, otype_max))))))
 
 /* x >  y  &&  x != XXX_MIN  -->  x > y
    x >  y  &&  x == XXX_MIN  -->  false . */
@@ -5415,8 +5424,13 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 /* x / y * y == x -> x % y == 0.  */
 (simplify
   (eq:c (mult:c (trunc_div:s @0 @1) @1) @0)
-  (if (TREE_CODE (TREE_TYPE (@0)) != COMPLEX_TYPE)
-    (eq (trunc_mod @0 @1) { build_zero_cst (TREE_TYPE (@0)); })))
+  (if (TREE_CODE (TREE_TYPE (@0)) != COMPLEX_TYPE
+       && (!VECTOR_MODE_P (TYPE_MODE (TREE_TYPE (@0)))
+	   || !target_supports_op_p (TREE_TYPE (@0), TRUNC_DIV_EXPR,
+				     optab_vector)
+	   || target_supports_op_p (TREE_TYPE (@0), TRUNC_MOD_EXPR,
+				    optab_vector)))
+   (eq (trunc_mod @0 @1) { build_zero_cst (TREE_TYPE (@0)); })))
 
 /* ((X /[ex] A) +- B) * A  -->  X +- A * B.  */
 (for op (plus minus)
@@ -5685,35 +5699,38 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 /* (c ? a : b) op (c ? d : e)  -->  c ? (a op d) : (b op e) */
  (simplify
   (op (vec_cond:s @0 @1 @2) (vec_cond:s @0 @3 @4))
-  (if (TREE_CODE_CLASS (op) != tcc_comparison
-       || types_match (type, TREE_TYPE (@1))
-       || expand_vec_cond_expr_p (type, TREE_TYPE (@0), ERROR_MARK)
-       || (optimize_vectors_before_lowering_p ()
-	   /* The following is optimistic on the side of non-support, we are
-	      missing the legacy vcond{,u,eq} cases.  Do this only when
-	      lowering will be able to fixup..  */
-	   && !expand_vec_cond_expr_p (TREE_TYPE (@1),
-				       TREE_TYPE (@0), ERROR_MARK)))
+  (if (VECTOR_TYPE_P (type)
+       && (TREE_CODE_CLASS (op) != tcc_comparison
+	   || types_match (type, TREE_TYPE (@1))
+	   || expand_vec_cond_expr_p (type, TREE_TYPE (@0), ERROR_MARK)
+	   || (optimize_vectors_before_lowering_p ()
+	       /* The following is optimistic on the side of non-support, we are
+		  missing the legacy vcond{,u,eq} cases.  Do this only when
+		  lowering will be able to fixup..  */
+	       && !expand_vec_cond_expr_p (TREE_TYPE (@1),
+					   TREE_TYPE (@0), ERROR_MARK))))
    (vec_cond @0 (op! @1 @3) (op! @2 @4))))
 
 /* (c ? a : b) op d  -->  c ? (a op d) : (b op d) */
  (simplify
   (op (vec_cond:s @0 @1 @2) @3)
-  (if (TREE_CODE_CLASS (op) != tcc_comparison
-       || types_match (type, TREE_TYPE (@1))
-       || expand_vec_cond_expr_p (type, TREE_TYPE (@0), ERROR_MARK)
-       || (optimize_vectors_before_lowering_p ()
-	   && !expand_vec_cond_expr_p (TREE_TYPE (@1),
-				       TREE_TYPE (@0), ERROR_MARK)))
+  (if (VECTOR_TYPE_P (type)
+       && (TREE_CODE_CLASS (op) != tcc_comparison
+	   || types_match (type, TREE_TYPE (@1))
+	   || expand_vec_cond_expr_p (type, TREE_TYPE (@0), ERROR_MARK)
+	   || (optimize_vectors_before_lowering_p ()
+	       && !expand_vec_cond_expr_p (TREE_TYPE (@1),
+					   TREE_TYPE (@0), ERROR_MARK))))
    (vec_cond @0 (op! @1 @3) (op! @2 @3))))
  (simplify
   (op @3 (vec_cond:s @0 @1 @2))
-  (if (TREE_CODE_CLASS (op) != tcc_comparison
-       || types_match (type, TREE_TYPE (@1))
-       || expand_vec_cond_expr_p (type, TREE_TYPE (@0), ERROR_MARK)
-       || (optimize_vectors_before_lowering_p ()
-	   && !expand_vec_cond_expr_p (TREE_TYPE (@1),
-				       TREE_TYPE (@0), ERROR_MARK)))
+  (if (VECTOR_TYPE_P (type)
+       && (TREE_CODE_CLASS (op) != tcc_comparison
+	   || types_match (type, TREE_TYPE (@1))
+	   || expand_vec_cond_expr_p (type, TREE_TYPE (@0), ERROR_MARK)
+	   || (optimize_vectors_before_lowering_p ()
+	       && !expand_vec_cond_expr_p (TREE_TYPE (@1),
+					   TREE_TYPE (@0), ERROR_MARK))))
    (vec_cond @0 (op! @3 @1) (op! @3 @2)))))
 
 #if GIMPLE
@@ -8164,6 +8181,31 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
   (simplify
    (rdiv @0 (exps:s @1))
     (mult @0 (exps (negate @1)))))
+
+ (if (! HONOR_SIGN_DEPENDENT_ROUNDING (type)
+      && ! HONOR_NANS (type) && ! HONOR_INFINITIES (type)
+      && ! flag_trapping_math
+      && ! flag_errno_math)
+  (for logs (LOG LOG2 LOG10)
+   /* Simplify logN(1.0/a) into -logN(a).  */
+   (simplify
+    (logs (rdiv:s real_onep@0 @1))
+     (negate (logs @1)))
+
+   /* Simplify logN(C/a) into logN(C)-logN(a).  */
+   (simplify
+    (logs (rdiv:s REAL_CST@0 @1))
+     (minus (logs! @0) (logs @1)))
+
+   /* Simplify logN(a)+logN(b) into logN(a*b).  */
+   (simplify
+    (plus (logs:s @0) (logs:s @1))
+     (logs (mult @0 @1)))
+
+   /* Simplify logN(a)-logN(b) into logN(a/b).  */
+   (simplify
+    (minus (logs:s @0) (logs:s @1))
+     (logs (rdiv @0 @1)))))
 
  (for logs (LOG LOG2 LOG10 LOG10)
       exps (EXP EXP2 EXP10 POW10)

@@ -25025,12 +25025,15 @@ private:
      where we know it's not loaded from memory.  */
   unsigned m_num_gpr_needed[3];
   unsigned m_num_sse_needed[3];
+  /* Number of 256-bit vector permutation.  */
+  unsigned m_num_avx256_vec_perm[3];
 };
 
 ix86_vector_costs::ix86_vector_costs (vec_info* vinfo, bool costing_for_scalar)
   : vector_costs (vinfo, costing_for_scalar),
     m_num_gpr_needed (),
-    m_num_sse_needed ()
+    m_num_sse_needed (),
+    m_num_avx256_vec_perm ()
 {
 }
 
@@ -25198,13 +25201,21 @@ ix86_vector_costs::add_stmt_cost (int count, vect_cost_for_stmt kind,
      (AGU and load ports).  Try to account for this by scaling the
      construction cost by the number of elements involved.  */
   if ((kind == vec_construct || kind == vec_to_scalar)
-      && stmt_info
-      && (STMT_VINFO_TYPE (stmt_info) == load_vec_info_type
-	  || STMT_VINFO_TYPE (stmt_info) == store_vec_info_type)
-      && ((STMT_VINFO_MEMORY_ACCESS_TYPE (stmt_info) == VMAT_ELEMENTWISE
-	   && (TREE_CODE (DR_STEP (STMT_VINFO_DATA_REF (stmt_info)))
-	       != INTEGER_CST))
-	  || STMT_VINFO_MEMORY_ACCESS_TYPE (stmt_info) == VMAT_GATHER_SCATTER))
+      && ((stmt_info
+	   && (STMT_VINFO_TYPE (stmt_info) == load_vec_info_type
+	       || STMT_VINFO_TYPE (stmt_info) == store_vec_info_type)
+	   && ((STMT_VINFO_MEMORY_ACCESS_TYPE (stmt_info) == VMAT_ELEMENTWISE
+		&& (TREE_CODE (DR_STEP (STMT_VINFO_DATA_REF (stmt_info)))
+		    != INTEGER_CST))
+	       || (STMT_VINFO_MEMORY_ACCESS_TYPE (stmt_info)
+		   == VMAT_GATHER_SCATTER)))
+	  || (node
+	      && ((SLP_TREE_MEMORY_ACCESS_TYPE (node) == VMAT_ELEMENTWISE
+		  && (TREE_CODE (DR_STEP (STMT_VINFO_DATA_REF
+					    (SLP_TREE_REPRESENTATIVE (node))))
+		      != INTEGER_CST))
+		  || (SLP_TREE_MEMORY_ACCESS_TYPE (node)
+		      == VMAT_GATHER_SCATTER)))))
     {
       stmt_cost = ix86_builtin_vectorization_cost (kind, vectype, misalign);
       stmt_cost *= (TYPE_VECTOR_SUBPARTS (vectype) + 1);
@@ -25263,6 +25274,10 @@ ix86_vector_costs::add_stmt_cost (int count, vect_cost_for_stmt kind,
     }
   if (stmt_cost == -1)
     stmt_cost = ix86_builtin_vectorization_cost (kind, vectype, misalign);
+
+  if (kind == vec_perm && vectype
+      && GET_MODE_SIZE (TYPE_MODE (vectype)) == 32)
+    m_num_avx256_vec_perm[where]++;
 
   /* Penalize DFmode vector operations for Bonnell.  */
   if (TARGET_CPU_P (BONNELL) && kind == vector_stmt
@@ -25332,6 +25347,11 @@ ix86_vector_costs::finish_cost (const vector_costs *scalar_costs)
     }
 
   ix86_vect_estimate_reg_pressure ();
+
+  for (int i = 0; i != 3; i++)
+    if (m_num_avx256_vec_perm[i]
+	&& TARGET_AVX256_AVOID_VEC_PERM)
+      m_costs[i] = INT_MAX;
 
   vector_costs::finish_cost (scalar_costs);
 }

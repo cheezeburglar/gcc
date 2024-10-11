@@ -124,6 +124,7 @@ _slp_tree::_slp_tree ()
   this->ldst_lanes = false;
   SLP_TREE_VECTYPE (this) = NULL_TREE;
   SLP_TREE_REPRESENTATIVE (this) = NULL;
+  SLP_TREE_MEMORY_ACCESS_TYPE (this) = VMAT_INVARIANT;
   SLP_TREE_REF_COUNT (this) = 1;
   this->failed = NULL;
   this->max_nunits = 1;
@@ -905,7 +906,8 @@ vect_get_and_check_slp_defs (vec_info *vinfo, unsigned char swap,
 	    }
 
 	  if (is_a <bb_vec_info> (vinfo)
-	      && !oprnd_info->any_pattern)
+	      && !oprnd_info->any_pattern
+	      && number_of_oprnds > 1)
 	    {
 	      /* Now for commutative ops we should see whether we can
 		 make the other operand matching.  */
@@ -1305,10 +1307,12 @@ vect_build_slp_tree_1 (vec_info *vinfo, unsigned char *swap,
 	      /* Mismatch.  */
 	      continue;
 	    }
-	  if (first_stmt_code != rhs_code
+	  if (!ldst_p
+	      && first_stmt_code != rhs_code
 	      && alt_stmt_code == ERROR_MARK)
 	    alt_stmt_code = rhs_code;
-	  if ((first_stmt_code != rhs_code
+	  if ((!ldst_p
+	       && first_stmt_code != rhs_code
 	       && (first_stmt_code != IMAGPART_EXPR
 		   || rhs_code != REALPART_EXPR)
 	       && (first_stmt_code != REALPART_EXPR
@@ -1325,20 +1329,7 @@ vect_build_slp_tree_1 (vec_info *vinfo, unsigned char *swap,
 		    && (TREE_CODE_CLASS (tree_code (first_stmt_code))
 			== tcc_comparison)
 		    && (swap_tree_comparison (tree_code (first_stmt_code))
-			== tree_code (rhs_code)))
-	       && !(STMT_VINFO_GROUPED_ACCESS (stmt_info)
-		    && (first_stmt_code == ARRAY_REF
-			|| first_stmt_code == BIT_FIELD_REF
-			|| first_stmt_code == COMPONENT_REF
-			|| first_stmt_code == REALPART_EXPR
-			|| first_stmt_code == IMAGPART_EXPR
-			|| first_stmt_code == MEM_REF)
-		    && (rhs_code == ARRAY_REF
-			|| rhs_code == BIT_FIELD_REF
-			|| rhs_code == COMPONENT_REF
-			|| rhs_code == REALPART_EXPR
-			|| rhs_code == IMAGPART_EXPR
-			|| rhs_code == MEM_REF)))
+			== tree_code (rhs_code))))
 	      || (ldst_p
 		  && (STMT_VINFO_GROUPED_ACCESS (stmt_info)
 		      != STMT_VINFO_GROUPED_ACCESS (first_stmt_info)))
@@ -1377,8 +1368,9 @@ vect_build_slp_tree_1 (vec_info *vinfo, unsigned char *swap,
 	      && first_stmt_code != CFN_MASK_LOAD
 	      && first_stmt_code != CFN_MASK_STORE)
 	    {
-	      if (!compatible_calls_p (as_a <gcall *> (stmts[0]->stmt),
-				       call_stmt))
+	      if (!is_a <gcall *> (stmts[0]->stmt)
+		  || !compatible_calls_p (as_a <gcall *> (stmts[0]->stmt),
+					  call_stmt))
 		{
 		  if (dump_enabled_p ())
 		    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
@@ -2040,7 +2032,8 @@ vect_build_slp_tree_2 (vec_info *vinfo, slp_tree node,
 		 loads with gaps.  */
 	      if ((STMT_VINFO_GROUPED_ACCESS (stmt_info)
 		   && (DR_GROUP_GAP (first_stmt_info) != 0 || has_gaps))
-		  || STMT_VINFO_STRIDED_P (stmt_info))
+		  || STMT_VINFO_STRIDED_P (stmt_info)
+		  || (!STMT_VINFO_GROUPED_ACCESS (stmt_info) && any_permute))
 		{
 		  load_permutation.release ();
 		  matches[0] = false;
@@ -3513,17 +3506,22 @@ vect_match_slp_patterns (slp_instance instance, vec_info *vinfo,
 }
 
 /* STMT_INFO is a store group of size GROUP_SIZE that we are considering
-   splitting into two, with the first split group having size NEW_GROUP_SIZE.
+   vectorizing with VECTYPE that might be NULL.  MASKED_P indicates whether
+   the stores are masked.
    Return true if we could use IFN_STORE_LANES instead and if that appears
    to be the better approach.  */
 
 static bool
 vect_slp_prefer_store_lanes_p (vec_info *vinfo, stmt_vec_info stmt_info,
+			       tree vectype, bool masked_p,
 			       unsigned int group_size,
 			       unsigned int new_group_size)
 {
-  tree scalar_type = TREE_TYPE (DR_REF (STMT_VINFO_DATA_REF (stmt_info)));
-  tree vectype = get_vectype_for_scalar_type (vinfo, scalar_type);
+  if (!vectype)
+    {
+      tree scalar_type = TREE_TYPE (DR_REF (STMT_VINFO_DATA_REF (stmt_info)));
+      vectype = get_vectype_for_scalar_type (vinfo, scalar_type);
+    }
   if (!vectype)
     return false;
   /* Allow the split if one of the two new groups would operate on full
@@ -3537,7 +3535,7 @@ vect_slp_prefer_store_lanes_p (vec_info *vinfo, stmt_vec_info stmt_info,
   if (multiple_p (group_size - new_group_size, TYPE_VECTOR_SUBPARTS (vectype))
       || multiple_p (new_group_size, TYPE_VECTOR_SUBPARTS (vectype)))
     return false;
-  return vect_store_lanes_supported (vectype, group_size, false) != IFN_LAST;
+  return vect_store_lanes_supported (vectype, group_size, masked_p) != IFN_LAST;
 }
 
 /* Analyze an SLP instance starting from a group of grouped stores.  Call
@@ -3982,6 +3980,10 @@ vect_build_slp_instance (vec_info *vinfo,
       else if (is_a <loop_vec_info> (vinfo)
 	       && (group_size != 1 && i < group_size))
 	{
+	  gcall *call = dyn_cast <gcall *> (stmt_info->stmt);
+	  bool masked_p = call
+	      && gimple_call_internal_p (call)
+	      && internal_fn_mask_index (gimple_call_internal_fn (call)) != -1;
 	  /* There are targets that cannot do even/odd interleaving schemes
 	     so they absolutely need to use load/store-lanes.  For now
 	     force single-lane SLP for them - they would be happy with
@@ -3996,9 +3998,10 @@ vect_build_slp_instance (vec_info *vinfo,
 	  bool want_store_lanes
 	    = (! STMT_VINFO_GATHER_SCATTER_P (stmt_info)
 	       && ! STMT_VINFO_STRIDED_P (stmt_info)
+	       && ! STMT_VINFO_SLP_VECT_ONLY (stmt_info)
 	       && compare_step_with_zero (vinfo, stmt_info) > 0
-	       && vect_slp_prefer_store_lanes_p (vinfo, stmt_info,
-						 group_size, 1));
+	       && vect_slp_prefer_store_lanes_p (vinfo, stmt_info, NULL_TREE,
+						 masked_p, group_size, 1));
 	  if (want_store_lanes || force_single_lane)
 	    i = 1;
 
@@ -4083,14 +4086,14 @@ vect_build_slp_instance (vec_info *vinfo,
 
 	  /* Now re-assess whether we want store lanes in case the
 	     discovery ended up producing all single-lane RHSs.  */
-	  if (rhs_common_nlanes == 1
+	  if (! want_store_lanes
+	      && rhs_common_nlanes == 1
 	      && ! STMT_VINFO_GATHER_SCATTER_P (stmt_info)
 	      && ! STMT_VINFO_STRIDED_P (stmt_info)
+	      && ! STMT_VINFO_SLP_VECT_ONLY (stmt_info)
 	      && compare_step_with_zero (vinfo, stmt_info) > 0
 	      && (vect_store_lanes_supported (SLP_TREE_VECTYPE (rhs_nodes[0]),
-					      group_size,
-					      SLP_TREE_CHILDREN
-						(rhs_nodes[0]).length () != 1)
+					      group_size, masked_p)
 		  != IFN_LAST))
 	    want_store_lanes = true;
 
@@ -10288,10 +10291,19 @@ vectorizable_slp_permutation_1 (vec_info *vinfo, gimple_stmt_iterator *gsi,
 	}
       auto op_nunits = TYPE_VECTOR_SUBPARTS (op_vectype);
       unsigned int this_unpack_factor;
+      /* Detect permutations of external, pre-existing vectors.  The external
+	 node's SLP_TREE_LANES stores the total number of units in the vector,
+	 or zero if the vector has variable length.
+
+	 We are expected to keep the original VEC_PERM_EXPR for such cases.
+	 There is no repetition to model.  */
+      if (SLP_TREE_DEF_TYPE (child) == vect_external_def
+	  && SLP_TREE_SCALAR_OPS (child).is_empty ())
+	repeating_p = false;
       /* Check whether the input has twice as many lanes per vector.  */
-      if (children.length () == 1
-	  && known_eq (SLP_TREE_LANES (child) * nunits,
-		       SLP_TREE_LANES (node) * op_nunits * 2))
+      else if (children.length () == 1
+	       && known_eq (SLP_TREE_LANES (child) * nunits,
+			    SLP_TREE_LANES (node) * op_nunits * 2))
 	pack_p = true;
       /* Check whether the output has N times as many lanes per vector.  */
       else if (constant_multiple_p (SLP_TREE_LANES (node) * op_nunits,
