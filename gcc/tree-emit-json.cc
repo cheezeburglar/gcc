@@ -2119,6 +2119,9 @@ node_emit_json(tree t, dump_info_p di)
                     else 
                       cst_elt->set ("field", node_to_json_brief (field, di));
                   }
+                if (TREE_CODE (field) == INTEGER_CST)
+                  curidx = wi::to_widest (field);
+                holder->append(cst_elt);
               }
             if (is_array_init)
               curidx += 1;
@@ -2133,9 +2136,6 @@ node_emit_json(tree t, dump_info_p di)
             else
               cst_elt->set("val", node_to_json_brief(val, di));
 
-            if (TREE_CODE (field) == INTEGER_CST)
-              curidx = wi::to_widest (field);
-            holder->append(cst_elt);
           }
         json_obj->set("ctor_elts", holder);
       }
