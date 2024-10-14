@@ -2112,8 +2112,10 @@ node_emit_json(tree t, dump_info_p di)
                     if (TREE_CODE (field) == RANGE_EXPR)
                       {
                         array_init_json = new json::array ();
-                        array_init_json->append(node_to_json_brief(TREE_OPERAND(field, 0), di));
-                        array_init_json->append(node_to_json_brief(TREE_OPERAND(field, 1), di));
+                        array_init_json->append(node_to_json_brief(
+                                                   TREE_OPERAND(field, 0), di));
+                        array_init_json->append(node_to_json_brief(
+                                                   TREE_OPERAND(field, 1), di));
                         cst_elt->set("field", array_init_json);
                       }
                     else 
