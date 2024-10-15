@@ -1886,9 +1886,15 @@ namespace views::__adaptor
 	  static auto
 	  _S_iter_cat()
 	  {
+	    // _GLIBCXX_RESOLVE_LIB_DEFECTS
+	    // 3564. transform_view::iterator<true>::value_type and
+	    // iterator_category should use const F&
 	    using _Base = transform_view::_Base<_Const>;
-	    using _Res = invoke_result_t<_Fp&, range_reference_t<_Base>>;
-	    if constexpr (is_lvalue_reference_v<_Res>)
+	    using _Res = invoke_result_t<__maybe_const_t<_Const, _Fp>&,
+					 range_reference_t<_Base>>;
+	    // _GLIBCXX_RESOLVE_LIB_DEFECTS
+	    // 3798. Rvalue reference and iterator_category
+	    if constexpr (is_reference_v<_Res>)
 	      {
 		using _Cat
 		  = typename iterator_traits<iterator_t<_Base>>::iterator_category;
@@ -1936,7 +1942,8 @@ namespace views::__adaptor
 	  using iterator_concept = decltype(_S_iter_concept());
 	  // iterator_category defined in __transform_view_iter_cat
 	  using value_type
-	    = remove_cvref_t<invoke_result_t<_Fp&, range_reference_t<_Base>>>;
+	    = remove_cvref_t<invoke_result_t<__maybe_const_t<_Const, _Fp>&,
+					     range_reference_t<_Base>>>;
 	  using difference_type = range_difference_t<_Base>;
 
 	  _Iterator() requires default_initializable<_Base_iter> = default;
@@ -5042,7 +5049,9 @@ namespace views::__adaptor
 	  using __detail::__range_iter_cat;
 	  using _Res = invoke_result_t<__maybe_const_t<_Const, _Fp>&,
 				       range_reference_t<__maybe_const_t<_Const, _Vs>>...>;
-	  if constexpr (!is_lvalue_reference_v<_Res>)
+	  // _GLIBCXX_RESOLVE_LIB_DEFECTS
+	  // 3798. Rvalue reference and iterator_category
+	  if constexpr (!is_reference_v<_Res>)
 	    return input_iterator_tag{};
 	  else if constexpr ((derived_from<__range_iter_cat<_Vs, _Const>,
 					   random_access_iterator_tag> && ...))
@@ -5815,7 +5824,9 @@ namespace views::__adaptor
       using _Res = invoke_result_t<__unarize<__maybe_const_t<_Const, _Fp>&, _Nm>,
 				   range_reference_t<_Base>>;
       using _Cat = typename iterator_traits<iterator_t<_Base>>::iterator_category;
-      if constexpr (!is_lvalue_reference_v<_Res>)
+      // _GLIBCXX_RESOLVE_LIB_DEFECTS
+      // 3798. Rvalue reference and iterator_category
+      if constexpr (!is_reference_v<_Res>)
 	return input_iterator_tag{};
       else if constexpr (derived_from<_Cat, random_access_iterator_tag>)
 	return random_access_iterator_tag{};
@@ -7223,8 +7234,10 @@ namespace views::__adaptor
 	  using _OuterCat = typename iterator_traits<_OuterIter>::iterator_category;
 	  using _InnerCat = typename iterator_traits<_InnerIter>::iterator_category;
 	  using _PatternCat = typename iterator_traits<_PatternIter>::iterator_category;
-	  if constexpr (!is_lvalue_reference_v<common_reference_t<iter_reference_t<_InnerIter>,
-								  iter_reference_t<_PatternIter>>>)
+	  // _GLIBCXX_RESOLVE_LIB_DEFECTS
+	  // 3798. Rvalue reference and iterator_category
+	  if constexpr (!is_reference_v<common_reference_t<iter_reference_t<_InnerIter>,
+							   iter_reference_t<_PatternIter>>>)
 	    return input_iterator_tag{};
 	  else if constexpr (derived_from<_OuterCat, bidirectional_iterator_tag>
 			     && derived_from<_InnerCat, bidirectional_iterator_tag>

@@ -3395,11 +3395,28 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
    The T and UT are type pair like T=int8_t, UT=uint8_t.  */
 (match (signed_integer_sat_sub @0 @1)
  (cond^ (ne (imagpart (IFN_SUB_OVERFLOW@2 @0 @1)) integer_zerop)
-	(bit_xor:c (negate (convert (lt @0 integer_zerop)))
+	(bit_xor:c (nop_convert?
+		    (negate (nop_convert? (convert (lt @0 integer_zerop)))))
 		   max_value)
 	(realpart @2))
  (if (INTEGRAL_TYPE_P (type) && !TYPE_UNSIGNED (type)
       && types_match (type, @0, @1))))
+
+/* Signed saturation sub, case 4:
+   T minus = (T)((UT)X - (UT)Y);
+   SAT_S_SUB = (X ^ Y) < 0 & (X ^ minus) < 0 ? (-(T)(X < 0) ^ MAX) : minus;
+
+   The T and UT are type pair like T=int8_t, UT=uint8_t.  */
+(match (signed_integer_sat_sub @0 @1)
+ (cond^ (bit_and:c (lt (bit_xor @0 (nop_convert@2 (minus (nop_convert @0)
+						         (nop_convert @1))))
+		       integer_zerop)
+		   (lt (bit_xor:c @0 @1) integer_zerop))
+	(bit_xor:c (nop_convert (negate (nop_convert (convert
+						      (lt @0 integer_zerop)))))
+		   max_value)
+	@2)
+ (if (INTEGRAL_TYPE_P (type) && !TYPE_UNSIGNED (type))))
 
 /* Unsigned saturation truncate, case 1, sizeof (WT) > sizeof (NT).
    SAT_U_TRUNC = (NT)x | (NT)(-(X > (WT)(NT)(-1))).  */
@@ -4672,7 +4689,11 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
      out    (le  gt  gt  le  ge  lt  lt  ge )
  (simplify
   (cmp:c (minmax:c @0 @1) @0)
-  (if (ANY_INTEGRAL_TYPE_P (TREE_TYPE (@0)))
+  (if (ANY_INTEGRAL_TYPE_P (TREE_TYPE (@0))
+       && (!VECTOR_TYPE_P (TREE_TYPE (@0))
+	   || (VECTOR_TYPE_P (type)
+	       && (!expand_vec_cmp_expr_p (TREE_TYPE (@0), type, cmp)
+		   || expand_vec_cmp_expr_p (TREE_TYPE (@0), type, out)))))
    (out @0 @1))))
 /* MIN (X, 5) == 0 -> X == 0
    MIN (X, 5) == 7 -> false  */
@@ -9420,7 +9441,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
    (IFN_FNMS @0 @1 @2))
   (simplify
    (negate (fmas@3 @0 @1 @2))
-   (if (single_use (@3))
+   (if (!HONOR_SIGN_DEPENDENT_ROUNDING (type) && single_use (@3))
     (IFN_FNMS @0 @1 @2))))
 
  (simplify
@@ -9434,7 +9455,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
   (IFN_FNMA @0 @1 @2))
  (simplify
   (negate (IFN_FMS@3 @0 @1 @2))
-   (if (single_use (@3))
+   (if (!HONOR_SIGN_DEPENDENT_ROUNDING (type) && single_use (@3))
     (IFN_FNMA @0 @1 @2)))
 
  (simplify
@@ -9448,7 +9469,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
   (IFN_FMS @0 @1 @2))
  (simplify
   (negate (IFN_FNMA@3 @0 @1 @2))
-  (if (single_use (@3))
+  (if (!HONOR_SIGN_DEPENDENT_ROUNDING (type) && single_use (@3))
    (IFN_FMS @0 @1 @2)))
 
  (simplify
@@ -9462,7 +9483,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
   (IFN_FMA @0 @1 @2))
  (simplify
   (negate (IFN_FNMS@3 @0 @1 @2))
-  (if (single_use (@3))
+  (if (!HONOR_SIGN_DEPENDENT_ROUNDING (type) && single_use (@3))
    (IFN_FMA @0 @1 @2))))
 
 /* CLZ simplifications.  */

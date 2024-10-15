@@ -598,6 +598,9 @@ struct cpp_options
   /* True if -finput-charset= option has been used explicitly.  */
   bool cpp_input_charset_explicit;
 
+  /* -Wtrailing-whitespace= value.  */
+  unsigned char cpp_warn_trailing_whitespace;
+
   /* Dependency generation.  */
   struct
   {
@@ -652,6 +655,13 @@ struct cpp_options
 
   cpp_main_search main_search : 8;
 };
+
+#if GCC_VERSION >= 3005
+#define ATTRIBUTE_CPP_PPDIAG(m, n) \
+  __attribute__ ((__format__ (__gcc_diag__, m , n))) ATTRIBUTE_NONNULL(m)
+#else
+#define ATTRIBUTE_CPP_PPDIAG(m, n) ATTRIBUTE_NONNULL(m)
+#endif
 
 /* Diagnostic levels.  To get a diagnostic without associating a
    position in the translation unit with it, use cpp_error_with_line
@@ -715,7 +725,8 @@ enum cpp_warning_reason {
   CPP_W_INVALID_UTF8,
   CPP_W_UNICODE,
   CPP_W_HEADER_GUARD,
-  CPP_W_PRAGMA_ONCE_OUTSIDE_HEADER
+  CPP_W_PRAGMA_ONCE_OUTSIDE_HEADER,
+  CPP_W_TRAILING_WHITESPACE
 };
 
 /* Callback for header lookup for HEADER, which is the name of a
@@ -760,7 +771,7 @@ struct cpp_callbacks
 		      enum cpp_warning_reason,
 		      rich_location *,
 		      const char *, va_list *)
-       ATTRIBUTE_FPTR_PRINTF(5,0);
+       ATTRIBUTE_CPP_PPDIAG (5,0);
 
   /* Callbacks for when a macro is expanded, or tested (whether
      defined or not at the time) in #ifdef, #ifndef or "defined".  */
@@ -1357,24 +1368,24 @@ cpp_num cpp_num_sign_extend (cpp_num, size_t);
 /* Output a diagnostic of some kind.  */
 extern bool cpp_error (cpp_reader *, enum cpp_diagnostic_level,
 		       const char *msgid, ...)
-  ATTRIBUTE_PRINTF_3;
+  ATTRIBUTE_CPP_PPDIAG (3, 4);
 extern bool cpp_warning (cpp_reader *, enum cpp_warning_reason,
 			 const char *msgid, ...)
-  ATTRIBUTE_PRINTF_3;
+  ATTRIBUTE_CPP_PPDIAG (3, 4);
 extern bool cpp_pedwarning (cpp_reader *, enum cpp_warning_reason,
 			    const char *msgid, ...)
-  ATTRIBUTE_PRINTF_3;
+  ATTRIBUTE_CPP_PPDIAG (3, 4);
 extern bool cpp_warning_syshdr (cpp_reader *, enum cpp_warning_reason reason,
 				const char *msgid, ...)
-  ATTRIBUTE_PRINTF_3;
+  ATTRIBUTE_CPP_PPDIAG (3, 4);
 
 /* As their counterparts above, but use RICHLOC.  */
 extern bool cpp_warning_at (cpp_reader *, enum cpp_warning_reason,
 			    rich_location *richloc, const char *msgid, ...)
-  ATTRIBUTE_PRINTF_4;
+  ATTRIBUTE_CPP_PPDIAG (4, 5);
 extern bool cpp_pedwarning_at (cpp_reader *, enum cpp_warning_reason,
 			       rich_location *richloc, const char *msgid, ...)
-  ATTRIBUTE_PRINTF_4;
+  ATTRIBUTE_CPP_PPDIAG (4, 5);
 
 /* Output a diagnostic with "MSGID: " preceding the
    error string of errno.  No location is printed.  */
@@ -1391,27 +1402,27 @@ extern bool cpp_errno_filename (cpp_reader *, enum cpp_diagnostic_level,
 extern bool cpp_error_with_line (cpp_reader *, enum cpp_diagnostic_level,
 				 location_t, unsigned,
 				 const char *msgid, ...)
-  ATTRIBUTE_PRINTF_5;
+  ATTRIBUTE_CPP_PPDIAG (5, 6);
 extern bool cpp_warning_with_line (cpp_reader *, enum cpp_warning_reason,
 				   location_t, unsigned,
 				   const char *msgid, ...)
-  ATTRIBUTE_PRINTF_5;
+  ATTRIBUTE_CPP_PPDIAG (5, 6);
 extern bool cpp_pedwarning_with_line (cpp_reader *, enum cpp_warning_reason,
 				      location_t, unsigned,
 				      const char *msgid, ...)
-  ATTRIBUTE_PRINTF_5;
+  ATTRIBUTE_CPP_PPDIAG (5, 6);
 extern bool cpp_warning_with_line_syshdr (cpp_reader *, enum cpp_warning_reason,
 					  location_t, unsigned,
 					  const char *msgid, ...)
-  ATTRIBUTE_PRINTF_5;
+  ATTRIBUTE_CPP_PPDIAG (5, 6);
 
 extern bool cpp_error_at (cpp_reader * pfile, enum cpp_diagnostic_level,
 			  location_t src_loc, const char *msgid, ...)
-  ATTRIBUTE_PRINTF_4;
+  ATTRIBUTE_CPP_PPDIAG (4, 5);
 
 extern bool cpp_error_at (cpp_reader * pfile, enum cpp_diagnostic_level,
 			  rich_location *richloc, const char *msgid, ...)
-  ATTRIBUTE_PRINTF_4;
+  ATTRIBUTE_CPP_PPDIAG (4, 5);
 
 /* In lex.cc */
 extern int cpp_ideq (const cpp_token *, const char *);
@@ -1654,5 +1665,18 @@ enum cpp_xid_property {
 };
 
 unsigned int cpp_check_xid_property (cppchar_t c);
+
+/* In errors.cc */
+
+/* RAII class to suppress CPP diagnostics in the current scope.  */
+class cpp_auto_suppress_diagnostics
+{
+ public:
+  explicit cpp_auto_suppress_diagnostics (cpp_reader *pfile);
+  ~cpp_auto_suppress_diagnostics ();
+ private:
+  cpp_reader *const m_pfile;
+  const decltype (cpp_callbacks::diagnostic) m_cb;
+};
 
 #endif /* ! LIBCPP_CPPLIB_H */

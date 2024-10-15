@@ -3256,6 +3256,9 @@ again:
   unsigned i, j;
   FOR_EACH_VEC_ELT (LOOP_VINFO_SLP_INSTANCES (loop_vinfo), i, instance)
     {
+      if (SLP_TREE_DEF_TYPE (SLP_INSTANCE_TREE (instance)) != vect_internal_def)
+	continue;
+
       stmt_vec_info vinfo;
       vinfo = SLP_TREE_SCALAR_STMTS (SLP_INSTANCE_TREE (instance))[0];
       if (! STMT_VINFO_GROUPED_ACCESS (vinfo))
@@ -8916,6 +8919,7 @@ vect_transform_reduction (loop_vec_info loop_vinfo,
 
   bool emulated_mixed_dot_prod = vect_is_emulated_mixed_dot_prod (stmt_info);
   unsigned num = vec_oprnds[reduc_index == 0 ? 1 : 0].length ();
+  unsigned mask_index = 0;
 
   for (unsigned i = 0; i < num; ++i)
     {
@@ -8954,7 +8958,8 @@ vect_transform_reduction (loop_vec_info loop_vinfo,
 	      std::swap (vop[0], vop[1]);
 	    }
 	  tree mask = vect_get_loop_mask (loop_vinfo, gsi, masks,
-					  vec_num * ncopies, vectype_in, i);
+					  vec_num * ncopies, vectype_in,
+					  mask_index++);
 	  gcall *call = gimple_build_call_internal (cond_fn, 4, mask,
 						    vop[0], vop[1], vop[0]);
 	  new_temp = make_ssa_name (vec_dest, call);
@@ -8971,7 +8976,8 @@ vect_transform_reduction (loop_vec_info loop_vinfo,
 	  if (masked_loop_p && mask_by_cond_expr)
 	    {
 	      tree mask = vect_get_loop_mask (loop_vinfo, gsi, masks,
-					      vec_num * ncopies, vectype_in, i);
+					      vec_num * ncopies, vectype_in,
+					      mask_index++);
 	      build_vect_cond_expr (code, vop, mask, gsi);
 	    }
 
