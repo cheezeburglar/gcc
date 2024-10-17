@@ -46,7 +46,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "make-unique.h"
 
 static void queue (dump_info_p, const_tree);
-static void dequeue_and_dump (dump_info_p);
+static void dequeue_and_add (dump_info_p);
 static json::array * function_decl_emit_json (tree, dump_info_p );
 static void identifier_node_add_json (tree, json::object &);
 static void decl_node_add_json (tree, json::object &);
@@ -3098,7 +3098,7 @@ node_emit_json(tree t, dump_info_p di)
 /* Dump the next node in the queue.  */
 
 static void
-dequeue_and_dump (dump_info_p di)
+dequeue_and_add (dump_info_p di)
 {
   dump_queue_p dq;
   splay_tree_node stn;
@@ -3121,10 +3121,9 @@ dequeue_and_dump (dump_info_p di)
   di->json_dump->append(dummy);
 }
 
-/* Dump T, and all its children, on STREAM as JSON array. */
-
-void
-dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
+/* Return T and all it's children as a JSON array. */
+json::array *
+tree_to_json_array (const_tree t, dump_flags_t flags, FILE *stream)
 {
   struct dump_info di;
   dump_queue_p dq;
@@ -3147,10 +3146,7 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
 
   /* Until the queue is empty, keep dumping nodes.  */
   while (di.queue)
-    dequeue_and_dump (&di);
-
-  di.json_dump->dump(stream, true);
-  fputs("\n", stream);
+    dequeue_and_add (&di);
 
   /* Now, clean up.  */
   for (dq = di.free_list; dq; dq = next_dq)
@@ -3159,9 +3155,30 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
       free (dq);
     }
   splay_tree_delete (di.nodes);
+  
+  return di.json_dump.release();
 }
 
-/* c.f. debug_tree(). Logic is same as the above fucntion. */
+/* Dump T, and all its children, on STREAM as JSON array. */
+void
+dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
+{
+  tree_to_json_array(t, flags, stream)->dump(stream, true);
+  fputs("\n", stream);
+}
+
+json::object*
+fndecl_to_json (tree t, dump_flags_t flags, FILE *stream)
+{
+  auto json_fndecl = new json::object();
+  json_fndecl->set(lang_hooks.decl_printable_name(t, 2),
+                   tree_to_json_array(DECL_SAVED_TREE(t), flags, stream));
+  return json_fndecl;
+}
+
+
+
+/* c.f. debug_tree(). Logic is same as the above function. */
 
 DEBUG_FUNCTION void
 debug_dump_node_json (tree t, FILE *stream)
@@ -3181,7 +3198,7 @@ debug_dump_node_json (tree t, FILE *stream)
   queue (&di, t);
 
   while (di.queue)
-    dequeue_and_dump (&di);
+    dequeue_and_add (&di);
 
   di.json_dump->dump(stream, true);
   
