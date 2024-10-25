@@ -1455,6 +1455,99 @@ node_emit_json(tree t, dump_info_p di)
       if (CODE_CONTAINS_STRUCT (code, TS_DECL_WITH_VIS)  && DECL_DEFER_OUTPUT (t))
 	json_obj->set_bool ("defer-output", true);
 
+      // TODO: handle later
+      set_xloc_as(*json_obj, expand_location (DECL_SOURCE_LOCATION (t)), "decl_source_location");
+
+      if (CODE_CONTAINS_STRUCT (code, TS_DECL_COMMON))
+	{
+          json_obj->set("decl_size", node_to_json_brief(DECL_SIZE(t), di));
+          json_obj->set("decl_size_unit", node_to_json_brief(DECL_SIZE_UNIT(t), di));
+	  if (DECL_USER_ALIGN (t))
+	    json_obj->set_bool("decl_user_align", true);
+          json_obj->set_integer("decl_align_raw", DECL_ALIGN_RAW(t));
+          json_obj->set_integer("decl_align", DECL_ALIGN(t));
+          json_obj->set_integer("decl_warn_if_not_align",
+                               DECL_WARN_IF_NOT_ALIGN(t));
+	  if (code == FIELD_DECL)
+	    {
+              json_obj->set_integer("decl_offset_align", DECL_OFFSET_ALIGN(t));
+              json_obj->set_integer("decl_not_flexarray", DECL_NOT_FLEXARRAY(t));
+	    }
+	  if (code == FUNCTION_DECL && fndecl_built_in_p (t))
+	    {
+	      if (DECL_BUILT_IN_CLASS (t) == BUILT_IN_MD)
+                json_obj->set_integer("decl_md_function_code",
+                                     DECL_MD_FUNCTION_CODE(t));
+	      else if (DECL_BUILT_IN_CLASS (t) == BUILT_IN_FRONTEND)
+                json_obj->set_integer("decl_fe_function_code",
+                                     DECL_FE_FUNCTION_CODE(t));
+	      else
+                {
+                json_obj->set_bool(built_in_class_names[(int) DECL_BUILT_IN_CLASS (t)], 
+                                  true);
+                json_obj->set_bool(built_in_names[(int) DECL_FUNCTION_CODE (t)], 
+                                  true);
+                }
+	    }
+	}
+      if (code == FIELD_DECL)
+	{
+          json_obj->set("decl_field_offset", node_to_json_brief(DECL_FIELD_OFFSET(t), di));
+          json_obj->set("decl_field_bit_offset", node_to_json_brief(DECL_FIELD_BIT_OFFSET(t), di));
+	  if (DECL_BIT_FIELD_TYPE (t))
+            json_obj->set("decl_field_type", node_to_json_brief(DECL_BIT_FIELD_TYPE(t), di));
+	}
+
+//      print_node_brief (file, "context", DECL_CONTEXT (node), indent + 4);
+
+      if (CODE_CONTAINS_STRUCT (code, TS_DECL_COMMON))
+	{
+	  json_obj->set("decl_attributes", node_to_json_brief(DECL_ATTRIBUTES(t), di));
+	  if (code != PARM_DECL)
+	    json_obj->set("decl_initial", node_to_json_brief(DECL_INITIAL(t), di));
+	}
+      if (CODE_CONTAINS_STRUCT (code, TS_DECL_WRTL))
+	{
+	  json_obj->set("decl_abstract_origin", node_to_json_brief(DECL_ABSTRACT_ORIGIN(t), di));
+	}
+      if (CODE_CONTAINS_STRUCT (code, TS_DECL_NON_COMMON))
+	{
+	  json_obj->set("decl_result_fld", node_to_json_brief(DECL_RESULT_FLD(t), di));
+	}
+
+      if (DECL_RTL_SET_P (t))
+	{
+          //  TODO  :RTL handling?
+	  //indent_to (file, indent + 4);
+	  //print_rtl (file, DECL_RTL (node));
+	}
+
+      if (code == PARM_DECL)
+	{
+          json_obj->set("decl_arg_type", node_to_json_brief(DECL_ARG_TYPE(t), di));
+
+	  if (DECL_INCOMING_RTL (t) != 0)
+	    {
+              // TODO :
+	      //indent_to (file, indent + 4);
+	      //fprintf (file, "incoming-rtl ");
+	      //print_rtl (file, DECL_INCOMING_RTL (node));
+	    }
+	}
+      else if (code == FUNCTION_DECL
+	       && DECL_STRUCT_FUNCTION (t) != 0)
+	{
+          char address_buffer [20] = {"\0"};
+
+          sprintf(address_buffer, HOST_PTR_PRINTF, (void *)(DECL_STRUCT_FUNCTION (t)));
+
+          json_obj->set("decl_arguments", node_to_json_brief(DECL_ARGUMENTS(t), di));
+          json_obj->set_string("decl_struct_function", address_buffer);
+	}
+
+      if ((code == VAR_DECL || code == PARM_DECL)
+	  && DECL_HAS_VALUE_EXPR_P (t))
+        json_obj->set("decl_value_expr", node_to_json_brief(DECL_VALUE_EXPR(t), di));
     } //end tcc_decl flags
 
     if (TREE_CODE_CLASS(code) == tcc_type)
@@ -1527,6 +1620,7 @@ node_emit_json(tree t, dump_info_p di)
   // For nodes with a type output a reference to it
   if (CODE_CONTAINS_STRUCT (code, TS_TYPED) && TREE_TYPE (t))
     json_obj->set("tree_type", node_to_json_brief(TREE_TYPE(t), di));
+
 
   // Accessors
   switch (code)
