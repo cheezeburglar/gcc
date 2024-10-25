@@ -640,6 +640,8 @@ public:
   /* If warn_cxx_compat, a list of typedef names used when defining
      fields in this struct.  */
   auto_vec<tree> typedefs_seen;
+  /* The location of a previous definition of this struct.  */
+  location_t refloc;
 };
 
 
@@ -2789,7 +2791,7 @@ merge_decls (tree newdecl, tree olddecl, tree newtype, tree oldtype)
 			= TYPE_NEXT_VARIANT (TYPE_NEXT_VARIANT (t));
 		      break;
 		    }
-	    }	    
+	    }
 	  else
 	    for (tree t = TYPE_MAIN_VARIANT (remove); ;
 		 t = TYPE_NEXT_VARIANT (t))
@@ -5367,7 +5369,7 @@ one_element_array_type_p (const_tree type)
 {
   if (TREE_CODE (type) != ARRAY_TYPE)
     return false;
-  return integer_zerop (array_type_nelts (type));
+  return integer_zerop (array_type_nelts_minus_one (type));
 }
 
 /* Determine whether TYPE is a zero-length array type "[0]".  */
@@ -6315,15 +6317,15 @@ get_parm_array_spec (const struct c_parm *parm, tree attrs)
 	  for (tree type = parm->specs->type; TREE_CODE (type) == ARRAY_TYPE;
 	       type = TREE_TYPE (type))
 	    {
-	      tree nelts = array_type_nelts (type);
-	      if (error_operand_p (nelts))
+	      tree nelts_minus_one = array_type_nelts_minus_one (type);
+	      if (error_operand_p (nelts_minus_one))
 		return attrs;
-	      if (TREE_CODE (nelts) != INTEGER_CST)
+	      if (TREE_CODE (nelts_minus_one) != INTEGER_CST)
 		{
 		  /* Each variable VLA bound is represented by the dollar
 		     sign.  */
 		  spec += "$";
-		  tpbnds = tree_cons (NULL_TREE, nelts, tpbnds);
+		  tpbnds = tree_cons (NULL_TREE, nelts_minus_one, tpbnds);
 		}
 	    }
 	  tpbnds = nreverse (tpbnds);
@@ -8519,7 +8521,10 @@ grokparms (struct c_arg_info *arg_info, bool funcdef_flag)
 	  && !arg_types
 	  && !arg_info->parms
 	  && !arg_info->no_named_args_stdarg_p)
-	arg_types = arg_info->types = void_list_node;
+	{
+	  arg_types = arg_info->types = void_list_node;
+	  arg_info->c23_empty_parens = 1;
+	}
 
       /* If there is a parameter of incomplete type in a definition,
 	 this is an error.  In a declaration this is valid, and a
@@ -8589,6 +8594,7 @@ build_arg_info (void)
   ret->pending_sizes = NULL;
   ret->had_vla_unspec = 0;
   ret->no_named_args_stdarg_p = 0;
+  ret->c23_empty_parens = 0;
   return ret;
 }
 
@@ -8996,6 +9002,7 @@ start_struct (location_t loc, enum tree_code code, tree name,
 
   *enclosing_struct_parse_info = struct_parse_info;
   struct_parse_info = new c_struct_parse_info ();
+  struct_parse_info->refloc = refloc;
 
   /* FIXME: This will issue a warning for a use of a type defined
      within a statement expr used within sizeof, et. al.  This is not
@@ -9892,10 +9899,18 @@ finish_struct (location_t loc, tree t, tree fieldlist, tree attributes,
 	{
 	  TYPE_STUB_DECL (vistype) = TYPE_STUB_DECL (t);
 	  if (c_type_variably_modified_p (t))
-	    error ("redefinition of struct or union %qT with variably "
-		   "modified type", t);
+	    {
+	      error ("redefinition of struct or union %qT with variably "
+		     "modified type", t);
+	      if (struct_parse_info->refloc != UNKNOWN_LOCATION)
+		inform (struct_parse_info->refloc, "originally defined here");
+	    }
 	  else if (!comptypes_same_p (t, vistype))
-	    error ("redefinition of struct or union %qT", t);
+	    {
+	      error ("redefinition of struct or union %qT", t);
+	      if (struct_parse_info->refloc != UNKNOWN_LOCATION)
+		inform (struct_parse_info->refloc, "originally defined here");
+	    }
 	}
     }
 
@@ -10923,7 +10938,8 @@ store_parm_decls_newstyle (tree fndecl, const struct c_arg_info *arg_info)
      its parameter list).  */
   else if (!in_system_header_at (input_location)
 	   && !current_function_scope
-	   && arg_info->types != error_mark_node)
+	   && arg_info->types != error_mark_node
+	   && !arg_info->c23_empty_parens)
     warning_at (DECL_SOURCE_LOCATION (fndecl), OPT_Wtraditional,
 		"traditional C rejects ISO C style function definitions");
 
@@ -11416,7 +11432,7 @@ void
 finish_function (location_t end_loc)
 {
   tree fndecl = current_function_decl;
-  
+
   if (c_dialect_objc ())
     objc_finish_function ();
 
@@ -11811,6 +11827,7 @@ names_builtin_p (const char *name)
     case RID_BUILTIN_SHUFFLE:
     case RID_BUILTIN_SHUFFLEVECTOR:
     case RID_BUILTIN_STDC:
+    case RID_BUILTIN_COUNTED_BY_REF:
     case RID_CHOOSE_EXPR:
     case RID_OFFSETOF:
     case RID_TYPES_COMPATIBLE_P:
@@ -13604,7 +13621,7 @@ collect_source_refs (void)
   unsigned i;
 
   FOR_EACH_VEC_ELT (*all_translation_units, i, t)
-    { 
+    {
       decls = DECL_INITIAL (t);
       for (decl = BLOCK_VARS (decls); decl; decl = TREE_CHAIN (decl))
 	if (!DECL_IS_UNDECLARED_BUILTIN (decl))
@@ -13880,6 +13897,7 @@ c_get_loop_names (tree before_labels, bool switch_p, tree *last_p)
 	    {
 	      if (C_DECL_LOOP_NAME (l) || C_DECL_SWITCH_NAME (l))
 		c = l;
+	      gcc_checking_assert (c);
 	      loop_names_hash->put (l, c);
 	      if (i == first)
 		break;
@@ -13951,6 +13969,7 @@ c_finish_bc_name (location_t loc, tree name, bool is_break)
 	  {
 	    if (C_DECL_LOOP_NAME (l) || C_DECL_SWITCH_NAME (l))
 	      c = l;
+	    gcc_checking_assert (c);
 	    if (l == lab)
 	      {
 		label = c;
@@ -13969,6 +13988,7 @@ c_finish_bc_name (location_t loc, tree name, bool is_break)
 	{
 	  if (C_DECL_LOOP_NAME (l) || C_DECL_SWITCH_NAME (l))
 	    c = l;
+	  gcc_checking_assert (c);
 	  if (is_break || C_DECL_LOOP_NAME (c))
 	    candidates.safe_push (IDENTIFIER_POINTER (DECL_NAME (l)));
 	}

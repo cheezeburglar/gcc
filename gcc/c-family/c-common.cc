@@ -19,6 +19,7 @@ along with GCC; see the file COPYING3.  If not see
 
 #define GCC_C_COMMON_C
 
+#define INCLUDE_MEMORY
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -430,6 +431,7 @@ const struct c_common_resword c_common_reswords[] =
   { "__builtin_choose_expr", RID_CHOOSE_EXPR, D_CONLY },
   { "__builtin_complex", RID_BUILTIN_COMPLEX, D_CONLY },
   { "__builtin_convertvector", RID_BUILTIN_CONVERTVECTOR, 0 },
+  { "__builtin_counted_by_ref", RID_BUILTIN_COUNTED_BY_REF, D_CONLY },
   { "__builtin_has_attribute", RID_BUILTIN_HAS_ATTRIBUTE, 0 },
   { "__builtin_launder", RID_BUILTIN_LAUNDER, D_CXXONLY },
   { "__builtin_shuffle", RID_BUILTIN_SHUFFLE, 0 },
@@ -3306,14 +3308,14 @@ shorten_compare (location_t loc, tree *op0_ptr, tree *op1_ptr,
 	     the comparison isn't an issue, so suppress the
 	     warning.  */
 	  tree folded_op0 = fold_for_warn (op0);
-	  bool warn = 
+	  bool warn =
 	    warn_type_limits && !in_system_header_at (loc)
 	    && !(TREE_CODE (folded_op0) == INTEGER_CST
 		 && !TREE_OVERFLOW (convert (c_common_signed_type (type),
 					     folded_op0)))
 	    /* Do not warn for enumeration types.  */
 	    && (TREE_CODE (expr_original_type (folded_op0)) != ENUMERAL_TYPE);
-	  
+
 	  switch (code)
 	    {
 	    case GE_EXPR:
@@ -6766,6 +6768,8 @@ c_parse_error (const char *gmsgid, enum cpp_ttype token_type,
     message = catenate_messages (gmsgid, " before end of line");
   else if (token_type == CPP_DECLTYPE)
     message = catenate_messages (gmsgid, " before %<decltype%>");
+  else if (token_type == CPP_EMBED)
+    message = catenate_messages (gmsgid, " before %<#embed%>");
   else if (token_type < N_TTYPES)
     {
       message = catenate_messages (gmsgid, " before %qs token");
@@ -7192,9 +7196,9 @@ complete_flexible_array_elts (tree init)
 }
 
 /* Like c_mark_addressable but don't check register qualifier.  */
-void 
+void
 c_common_mark_addressable_vec (tree t)
-{   
+{
   while (handled_component_p (t) || TREE_CODE (t) == C_MAYBE_CONST_EXPR)
     {
       if (TREE_CODE (t) == C_MAYBE_CONST_EXPR)
@@ -7582,7 +7586,7 @@ get_atomic_generic_size (location_t loc, tree function,
   /* Types must be compile time constant sizes. */
   if (!tree_fits_uhwi_p ((TYPE_SIZE_UNIT (TREE_TYPE (type_0)))))
     {
-      error_at (loc, 
+      error_at (loc,
 		"argument 1 of %qE must be a pointer to a constant size type",
 		function);
       return 0;
@@ -7593,7 +7597,7 @@ get_atomic_generic_size (location_t loc, tree function,
   /* Zero size objects are not allowed.  */
   if (size_0 == 0)
     {
-      error_at (loc, 
+      error_at (loc,
 		"argument 1 of %qE must be a pointer to a nonzero size object",
 		function);
       return 0;
@@ -7707,12 +7711,12 @@ get_atomic_generic_size (location_t loc, tree function,
 /* This will take an __atomic_ generic FUNCTION call, and add a size parameter N
    at the beginning of the parameter list PARAMS representing the size of the
    objects.  This is to match the library ABI requirement.  LOC is the location
-   of the function call.  
+   of the function call.
    The new function is returned if it needed rebuilding, otherwise NULL_TREE is
    returned to allow the external call to be constructed.  */
 
 static tree
-add_atomic_size_parameter (unsigned n, location_t loc, tree function, 
+add_atomic_size_parameter (unsigned n, location_t loc, tree function,
 			   vec<tree, va_gc> *params)
 {
   tree size_node;
@@ -7770,12 +7774,12 @@ atomic_size_supported_p (int n)
    PARAMS is the argument list for the call.  The return value is non-null
    TRUE is returned if it is translated into the proper format for a call to the
    external library, and NEW_RETURN is set the tree for that function.
-   FALSE is returned if processing for the _N variation is required, and 
+   FALSE is returned if processing for the _N variation is required, and
    NEW_RETURN is set to the return value the result is copied into.  */
 static bool
-resolve_overloaded_atomic_exchange (location_t loc, tree function, 
+resolve_overloaded_atomic_exchange (location_t loc, tree function,
 				    vec<tree, va_gc> *params, tree *new_return)
-{	
+{
   tree p0, p1, p2, p3;
   tree I_type, I_type_ptr;
   int n = get_atomic_generic_size (loc, function, params);
@@ -7803,14 +7807,14 @@ resolve_overloaded_atomic_exchange (location_t loc, tree function,
   p1 = (*params)[1];
   p2 = (*params)[2];
   p3 = (*params)[3];
-  
+
   /* Create pointer to appropriate size.  */
   I_type = builtin_type_for_size (BITS_PER_UNIT * n, 1);
   I_type_ptr = build_pointer_type (I_type);
 
   /* Convert object pointer to required type.  */
   p0 = build1 (VIEW_CONVERT_EXPR, I_type_ptr, p0);
-  (*params)[0] = p0; 
+  (*params)[0] = p0;
   /* Convert new value to required type, and dereference it.
      If *p1 type can have padding or may involve floating point which
      could e.g. be promoted to wider precision and demoted afterwards,
@@ -7832,7 +7836,7 @@ resolve_overloaded_atomic_exchange (location_t loc, tree function,
 }
 
 
-/* This will process an __atomic_compare_exchange function call, determine 
+/* This will process an __atomic_compare_exchange function call, determine
    whether it needs to be mapped to the _N variation, or turned into a lib call.
    LOC is the location of the builtin call.
    FUNCTION is the DECL that has been invoked;
@@ -7842,10 +7846,10 @@ resolve_overloaded_atomic_exchange (location_t loc, tree function,
    FALSE is returned if processing for the _N variation is required.  */
 
 static bool
-resolve_overloaded_atomic_compare_exchange (location_t loc, tree function, 
-					    vec<tree, va_gc> *params, 
+resolve_overloaded_atomic_compare_exchange (location_t loc, tree function,
+					    vec<tree, va_gc> *params,
 					    tree *new_return)
-{	
+{
   tree p0, p1, p2;
   tree I_type, I_type_ptr;
   int n = get_atomic_generic_size (loc, function, params);
@@ -7860,7 +7864,7 @@ resolve_overloaded_atomic_compare_exchange (location_t loc, tree function,
   /* If not a lock-free size, change to the library generic format.  */
   if (!atomic_size_supported_p (n))
     {
-      /* The library generic format does not have the weak parameter, so 
+      /* The library generic format does not have the weak parameter, so
 	 remove it from the param list.  Since a parameter has been removed,
 	 we can be sure that there is room for the SIZE_T parameter, meaning
 	 there will not be a recursive rebuilding of the parameter list, so
@@ -7883,7 +7887,7 @@ resolve_overloaded_atomic_compare_exchange (location_t loc, tree function,
   p0 = (*params)[0];
   p1 = (*params)[1];
   p2 = (*params)[2];
-  
+
   /* Create pointer to appropriate size.  */
   I_type = builtin_type_for_size (BITS_PER_UNIT * n, 1);
   I_type_ptr = build_pointer_type (I_type);
@@ -7920,13 +7924,13 @@ resolve_overloaded_atomic_compare_exchange (location_t loc, tree function,
    PARAMS is the argument list for the call.  The return value is non-null
    TRUE is returned if it is translated into the proper format for a call to the
    external library, and NEW_RETURN is set the tree for that function.
-   FALSE is returned if processing for the _N variation is required, and 
+   FALSE is returned if processing for the _N variation is required, and
    NEW_RETURN is set to the return value the result is copied into.  */
 
 static bool
-resolve_overloaded_atomic_load (location_t loc, tree function, 
+resolve_overloaded_atomic_load (location_t loc, tree function,
 				vec<tree, va_gc> *params, tree *new_return)
-{	
+{
   tree p0, p1, p2;
   tree I_type, I_type_ptr;
   int n = get_atomic_generic_size (loc, function, params);
@@ -7953,7 +7957,7 @@ resolve_overloaded_atomic_load (location_t loc, tree function,
   p0 = (*params)[0];
   p1 = (*params)[1];
   p2 = (*params)[2];
-  
+
   /* Create pointer to appropriate size.  */
   I_type = builtin_type_for_size (BITS_PER_UNIT * n, 1);
   I_type_ptr = build_pointer_type (I_type);
@@ -7980,13 +7984,13 @@ resolve_overloaded_atomic_load (location_t loc, tree function,
    PARAMS is the argument list for the call.  The return value is non-null
    TRUE is returned if it is translated into the proper format for a call to the
    external library, and NEW_RETURN is set the tree for that function.
-   FALSE is returned if processing for the _N variation is required, and 
+   FALSE is returned if processing for the _N variation is required, and
    NEW_RETURN is set to the return value the result is copied into.  */
 
 static bool
-resolve_overloaded_atomic_store (location_t loc, tree function, 
+resolve_overloaded_atomic_store (location_t loc, tree function,
 				 vec<tree, va_gc> *params, tree *new_return)
-{	
+{
   tree p0, p1;
   tree I_type, I_type_ptr;
   int n = get_atomic_generic_size (loc, function, params);
@@ -8012,7 +8016,7 @@ resolve_overloaded_atomic_store (location_t loc, tree function,
 
   p0 = (*params)[0];
   p1 = (*params)[1];
-  
+
   /* Create pointer to appropriate size.  */
   I_type = builtin_type_for_size (BITS_PER_UNIT * n, 1);
   I_type_ptr = build_pointer_type (I_type);
@@ -8025,7 +8029,7 @@ resolve_overloaded_atomic_store (location_t loc, tree function,
   p1 = build_indirect_ref (loc, p1, RO_UNARY_STAR);
   p1 = build1 (VIEW_CONVERT_EXPR, I_type, p1);
   (*params)[1] = p1;
-  
+
   /* The memory model is in the right spot already. Return is void.  */
   *new_return = NULL_TREE;
 
@@ -9606,7 +9610,7 @@ c_family_tests (void)
 #endif /* #if CHECKING_P */
 
 /* Attempt to locate a suitable location within FILE for a
-   #include directive to be inserted before.  
+   #include directive to be inserted before.
    LOC is the location of the relevant diagnostic.
 
    Attempt to return the location within FILE immediately
@@ -9774,7 +9778,9 @@ maybe_add_include_fixit (rich_location *richloc, const char *header,
 
 /* Attempt to convert a braced array initializer list CTOR for array
    TYPE into a STRING_CST for convenience and efficiency.  Return
-   the converted string on success or the original ctor on failure.  */
+   the converted string on success or the original ctor on failure.
+   Also, for non-convertable CTORs which contain RAW_DATA_CST values
+   among the elts try to extend the range of RAW_DATA_CSTs.  */
 
 static tree
 braced_list_to_string (tree type, tree ctor, bool member)
@@ -9818,26 +9824,155 @@ braced_list_to_string (tree type, tree ctor, bool member)
   auto_vec<char> str;
   str.reserve (nelts + 1);
 
-  unsigned HOST_WIDE_INT i;
+  unsigned HOST_WIDE_INT i, j = HOST_WIDE_INT_M1U;
   tree index, value;
+  bool check_raw_data = false;
 
   FOR_EACH_CONSTRUCTOR_ELT (CONSTRUCTOR_ELTS (ctor), i, index, value)
     {
+      if (check_raw_data)
+	{
+	  /* The preprocessor always surrounds CPP_EMBED tokens in between
+	     CPP_NUMBER and CPP_COMMA tokens.  Try to undo that here now that
+	     the whole initializer is parsed.  E.g. if we have
+	     [0] = 'T', [1] = "his is a #embed tex", [20] = 't'
+	     where the middle value is RAW_DATA_CST and in its owner this is
+	     surrounded by 'T' and 't' characters, we can create from it just
+	     [0] = "This is a #embed text"
+	     Similarly if a RAW_DATA_CST needs to be split into two parts
+	     because of designated init store but the stored value is actually
+	     the same as in the RAW_DATA_OWNER's memory we can merge multiple
+	     RAW_DATA_CSTs.  */
+	  if (TREE_CODE (value) == RAW_DATA_CST
+	      && index
+	      && tree_fits_uhwi_p (index))
+	    {
+	      tree owner = RAW_DATA_OWNER (value);
+	      unsigned int start, end, k;
+	      if (TREE_CODE (owner) == STRING_CST)
+		{
+		  start
+		    = RAW_DATA_POINTER (value) - TREE_STRING_POINTER (owner);
+		  end = TREE_STRING_LENGTH (owner) - RAW_DATA_LENGTH (value);
+		}
+	      else
+		{
+		  gcc_checking_assert (TREE_CODE (owner) == RAW_DATA_CST);
+		  start
+		    = RAW_DATA_POINTER (value) - RAW_DATA_POINTER (owner);
+		  end = RAW_DATA_LENGTH (owner) - RAW_DATA_LENGTH (value);
+		}
+	      end -= start;
+	      unsigned HOST_WIDE_INT l = j == HOST_WIDE_INT_M1U ? i : j;
+	      for (k = 0; k < start && k < l; ++k)
+		{
+		  constructor_elt *elt = CONSTRUCTOR_ELT (ctor, l - k - 1);
+		  if (elt->index == NULL_TREE
+		      || !tree_fits_uhwi_p (elt->index)
+		      || !tree_fits_shwi_p (elt->value)
+		      || wi::to_widest (index) != (wi::to_widest (elt->index)
+						   + (k + 1)))
+		    break;
+		  if (TYPE_UNSIGNED (TREE_TYPE (value)))
+		    {
+		      if (tree_to_shwi (elt->value)
+			  != *((const unsigned char *)
+			       RAW_DATA_POINTER (value) - k - 1))
+			break;
+		    }
+		  else if (tree_to_shwi (elt->value)
+			   != *((const signed char *)
+				RAW_DATA_POINTER (value) - k - 1))
+		    break;
+		}
+	      start = k;
+	      l = 0;
+	      for (k = 0; k < end && k + 1 < CONSTRUCTOR_NELTS (ctor) - i; ++k)
+		{
+		  constructor_elt *elt = CONSTRUCTOR_ELT (ctor, i + k + 1);
+		  if (elt->index == NULL_TREE
+		      || !tree_fits_uhwi_p (elt->index)
+		      || (wi::to_widest (elt->index)
+			  != (wi::to_widest (index)
+			      + (RAW_DATA_LENGTH (value) + l))))
+		    break;
+		  if (TREE_CODE (elt->value) == RAW_DATA_CST
+		      && RAW_DATA_OWNER (elt->value) == RAW_DATA_OWNER (value)
+		      && (RAW_DATA_POINTER (elt->value)
+			  == RAW_DATA_POINTER (value) + l))
+		    {
+		      l += RAW_DATA_LENGTH (elt->value);
+		      end -= RAW_DATA_LENGTH (elt->value) - 1;
+		      continue;
+		    }
+		  if (!tree_fits_shwi_p (elt->value))
+		    break;
+		  if (TYPE_UNSIGNED (TREE_TYPE (value)))
+		    {
+		      if (tree_to_shwi (elt->value)
+			  != *((const unsigned char *)
+			       RAW_DATA_POINTER (value)
+			       + RAW_DATA_LENGTH (value) + k))
+			break;
+		    }
+		  else if (tree_to_shwi (elt->value)
+			   != *((const signed char *)
+				RAW_DATA_POINTER (value)
+				+ RAW_DATA_LENGTH (value) + k))
+		    break;
+		  ++l;
+		}
+	      end = k;
+	      if (start != 0 || end != 0)
+		{
+		  if (j == HOST_WIDE_INT_M1U)
+		    j = i - start;
+		  else
+		    j -= start;
+		  RAW_DATA_POINTER (value) -= start;
+		  RAW_DATA_LENGTH (value) += start + end;
+		  i += end;
+		  if (start == 0)
+		    CONSTRUCTOR_ELT (ctor, j)->index = index;
+		  CONSTRUCTOR_ELT (ctor, j)->value = value;
+		  ++j;
+		  continue;
+		}
+	    }
+	  if (j != HOST_WIDE_INT_M1U)
+	    {
+	      CONSTRUCTOR_ELT (ctor, j)->index = index;
+	      CONSTRUCTOR_ELT (ctor, j)->value = value;
+	      ++j;
+	    }
+	  continue;
+	}
+
       unsigned HOST_WIDE_INT idx = i;
       if (index)
 	{
 	  if (!tree_fits_uhwi_p (index))
-	    return ctor;
+	    {
+	      check_raw_data = true;
+	      continue;
+	    }
 	  idx = tree_to_uhwi (index);
 	}
 
       /* auto_vec is limited to UINT_MAX elements.  */
       if (idx > UINT_MAX)
-	return ctor;
+	{
+	  check_raw_data = true;
+	  continue;
+	}
 
-     /* Avoid non-constant initializers.  */
-     if (!tree_fits_shwi_p (value))
-	return ctor;
+      /* Avoid non-constant initializers.  */
+      if (!tree_fits_shwi_p (value))
+	{
+	  check_raw_data = true;
+	  --i;
+	  continue;
+	}
 
       /* Skip over embedded nuls except the last one (initializer
 	 elements are in ascending order of indices).  */
@@ -9845,14 +9980,20 @@ braced_list_to_string (tree type, tree ctor, bool member)
       if (!val && i + 1 < nelts)
 	continue;
 
-      if (idx < str.length())
-	return ctor;
+      if (idx < str.length ())
+	{
+	  check_raw_data = true;
+	  continue;
+	}
 
       /* Bail if the CTOR has a block of more than 256 embedded nuls
 	 due to implicitly initialized elements.  */
       unsigned nchars = (idx - str.length ()) + 1;
       if (nchars > 256)
-	return ctor;
+	{
+	  check_raw_data = true;
+	  continue;
+	}
 
       if (nchars > 1)
 	{
@@ -9861,9 +10002,19 @@ braced_list_to_string (tree type, tree ctor, bool member)
 	}
 
       if (idx >= maxelts)
-	return ctor;
+	{
+	  check_raw_data = true;
+	  continue;
+	}
 
       str.safe_insert (idx, val);
+    }
+
+  if (check_raw_data)
+    {
+      if (j != HOST_WIDE_INT_M1U)
+	CONSTRUCTOR_ELTS (ctor)->truncate (j);
+      return ctor;
     }
 
   /* Append a nul string termination.  */

@@ -114,12 +114,21 @@ TEST_UNIFORM_Z (mul_intminnop2_s8_m_tied1, svint8_t,
 
 /*
 ** mul_1_s8_m_tied1:
-**	sel	z0\.b, p0, z0\.b, z0\.b
 **	ret
 */
 TEST_UNIFORM_Z (mul_1_s8_m_tied1, svint8_t,
 		z0 = svmul_n_s8_m (p0, z0, 1),
 		z0 = svmul_m (p0, z0, 1))
+
+/*
+** mul_1op1_s8_m_tied2:
+**	mov	(z[0-9]+)\.b, #1
+**	sel	z0\.b, p0, z0\.b, \1\.b
+**	ret
+*/
+TEST_UNIFORM_Z (mul_1op1_s8_m_tied2, svint8_t,
+		z0 = svmul_s8_m (p0, svdup_s8 (1), z0),
+		z0 = svmul_m (p0, svdup_s8 (1), z0))
 
 /*
 ** mul_3_s8_m_tied1:
@@ -174,8 +183,7 @@ TEST_UNIFORM_Z (mul_3_s8_m_untied, svint8_t,
 
 /*
 ** mul_m1_s8_m:
-**	mov	(z[0-9]+)\.b, #-1
-**	mul	z0\.b, p0/m, z0\.b, \1\.b
+**	neg	z0\.b, p0/m, z0\.b
 **	ret
 */
 TEST_UNIFORM_Z (mul_m1_s8_m, svint8_t,
@@ -305,14 +313,23 @@ TEST_UNIFORM_Z (mul_intminnop2_s8_z_tied1, svint8_t,
 
 /*
 ** mul_1_s8_z_tied1:
-**	mov	z31.b, #1
-**	movprfx	z0.b, p0/z, z0.b
-**	mul	z0.b, p0/m, z0.b, z31.b
+**	movi?	[vdz]([0-9]+)\.?(?:[0-9]*[bhsd])?, #?0
+**	sel	z0\.b, p0, z0\.b, z\1.b
 **	ret
 */
 TEST_UNIFORM_Z (mul_1_s8_z_tied1, svint8_t,
 		z0 = svmul_n_s8_z (p0, z0, 1),
 		z0 = svmul_z (p0, z0, 1))
+
+/*
+** mul_1op1_s8_z_tied2:
+**	movi?	[vdz]([0-9]+)\.?(?:[0-9]*[bhsd])?, #?0
+**	sel	z0\.b, p0, z0\.b, z\1.b
+**	ret
+*/
+TEST_UNIFORM_Z (mul_1op1_s8_z_tied2, svint8_t,
+		z0 = svmul_s8_z (p0, svdup_s8 (1), z0),
+		z0 = svmul_z (p0, svdup_s8 (1), z0))
 
 /*
 ** mul_3_s8_z_tied1:
@@ -487,6 +504,23 @@ TEST_UNIFORM_Z (mul_1_s8_x_tied1, svint8_t,
 		z0 = svmul_x (p0, z0, 1))
 
 /*
+** mul_1op1_s8_x_tied2:
+**	ret
+*/
+TEST_UNIFORM_Z (mul_1op1_s8_x_tied2, svint8_t,
+		z0 = svmul_s8_x (p0, svdup_s8 (1), z0),
+		z0 = svmul_x (p0, svdup_s8 (1), z0))
+
+/*
+** mul_1op1_s8_x_untied:
+**	mov	z0\.d, z1\.d
+**	ret
+*/
+TEST_UNIFORM_Z (mul_1op1_s8_x_untied, svint8_t,
+		z0 = svmul_s8_x (p0, svdup_s8 (1), z1),
+		z0 = svmul_x (p0, svdup_s8 (1), z1))
+
+/*
 ** mul_3_s8_x_tied1:
 **	mul	z0\.b, z0\.b, #3
 **	ret
@@ -552,7 +586,7 @@ TEST_UNIFORM_Z (mul_128_s8_x, svint8_t,
 
 /*
 ** mul_255_s8_x:
-**	mul	z0\.b, z0\.b, #-1
+**	neg	z0\.b, p0/m, z0\.b
 **	ret
 */
 TEST_UNIFORM_Z (mul_255_s8_x, svint8_t,
@@ -561,7 +595,7 @@ TEST_UNIFORM_Z (mul_255_s8_x, svint8_t,
 
 /*
 ** mul_m1_s8_x:
-**	mul	z0\.b, z0\.b, #-1
+**	neg	z0\.b, p0/m, z0\.b
 **	ret
 */
 TEST_UNIFORM_Z (mul_m1_s8_x, svint8_t,

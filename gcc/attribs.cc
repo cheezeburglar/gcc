@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
+#define INCLUDE_MEMORY
 #define INCLUDE_STRING
 #include "config.h"
 #include "system.h"
@@ -381,7 +382,7 @@ lookup_scoped_attribute_spec (const_tree ns, const_tree name)
   struct substring attr;
   scoped_attributes *attrs;
 
-  const char *ns_str = (ns != NULL_TREE) ? IDENTIFIER_POINTER (ns): NULL;
+  const char *ns_str = (ns != NULL_TREE) ? IDENTIFIER_POINTER (ns) : NULL;
 
   attrs = find_attribute_namespace (ns_str);
 
@@ -1257,7 +1258,7 @@ make_dispatcher_decl (const tree decl)
   fn_type = TREE_TYPE (decl);
   func_type = build_function_type (TREE_TYPE (fn_type),
 				   TYPE_ARG_TYPES (fn_type));
-  
+
   func_decl = build_fn_decl (func_name, func_type);
   XDELETEVEC (func_name);
   TREE_USED (func_decl) = 1;
@@ -1270,7 +1271,7 @@ make_dispatcher_decl (const tree decl)
   /* This will be of type IFUNCs have to be externally visible.  */
   TREE_PUBLIC (func_decl) = 1;
 
-  return func_decl;  
+  return func_decl;
 }
 
 /* Returns true if DECL is multi-versioned using the target attribute, and this
@@ -2673,10 +2674,9 @@ attr_access::array_as_string (tree type) const
 
   /* Format the type using the current pretty printer.  The generic tree
      printer does a terrible job.  */
-  pretty_printer *pp = global_dc->m_printer->clone ();
-  pp_printf (pp, "%qT", type);
-  typstr = pp_formatted_text (pp);
-  delete pp;
+  std::unique_ptr<pretty_printer> pp (global_dc->clone_printer ());
+  pp_printf (pp.get (), "%qT", type);
+  typstr = pp_formatted_text (pp.get ());
 
   return typstr;
 }

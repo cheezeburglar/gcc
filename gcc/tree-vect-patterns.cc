@@ -3581,7 +3581,7 @@ vect_recog_average_pattern (vec_info *vinfo,
 	 unmasked_carry = new_ops[0] and/or new_ops[1];
 	 carry = unmasked_carry & 1;
 	 new_var = sum_of_shifted + carry;
-      */	 
+      */
 
       tree one_cst = build_one_cst (new_type);
       gassign *g;
@@ -3598,12 +3598,12 @@ vect_recog_average_pattern (vec_info *vinfo,
       g = gimple_build_assign (sum_of_shifted, PLUS_EXPR,
 			       shifted_op0, shifted_op1);
       append_pattern_def_seq (vinfo, last_stmt_info, g, new_vectype);
-      
+
       tree unmasked_carry = vect_recog_temp_ssa_var (new_type, NULL);
       tree_code c = (ifn == IFN_AVG_CEIL) ? BIT_IOR_EXPR : BIT_AND_EXPR;
       g = gimple_build_assign (unmasked_carry, c, new_ops[0], new_ops[1]);
       append_pattern_def_seq (vinfo, last_stmt_info, g, new_vectype);
- 
+
       tree carry = vect_recog_temp_ssa_var (new_type, NULL);
       g = gimple_build_assign (carry, BIT_AND_EXPR, unmasked_carry, one_cst);
       append_pattern_def_seq (vinfo, last_stmt_info, g, new_vectype);
@@ -4539,6 +4539,7 @@ extern bool gimple_unsigned_integer_sat_trunc (tree, tree*, tree (*)(tree));
 
 extern bool gimple_signed_integer_sat_add (tree, tree*, tree (*)(tree));
 extern bool gimple_signed_integer_sat_sub (tree, tree*, tree (*)(tree));
+extern bool gimple_signed_integer_sat_trunc (tree, tree*, tree (*)(tree));
 
 static gimple *
 vect_recog_build_binary_gimple_stmt (vec_info *vinfo, stmt_vec_info stmt_info,
@@ -4770,7 +4771,8 @@ vect_recog_sat_trunc_pattern (vec_info *vinfo, stmt_vec_info stmt_vinfo,
   tree lhs = gimple_assign_lhs (last_stmt);
   tree otype = TREE_TYPE (lhs);
 
-  if (gimple_unsigned_integer_sat_trunc (lhs, ops, NULL)
+  if ((gimple_unsigned_integer_sat_trunc (lhs, ops, NULL)
+       || gimple_signed_integer_sat_trunc (lhs, ops, NULL))
       && type_has_mode_precision_p (otype))
     {
       tree itype = TREE_TYPE (ops[0]);
@@ -6148,7 +6150,7 @@ vect_recog_bool_pattern (vec_info *vinfo,
 			      TREE_TYPE (var));
 
       lhs = vect_recog_temp_ssa_var (TREE_TYPE (lhs), NULL);
-      pattern_stmt 
+      pattern_stmt
 	= gimple_build_assign (lhs, COND_EXPR, lhs_var,
 			       gimple_assign_rhs2 (last_stmt),
 			       gimple_assign_rhs3 (last_stmt));

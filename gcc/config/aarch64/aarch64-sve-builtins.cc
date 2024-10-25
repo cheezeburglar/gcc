@@ -19,6 +19,7 @@
 
 #define IN_TARGET_CODE 1
 
+#define INCLUDE_MEMORY
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -1147,7 +1148,10 @@ aarch64_const_binop (enum tree_code code, tree arg1, tree arg2)
       /* Return 0 for division by 0, like SDIV and UDIV do.  */
       if (code == TRUNC_DIV_EXPR && integer_zerop (arg2))
 	return arg2;
-
+      /* Return 0 if shift amount is out of range. */
+      if (code == LSHIFT_EXPR
+	  && wi::geu_p (wi::to_wide (arg2), TYPE_PRECISION (type)))
+	return build_int_cst (type, 0);
       if (!poly_int_binop (poly_res, code, arg1, arg2, sign, &overflow))
 	return NULL_TREE;
       return force_fit_type (type, poly_res, false,
@@ -3634,6 +3638,33 @@ gimple_folder::fold_const_binary (enum tree_code code)
       return gimple_build_assign (lhs, res);
 
   return NULL;
+}
+
+/* Fold the active lanes to X and set the inactive lanes according to the
+   predication.  Return the new statement.  */
+gimple *
+gimple_folder::fold_active_lanes_to (tree x)
+{
+  /* If predication is _x or the predicate is ptrue, fold to X.  */
+  if (pred == PRED_x
+      || is_ptrue (gimple_call_arg (call, 0), type_suffix (0).element_bytes))
+    return gimple_build_assign (lhs, x);
+
+  /* If the predication is _z or _m, calculate a vector that supplies the
+     values of inactive lanes (the first vector argument for m and a zero
+     vector from z).  */
+  tree vec_inactive;
+  if (pred == PRED_z)
+    vec_inactive = build_zero_cst (TREE_TYPE (lhs));
+  else
+    vec_inactive = gimple_call_arg (call, 1);
+  if (operand_equal_p (x, vec_inactive, 0))
+    return gimple_build_assign (lhs, x);
+
+  gimple_seq stmts = NULL;
+  tree pred = convert_pred (stmts, vector_type (0), 0);
+  gsi_insert_seq_before (gsi, stmts, GSI_SAME_STMT);
+  return gimple_build_assign (lhs, VEC_COND_EXPR, pred, x, vec_inactive);
 }
 
 /* Try to fold the call.  Return the new statement on success and null

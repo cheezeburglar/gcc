@@ -525,6 +525,10 @@ struct c_arg_info {
   BOOL_BITFIELD had_vla_unspec : 1;
   /* True when the arguments are a (...) prototype.  */
   BOOL_BITFIELD no_named_args_stdarg_p : 1;
+  /* True when empty parentheses have been interpreted as (void) in C23 or
+     later.  This is only for use by -Wtraditional and is no longer needed if
+     -Wtraditional is removed.  */
+  BOOL_BITFIELD c23_empty_parens : 1;
 };
 
 /* A declarator.  */
@@ -804,6 +808,7 @@ extern tree composite_type (tree, tree);
 extern tree lookup_field (const_tree, tree);
 extern tree build_component_ref (location_t, tree, tree, location_t,
 				 location_t, bool = true);
+extern tree handle_counted_by_for_component_ref (location_t, tree);
 extern tree build_array_ref (location_t, tree, tree);
 extern tree build_omp_array_section (location_t, tree, tree, tree);
 extern tree build_external_ref (location_t, tree, bool, tree *);
@@ -831,6 +836,7 @@ extern struct c_expr pop_init_level (location_t, int, struct obstack *,
 				     location_t);
 extern void set_init_index (location_t, tree, tree, struct obstack *);
 extern void set_init_label (location_t, tree, location_t, struct obstack *);
+unsigned c_maybe_optimize_large_byte_initializer (void);
 extern void process_init_element (location_t, struct c_expr, bool,
 				  struct obstack *);
 extern tree build_compound_literal (location_t, tree, tree, bool,

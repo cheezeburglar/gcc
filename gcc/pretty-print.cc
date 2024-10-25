@@ -794,18 +794,75 @@ output_buffer::pop_formatted_chunks ()
   obstack_free (&m_chunk_obstack, old_top);
 }
 
+static const int bytes_per_hexdump_line = 16;
+
+static void
+print_hexdump_line (FILE *out, int indent,
+		    const void *buf, size_t size, size_t line_start_idx)
+{
+  fprintf (out, "%*s%08lx: ", indent, "", (unsigned long)line_start_idx);
+  for (size_t offset = 0; offset < bytes_per_hexdump_line; ++offset)
+    {
+      const size_t idx = line_start_idx + offset;
+      if (idx < size)
+	fprintf (out, "%02x ", ((const unsigned char *)buf)[idx]);
+      else
+	fprintf (out, "   ");
+    }
+  fprintf (out, "| ");
+  for (size_t offset = 0; offset < bytes_per_hexdump_line; ++offset)
+    {
+      const size_t idx = line_start_idx + offset;
+      if (idx < size)
+	{
+	  unsigned char ch = ((const unsigned char *)buf)[idx];
+	  if (!ISPRINT (ch))
+	    ch = '.';
+	  fputc (ch, out);
+	}
+      else
+	break;
+    }
+  fprintf (out, "\n");
+
+}
+
+static void
+print_hexdump (FILE *out, int indent, const void *buf, size_t size)
+{
+  for (size_t idx = 0; idx < size; idx += bytes_per_hexdump_line)
+    print_hexdump_line (out, indent, buf, size, idx);
+}
+
 /* Dump state of this output_buffer to OUT, for debugging.  */
 
 void
-output_buffer::dump (FILE *out) const
+output_buffer::dump (FILE *out, int indent) const
 {
+  {
+    size_t obj_size = obstack_object_size (&m_formatted_obstack);
+    fprintf (out, "%*sm_formatted_obstack current object: length %li:\n",
+	     indent, "", (long)obj_size);
+    print_hexdump (out, indent + 2,
+		   m_formatted_obstack.object_base, obj_size);
+  }
+  {
+    size_t obj_size = obstack_object_size (&m_chunk_obstack);
+    fprintf (out, "%*sm_chunk_obstack current object: length %li:\n",
+	     indent, "", (long)obj_size);
+    print_hexdump (out, indent + 2,
+		   m_chunk_obstack.object_base, obj_size);
+  }
+
   int depth = 0;
   for (pp_formatted_chunks *iter = m_cur_formatted_chunks;
        iter;
        iter = iter->m_prev, depth++)
     {
-      fprintf (out, "pp_formatted_chunks: depth %i\n", depth);
-      iter->dump (out);
+      fprintf (out, "%*spp_formatted_chunks: depth %i\n",
+	       indent, "",
+	       depth);
+      iter->dump (out, indent + 2);
     }
 }
 
@@ -944,7 +1001,7 @@ pp_write_text_to_stream (pretty_printer *pp)
    Flush the formatted text of pretty-printer PP onto the attached stream.
    Replace characters in PPF that have special meaning in a GraphViz .dot
    file.
-   
+
    This routine is not very fast, but it doesn't have to be as this is only
    be used by routines dumping intermediate representations in graph form.  */
 
@@ -1505,7 +1562,6 @@ pp_token_list::apply_urlifier (const urlifier &urlifier)
 void
 pp_token_list::dump (FILE *out) const
 {
-  fprintf (out, "[");
   for (auto iter = m_first; iter; iter = iter->m_next)
     {
       iter->dump (out);
@@ -1532,11 +1588,13 @@ pp_formatted_chunks::append_formatted_chunk (obstack &s, const char *content)
 }
 
 void
-pp_formatted_chunks::dump (FILE *out) const
+pp_formatted_chunks::dump (FILE *out, int indent) const
 {
   for (size_t idx = 0; m_args[idx]; ++idx)
     {
-      fprintf (out, "%i: ", (int)idx);
+      fprintf (out, "%*s%i: ",
+	       indent, "",
+	       (int)idx);
       m_args[idx]->dump (out);
     }
 }
@@ -2461,10 +2519,10 @@ pretty_printer::~pretty_printer ()
 
 /* Base class implementation of pretty_printer::clone vfunc.  */
 
-pretty_printer *
+std::unique_ptr<pretty_printer>
 pretty_printer::clone () const
 {
-  return new pretty_printer (*this);
+  return ::make_unique<pretty_printer> (*this);
 }
 
 /* Append a string delimited by START and END to the output area of
@@ -2523,6 +2581,32 @@ pp_printf (pretty_printer *pp, const char *msg, ...)
   va_end (ap);
 }
 
+/* Format a message into PP using ngettext to handle
+   singular vs plural.  */
+
+void
+pp_printf_n (pretty_printer *pp,
+	     unsigned HOST_WIDE_INT n,
+	     const char *singular_gmsgid, const char *plural_gmsgid, ...)
+{
+  va_list ap;
+
+  va_start (ap, plural_gmsgid);
+
+  unsigned long gtn;
+  if (sizeof n <= sizeof gtn)
+    gtn = n;
+  else
+    /* Use the largest number ngettext can handle, otherwise
+       preserve the six least significant decimal digits for
+       languages where the plural form depends on them.  */
+    gtn = n <= ULONG_MAX ? n : n % 1000000LU + 1000000LU;
+  const char *msg = ngettext (singular_gmsgid, plural_gmsgid, gtn);
+  text_info text (msg, &ap, errno);
+  pp_format (pp, &text);
+  pp_output_formatted_text (pp);
+  va_end (ap);
+}
 
 /* Output MESSAGE verbatim into BUFFER.  */
 void
@@ -3035,9 +3119,31 @@ pretty_printer::end_url ()
 /* Dump state of this pretty_printer to OUT, for debugging.  */
 
 void
-pretty_printer::dump (FILE *out) const
+pretty_printer::dump (FILE *out, int indent) const
 {
-  m_buffer->dump (out);
+  fprintf (out, "%*sm_show_color: %s\n",
+	   indent, "",
+	   m_show_color ? "true" : "false");
+
+  fprintf (out, "%*sm_url_format: ", indent, "");
+  switch (m_url_format)
+    {
+    case URL_FORMAT_NONE:
+      fprintf (out, "none");
+      break;
+    case URL_FORMAT_ST:
+      fprintf (out, "st");
+      break;
+    case URL_FORMAT_BEL:
+      fprintf (out, "bel");
+      break;
+    default:
+      gcc_unreachable ();
+    }
+  fprintf (out, "\n");
+
+  fprintf (out, "%*sm_buffer:\n", indent, "");
+  m_buffer->dump (out, indent + 2);
 }
 
 /* class pp_markup::context.  */
@@ -3331,10 +3437,10 @@ test_pp_format ()
   }
 
   /* Verify %Z.  */
-  int v[] = { 1, 2, 3 }; 
+  int v[] = { 1, 2, 3 };
   ASSERT_PP_FORMAT_3 ("1, 2, 3 12345678", "%Z %x", v, 3, 0x12345678);
 
-  int v2[] = { 0 }; 
+  int v2[] = { 0 };
   ASSERT_PP_FORMAT_3 ("0 12345678", "%Z %x", v2, 1, 0x12345678);
 
   /* Verify %e.  */

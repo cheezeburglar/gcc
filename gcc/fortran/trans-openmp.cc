@@ -19,6 +19,7 @@ along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
 
+#define INCLUDE_MEMORY
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -582,7 +583,7 @@ gfc_walk_alloc_comps (tree decl, tree dest, tree var,
 	      tem = size_binop (MINUS_EXPR, tem, size_one_node);
 	    }
 	  else
-	    tem = array_type_nelts (type);
+	    tem = array_type_nelts_minus_one (type);
 	  tem = fold_convert (gfc_array_index_type, tem);
 	}
 
@@ -1309,7 +1310,7 @@ gfc_omp_clause_linear_ctor (tree clause, tree dest, tree src, tree add)
 	  nelems = size_binop (MINUS_EXPR, nelems, size_one_node);
 	}
       else
-	nelems = array_type_nelts (type);
+	nelems = array_type_nelts_minus_one (type);
       nelems = fold_convert (gfc_array_index_type, nelems);
 
       gfc_omp_linear_clause_add_loop (&block, dest, src, add, nelems);
@@ -2967,7 +2968,7 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
 	  for (; n != NULL; n = n->next)
 	    {
 	      if (iterator && prev->u2.ns != n->u2.ns)
-		{ 
+		{
 		  BLOCK_SUBBLOCKS (tree_block) = gfc_finish_block (&iter_block);
 		  TREE_VEC_ELT (iterator, 5) = tree_block;
 		  for (tree c = omp_clauses; c != prev_clauses;
@@ -3124,7 +3125,7 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
 	      omp_clauses = gfc_trans_add_clause (node, omp_clauses);
 	    }
 	  if (iterator)
-	    { 
+	    {
 	      BLOCK_SUBBLOCKS (tree_block) = gfc_finish_block (&iter_block);
 	      TREE_VEC_ELT (iterator, 5) = tree_block;
 	      for (tree c = omp_clauses; c != prev_clauses;
@@ -4980,7 +4981,7 @@ gfc_trans_oacc_construct (gfc_code *code)
 }
 
 /* update, enter_data, exit_data, cache. */
-static tree 
+static tree
 gfc_trans_oacc_executable_directive (gfc_code *code)
 {
   stmtblock_t block;
@@ -5008,7 +5009,7 @@ gfc_trans_oacc_executable_directive (gfc_code *code)
   gfc_start_block (&block);
   oacc_clauses = gfc_trans_omp_clauses (&block, code->ext.omp_clauses,
 					code->loc, false, true, code->op);
-  stmt = build1_loc (input_location, construct_code, void_type_node, 
+  stmt = build1_loc (input_location, construct_code, void_type_node,
 		     oacc_clauses);
   gfc_add_expr_to_block (&block, stmt);
   return gfc_finish_block (&block);
@@ -7216,7 +7217,7 @@ gfc_split_omp_clauses (gfc_code *code,
 		 }
 	     }
 	   if (!found)
-	     gfc_error ("%qs specified in 'allocate' clause at %L but not "
+	     gfc_error ("%qs specified in %<allocate%> clause at %L but not "
 			"in an explicit privatization clause",
 			alloc_nl->sym->name, &alloc_nl->where);
 	 }
@@ -8119,7 +8120,7 @@ gfc_trans_omp_workshare (gfc_code *code, gfc_omp_clauses *clauses)
 	  gfc_internal_error ("gfc_trans_omp_workshare(): Bad statement code");
 	}
 
-      gfc_set_backend_locus (&code->loc);
+      input_location = gfc_get_location (&code->loc);
 
       if (res != NULL_TREE && ! IS_EMPTY_STMT (res))
 	{
@@ -8424,7 +8425,7 @@ gfc_trans_omp_declare_variant (gfc_namespace *ns)
 	{
 	  if (!search_ns->proc_name->attr.function
 	      && !search_ns->proc_name->attr.subroutine)
-	    gfc_error ("The base name for 'declare variant' must be "
+	    gfc_error ("The base name for %<declare variant%> must be "
 		       "specified at %L ", &odv->where);
 	  else
 	    error_found = false;

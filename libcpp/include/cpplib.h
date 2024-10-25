@@ -144,6 +144,8 @@ class rich_location;
   TK(STRING32_USERDEF,	LITERAL) /* U"string"_suffix - C++11 */		\
   TK(UTF8STRING_USERDEF,LITERAL) /* u8"string"_suffix - C++11 */	\
 									\
+  TK(EMBED,		LITERAL) /* #embed - C23 */			\
+									\
   TK(COMMENT,		LITERAL) /* Only if output comments.  */	\
 				 /* SPELL_LITERAL happens to DTRT.  */	\
   TK(MACRO_ARG,		NONE)	 /* Macro argument.  */			\
@@ -264,7 +266,7 @@ struct GTY(()) cpp_token {
   {
     /* An identifier.  */
     struct cpp_identifier GTY ((tag ("CPP_TOKEN_FLD_NODE"))) node;
-	 
+
     /* Inherit padding from this token.  */
     cpp_token * GTY ((tag ("CPP_TOKEN_FLD_SOURCE"))) source;
 
@@ -323,7 +325,7 @@ enum cpp_normalize_level {
   normalized_none
 };
 
-enum cpp_main_search 
+enum cpp_main_search
 {
   CMS_none,    /* A regular source file.  */
   CMS_header,  /* Is a directly-specified header file (eg PCH or
@@ -475,7 +477,7 @@ struct cpp_options
   /* Nonzero means we're looking at already preprocessed code, so don't
      bother trying to do macro expansion and whatnot.  */
   unsigned char preprocessed;
-  
+
   /* Nonzero means we are going to emit debugging logs during
      preprocessing.  */
   unsigned char debug;
@@ -546,6 +548,12 @@ struct cpp_options
   /* Nonzero for C++23 delimited escape sequences.  */
   unsigned char delimited_escape_seqs;
 
+  /* Nonzero for C++23 named universal character escape sequences.  */
+  unsigned char named_uc_escape_seqs;
+
+  /* Nonzero for C2Y 0o prefixed octal integer constants.  */
+  unsigned char octal_constants;
+
   /* Nonzero for 'true' and 'false' in #if expressions.  */
   unsigned char true_false;
 
@@ -577,6 +585,9 @@ struct cpp_options
   /* True if warn about differences between C11 and C23.  */
   signed char cpp_warn_c11_c23_compat;
 
+  /* True if warn about differences between C23 and C2Y.  */
+  signed char cpp_warn_c23_c2y_compat;
+
   /* True if warn about differences between C++98 and C++11.  */
   bool cpp_warn_cxx11_compat;
 
@@ -598,8 +609,14 @@ struct cpp_options
   /* True if -finput-charset= option has been used explicitly.  */
   bool cpp_input_charset_explicit;
 
+  /* -Wleading-whitespace= value.  */
+  unsigned char cpp_warn_leading_whitespace;
+
   /* -Wtrailing-whitespace= value.  */
   unsigned char cpp_warn_trailing_whitespace;
+
+  /* -ftabstop= value.  */
+  unsigned int cpp_tabstop;
 
   /* Dependency generation.  */
   struct
@@ -714,6 +731,7 @@ enum cpp_warning_reason {
   CPP_W_PEDANTIC,
   CPP_W_C90_C99_COMPAT,
   CPP_W_C11_C23_COMPAT,
+  CPP_W_C23_C2Y_COMPAT,
   CPP_W_CXX11_COMPAT,
   CPP_W_CXX20_COMPAT,
   CPP_W_CXX14_EXTENSIONS,
@@ -726,6 +744,7 @@ enum cpp_warning_reason {
   CPP_W_UNICODE,
   CPP_W_HEADER_GUARD,
   CPP_W_PRAGMA_ONCE_OUTSIDE_HEADER,
+  CPP_W_LEADING_WHITESPACE,
   CPP_W_TRAILING_WHITESPACE
 };
 
@@ -855,7 +874,7 @@ struct cpp_dir
   /* Is this a user-supplied directory? */
   bool user_supplied_p;
 
-  /* The canonicalized NAME as determined by lrealpath.  This field 
+  /* The canonicalized NAME as determined by lrealpath.  This field
      is only used by hosts that lack reliable inode numbers.  */
   char *canonical_name;
 
@@ -885,7 +904,7 @@ enum cpp_macro_kind {
 /* Each macro definition is recorded in a cpp_macro structure.
    Variadic macros cannot occur with traditional cpp.  */
 struct GTY(()) cpp_macro {
-  union cpp_parm_u 
+  union cpp_parm_u
   {
     /* Parameters, if any.  If parameter names use extended identifiers,
        the original spelling of those identifiers, not the canonical
@@ -1226,7 +1245,7 @@ inline location_t cpp_macro_definition_location (cpp_hashnode *node)
   return macro ? macro->line : 0;
 }
 /* Return an idempotent time stamp (possibly from SOURCE_DATE_EPOCH).  */
-enum class CPP_time_kind 
+enum class CPP_time_kind
 {
   FIXED = -1,	/* Fixed time via source epoch.  */
   DYNAMIC = -2,	/* Dynamic via time(2).  */
@@ -1261,7 +1280,7 @@ extern cppchar_t cpp_host_to_exec_charset (cpp_reader *, cppchar_t);
    The text is the same as the command line argument.  */
 extern void cpp_define (cpp_reader *, const char *);
 extern void cpp_define_unused (cpp_reader *, const char *);
-extern void cpp_define_formatted (cpp_reader *pfile, 
+extern void cpp_define_formatted (cpp_reader *pfile,
 				  const char *fmt, ...) ATTRIBUTE_PRINTF_2;
 extern void cpp_define_formatted_unused (cpp_reader *pfile,
 					 const char *fmt,

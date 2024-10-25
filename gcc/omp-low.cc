@@ -22,6 +22,7 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
+#define INCLUDE_MEMORY
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -8346,7 +8347,7 @@ lower_oacc_head_mark (location_t loc, tree ddvar, tree clauses,
     }
 
   if (tag & OLF_TILE)
-    /* Tiling could use all 3 levels.  */ 
+    /* Tiling could use all 3 levels.  */
     levels = 3;
   else
     {
@@ -8374,7 +8375,7 @@ lower_oacc_head_mark (location_t loc, tree ddvar, tree clauses,
 }
 
 /* Emit an OpenACC lopp head or tail marker to SEQ.  LEVEL is the
-   partitioning level of the enclosed region.  */ 
+   partitioning level of the enclosed region.  */
 
 static void
 lower_oacc_loop_marker (location_t loc, tree ddvar, bool head,

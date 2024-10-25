@@ -21,6 +21,7 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
+#define INCLUDE_MEMORY
 #include "bconfig.h"
 #include "system.h"
 #include "coretypes.h"
@@ -1106,12 +1107,13 @@ is_a_helper <user_id *>::test (id_base *id)
    index of the first, otherwise return -1.  */
 
 static int
-commutative_op (id_base *id)
+commutative_op (id_base *id, bool compares_are_commutative = false)
 {
   if (operator_id *code = dyn_cast <operator_id *> (id))
     {
       if (commutative_tree_code (code->code)
-	  || commutative_ternary_tree_code (code->code))
+	  || commutative_ternary_tree_code (code->code)
+	  || (compares_are_commutative && comparison_code_p (code->code)))
 	return 0;
       return -1;
     }
@@ -1119,9 +1121,12 @@ commutative_op (id_base *id)
     switch (fn->fn)
       {
       CASE_CFN_FMA:
+      CASE_CFN_HYPOT:
       case CFN_FMS:
       case CFN_FNMA:
       case CFN_FNMS:
+      case CFN_ADD_OVERFLOW:
+      case CFN_MUL_OVERFLOW:
 	return 0;
 
       case CFN_COND_ADD:
@@ -1157,11 +1162,13 @@ commutative_op (id_base *id)
       }
   if (user_id *uid = dyn_cast<user_id *> (id))
     {
-      int res = commutative_op (uid->substitutes[0]);
+      int res = commutative_op (uid->substitutes[0],
+				compares_are_commutative);
       if (res < 0)
 	return -1;
       for (unsigned i = 1; i < uid->substitutes.length (); ++i)
-	if (res != commutative_op (uid->substitutes[i]))
+	if (res != commutative_op (uid->substitutes[i],
+				   compares_are_commutative))
 	  return -1;
       return res;
     }
@@ -1798,7 +1805,7 @@ lower_opt (operand *o, unsigned char grp, bool strip)
   return ne;
 }
 
-/* Determine whether O or its children uses the conditional operation 
+/* Determine whether O or its children uses the conditional operation
    group GRP.  */
 
 static bool
@@ -4612,7 +4619,7 @@ decision_tree::gen (vec <FILE *> &files, bool gimple)
 
   fprintf (stderr, "%s decision tree has %u leafs, maximum depth %u and "
 	   "a total number of %u nodes\n",
-	   gimple ? "GIMPLE" : "GENERIC", 
+	   gimple ? "GIMPLE" : "GENERIC",
 	   root->num_leafs, root->max_level, root->total_size);
 
   /* First split out the transform part of equal leafs.  */
@@ -5213,27 +5220,11 @@ parser::parse_expr ()
 		{
 		  if (*sp == 'c')
 		    {
-		      if (operator_id *o
-			    = dyn_cast<operator_id *> (e->operation))
-			{
-			  if (!commutative_tree_code (o->code)
-			      && !comparison_code_p (o->code))
-			    fatal_at (token, "operation is not commutative");
-			}
-		      else if (user_id *p = dyn_cast<user_id *> (e->operation))
-			for (unsigned i = 0;
-			     i < p->substitutes.length (); ++i)
-			  {
-			    if (operator_id *q
-				  = dyn_cast<operator_id *> (p->substitutes[i]))
-			      {
-				if (!commutative_tree_code (q->code)
-				    && !comparison_code_p (q->code))
-				  fatal_at (token, "operation %s is not "
-					    "commutative", q->id);
-			      }
-			  }
-		      is_commutative = true;
+		      if (commutative_op (e->operation, true) != -1)
+			is_commutative = true;
+		      else
+			fatal_at (token, "operation %s is not known "
+				  "commutative", e->operation->id);
 		    }
 		  else if (*sp == 'C')
 		    is_commutative = true;
@@ -5692,7 +5683,7 @@ parser::parse_for (location_t)
 	      else
 		fatal_at (token, "iterator cannot be used as operator-list");
 	    }
-	  else 
+	  else
 	    op->substitutes.safe_push (idb);
 	}
       op->nargs = arity;
@@ -5755,7 +5746,7 @@ parser::parse_for (location_t)
 void
 parser::parse_operator_list (location_t)
 {
-  const cpp_token *token = peek (); 
+  const cpp_token *token = peek ();
   const char *id = get_ident ();
 
   if (get_operator (id, true) != 0)
@@ -5763,13 +5754,13 @@ parser::parse_operator_list (location_t)
 
   user_id *op = new user_id (id, true);
   int arity = -1;
-  
+
   while ((token = peek_ident ()) != 0)
     {
-      token = peek (); 
+      token = peek ();
       const char *oper = get_ident ();
       id_base *idb = get_operator (oper, true);
-      
+
       if (idb == 0)
 	fatal_at (token, "no such operator '%s'", oper);
 
@@ -6115,8 +6106,8 @@ main (int argc, char **argv)
 
   if (!cpp_read_main_file (r, input))
     return 1;
-  cpp_define (r, gimple ? "GIMPLE=1": "GENERIC=1");
-  cpp_define (r, gimple ? "GENERIC=0": "GIMPLE=0");
+  cpp_define (r, gimple ? "GIMPLE=1" : "GENERIC=1");
+  cpp_define (r, gimple ? "GENERIC=0" : "GIMPLE=0");
 
   null_id = new id_base (id_base::NULL_ID, "null");
 

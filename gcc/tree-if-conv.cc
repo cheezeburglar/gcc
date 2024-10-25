@@ -525,7 +525,7 @@ fold_build_cond_expr (tree type, tree cond, tree rhs, tree lhs)
 
 /* Add condition NC to the predicate list of basic block BB.  LOOP is
    the loop to be if-converted. Use predicate of cd-equivalent block
-   for join bb if it exists: we call basic blocks bb1 and bb2 
+   for join bb if it exists: we call basic blocks bb1 and bb2
    cd-equivalent if they are executed under the same condition.  */
 
 static inline void
@@ -1477,10 +1477,12 @@ predicate_bbs (loop_p loop)
 		{
 		  tree low = build2_loc (loc, GE_EXPR,
 					 boolean_type_node,
-					 index, CASE_LOW (label));
+					 index, fold_convert_loc (loc, TREE_TYPE (index),
+						 CASE_LOW (label)));
 		  tree high = build2_loc (loc, LE_EXPR,
 					  boolean_type_node,
-					  index, CASE_HIGH (label));
+					  index, fold_convert_loc (loc, TREE_TYPE (index),
+						  CASE_HIGH (label)));
 		  case_cond = build2_loc (loc, TRUTH_AND_EXPR,
 					  boolean_type_node,
 					  low, high);
@@ -1489,7 +1491,8 @@ predicate_bbs (loop_p loop)
 		case_cond = build2_loc (loc, EQ_EXPR,
 					boolean_type_node,
 					index,
-					CASE_LOW (gimple_switch_label (sw, i)));
+					fold_convert_loc (loc, TREE_TYPE (index),
+							  CASE_LOW (label)));
 	      if (i > 1)
 		switch_cond = build2_loc (loc, TRUTH_OR_EXPR,
 					  boolean_type_node,
@@ -3087,7 +3090,7 @@ combine_blocks (class loop *loop, bool loop_versioned)
 	    }
 	  if (SSA_NAME_OCCURS_IN_ABNORMAL_PHI (gimple_phi_result (vphi)))
 	    SSA_NAME_OCCURS_IN_ABNORMAL_PHI (last_vdef) = 1;
-	  gsi = gsi_for_stmt (vphi); 
+	  gsi = gsi_for_stmt (vphi);
 	  remove_phi_node (&gsi, true);
 	}
 
@@ -3145,7 +3148,7 @@ combine_blocks (class loop *loop, bool loop_versioned)
 	    }
 	  if (SSA_NAME_OCCURS_IN_ABNORMAL_PHI (gimple_phi_result (vphi)))
 	    SSA_NAME_OCCURS_IN_ABNORMAL_PHI (last_vdef) = 1;
-	  gimple_stmt_iterator gsi = gsi_for_stmt (vphi); 
+	  gimple_stmt_iterator gsi = gsi_for_stmt (vphi);
 	  remove_phi_node (&gsi, true);
 	}
     }
@@ -3218,7 +3221,7 @@ combine_blocks (class loop *loop, bool loop_versioned)
    will be if-converted, the new copy of the loop will not,
    and the LOOP_VECTORIZED internal call will be guarding which
    loop to execute.  The vectorizer pass will fold this
-   internal call into either true or false. 
+   internal call into either true or false.
 
    Note that this function intentionally invalidates profile.  Both edges
    out of LOOP_VECTORIZED must have 100% probability so the profile remains

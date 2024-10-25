@@ -49,6 +49,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "text-art/theme.h"
 #include "pretty-print-urlifier.h"
 #include "logical-location.h"
+#include "diagnostic-buffer.h"
 
 #ifdef HAVE_TERMIOS_H
 # include <termios.h>
@@ -116,11 +117,11 @@ void
 diagnostic_set_caret_max_width (diagnostic_context *context, int value)
 {
   /* One minus to account for the leading empty space.  */
-  value = value ? value - 1 
+  value = value ? value - 1
     : (isatty (fileno (pp_buffer (context->m_printer)->m_stream))
-       ? get_terminal_width () - 1: INT_MAX);
-  
-  if (value <= 0) 
+       ? get_terminal_width () - 1 : INT_MAX);
+
+  if (value <= 0)
     value = INT_MAX;
 
   context->m_source_printing.max_width = value;
@@ -226,7 +227,7 @@ diagnostic_context::initialize (int n_opts)
   new (m_printer) pretty_printer ();
 
   m_file_cache = new file_cache ();
-  memset (m_diagnostic_count, 0, sizeof m_diagnostic_count);
+  m_diagnostic_counters.clear ();
   m_warning_as_error_requested = false;
   m_n_opts = n_opts;
   m_option_classifier.init (n_opts);
@@ -284,10 +285,10 @@ diagnostic_context::initialize (int n_opts)
   m_diagnostic_groups.m_emission_count = 0;
   m_output_format = new diagnostic_text_output_format (*this);
   m_set_locations_cb = nullptr;
-  m_ice_handler_cb = nullptr;
   m_client_data_hooks = nullptr;
   m_diagrams.m_theme = nullptr;
   m_original_argv = nullptr;
+  m_diagnostic_buffer = nullptr;
 
   enum diagnostic_text_art_charset text_art_charset
     = DIAGNOSTICS_TEXT_ART_CHARSET_EMOJI;
@@ -378,6 +379,8 @@ diagnostic_context::finish ()
   while (m_diagnostic_groups.m_nesting_depth > 0)
     end_group ();
 
+  set_diagnostic_buffer (nullptr);
+
   /* Clean ups.  */
 
   delete m_output_format;
@@ -419,6 +422,24 @@ diagnostic_context::finish ()
   m_original_argv = nullptr;
 }
 
+/* Dump state of this diagnostic_context to OUT, for debugging.  */
+
+void
+diagnostic_context::dump (FILE *out) const
+{
+  fprintf (out, "diagnostic_context:\n");
+  m_diagnostic_counters.dump (out, 2);
+  fprintf (out, "  output format:\n");
+  m_output_format->dump (out, 4);
+  fprintf (out, "  printer:\n");
+  m_printer->dump (out, 4);
+  fprintf (out, "  diagnostic buffer:\n");
+  if (m_diagnostic_buffer)
+    m_diagnostic_buffer->dump (out, 4);
+  else
+    fprintf (out, "    (none):\n");
+}
+
 /* Return true if sufficiently severe diagnostics have been seen that
    we ought to exit with a non-zero exit code.  */
 
@@ -427,25 +448,27 @@ diagnostic_context::execution_failed_p () const
 {
   /* Equivalent to (seen_error () || werrorcount), but on
      this context, rather than global_dc.  */
-  return (m_diagnostic_count [DK_ERROR]
-	  || m_diagnostic_count [DK_SORRY]
-	  || m_diagnostic_count [DK_WERROR]);
+  return (diagnostic_count (DK_ERROR)
+	  || diagnostic_count (DK_SORRY)
+	  || diagnostic_count (DK_WERROR));
 }
 
 void
-diagnostic_context::set_output_format (diagnostic_output_format *output_format)
+diagnostic_context::
+set_output_format (std::unique_ptr<diagnostic_output_format> output_format)
 {
-  /* Ideally we'd use a std::unique_ptr here.  */
   delete m_output_format;
-  m_output_format = output_format;
+  /* Ideally this field would be a std::unique_ptr.  */
+  m_output_format = output_format.release ();
 }
 
 void
-diagnostic_context::set_client_data_hooks (diagnostic_client_data_hooks *hooks)
+diagnostic_context::
+set_client_data_hooks (std::unique_ptr<diagnostic_client_data_hooks> hooks)
 {
-  /* Ideally we'd use a std::unique_ptr here.  */
   delete m_client_data_hooks;
-  m_client_data_hooks = hooks;
+  /* Ideally the field would be a std::unique_ptr here.  */
+  m_client_data_hooks = hooks.release ();
 }
 
 void
@@ -462,20 +485,21 @@ diagnostic_context::set_original_argv (unique_argv original_argv)
 }
 
 void
-diagnostic_context::set_option_manager (diagnostic_option_manager *mgr,
-					unsigned lang_mask)
+diagnostic_context::
+set_option_manager (std::unique_ptr<diagnostic_option_manager> mgr,
+		    unsigned lang_mask)
 {
   delete m_option_mgr;
-  m_option_mgr = mgr;
+  m_option_mgr = mgr.release ();
   m_lang_mask = lang_mask;
 }
 
 void
-diagnostic_context::set_urlifier (urlifier *urlifier)
+diagnostic_context::set_urlifier (std::unique_ptr<urlifier> urlifier)
 {
-  /* Ideally we'd use a std::unique_ptr here.  */
   delete m_urlifier;
-  m_urlifier = urlifier;
+  /* Ideally the field would be a std::unique_ptr here.  */
+  m_urlifier = urlifier.release ();
 }
 
 void
@@ -739,9 +763,9 @@ diagnostic_context::check_max_errors (bool flush)
   if (!m_max_errors)
     return;
 
-  int count = (m_diagnostic_count[DK_ERROR]
-	       + m_diagnostic_count[DK_SORRY]
-	       + m_diagnostic_count[DK_WERROR]);
+  int count = (diagnostic_count (DK_ERROR)
+	       + diagnostic_count (DK_SORRY)
+	       + diagnostic_count (DK_WERROR));
 
   if (count >= m_max_errors)
     {
@@ -782,16 +806,15 @@ diagnostic_context::action_after_output (diagnostic_t diag_kind)
     case DK_ICE:
     case DK_ICE_NOBT:
       {
-	/* Optional callback for attempting to handle ICEs gracefully.  */
-	if (void (*ice_handler_cb) (diagnostic_context *) = m_ice_handler_cb)
+	/* Attempt to ensure that any outputs are flushed e.g. that .sarif
+	   files are written out.
+	   Only do it once.  */
+	static bool finishing_due_to_ice = false;
+	if (!finishing_due_to_ice)
 	  {
-	    /* Clear the callback, to avoid potentially re-entering
-	       the routine if there's a crash within the handler.  */
-	    m_ice_handler_cb = NULL;
-	    ice_handler_cb (this);
+	    finishing_due_to_ice = true;
+	    finish ();
 	  }
-	/* The context might have had diagnostic_finish called on
-	   it at this point.  */
 
 	struct backtrace_state *state = NULL;
 	if (diag_kind == DK_ICE)
@@ -1276,7 +1299,7 @@ diagnostic_context::report_diagnostic (diagnostic_info *diagnostic)
     return false;
 
   if (diagnostic->kind != DK_NOTE && diagnostic->kind != DK_ICE)
-    diagnostic_check_max_errors (this);
+    check_max_errors (false);
 
   m_lock++;
 
@@ -1286,11 +1309,11 @@ diagnostic_context::report_diagnostic (diagnostic_info *diagnostic)
 	 error has already occurred.  This is counteracted by
 	 abort_on_error.  */
       if (!CHECKING_P
-	  && (m_diagnostic_count[DK_ERROR] > 0
-	      || m_diagnostic_count[DK_SORRY] > 0)
+	  && (diagnostic_count (DK_ERROR) > 0
+	      || diagnostic_count (DK_SORRY) > 0)
 	  && !m_abort_on_error)
 	{
-	  expanded_location s 
+	  expanded_location s
 	    = expand_location (diagnostic_location (diagnostic));
 	  fnotice (stderr, "%s:%d: confused by earlier errors, bailing out\n",
 		   s.file, s.line);
@@ -1301,17 +1324,34 @@ diagnostic_context::report_diagnostic (diagnostic_info *diagnostic)
 			     diagnostic->message.m_format_spec,
 			     diagnostic->message.m_args_ptr);
     }
-  if (diagnostic->kind == DK_ERROR && orig_diag_kind == DK_WARNING)
-    ++m_diagnostic_count[DK_WERROR];
-  else
-    ++m_diagnostic_count[diagnostic->kind];
+
+  /* Increment the counter for the appropriate diagnostic kind, either
+     within this context, or within the diagnostic_buffer.  */
+  {
+    const diagnostic_t kind_for_count =
+      ((diagnostic->kind == DK_ERROR && orig_diag_kind == DK_WARNING)
+       ? DK_WERROR
+       : diagnostic->kind);
+    diagnostic_counters &counters
+      = (m_diagnostic_buffer
+	 ? m_diagnostic_buffer->m_diagnostic_counters
+	 : m_diagnostic_counters);
+    ++counters.m_count_for_kind[kind_for_count];
+  }
 
   /* Is this the initial diagnostic within the stack of groups?  */
   if (m_diagnostic_groups.m_emission_count == 0)
     m_output_format->on_begin_group ();
   m_diagnostic_groups.m_emission_count++;
 
+  /* Run phases 1 and 2 of formatting the message.
+     In particular, some format codes may have side-effects here which need to
+     happen before sending the diagnostic to the output format.
+
+     For example, Fortran's %C and %L formatting codes populate the
+     rich_location.  */
   pp_format (m_printer, &diagnostic->message);
+
   /* Call vfunc in the output format.  This is responsible for
      phase 3 of formatting, and for printing the result.  */
   m_output_format->on_report_diagnostic (*diagnostic, orig_diag_kind);
@@ -1335,16 +1375,21 @@ diagnostic_context::report_diagnostic (diagnostic_info *diagnostic)
       pp_flush (m_printer);
       break;
     }
-  diagnostic_action_after_output (this, diagnostic->kind);
+  if (m_diagnostic_buffer == nullptr
+      || diagnostic->kind == DK_ICE
+      || diagnostic->kind == DK_ICE_NOBT)
+    action_after_output (diagnostic->kind);
   diagnostic->x_data = NULL;
 
   if (m_edit_context_ptr)
     if (diagnostic->richloc->fixits_can_be_auto_applied_p ())
-      m_edit_context_ptr->add_fixits (diagnostic->richloc);
+      if (!m_diagnostic_buffer)
+	m_edit_context_ptr->add_fixits (diagnostic->richloc);
 
   m_lock--;
 
-  m_output_format->after_diagnostic (*diagnostic);
+  if (!m_diagnostic_buffer)
+    m_output_format->after_diagnostic (*diagnostic);
 
   return true;
 }
@@ -1484,9 +1529,9 @@ diagnostic_context::error_recursion ()
   fnotice (stderr,
 	   "internal compiler error: error reporting routines re-entered.\n");
 
-  /* Call diagnostic_action_after_output to get the "please submit a bug
-     report" message.  */
-  diagnostic_action_after_output (this, DK_ICE);
+  /* Call action_after_output to get the "please submit a bug report"
+     message.  */
+  action_after_output (DK_ICE);
 
   /* Do not use gcc_unreachable here; that goes through internal_error
      and therefore would cause infinite recursion.  */
@@ -1555,6 +1600,12 @@ diagnostic_context::end_group ()
 	m_output_format->on_end_group ();
       m_diagnostic_groups.m_emission_count = 0;
     }
+}
+
+void
+diagnostic_output_format::dump (FILE *, int) const
+{
+  /* No-op for now.  */
 }
 
 /* Set the output format for CONTEXT to FORMAT, using BASE_FILE_NAME for
@@ -1644,6 +1695,152 @@ set_text_art_charset (enum diagnostic_text_art_charset charset)
       m_diagrams.m_theme = new text_art::emoji_theme ();
       break;
     }
+}
+
+/* If BUFFER is non-null, use BUFFER as the active diagnostic_buffer on
+   this context.  BUFFER is borrowed.
+
+   If BUFFER is null, stop any buffering on this context until the next call
+   to this function.  */
+
+void
+diagnostic_context::set_diagnostic_buffer (diagnostic_buffer *buffer)
+{
+  /* We don't allow changing buffering within a diagnostic group
+     (to simplify handling of buffered diagnostics within the
+     diagnostic_format implementations).  */
+  gcc_assert (m_diagnostic_groups.m_nesting_depth == 0);
+
+  m_diagnostic_buffer = buffer;
+
+  gcc_assert (m_output_format);
+  if (buffer)
+    {
+      buffer->ensure_per_format_buffer ();
+      gcc_assert (buffer->m_per_format_buffer);
+      m_output_format->set_buffer (buffer->m_per_format_buffer.get ());
+    }
+  else
+    m_output_format->set_buffer (nullptr);
+}
+
+/* Clear BUFFER without flushing it.  */
+
+void
+diagnostic_context::clear_diagnostic_buffer (diagnostic_buffer &buffer)
+{
+  if (buffer.m_per_format_buffer)
+    buffer.m_per_format_buffer->clear ();
+  buffer.m_diagnostic_counters.clear ();
+
+  /* We need to reset last_location, otherwise we may skip caret lines
+     when we actually give a diagnostic.  */
+  m_last_location = UNKNOWN_LOCATION;
+}
+
+/* Flush the diagnostics in BUFFER to this context, clearing BUFFER.  */
+
+void
+diagnostic_context::flush_diagnostic_buffer (diagnostic_buffer &buffer)
+{
+  bool had_errors
+    = (buffer.m_diagnostic_counters.m_count_for_kind[DK_ERROR] > 0
+       || buffer.m_diagnostic_counters.m_count_for_kind[DK_WERROR] > 0);
+  if (buffer.m_per_format_buffer)
+    buffer.m_per_format_buffer->flush ();
+  buffer.m_diagnostic_counters.move_to (m_diagnostic_counters);
+
+  action_after_output (had_errors ? DK_ERROR : DK_WARNING);
+  check_max_errors (true);
+}
+
+/* struct diagnostic_counters.  */
+
+diagnostic_counters::diagnostic_counters ()
+{
+  clear ();
+}
+
+void
+diagnostic_counters::dump (FILE *out, int indent) const
+{
+  fprintf (out, "%*scounts:\n", indent, "");
+  bool none = true;
+  for (int i = 0; i < DK_LAST_DIAGNOSTIC_KIND; i++)
+    if (m_count_for_kind[i] > 0)
+      {
+	fprintf (out, "%*s%s%i\n",
+		 indent + 2, "",
+		 get_diagnostic_kind_text (static_cast<diagnostic_t> (i)),
+		 m_count_for_kind[i]);
+	none = false;
+      }
+  if (none)
+    fprintf (out, "%*s(none)\n", indent + 2, "");
+}
+
+void
+diagnostic_counters::move_to (diagnostic_counters &dest)
+{
+  for (int i = 0; i < DK_LAST_DIAGNOSTIC_KIND; i++)
+    dest.m_count_for_kind[i] += m_count_for_kind[i];
+  clear ();
+}
+
+void
+diagnostic_counters::clear ()
+{
+  memset (&m_count_for_kind, 0, sizeof m_count_for_kind);
+}
+
+/* class diagnostic_buffer.  */
+
+diagnostic_buffer::diagnostic_buffer (diagnostic_context &ctxt)
+: m_ctxt (ctxt)
+{
+}
+
+void
+diagnostic_buffer::dump (FILE *out, int indent) const
+{
+  fprintf (out, "%*sm_per_format_buffer:\n", indent, "");
+  m_diagnostic_counters.dump (out, indent + 2);
+  if (m_per_format_buffer)
+    m_per_format_buffer->dump (out, indent + 2);
+  else
+    fprintf (out, "%*s(none)\n", indent + 2, "");
+}
+
+bool
+diagnostic_buffer::empty_p () const
+{
+  if (m_per_format_buffer)
+    return m_per_format_buffer->empty_p ();
+  else
+    return true;
+}
+
+void
+diagnostic_buffer::move_to (diagnostic_buffer &dest)
+{
+  ensure_per_format_buffer ();
+  dest.ensure_per_format_buffer ();
+  m_per_format_buffer->move_to (*dest.m_per_format_buffer);
+  m_diagnostic_counters.move_to (dest.m_diagnostic_counters);
+}
+
+/* Lazily get output format to create its own kind of buffer.  */
+
+void
+diagnostic_buffer::ensure_per_format_buffer ()
+{
+  if (!m_per_format_buffer)
+    {
+      gcc_assert (m_ctxt.get_output_format ());
+      m_per_format_buffer
+	= m_ctxt.get_output_format ()->make_per_format_buffer ();
+    }
+  gcc_assert (m_per_format_buffer);
 }
 
 /* Really call the system 'abort'.  This has to go right at the end of
@@ -1975,7 +2172,6 @@ c_diagnostic_cc_tests ()
   test_print_parseable_fixits_bytes_vs_display_columns ();
   test_get_location_text ();
   test_num_digits ();
-
 }
 
 } // namespace selftest

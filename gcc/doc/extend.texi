@@ -15317,6 +15317,61 @@ initializers of variables usable in constant expressions.   For more details
 refer to the latest revision of the C++ standard.
 @enddefbuiltin
 
+@defbuiltin{@var{type} __builtin_counted_by_ref (@var{ptr})}
+The built-in function @code{__builtin_counted_by_ref} checks whether the array
+object pointed by the pointer @var{ptr} has another object associated with it
+that represents the number of elements in the array object through the
+@code{counted_by} attribute (i.e. the counted-by object). If so, returns a
+pointer to the corresponding counted-by object.
+If such counted-by object does not exist, returns a null pointer.
+
+This built-in function is only available in C for now.
+
+The argument @var{ptr} must be a pointer to an array.
+The @var{type} of the returned value is a pointer type pointing to the
+corresponding type of the counted-by object or a void pointer type in case
+of a null pointer being returned.
+
+For example:
+
+@smallexample
+struct foo1 @{
+  int counter;
+  struct bar1 array[] __attribute__((counted_by (counter)));
+@} *p;
+
+struct foo2 @{
+  int other;
+  struct bar2 array[];
+@} *q;
+@end smallexample
+
+@noindent
+the following call to the built-in
+
+@smallexample
+__builtin_counted_by_ref (p->array)
+@end smallexample
+
+@noindent
+returns:
+
+@smallexample
+&p->counter with type @code{int *}.
+@end smallexample
+
+@noindent
+However, the following call to the built-in
+
+@smallexample
+__builtin_counted_by_ref (q->array)
+@end smallexample
+
+@noindent
+returns a null pointer to @code{void}.
+
+@enddefbuiltin
+
 @defbuiltin{void __builtin_clear_padding (@var{ptr})}
 The built-in function @code{__builtin_clear_padding} function clears
 padding bits inside of the object representation of object pointed by
@@ -29213,7 +29268,6 @@ Predefined Macros,cpp,The GNU C Preprocessor}).
 * C++ Attributes::      Variable, function, and type attributes for C++ only.
 * Function Multiversioning::   Declaring multiple function versions.
 * Type Traits::         Compiler support for type traits.
-* C++ Concepts::        Improved support for generic programming.
 * Deprecated Features:: Things will disappear from G++.
 * Backwards Compatibility:: Compatibilities with earlier definitions of C++.
 @end menu
@@ -30090,49 +30144,6 @@ from @code{0} to @code{@var{length}-1}.  This is provided for
 efficient implementation of @code{std::make_integer_sequence}.
 @enddefbuiltin
 
-
-@node C++ Concepts
-@section C++ Concepts
-
-C++ concepts provide much-improved support for generic programming. In
-particular, they allow the specification of constraints on template arguments.
-The constraints are used to extend the usual overloading and partial
-specialization capabilities of the language, allowing generic data structures
-and algorithms to be ``refined'' based on their properties rather than their
-type names.
-
-The following keywords are reserved for concepts.
-
-@table @code
-@kindex assumes
-@item assumes
-States an expression as an assumption, and if possible, verifies that the
-assumption is valid. For example, @code{assume(n > 0)}.
-
-@kindex axiom
-@item axiom
-Introduces an axiom definition. Axioms introduce requirements on values.
-
-@kindex forall
-@item forall
-Introduces a universally quantified object in an axiom. For example,
-@code{forall (int n) n + 0 == n}.
-
-@kindex concept
-@item concept
-Introduces a concept definition. Concepts are sets of syntactic and semantic
-requirements on types and their values.
-
-@kindex requires
-@item requires
-Introduces constraints on template arguments or requirements for a member
-function of a class template.
-@end table
-
-The front end also exposes a number of internal mechanism that can be used
-to simplify the writing of type traits. Note that some of these traits are
-likely to be removed in the future.
-
 @defbuiltin{bool __is_same (@var{type1}, @var{type2})}
 A binary type trait: @code{true} whenever the @var{type1} and
 @var{type2} refer to the same type.
@@ -30157,16 +30168,6 @@ future version.
 The use of default arguments in function pointers, function typedefs
 and other places where they are not permitted by the standard is
 deprecated and will be removed from a future version of G++.
-
-G++ allows floating-point literals to appear in integral constant expressions,
-e.g.@: @samp{ enum E @{ e = int(2.2 * 3.7) @} }
-This extension is deprecated and will be removed from a future version.
-
-G++ allows static data members of const floating-point type to be declared
-with an initializer in a class definition. The standard only allows
-initializers for static members of const integral types and const
-enumeration types so this extension has been deprecated and will be removed
-from a future version.
 
 G++ allows attributes to follow a parenthesized direct initializer,
 e.g.@: @samp{ int f (0) __attribute__ ((something)); } This extension

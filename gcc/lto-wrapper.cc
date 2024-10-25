@@ -37,6 +37,7 @@ along with GCC; see the file COPYING3.  If not see
    ./ccCJuXGv.lto.ltrans.o
 */
 
+#define INCLUDE_MEMORY
 #define INCLUDE_STRING
 #include "config.h"
 #include "system.h"
@@ -52,6 +53,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "opts-diagnostic.h"
 #include "opt-suggestions.h"
 #include "opts-jobserver.h"
+#include "make-unique.h"
 
 /* Environment variable, used for passing the names of offload targets from GCC
    driver to lto-wrapper.  */
@@ -288,7 +290,7 @@ merge_and_complain (vec<cl_decoded_option> &decoded_options,
 	  cf_protection_option = foption;
 	}
     }
-  
+
   /* The following does what the old LTO option code did,
      union all target and a selected set of common options.  */
   for (i = 0; i < fdecoded_options.length (); ++i)
@@ -481,7 +483,7 @@ merge_and_complain (vec<cl_decoded_option> &decoded_options,
 	      decoded_options[existing_opt].value = 1;
 	    }
 	  break;
- 
+
 
 	case OPT_foffload_abi_:
 	case OPT_foffload_abi_host_opts_:
@@ -518,7 +520,7 @@ merge_and_complain (vec<cl_decoded_option> &decoded_options,
 
      It would be good to warn on mismatches, but it is bit hard to do as
      we do not know what nothing translates to.  */
-    
+
   for (unsigned int j = 0; j < decoded_options.length ();)
     if (decoded_options[j].opt_index == OPT_fPIC
 	|| decoded_options[j].opt_index == OPT_fpic)
@@ -1481,7 +1483,7 @@ run_gcc (unsigned argc, char *argv[])
 	}
 
       if ((p = strrchr (argv[i], '@'))
-	  && p != argv[i] 
+	  && p != argv[i]
 	  && sscanf (p, "@%li%n", &loffset, &consumed) >= 1
 	  && strlen (p) == (unsigned int) consumed)
 	{
@@ -1826,7 +1828,7 @@ cont1:
       obstack_ptr_grow (&argv_obstack, "-o");
       obstack_ptr_grow (&argv_obstack, flto_out);
     }
-  else 
+  else
     {
       const char *list_option = "-fltrans-output-list=";
 
@@ -1904,7 +1906,7 @@ cont1:
 	{
 	  for (i = 0; i < ltoobj_argc; ++i)
 	    if (early_debug_object_names[i] != NULL)
-	      printf ("%s\n", early_debug_object_names[i]);	      
+	      printf ("%s\n", early_debug_object_names[i]);
 	}
       /* These now belong to collect2.  */
       free (flto_out);
@@ -2068,7 +2070,7 @@ cont:
 	  fclose (mstream);
 	  if (!jobserver)
 	    {
-	      /* Avoid passing --jobserver-fd= and similar flags 
+	      /* Avoid passing --jobserver-fd= and similar flags
 		 unless jobserver mode is explicitly enabled.  */
 	      putenv (xstrdup ("MAKEFLAGS="));
 	      putenv (xstrdup ("MFLAGS="));
@@ -2114,7 +2116,7 @@ cont:
 	{
 	  for (i = 0; i < ltoobj_argc; ++i)
 	    if (early_debug_object_names[i] != NULL)
-	      printf ("%s\n", early_debug_object_names[i]);	      
+	      printf ("%s\n", early_debug_object_names[i]);
 	}
       nr = 0;
       free (ltrans_priorities);
@@ -2174,7 +2176,8 @@ main (int argc, char *argv[])
   diagnostic_initialize (global_dc, 0);
   diagnostic_color_init (global_dc);
   diagnostic_urls_init (global_dc);
-  global_dc->set_option_manager (new lto_diagnostic_option_manager (), 0);
+  global_dc->set_option_manager
+    (::make_unique<lto_diagnostic_option_manager> (), 0);
 
   if (atexit (lto_wrapper_cleanup) != 0)
     fatal_error (input_location, "%<atexit%> failed");

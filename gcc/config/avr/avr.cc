@@ -8,12 +8,12 @@
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 3, or (at your option)
    any later version.
-   
+
    GCC is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with GCC; see the file COPYING3.  If not see
    <http://www.gnu.org/licenses/>.  */
@@ -13603,15 +13603,15 @@ avr_hard_regno_rename_ok (unsigned int old_reg, unsigned int new_reg)
    Operand 3: label to jump to if the test is true.  */
 
 const char *
-avr_out_sbxx_branch (rtx_insn *insn, rtx xop[])
+avr_out_sbxx_branch (rtx_insn *insn, rtx operands[])
 {
-  // jump_over_one_insn_p may call extract on the next insn, clobbering
-  // recog_data.operand.  Hence make a copy of the operands (PR116953).
-  rtx operands[] = { xop[0], xop[1], xop[2], xop[3] };
-
   rtx_code comp = GET_CODE (operands[0]);
   bool long_jump = get_attr_length (insn) >= 4;
   bool reverse = long_jump || jump_over_one_insn_p (insn, operands[3]);
+
+  // PR116953: jump_over_one_insn_p may call extract on the next insn,
+  // clobbering recog_data.operand.  Thus, restore recog_data.
+  extract_constrain_insn_cached (insn);
 
   if (comp == GE)
     comp = EQ;

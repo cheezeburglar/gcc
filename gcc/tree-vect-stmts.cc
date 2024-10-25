@@ -88,7 +88,7 @@ stmt_in_inner_loop_p (vec_info *vinfo, class _stmt_vec_info *stmt_info)
   return (bb->loop_father == loop->inner);
 }
 
-/* Record the cost of a statement, either by directly informing the 
+/* Record the cost of a statement, either by directly informing the
    target model or by saving it in a vector for later processing.
    Return a preliminary estimate of the statement's cost.  */
 
@@ -2081,6 +2081,35 @@ get_group_load_store_type (vec_info *vinfo, stmt_vec_info stmt_info,
 	  else
 	    *memory_access_type = VMAT_CONTIGUOUS;
 
+	  /* If this is single-element interleaving with an element
+	     distance that leaves unused vector loads around punt - we
+	     at least create very sub-optimal code in that case (and
+	     blow up memory, see PR65518).  */
+	  if (loop_vinfo
+	      && *memory_access_type == VMAT_CONTIGUOUS
+	      && single_element_p
+	      && maybe_gt (group_size, TYPE_VECTOR_SUBPARTS (vectype)))
+	    {
+	      if (SLP_TREE_LANES (slp_node) == 1)
+		{
+		  *memory_access_type = VMAT_ELEMENTWISE;
+		  overrun_p = false;
+		  if (dump_enabled_p ())
+		    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+				     "single-element interleaving not supported "
+				     "for not adjacent vector loads, using "
+				     "elementwise access\n");
+		}
+	      else
+		{
+		  if (dump_enabled_p ())
+		    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+				     "single-element interleaving not supported "
+				     "for not adjacent vector loads\n");
+		  return false;
+		}
+	    }
+
 	  overrun_p = loop_vinfo && gap != 0;
 	  if (overrun_p && vls_type != VLS_LOAD)
 	    {
@@ -2149,6 +2178,7 @@ get_group_load_store_type (vec_info *vinfo, stmt_vec_info stmt_info,
 				 "Peeling for outer loop is not supported\n");
 	      return false;
 	    }
+
 	  /* Peeling for gaps assumes that a single scalar iteration
 	     is enough to make sure the last vector iteration doesn't
 	     access excess elements.  */
@@ -2176,34 +2206,6 @@ get_group_load_store_type (vec_info *vinfo, stmt_vec_info stmt_info,
 		    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
 				     "peeling for gaps insufficient for "
 				     "access\n");
-		  return false;
-		}
-	    }
-
-	  /* If this is single-element interleaving with an element
-	     distance that leaves unused vector loads around punt - we
-	     at least create very sub-optimal code in that case (and
-	     blow up memory, see PR65518).  */
-	  if (loop_vinfo
-	      && *memory_access_type == VMAT_CONTIGUOUS
-	      && single_element_p
-	      && maybe_gt (group_size, TYPE_VECTOR_SUBPARTS (vectype)))
-	    {
-	      if (SLP_TREE_LANES (slp_node) == 1)
-		{
-		  *memory_access_type = VMAT_ELEMENTWISE;
-		  if (dump_enabled_p ())
-		    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
-				     "single-element interleaving not supported "
-				     "for not adjacent vector loads, using "
-				     "elementwise access\n");
-		}
-	      else
-		{
-		  if (dump_enabled_p ())
-		    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
-				     "single-element interleaving not supported "
-				     "for not adjacent vector loads\n");
 		  return false;
 		}
 	    }
@@ -2518,7 +2520,8 @@ vect_check_scalar_mask (vec_info *vinfo, stmt_vec_info stmt_info,
       return false;
     }
 
-  if (!VECT_SCALAR_BOOLEAN_TYPE_P (TREE_TYPE (*mask)))
+  if ((mask_dt == vect_constant_def || mask_dt == vect_external_def)
+      && !VECT_SCALAR_BOOLEAN_TYPE_P (TREE_TYPE (*mask)))
     {
       if (dump_enabled_p ())
 	dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
@@ -4289,7 +4292,7 @@ vectorizable_simd_clone_call (vec_info *vinfo, stmt_vec_info stmt_info,
 		  return false;
 		}
 	      if (!expand_vec_cond_expr_p (clone_arg_vectype,
-					   arginfo[i].vectype, ERROR_MARK))
+					   arginfo[i].vectype))
 		{
 		  if (dump_enabled_p ())
 		    dump_printf_loc (MSG_MISSED_OPTIMIZATION,
@@ -7422,7 +7425,7 @@ scan_store_can_perm_p (tree vectype, tree init,
 		  || !initializer_zerop (init))
 		{
 		  tree masktype = truth_type_for (vectype);
-		  if (!expand_vec_cond_expr_p (vectype, masktype, VECTOR_CST))
+		  if (!expand_vec_cond_expr_p (vectype, masktype))
 		    return -1;
 		  whole_vector_shift_kind = scan_store_kind_lshift_cond;
 		}
@@ -8438,7 +8441,7 @@ vectorizable_store (vec_info *vinfo,
       if (slp)
         {
           grouped_store = false;
-          /* VEC_NUM is the number of vect stmts to be created for this 
+          /* VEC_NUM is the number of vect stmts to be created for this
              group.  */
           vec_num = SLP_TREE_NUMBER_OF_VEC_STMTS (slp_node);
 	  first_stmt_info = SLP_TREE_SCALAR_STMTS (slp_node)[0];
@@ -8447,9 +8450,9 @@ vectorizable_store (vec_info *vinfo,
 			  == first_stmt_info));
 	  first_dr_info = STMT_VINFO_DR_INFO (first_stmt_info);
 	  op = vect_get_store_rhs (first_stmt_info);
-        } 
+        }
       else
-        /* VEC_NUM is the number of vect stmts to be created for this 
+        /* VEC_NUM is the number of vect stmts to be created for this
            group.  */
 	vec_num = group_size;
 
@@ -12429,8 +12432,7 @@ vectorizable_condition (vec_info *vinfo,
 	       && (masked
 		   || (!expand_vec_cmp_expr_p (comp_vectype, vec_cmp_type,
 					       cond_code)
-		       || !expand_vec_cond_expr_p (vectype, vec_cmp_type,
-						   ERROR_MARK))))
+		       || !expand_vec_cond_expr_p (vectype, vec_cmp_type))))
 	return false;
 
       if (slp_node
@@ -13823,7 +13825,7 @@ get_related_vectype_for_scalar_type (machine_mode prevailing_mode,
   /* We can't build a vector type of elements with alignment bigger than
      their size.  */
   else if (nbytes < TYPE_ALIGN_UNIT (scalar_type))
-    scalar_type = lang_hooks.types.type_for_mode (inner_mode, 
+    scalar_type = lang_hooks.types.type_for_mode (inner_mode,
 						  TYPE_UNSIGNED (scalar_type));
 
   /* If we felt back to using the mode fail if there was
@@ -14288,9 +14290,12 @@ vect_maybe_update_slp_op_vectype (slp_tree op, tree vectype)
   if (SLP_TREE_VECTYPE (op))
     return types_compatible_p (SLP_TREE_VECTYPE (op), vectype);
   /* For external defs refuse to produce VECTOR_BOOLEAN_TYPE_P, those
-     should be handled by patters.  Allow vect_constant_def for now.  */
+     should be handled by patters.  Allow vect_constant_def for now
+     as well as the trivial single-lane uniform vect_external_def case
+     both of which we code-generate reasonably.  */
   if (VECTOR_BOOLEAN_TYPE_P (vectype)
-      && SLP_TREE_DEF_TYPE (op) == vect_external_def)
+      && SLP_TREE_DEF_TYPE (op) == vect_external_def
+      && SLP_TREE_LANES (op) > 1)
     return false;
   SLP_TREE_VECTYPE (op) = vectype;
   return true;
@@ -14377,7 +14382,7 @@ supportable_widening_operation (vec_info *vinfo,
 	 vectorization.  */
       /* TODO: Another case in which order doesn't *really* matter is when we
 	 widen and then contract again, e.g. (short)((int)x * y >> 8).
-	 Normally, pack_trunc performs an even/odd permute, whereas the 
+	 Normally, pack_trunc performs an even/odd permute, whereas the
 	 repack from an even/odd expansion would be an interleave, which
 	 would be significantly simpler for e.g. AVX2.  */
       /* In any case, in order to avoid duplicating the code below, recurse

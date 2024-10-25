@@ -1051,7 +1051,7 @@ expand_vector_condition (gimple_stmt_iterator *gsi, bitmap dce_ssa_names)
      VEC_COND_EXPR could be supported individually.  See PR109176.  */
   if (a_is_comparison
       && VECTOR_BOOLEAN_TYPE_P (TREE_TYPE (a))
-      && expand_vec_cond_expr_p (type, TREE_TYPE (a), SSA_NAME)
+      && expand_vec_cond_expr_p (type, TREE_TYPE (a))
       && expand_vec_cmp_expr_p (TREE_TYPE (a1), TREE_TYPE (a), code))
     return true;
 
@@ -1500,6 +1500,7 @@ lower_vec_perm (gimple_stmt_iterator *gsi)
   tree mask = gimple_assign_rhs3 (stmt);
   tree vec0 = gimple_assign_rhs1 (stmt);
   tree vec1 = gimple_assign_rhs2 (stmt);
+  tree res_vect_type = TREE_TYPE (gimple_assign_lhs (stmt));
   tree vect_type = TREE_TYPE (vec0);
   tree mask_type = TREE_TYPE (mask);
   tree vect_elt_type = TREE_TYPE (vect_type);
@@ -1512,7 +1513,7 @@ lower_vec_perm (gimple_stmt_iterator *gsi)
   location_t loc = gimple_location (gsi_stmt (*gsi));
   unsigned i;
 
-  if (!TYPE_VECTOR_SUBPARTS (vect_type).is_constant (&elements))
+  if (!TYPE_VECTOR_SUBPARTS (res_vect_type).is_constant (&elements))
     return;
 
   if (TREE_CODE (mask) == SSA_NAME)
@@ -1672,9 +1673,9 @@ lower_vec_perm (gimple_stmt_iterator *gsi)
     }
 
   if (constant_p)
-    constr = build_vector_from_ctor (vect_type, v);
+    constr = build_vector_from_ctor (res_vect_type, v);
   else
-    constr = build_constructor (vect_type, v);
+    constr = build_constructor (res_vect_type, v);
   gimple_assign_set_rhs_from_tree (gsi, constr);
   update_stmt (gsi_stmt (*gsi));
 }
@@ -2169,7 +2170,7 @@ expand_vector_operations_1 (gimple_stmt_iterator *gsi,
   if (!VECTOR_TYPE_P (type)
       || !VECTOR_TYPE_P (TREE_TYPE (rhs1)))
     return;
- 
+
   /* A scalar operation pretending to be a vector one.  */
   if (VECTOR_BOOLEAN_TYPE_P (type)
       && !VECTOR_MODE_P (TYPE_MODE (type))

@@ -25,6 +25,7 @@ along with GCC; see the file COPYING3.  If not see
    has been sorted into the right order and has NULL arguments in the
    correct places for missing optional arguments.  */
 
+#define INCLUDE_MEMORY
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -5615,32 +5616,32 @@ is_c_interoperable (gfc_expr *expr, const char **msg, bool c_loc, bool c_f_ptr)
 
   if (expr->expr_type == EXPR_NULL && expr->ts.type == BT_UNKNOWN)
     {
-      *msg = "NULL() is not interoperable";
+      *msg = _("NULL() is not interoperable");
       return false;
     }
 
   if (expr->ts.type == BT_BOZ)
     {
-      *msg = "BOZ literal constant";
+      *msg = _("BOZ literal constant");
       return false;
     }
 
   if (expr->ts.type == BT_CLASS)
     {
-      *msg = "Expression is polymorphic";
+      *msg = _("Expression is polymorphic");
       return false;
     }
 
   if (expr->ts.type == BT_DERIVED && !expr->ts.u.derived->attr.is_bind_c
       && !expr->ts.u.derived->ts.is_iso_c)
     {
-      *msg = "Expression is a noninteroperable derived type";
+      *msg = _("Expression is a noninteroperable derived type");
       return false;
     }
 
   if (expr->ts.type == BT_PROCEDURE)
     {
-      *msg = "Procedure unexpected as argument";
+      *msg = _("Procedure unexpected as argument");
       return false;
     }
 
@@ -5650,14 +5651,14 @@ is_c_interoperable (gfc_expr *expr, const char **msg, bool c_loc, bool c_f_ptr)
       for (i = 0; gfc_logical_kinds[i].kind; i++)
         if (gfc_logical_kinds[i].kind == expr->ts.kind)
           return true;
-      *msg = "Extension to use a non-C_Bool-kind LOGICAL";
+      *msg = _("Extension to use a non-C_Bool-kind LOGICAL");
       return false;
     }
 
   if (gfc_notification_std (GFC_STD_GNU) && expr->ts.type == BT_CHARACTER
       && expr->ts.kind != 1)
     {
-      *msg = "Extension to use a non-C_CHAR-kind CHARACTER";
+      *msg = _("Extension to use a non-C_CHAR-kind CHARACTER");
       return false;
     }
 
@@ -5678,7 +5679,7 @@ is_c_interoperable (gfc_expr *expr, const char **msg, bool c_loc, bool c_f_ptr)
 	&& expr->ts.u.cl
 	&& !gfc_length_one_character_type_p (&expr->ts))
       {
-	*msg = "Type shall have a character length of 1";
+	*msg = _("Type shall have a character length of 1");
 	return false;
       }
     }
@@ -5689,7 +5690,7 @@ is_c_interoperable (gfc_expr *expr, const char **msg, bool c_loc, bool c_f_ptr)
 
   if (gfc_is_coarray (expr))
     {
-      *msg = "Coarrays are not interoperable";
+      *msg = _("Coarrays are not interoperable");
       return false;
     }
 
@@ -5700,7 +5701,7 @@ is_c_interoperable (gfc_expr *expr, const char **msg, bool c_loc, bool c_f_ptr)
       gfc_array_ref *ar = gfc_find_array_ref (expr);
       if (ar->type == AR_FULL && ar->as->type == AS_ASSUMED_SIZE)
 	{
-	  *msg = "Assumed-size arrays are not interoperable";
+	  *msg = _("Assumed-size arrays are not interoperable");
 	  return false;
 	}
     }

@@ -304,7 +304,7 @@ struct spec_nodes
   cpp_hashnode *n__VA_OPT__;		/* C++ vararg macros */
 
   enum {M_EXPORT, M_MODULE, M_IMPORT, M__IMPORT, M_HWM};
-  
+
   /* C++20 modules, only set when module_directives is in effect.
      incoming variants [0], outgoing ones [1] */
   cpp_hashnode *n_modules[M_HWM][2];
@@ -318,7 +318,8 @@ struct _cpp_line_note
 
   /* Type of note.  The 9 'from' trigraph characters represent those
      trigraphs, '\\' an escaped newline, ' ' an escaped newline with
-     intervening space, 'W' trailing whitespace, 0 represents a note that
+     intervening space, 'W' trailing whitespace, 'L', 'S' and 'T' for
+     leading whitespace issues, 0 represents a note that
      has already been handled, and anything else is invalid.  */
   unsigned int type;
 };
@@ -616,6 +617,10 @@ struct cpp_reader
      zero of said file.  */
   location_t main_loc;
 
+  /* If non-zero, override diagnostic locations (other than DK_NOTE
+     diagnostics) to this one.  */
+  location_t diagnostic_override_loc;
+
   /* Returns true iff we should warn about UTF-8 bidirectional control
      characters.  */
   bool warn_bidi_p () const
@@ -849,7 +854,7 @@ extern size_t _cpp_replacement_text_len (const cpp_macro *);
    It starts initialized to all zeros, and at the end
    'level' is the normalization level of the sequence.  */
 
-struct normalize_state 
+struct normalize_state
 {
   /* The previous starter character.  */
   cppchar_t previous;

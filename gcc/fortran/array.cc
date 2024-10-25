@@ -18,6 +18,7 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
+#define INCLUDE_MEMORY
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -869,7 +870,7 @@ gfc_set_array_spec (gfc_symbol *sym, gfc_array_spec *as, locus *error_loc)
 {
   int i;
   symbol_attribute *attr;
-  
+
   if (as == NULL)
     return true;
 
@@ -878,7 +879,7 @@ gfc_set_array_spec (gfc_symbol *sym, gfc_array_spec *as, locus *error_loc)
   attr = &sym->attr;
   if (gfc_submodule_procedure(attr))
     return true;
-  
+
   if (as->rank
       && !gfc_add_dimension (&sym->attr, sym->name, error_loc))
     return false;
@@ -2457,7 +2458,7 @@ gfc_ref_dimen_size (gfc_array_ref *ar, int dimen, mpz_t *result, mpz_t *end)
 	mpz_set_ui (stride, 1);
       else
 	{
-	  stride_expr = gfc_copy_expr(ar->stride[dimen]); 
+	  stride_expr = gfc_copy_expr(ar->stride[dimen]);
 
 	  if (!gfc_simplify_expr (stride_expr, 1)
 	     || stride_expr->expr_type != EXPR_CONSTANT

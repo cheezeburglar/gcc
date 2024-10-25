@@ -114,12 +114,21 @@ TEST_UNIFORM_Z (mul_intminnop2_s16_m_tied1, svint16_t,
 
 /*
 ** mul_1_s16_m_tied1:
-**	sel	z0\.h, p0, z0\.h, z0\.h
 **	ret
 */
 TEST_UNIFORM_Z (mul_1_s16_m_tied1, svint16_t,
 		z0 = svmul_n_s16_m (p0, z0, 1),
 		z0 = svmul_m (p0, z0, 1))
+
+/*
+** mul_1op1_s16_m_tied2:
+**	mov	(z[0-9]+\.h), #1
+**	sel	z0\.h, p0, z0\.h, \1
+**	ret
+*/
+TEST_UNIFORM_Z (mul_1op1_s16_m_tied2, svint16_t,
+		z0 = svmul_s16_m (p0, svdup_s16 (1), z0),
+		z0 = svmul_m (p0, svdup_s16 (1), z0))
 
 /*
 ** mul_3_s16_m_tied1:
@@ -174,8 +183,7 @@ TEST_UNIFORM_Z (mul_3_s16_m_untied, svint16_t,
 
 /*
 ** mul_m1_s16_m:
-**	mov	(z[0-9]+)\.b, #-1
-**	mul	z0\.h, p0/m, z0\.h, \1\.h
+**	neg	z0\.h, p0/m, z0\.h
 **	ret
 */
 TEST_UNIFORM_Z (mul_m1_s16_m, svint16_t,
@@ -305,14 +313,23 @@ TEST_UNIFORM_Z (mul_intminnop2_s16_z_tied1, svint16_t,
 
 /*
 ** mul_1_s16_z_tied1:
-**	mov	z31.h, #1
-**	movprfx	z0.h, p0/z, z0.h
-**	mul	z0.h, p0/m, z0.h, z31.h
+**	movi?	[vdz]([0-9]+)\.?(?:[0-9]*[bhsd])?, #?0
+**	sel	z0\.h, p0, z0\.h, z\1.h
 **	ret
 */
 TEST_UNIFORM_Z (mul_1_s16_z_tied1, svint16_t,
 		z0 = svmul_n_s16_z (p0, z0, 1),
 		z0 = svmul_z (p0, z0, 1))
+
+/*
+** mul_1op1_s16_z_tied2:
+**	movi?	[vdz]([0-9]+)\.?(?:[0-9]*[bhsd])?, #?0
+**	sel	z0\.h, p0, z0\.h, z\1.h
+**	ret
+*/
+TEST_UNIFORM_Z (mul_1op1_s16_z_tied2, svint16_t,
+		z0 = svmul_s16_z (p0, svdup_s16 (1), z0),
+		z0 = svmul_z (p0, svdup_s16 (1), z0))
 
 /*
 ** mul_3_s16_z_tied1:
@@ -487,6 +504,23 @@ TEST_UNIFORM_Z (mul_1_s16_x_tied1, svint16_t,
 		z0 = svmul_x (p0, z0, 1))
 
 /*
+** mul_1op1_s16_x_tied2:
+**	ret
+*/
+TEST_UNIFORM_Z (mul_1op1_s16_x_tied2, svint16_t,
+		z0 = svmul_s16_x (p0, svdup_s16 (1), z0),
+		z0 = svmul_x (p0, svdup_s16 (1), z0))
+
+/*
+** mul_1op1_s16_x_untied:
+**	mov	z0\.d, z1\.d
+**	ret
+*/
+TEST_UNIFORM_Z (mul_1op1_s16_x_untied, svint16_t,
+		z0 = svmul_s16_x (p0, svdup_s16 (1), z1),
+		z0 = svmul_x (p0, svdup_s16 (1), z1))
+
+/*
 ** mul_3_s16_x_tied1:
 **	mul	z0\.h, z0\.h, #3
 **	ret
@@ -562,7 +596,7 @@ TEST_UNIFORM_Z (mul_255_s16_x, svint16_t,
 
 /*
 ** mul_m1_s16_x:
-**	mul	z0\.h, z0\.h, #-1
+**	neg	z0\.h, p0/m, z0\.h
 **	ret
 */
 TEST_UNIFORM_Z (mul_m1_s16_x, svint16_t,

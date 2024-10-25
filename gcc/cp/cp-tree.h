@@ -7452,7 +7452,7 @@ extern void lazy_load_binding (unsigned mod, tree ns, tree id,
 			       binding_slot *bslot);
 extern void lazy_load_pendings (tree decl);
 extern module_state *preprocess_module (module_state *, location_t,
-					bool in_purview, 
+					bool in_purview,
 					bool is_import, bool export_p,
 					cpp_reader *reader);
 extern void preprocessed_module (cpp_reader *reader);
@@ -8121,7 +8121,6 @@ extern tree build_exception_variant		(tree, tree);
 extern void fixup_deferred_exception_variants   (tree, tree);
 extern tree bind_template_template_parm		(tree, tree);
 extern tree array_type_nelts_total		(tree);
-extern tree array_type_nelts_top		(tree);
 extern bool array_of_unknown_bound_p		(const_tree);
 extern tree break_out_target_exprs		(tree, bool = false);
 extern tree build_ctor_subob_ref		(tree, tree, tree);
@@ -8836,7 +8835,7 @@ set_contract_semantic (tree t, contract_semantic semantic)
 }
 
 /* Inline bodies.  */
-  
+
 inline tree
 ovl_first (tree node)
 {

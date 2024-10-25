@@ -80,7 +80,7 @@ along with GCC; see the file COPYING3.  If not see
    In finish_decl(), if the decl is static, has incomplete
    struct/union/enum type, it is appended to incomplete_record_decls.
    In c_parser_translation_unit(), we iterate over incomplete_record_decls
-   and report error if any of the decls are still incomplete.  */ 
+   and report error if any of the decls are still incomplete.  */
 
 vec<tree> incomplete_record_decls;
 
@@ -412,7 +412,7 @@ c_lex_one_token (c_parser *parser, c_token *token, bool raw = false)
 		/* Else they are not special keywords.
 		*/
 	      }
-	    else if (c_dialect_objc () 
+	    else if (c_dialect_objc ()
 		     && (OBJC_IS_AT_KEYWORD (rid_code)
 			 || OBJC_IS_CXX_KEYWORD (rid_code)))
 	      {
@@ -863,9 +863,9 @@ c_parser_next_token_starts_declspecs (c_parser *parser)
      setter/getter on the class.  c_token_starts_declspecs() can't
      differentiate between the two cases because it only checks the
      current token, so we have a special check here.  */
-  if (c_dialect_objc () 
+  if (c_dialect_objc ()
       && token->type == CPP_NAME
-      && token->id_kind == C_ID_CLASSNAME 
+      && token->id_kind == C_ID_CLASSNAME
       && c_parser_peek_2nd_token (parser)->type == CPP_DOT)
     return false;
 
@@ -881,9 +881,9 @@ c_parser_next_tokens_start_declaration (c_parser *parser)
   c_token *token = c_parser_peek_token (parser);
 
   /* Same as above.  */
-  if (c_dialect_objc () 
+  if (c_dialect_objc ()
       && token->type == CPP_NAME
-      && token->id_kind == C_ID_CLASSNAME 
+      && token->id_kind == C_ID_CLASSNAME
       && c_parser_peek_2nd_token (parser)->type == CPP_DOT)
     return false;
 
@@ -2449,7 +2449,7 @@ c_parser_declaration_or_fndef (c_parser *parser, bool fndef_ok,
 	      return;
 	    if (specs->attrs)
 	      {
-		warning_at (c_parser_peek_token (parser)->location, 
+		warning_at (c_parser_peek_token (parser)->location,
 			    OPT_Wattributes,
 	       		    "prefix attributes are ignored for methods");
 		specs->attrs = NULL_TREE;
@@ -2484,12 +2484,12 @@ c_parser_declaration_or_fndef (c_parser *parser, bool fndef_ok,
 	      return;
 	    if (specs->attrs)
 	      {
-		warning_at (c_parser_peek_token (parser)->location, 
+		warning_at (c_parser_peek_token (parser)->location,
 			OPT_Wattributes,
 			"prefix attributes are ignored for implementations");
 		specs->attrs = NULL_TREE;
 	      }
-	    c_parser_objc_class_definition (parser, NULL_TREE);	    
+	    c_parser_objc_class_definition (parser, NULL_TREE);
 	    return;
 	  }
 	  break;
@@ -2542,7 +2542,7 @@ c_parser_declaration_or_fndef (c_parser *parser, bool fndef_ok,
 	 should diagnose if there were no declaration specifiers) or a
 	 function definition (in which case the diagnostic for
 	 implicit int suffices).  */
-      declarator = c_parser_declarator (parser, 
+      declarator = c_parser_declarator (parser,
 					specs->typespec_kind != ctsk_none,
 					C_DTR_NORMAL, &dummy);
       if (declarator == NULL)
@@ -2862,7 +2862,7 @@ c_parser_declaration_or_fndef (c_parser *parser, bool fndef_ok,
 		  if (d)
 		    *objc_foreach_object_declaration = d;
 		  else
-		    *objc_foreach_object_declaration = error_mark_node;		    
+		    *objc_foreach_object_declaration = error_mark_node;
 		}
 	    }
 	  if (c_parser_next_token_is (parser, CPP_COMMA))
@@ -4848,7 +4848,7 @@ c_parser_parms_declarator (c_parser *parser, bool id_list_ok, tree attrs,
       && !attrs
       && c_parser_next_token_is (parser, CPP_NAME)
       && c_parser_peek_token (parser)->id_kind == C_ID_ID
-      
+
       /* Look ahead to detect typos in type names.  */
       && c_parser_peek_2nd_token (parser)->type != CPP_NAME
       && c_parser_peek_2nd_token (parser)->type != CPP_MULT
@@ -6221,6 +6221,25 @@ c_parser_braced_init (c_parser *parser, tree type, bool nested_p,
 	    {
 	      last_init_list_comma = c_parser_peek_token (parser)->location;
 	      c_parser_consume_token (parser);
+	      /* CPP_EMBED should be always in between two CPP_COMMA
+		 tokens.  */
+	      while (c_parser_next_token_is (parser, CPP_EMBED))
+		{
+		  c_token *embed = c_parser_peek_token (parser);
+		  c_parser_consume_token (parser);
+		  c_expr embed_val;
+		  embed_val.value = embed->value;
+		  embed_val.original_code = RAW_DATA_CST;
+		  embed_val.original_type = integer_type_node;
+		  set_c_expr_source_range (&embed_val, embed->get_range ());
+		  embed_val.m_decimal = 0;
+		  process_init_element (embed->location, embed_val, false,
+					&braced_init_obstack);
+		  gcc_checking_assert (c_parser_next_token_is (parser,
+							       CPP_COMMA));
+		  last_init_list_comma = c_parser_peek_token (parser)->location;
+		  c_parser_consume_token (parser);
+		}
 	    }
 	  else
 	    break;
@@ -6488,7 +6507,130 @@ c_parser_initval (c_parser *parser, struct c_expr *after,
 					    (init.value))))
 	init = convert_lvalue_to_rvalue (loc, init, true, true, true);
     }
+  tree val = init.value;
   process_init_element (loc, init, false, braced_init_obstack);
+
+  /* Attempt to optimize large char array initializers into RAW_DATA_CST
+     to save compile time and memory even when not using #embed.  */
+  static unsigned vals_to_ignore;
+  if (vals_to_ignore)
+    /* If earlier call determined there is certain number of CPP_COMMA
+       CPP_NUMBER tokens with 0-255 int values, but not enough for
+       RAW_DATA_CST to be beneficial, don't try to check it again until
+       they are all parsed.  */
+    --vals_to_ignore;
+  else if (val
+	   && TREE_CODE (val) == INTEGER_CST
+	   && TREE_TYPE (val) == integer_type_node
+	   && c_parser_next_token_is (parser, CPP_COMMA))
+    if (unsigned int len = c_maybe_optimize_large_byte_initializer ())
+      {
+	char buf1[64];
+	unsigned int i;
+	gcc_checking_assert (len >= 64);
+	location_t last_loc = UNKNOWN_LOCATION;
+	for (i = 0; i < 64; ++i)
+	  {
+	    c_token *tok = c_parser_peek_nth_token_raw (parser, 1 + 2 * i);
+	    if (tok->type != CPP_COMMA)
+	      break;
+	    tok = c_parser_peek_nth_token_raw (parser, 2 + 2 * i);
+	    if (tok->type != CPP_NUMBER
+		|| TREE_CODE (tok->value) != INTEGER_CST
+		|| TREE_TYPE (tok->value) != integer_type_node
+		|| wi::neg_p (wi::to_wide (tok->value))
+		|| wi::to_widest (tok->value) > UCHAR_MAX)
+	      break;
+	    buf1[i] = (char) tree_to_uhwi (tok->value);
+	    if (i == 0)
+	      loc = tok->location;
+	    last_loc = tok->location;
+	  }
+	if (i < 64)
+	  {
+	    vals_to_ignore = i;
+	    return;
+	  }
+	c_token *tok = c_parser_peek_nth_token_raw (parser, 1 + 2 * i);
+	/* If 64 CPP_COMMA CPP_NUMBER pairs are followed by CPP_CLOSE_BRACE,
+	   punt if len is INT_MAX as that can mean this is a flexible array
+	   member and in that case we need one CPP_NUMBER afterwards
+	   (as guaranteed for CPP_EMBED).  */
+	if (tok->type == CPP_CLOSE_BRACE && len != INT_MAX)
+	  len = i;
+	else if (tok->type != CPP_COMMA
+		 || (c_parser_peek_nth_token_raw (parser, 2 + 2 * i)->type
+		     != CPP_NUMBER))
+	  {
+	    vals_to_ignore = i;
+	    return;
+	  }
+	/* Ensure the STRING_CST fits into 128K.  */
+	unsigned int max_len = 131072 - offsetof (struct tree_string, str) - 1;
+	unsigned int orig_len = len;
+	unsigned int off = 0, last = 0;
+	if (!wi::neg_p (wi::to_wide (val)) && wi::to_widest (val) <= UCHAR_MAX)
+	  off = 1;
+	len = MIN (len, max_len - off);
+	char *buf2 = XNEWVEC (char, len + off);
+	if (off)
+	  buf2[0] = (char) tree_to_uhwi (val);
+	memcpy (buf2 + off, buf1, i);
+	for (unsigned int j = 0; j < i; ++j)
+	  {
+	    c_parser_peek_token (parser);
+	    c_parser_consume_token (parser);
+	    c_parser_peek_token (parser);
+	    c_parser_consume_token (parser);
+	  }
+	for (; i < len; ++i)
+	  {
+	    if (!c_parser_next_token_is (parser, CPP_COMMA))
+	      break;
+	    tok = c_parser_peek_2nd_token (parser);
+	    if (tok->type != CPP_NUMBER
+		|| TREE_CODE (tok->value) != INTEGER_CST
+		|| TREE_TYPE (tok->value) != integer_type_node
+		|| wi::neg_p (wi::to_wide (tok->value))
+		|| wi::to_widest (tok->value) > UCHAR_MAX)
+	      break;
+	    c_token *tok2 = c_parser_peek_nth_token (parser, 3);
+	    if (tok2->type != CPP_COMMA && tok2->type != CPP_CLOSE_BRACE)
+	      break;
+	    buf2[i + off] = (char) tree_to_uhwi (tok->value);
+	    /* If orig_len is INT_MAX, this can be flexible array member and
+	       in that case we need to ensure another element which
+	       for CPP_EMBED is normally guaranteed after it.  Include
+	       that byte in the RAW_DATA_OWNER though, so it can be optimized
+	       later.  */
+	    if (orig_len == INT_MAX
+		&& (tok2->type == CPP_CLOSE_BRACE
+		    || (c_parser_peek_nth_token (parser, 4)->type
+			!= CPP_NUMBER)))
+	      {
+		last = 1;
+		break;
+	      }
+	    last_loc = tok->location;
+	    c_parser_consume_token (parser);
+	    c_parser_consume_token (parser);
+	  }
+	val = make_node (RAW_DATA_CST);
+	TREE_TYPE (val) = integer_type_node;
+	RAW_DATA_LENGTH (val) = i;
+	tree owner = build_string (i + off + last, buf2);
+	XDELETEVEC (buf2);
+	TREE_TYPE (owner) = build_array_type_nelts (unsigned_char_type_node,
+						    i + off + last);
+	RAW_DATA_OWNER (val) = owner;
+	RAW_DATA_POINTER (val) = TREE_STRING_POINTER (owner) + off;
+	init.value = val;
+	set_c_expr_source_range (&init, loc, last_loc);
+	init.original_code = RAW_DATA_CST;
+	init.original_type = integer_type_node;
+	init.m_decimal = 0;
+	process_init_element (loc, init, false, braced_init_obstack);
+      }
 }
 
 /* Parse a compound statement (possibly a function body) (C90 6.6.2,
@@ -8441,7 +8583,7 @@ c_parser_do_statement (c_parser *parser, bool ivdep, unsigned short unroll,
 
    Here is the canonical example of the first variant:
     for (object in array)    { do something with object }
-   we call the first expression ("object") the "object_expression" and 
+   we call the first expression ("object") the "object_expression" and
    the second expression ("array") the "collection_expression".
    object_expression must be an lvalue of type "id" (a generic Objective-C
    object) because the loop works by assigning to object_expression the
@@ -8522,10 +8664,10 @@ c_parser_for_statement (c_parser *parser, bool ivdep, unsigned short unroll,
       else if (c_parser_next_tokens_start_declaration (parser)
 	       || c_parser_nth_token_starts_std_attributes (parser, 1))
 	{
-	  c_parser_declaration_or_fndef (parser, true, true, true, true, true, 
+	  c_parser_declaration_or_fndef (parser, true, true, true, true, true,
 					 &object_expression);
 	  parser->objc_could_be_foreach_context = false;
-	  
+
 	  if (c_parser_next_token_is_keyword (parser, RID_IN))
 	    {
 	      c_parser_consume_token (parser);
@@ -8556,7 +8698,7 @@ c_parser_for_statement (c_parser *parser, bool ivdep, unsigned short unroll,
 	      c_parser_declaration_or_fndef (parser, true, true, true, true,
 					     true, &object_expression);
 	      parser->objc_could_be_foreach_context = false;
-	      
+
 	      restore_extension_diagnostics (ext);
 	      if (c_parser_next_token_is_keyword (parser, RID_IN))
 		{
@@ -9335,7 +9477,7 @@ c_parser_expr_no_commas (c_parser *parser, struct c_expr *after,
   exp_location = c_parser_peek_token (parser)->location;
   rhs = c_parser_expr_no_commas (parser, NULL);
   rhs = convert_lvalue_to_rvalue (exp_location, rhs, true, true);
-  
+
   ret.value = build_modify_expr (op_location, lhs.value, lhs.original_type,
 				 code, exp_location, rhs.value,
 				 rhs.original_type);
@@ -9974,7 +10116,7 @@ c_parser_unary_expression (c_parser *parser)
       c_parser_consume_token (parser);
       exp_loc = c_parser_peek_token (parser)->location;
       op = c_parser_cast_expression (parser, NULL);
-      
+
       op = default_function_array_read_conversion (exp_loc, op);
       return parser_build_unary_op (op_loc, PREDECREMENT_EXPR, op);
     case CPP_AND:
@@ -10428,6 +10570,25 @@ c_parser_get_builtin_args (c_parser *parser, const char *bname,
   while (c_parser_next_token_is (parser, CPP_COMMA))
     {
       c_parser_consume_token (parser);
+      if (c_parser_next_token_is (parser, CPP_EMBED))
+	{
+	  c_token *embed = c_parser_peek_token (parser);
+	  tree value = embed->value;
+	  expr.original_code = INTEGER_CST;
+	  expr.original_type = integer_type_node;
+	  expr.value = NULL_TREE;
+	  set_c_expr_source_range (&expr, embed->get_range ());
+	  expr.m_decimal = 0;
+	  for (unsigned int i = 0; i < (unsigned) RAW_DATA_LENGTH (value); i++)
+	    {
+	      expr.value = build_int_cst (integer_type_node,
+					  ((const unsigned char *)
+					   RAW_DATA_POINTER (value))[i]);
+	      vec_safe_push (cexpr_list, expr);
+	    }
+	  c_parser_consume_token (parser);
+	  continue;
+	}
       expr = c_parser_expr_no_commas (parser, NULL);
       vec_safe_push (cexpr_list, expr);
     }
@@ -10453,7 +10614,7 @@ struct c_generic_association
 };
 
 /* Parse a generic-selection.  (C11 6.5.1.1).
-   
+
    generic-selection:
      _Generic ( generic-controlling-operand , generic-assoc-list )
 
@@ -10466,7 +10627,7 @@ struct c_generic_association
    generic-assoc-list:
      generic-association
      generic-assoc-list , generic-association
-   
+
    generic-association:
      type-name : assignment-expression
      default : assignment-expression
@@ -10781,6 +10942,37 @@ c_parser_predefined_identifier (c_parser *parser)
   return expr;
 }
 
+/* Check whether the ARRAY_REF has an counted-by object associated with it
+   through the "counted_by" attribute.  */
+
+static bool
+has_counted_by_object (tree array_ref)
+{
+  /* Currently, only when the array_ref is an indirect_ref to a call to the
+     .ACCESS_WITH_SIZE, return true.
+     More cases can be included later when the counted_by attribute is
+     extended to other situations.  */
+  if (TREE_CODE (array_ref) == INDIRECT_REF
+      && is_access_with_size_p (TREE_OPERAND (array_ref, 0)))
+    return true;
+  return false;
+}
+
+/* Get the reference to the counted-by object associated with the ARRAY_REF.  */
+
+static tree
+get_counted_by_ref (tree array_ref)
+{
+  /* Currently, only when the array_ref is an indirect_ref to a call to the
+     .ACCESS_WITH_SIZE, get the corresponding counted_by ref.
+     More cases can be included later when the counted_by attribute is
+     extended to other situations.  */
+  if (TREE_CODE (array_ref) == INDIRECT_REF
+      && is_access_with_size_p (TREE_OPERAND (array_ref, 0)))
+    return CALL_EXPR_ARG (TREE_OPERAND (array_ref, 0), 1);
+  return NULL_TREE;
+}
+
 /* Parse a postfix expression (C90 6.3.1-6.3.2, C99 6.5.1-6.5.2,
    C11 6.5.1-6.5.2).  Compound literals aren't handled here; callers have to
    call c_parser_postfix_expression_after_paren_type on encountering them.
@@ -10935,7 +11127,7 @@ c_parser_postfix_expression (c_parser *parser)
 	    component = component_tok->value;
 	    location_t end_loc = component_tok->get_finish ();
 	    c_parser_consume_token (parser);
-	    expr.value = objc_build_class_component_ref (class_name, 
+	    expr.value = objc_build_class_component_ref (class_name,
 							 component);
 	    set_c_expr_source_range (&expr, loc, end_loc);
 	    break;
@@ -11872,6 +12064,54 @@ c_parser_postfix_expression (c_parser *parser)
 				     (TYPE_MAIN_VARIANT
 				      (TREE_TYPE (e1_p->value))),
 				     e1_p->value, e2_p->value);
+	    set_c_expr_source_range (&expr, loc, close_paren_loc);
+	    break;
+	  }
+	case RID_BUILTIN_COUNTED_BY_REF:
+	  {
+	    vec<c_expr_t, va_gc> *cexpr_list;
+	    c_expr_t *e_p;
+	    location_t close_paren_loc;
+
+	    c_parser_consume_token (parser);
+	    if (!c_parser_get_builtin_args (parser,
+					    "__builtin_counted_by_ref",
+					    &cexpr_list, false,
+					    &close_paren_loc))
+	      {
+		expr.set_error ();
+		break;
+	      }
+	    if (vec_safe_length (cexpr_list) != 1)
+	      {
+		error_at (loc, "wrong number of arguments to "
+			       "%<__builtin_counted_by_ref%>");
+		expr.set_error ();
+		break;
+	      }
+
+	    e_p = &(*cexpr_list)[0];
+	    tree ref = e_p->value;
+
+	    if (TREE_CODE (TREE_TYPE (ref)) != ARRAY_TYPE)
+	      {
+		error_at (loc, "the argument to %<__builtin_counted_by_ref%>"
+				" must be an array");
+		expr.set_error ();
+		break;
+	      }
+
+	    /* If the array ref is inside TYPEOF or ALIGNOF, the call to
+	       .ACCESS_WITH_SIZE was not generated by the routine
+	       build_component_ref by default, we should generate it here.  */
+	    if ((in_typeof || in_alignof) && TREE_CODE (ref) == COMPONENT_REF)
+	      ref = handle_counted_by_for_component_ref (loc, ref);
+
+	    if (has_counted_by_object (ref))
+	      expr.value = get_counted_by_ref (ref);
+	    else
+	      expr.value = null_pointer_node;
+
 	    set_c_expr_source_range (&expr, loc, close_paren_loc);
 	    break;
 	  }
@@ -13050,8 +13290,28 @@ c_parser_expression (c_parser *parser)
 	}
       if (DECL_P (lhsval) || handled_component_p (lhsval))
 	mark_exp_read (lhsval);
-      next = c_parser_expr_no_commas (parser, NULL);
-      next = convert_lvalue_to_rvalue (expr_loc, next, true, false);
+      if (c_parser_next_token_is (parser, CPP_EMBED))
+	{
+	  /* Users aren't interested in milions of -Wunused-value
+	     warnings when using #embed inside of a comma expression,
+	     and one CPP_NUMBER plus CPP_COMMA before it and one
+	     CPP_COMMA plus CPP_NUMBER after it is guaranteed by
+	     the preprocessor.  Thus, parse the whole CPP_EMBED just
+	     as a single INTEGER_CST, the last byte in it.  */
+	  c_token *embed = c_parser_peek_token (parser);
+	  tree val = embed->value;
+	  unsigned last = RAW_DATA_LENGTH (val) - 1;
+	  next.value = build_int_cst (TREE_TYPE (val),
+				      ((const unsigned char *)
+				       RAW_DATA_POINTER (val))[last]);
+	  next.original_type = integer_type_node;
+	  c_parser_consume_token (parser);
+	}
+      else
+	{
+	  next = c_parser_expr_no_commas (parser, NULL);
+	  next = convert_lvalue_to_rvalue (expr_loc, next, true, false);
+	}
       expr.value = build_compound_expr (loc, expr.value, next.value);
       expr.original_code = COMPOUND_EXPR;
       expr.original_type = next.original_type;
@@ -13156,6 +13416,34 @@ c_parser_expr_list (c_parser *parser, bool convert_p, bool fold_p,
   while (c_parser_next_token_is (parser, CPP_COMMA))
     {
       c_parser_consume_token (parser);
+      if (c_parser_next_token_is (parser, CPP_EMBED))
+	{
+	  c_token *embed = c_parser_peek_token (parser);
+	  tree value = embed->value;
+	  expr.original_code = INTEGER_CST;
+	  expr.original_type = integer_type_node;
+	  expr.value = NULL_TREE;
+	  set_c_expr_source_range (&expr, embed->get_range ());
+	  expr.m_decimal = 0;
+	  for (unsigned int i = 0; i < (unsigned) RAW_DATA_LENGTH (value); i++)
+	    {
+	      if (literal_zero_mask
+		  && idx + 1 < HOST_BITS_PER_INT
+		  && RAW_DATA_POINTER (value)[i] == 0)
+		*literal_zero_mask |= 1U << (idx + 1);
+	      expr.value = build_int_cst (integer_type_node,
+					  ((const unsigned char *)
+					   RAW_DATA_POINTER (value))[i]);
+	      vec_safe_push (ret, expr.value);
+	      if (orig_types)
+		vec_safe_push (orig_types, expr.original_type);
+	      if (locations)
+		locations->safe_push (expr.get_location ());
+	      ++idx;
+	    }
+	  c_parser_consume_token (parser);
+	  continue;
+	}
       if (literal_zero_mask)
 	c_parser_check_literal_zero (parser, literal_zero_mask, idx + 1);
       expr = c_parser_expr_no_commas (parser, NULL);
@@ -13390,7 +13678,7 @@ c_parser_objc_class_instance_variables (c_parser *parser)
 	  /* There is a syntax error.  We want to skip the offending
 	     tokens up to the next ';' (included) or '}'
 	     (excluded).  */
-	  
+
 	  /* First, skip manually a ')' or ']'.  This is because they
 	     reduce the nesting level, so c_parser_skip_until_found()
 	     wouldn't be able to skip past them.  */
@@ -13696,32 +13984,32 @@ c_parser_objc_methodproto (c_parser *parser)
   /* Forget protocol qualifiers now.  */
   parser->objc_pq_context = false;
 
-  /* Do not allow the presence of attributes to hide an erroneous 
+  /* Do not allow the presence of attributes to hide an erroneous
      method implementation in the interface section.  */
   if (!c_parser_next_token_is (parser, CPP_SEMICOLON))
     {
       c_parser_error (parser, "expected %<;%>");
       return;
     }
-  
+
   if (decl != error_mark_node)
     objc_add_method_declaration (is_class_method, decl, attributes);
 
   c_parser_skip_until_found (parser, CPP_SEMICOLON, "expected %<;%>");
 }
 
-/* If we are at a position that method attributes may be present, check that 
-   there are not any parsed already (a syntax error) and then collect any 
+/* If we are at a position that method attributes may be present, check that
+   there are not any parsed already (a syntax error) and then collect any
    specified at the current location.  Finally, if new attributes were present,
    check that the next token is legal ( ';' for decls and '{' for defs).  */
-   
-static bool 
+
+static bool
 c_parser_objc_maybe_method_attributes (c_parser* parser, tree* attributes)
 {
   bool bad = false;
   if (*attributes)
     {
-      c_parser_error (parser, 
+      c_parser_error (parser,
 		    "method attributes must be specified at the end only");
       *attributes = NULL_TREE;
       bad = true;
@@ -13741,7 +14029,7 @@ c_parser_objc_maybe_method_attributes (c_parser* parser, tree* attributes)
     return bad;
 
   /* We've got attributes, but not at the end.  */
-  c_parser_error (parser, 
+  c_parser_error (parser,
 		  "expected %<;%> or %<{%> after method attribute definition");
   return true;
 }
@@ -13847,7 +14135,7 @@ c_parser_objc_method_decl (c_parser *parser, bool is_class_method,
 	    {
 	      ellipsis = true;
 	      c_parser_consume_token (parser);
-	      attr_err |= c_parser_objc_maybe_method_attributes 
+	      attr_err |= c_parser_objc_maybe_method_attributes
 						(parser, attributes) ;
 	      break;
 	    }
@@ -13977,7 +14265,7 @@ c_parser_objc_protocol_refs (c_parser *parser)
    where '...' is to be interpreted literally, that is, it means CPP_ELLIPSIS.
 
    PS: This function is identical to cp_parser_objc_try_catch_finally_statement
-   for C++.  Keep them in sync.  */   
+   for C++.  Keep them in sync.  */
 
 static void
 c_parser_objc_try_catch_finally_statement (c_parser *parser)
@@ -14036,7 +14324,7 @@ c_parser_objc_try_catch_finally_statement (c_parser *parser)
 	     going.  */
 	  if (c_parser_next_token_is (parser, CPP_CLOSE_PAREN))
 	    c_parser_consume_token (parser);
-	  
+
 	  /* If these is no immediate closing parenthesis, the user
 	     probably doesn't know that parenthesis are required at
 	     all (ie, they typed "@catch NSException *e").  So, just
@@ -14309,13 +14597,13 @@ c_parser_objc_keywordexpr (c_parser *parser)
 /* A check, needed in several places, that ObjC interface, implementation or
    method definitions are not prefixed by incorrect items.  */
 static bool
-c_parser_objc_diagnose_bad_element_prefix (c_parser *parser, 
+c_parser_objc_diagnose_bad_element_prefix (c_parser *parser,
 					   struct c_declspecs *specs)
 {
   if (!specs->declspecs_seen_p || specs->non_sc_seen_p
       || specs->typespec_kind != ctsk_none)
     {
-      c_parser_error (parser, 
+      c_parser_error (parser,
       		      "no type or storage class may be specified here,");
       c_parser_skip_to_end_of_block_or_statement (parser);
       return true;
@@ -17537,7 +17825,7 @@ c_parser_omp_clause_private (c_parser *parser, tree list)
      One of: + * - & ^ | && ||
 
    OpenMP 3.1:
-   
+
    reduction-operator:
      One of: + * - & ^ | && || max min
 
@@ -20033,8 +20321,8 @@ c_parser_omp_all_clauses (c_parser *parser, omp_clause_mask mask,
 	  clauses = c_parser_omp_clause_allocate (parser, clauses);
 	  c_name = "allocate";
 	  break;
-	case PRAGMA_OMP_CLAUSE_LINEAR: 
-	  clauses = c_parser_omp_clause_linear (parser, clauses); 
+	case PRAGMA_OMP_CLAUSE_LINEAR:
+	  clauses = c_parser_omp_clause_linear (parser, clauses);
 	  c_name = "linear";
 	  break;
 	case PRAGMA_OMP_CLAUSE_AFFINITY:
@@ -25498,7 +25786,7 @@ c_finish_omp_declare_simd (c_parser *parser, tree fndecl, tree parms,
 
   parser->tokens = clauses.address ();
   parser->tokens_avail = clauses.length ();
-  
+
   /* c_parser_omp_declare_simd pushed 2 extra CPP_EOF tokens at the end.  */
   while (parser->tokens_avail > 3)
     {

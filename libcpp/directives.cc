@@ -513,7 +513,7 @@ _cpp_handle_directive (cpp_reader *pfile, bool indented)
 	 compiled with -save-temps, we recognize directives in
 	 -fpreprocessed mode only if the # is in column 1.  macro.cc
 	 puts a space in front of any '#' at the start of a macro.
-	 
+
 	 We exclude the -fdirectives-only case because macro expansion
 	 has not been performed yet, and block comments can cause spaces
 	 to precede the directive.  */
@@ -915,8 +915,8 @@ do_include_common (cpp_reader *pfile, enum include_type type)
 
   /* Prevent #include recursion.  */
   if (pfile->line_table->depth >= CPP_OPTION (pfile, max_include_depth))
-    cpp_error (pfile, 
-	       CPP_DL_ERROR, 
+    cpp_error (pfile,
+	       CPP_DL_ERROR,
 	       "%<#include%> nested depth %u exceeds maximum of %u"
 	       " (use %<-fmax-include-depth=DEPTH%> to increase the maximum)",
 	       pfile->line_table->depth,
@@ -1891,7 +1891,7 @@ cpp_register_deferred_pragma (cpp_reader *pfile, const char *space,
       entry->allow_expansion = allow_expansion;
       entry->u.ident = ident;
     }
-}  
+}
 
 /* Register the pragmas the preprocessor itself handles.  */
 void
@@ -2430,6 +2430,12 @@ destringize_and_run (cpp_reader *pfile, const cpp_string *in,
   pfile->buffer->file = pfile->buffer->prev->file;
   pfile->buffer->sysp = pfile->buffer->prev->sysp;
 
+  /* See comment below regarding the use of expansion_loc as the location
+     for all tokens; arrange here that diagnostics issued during lexing
+     get the same treatment.  */
+  const auto prev_loc_override = pfile->diagnostic_override_loc;
+  pfile->diagnostic_override_loc = expansion_loc;
+
   start_directive (pfile);
   _cpp_clean_line (pfile);
   save_directive = pfile->directive;
@@ -2441,7 +2447,7 @@ destringize_and_run (cpp_reader *pfile, const cpp_string *in,
   pfile->directive = save_directive;
 
   /* We always insert at least one token, the directive result.  It'll
-     either be a CPP_PADDING or a CPP_PRAGMA.  In the later case, we 
+     either be a CPP_PADDING or a CPP_PRAGMA.  In the later case, we
      need to insert *all* of the tokens, including the CPP_PRAGMA_EOL.  */
 
   /* If we're not handling the pragma internally, read all of the tokens from
@@ -2497,6 +2503,7 @@ destringize_and_run (cpp_reader *pfile, const cpp_string *in,
      make that applicable to the real buffer too.  */
   pfile->buffer->prev->sysp = pfile->buffer->sysp;
   _cpp_pop_buffer (pfile);
+  pfile->diagnostic_override_loc = prev_loc_override;
 
   /* Reset the old macro state before ...  */
   XDELETE (pfile->context);
