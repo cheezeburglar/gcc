@@ -1548,6 +1548,8 @@ node_emit_json(tree t, dump_info_p di)
       if ((code == VAR_DECL || code == PARM_DECL)
 	  && DECL_HAS_VALUE_EXPR_P (t))
         json_obj->set("decl_value_expr", node_to_json_brief(DECL_VALUE_EXPR(t), di));
+      if (DECL_CHAIN(t))
+        json_obj->set("decl_chain", node_to_json_brief(DECL_CHAIN(t), di));
     } //end tcc_decl flags
 
     if (TREE_CODE_CLASS(code) == tcc_type)
@@ -3091,21 +3093,21 @@ node_emit_json(tree t, dump_info_p di)
       if (BLOCK_SUBBLOCKS(t))
         {
           subblock = new json::array ();
-          for (iter = BLOCK_SUBBLOCKS (t); iter; iter = BLOCK_CHAIN (t))
+          for (iter = BLOCK_SUBBLOCKS (t); iter; iter = BLOCK_CHAIN (iter))
             subblock->append(node_emit_json(iter, di));
           json_obj->set("block_subblocks", subblock);
         }
       if (BLOCK_CHAIN (t))
         {
           chain = new json::array ();
-          for (iter = BLOCK_SUBBLOCKS (t); iter; iter = BLOCK_CHAIN (t))
+          for (iter = BLOCK_SUBBLOCKS (t); iter; iter = BLOCK_CHAIN (iter))
               chain->append(node_emit_json(iter, di));
           json_obj->set("block_chain", chain);
         }
       if (BLOCK_VARS (t))
         {
           vars = new json::array ();
-          for (iter = BLOCK_VARS (t); iter; iter = TREE_CHAIN (t))
+          for (iter = BLOCK_VARS (t); iter; iter = TREE_CHAIN (iter))
               vars->append(node_emit_json(iter, di));
           json_obj->set("block_vars", vars);
         }
@@ -3132,7 +3134,7 @@ node_emit_json(tree t, dump_info_p di)
       if (BLOCK_FRAGMENT_CHAIN (t))
         {
           fragment_chain = new json::array ();
-          for (iter = BLOCK_FRAGMENT_CHAIN (t); iter; iter = BLOCK_FRAGMENT_CHAIN (t))
+          for (iter = BLOCK_FRAGMENT_CHAIN (t); iter; iter = BLOCK_FRAGMENT_CHAIN (iter))
               fragment_chain->append(node_emit_json(iter, di));
           json_obj->set("block_fragment_chain", fragment_chain);
         }
@@ -3150,7 +3152,7 @@ node_emit_json(tree t, dump_info_p di)
 
   // Logic for handling location information. Typically like: 
   // "expr_loc": "file.cc:line:column"
-  if (di->flags & TDF_LINENO)
+  if (t && (di->flags & TDF_LINENO))
     {
     expanded_location xloc;
     if (TREE_CODE_CLASS (code) == tcc_declaration
