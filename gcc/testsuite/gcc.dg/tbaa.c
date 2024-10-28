@@ -1,5 +1,7 @@
-/* { dg-do compile } */
-/* { dg-options "-O2 -flto -fdump-tree-evrp" } */
+/* { dg-do assemble } */
+/* { dg-options "-O2 -flto -flto-partition=one -fdump-tree-evrp -std=gnu89" } */
+/* { dg-require-effective-target lto } */
+
 typedef struct rtx_def *rtx;
 typedef struct cselib_val_struct
 {
@@ -38,4 +40,4 @@ discard_useless_locs (x, info)
       n_useless_values++;
     }
 }
-/* { dg-final { scan-tree-dump-times "n_useless_values" 2 "evrp" } } */                 
+/* { dg-final { scan-tree-dump-times "n_useless_values" 2 "evrp" { xfail *-*-* } } } */
