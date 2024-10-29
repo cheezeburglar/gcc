@@ -40,6 +40,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "gimplify.h"
 #include "langhooks.h"
 #include "dumpfile.h"
+#include "dump-context.h"
 #include "c-ubsan.h"
 #include "tree-nested.h"
 #include "context.h"
@@ -693,6 +694,12 @@ c_genericize (tree fndecl)
     {
       if (local_dump_flags & TDF_JSON)
         {
+//	  json::object * json_obj;
+//	  char * buffer;
+//
+//	  json_obj = new json::object ();
+//	  json_obj->set()
+	  dump_context:: get().hook_test();
 	  dump_node_json (DECL_SAVED_TREE (fndecl),
 	     TDF_SLIM | local_dump_flags, dump_orig);
         }

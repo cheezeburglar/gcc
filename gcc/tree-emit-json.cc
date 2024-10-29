@@ -3217,17 +3217,15 @@ dequeue_and_add (dump_info_p di)
   di->json_dump->append(dummy);
 }
 
-/* Return T and all it's children as a JSON array. */
 json::array *
-tree_to_json_array (const_tree t, dump_flags_t flags, FILE *stream)
+tree_to_json (const_tree t, dump_flags_t flags)
 {
   struct dump_info di;
   dump_queue_p dq;
   dump_queue_p next_dq;
   pretty_printer pp;
 
-  /* Initialize the dump-information structure.  */
-  di.stream = stream;
+  /* initialize the dump-information structure.  */
   di.queue = 0;
   di.queue_end = 0;
   di.free_list = 0;
@@ -3237,42 +3235,68 @@ tree_to_json_array (const_tree t, dump_flags_t flags, FILE *stream)
 			     splay_tree_delete_pointers);
   di.json_dump = make_unique<json::array> ();
 
-  /* Queue up the first node.  */
+  /* queue up the first node.  */
   queue (&di, t);
 
-  /* Until the queue is empty, keep dumping nodes.  */
+  /* until the queue is empty, keep dumping nodes.  */
   while (di.queue)
     dequeue_and_add (&di);
 
-  /* Now, clean up.  */
+  /* now, clean up.  */
   for (dq = di.free_list; dq; dq = next_dq)
     {
       next_dq = dq->next;
       free (dq);
     }
   splay_tree_delete (di.nodes);
-  
   return di.json_dump.release();
 }
 
-/* Dump T, and all its children, on STREAM as JSON array. */
+/* Return T and all it's children as a JSON array. */
 void
 dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
 {
-  tree_to_json_array(t, flags, stream)->dump(stream, true);
-  fputs("\n", stream);
+  auto json_tree = tree_to_json(t, flags);
+  json_tree->dump(stream, 1);
 }
 
-json::object*
-fndecl_to_json (tree t, dump_flags_t flags, FILE *stream)
+///* Dump T, and all its children, on STREAM as JSON array. */
+//void
+//dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
+//{
+//  dump_node_json(t, flags, stream)->dump(stream, true);
+//  fputs("\n", stream);
+//}
+
+//json::object*
+//fndecl_to_json (tree t, dump_flags_t flags, FILE *stream)
+//{
+//  auto json_fndecl = new json::object();
+//  json_fndecl->set(lang_hooks.decl_printable_name(t, 2),
+//                   dump_node_json(DECL_SAVED_TREE(t), flags, stream));
+//  return json_fndecl;
+//}
+
+tree_json_writer::tree_json_writer ()
+  : m_root_tuple ()
 {
-  auto json_fndecl = new json::object();
-  json_fndecl->set(lang_hooks.decl_printable_name(t, 2),
-                   tree_to_json_array(DECL_SAVED_TREE(t), flags, stream));
-  return json_fndecl;
+  m_root_tuple = make_unique<json::array> ();
 }
 
+tree_json_writer::~tree_json_writer ()
+{
 
+}
+
+void
+tree_json_writer::add_fndecl_tree(tree fndecl, dump_flags_t flags)
+{
+  auto json_obj = new json::object ();
+
+  json_obj->set(lang_hooks.decl_printable_name (fndecl, 2),
+                tree_to_json(DECL_SAVED_TREE(fndecl), flags));
+  m_root_tuple->append(json_obj);
+}
 
 /* c.f. debug_tree(). Logic is same as the above function. */
 

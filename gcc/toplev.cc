@@ -2146,6 +2146,7 @@ do_compile ()
 
       if (flag_save_tree_record)
         {
+	  dump_context::get ().set_tree_json_writer (new tree_json_writer ());
 	  printf("YAY!");
         }
 

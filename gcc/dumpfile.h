@@ -203,7 +203,7 @@ enum dump_flag : uint32_t
   /* For error.  */
   TDF_ERROR = ((uint32_t)1 << 30),
 
-  /* Tree JSON dumping */
+  /* Emit JSON for supported data types */
   TDF_JSON = ((uint32_t)1 << 31),
 };
 

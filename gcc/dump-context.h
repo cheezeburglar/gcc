@@ -26,8 +26,10 @@ along with GCC; see the file COPYING3.  If not see
 #include "pretty-print.h"
 #include "selftest.h"
 #include "optinfo.h"
+#include "tree-emit-json.h"
 
 class optrecord_json_writer;
+class tree_json_writer;
 namespace selftest { class temp_dump_context; }
 class debug_dump_context;
 
@@ -115,6 +117,11 @@ class dump_context
     return m_json_writer != NULL;
   }
   void set_json_writer (optrecord_json_writer *writer);
+  // WIP 
+  void set_tree_json_writer (tree_json_writer *writer);
+  void finish_tree_json_writer ();
+  void hook_test();
+
   void finish_any_json_writer ();
 
   void end_any_optinfo ();
@@ -140,6 +147,10 @@ class dump_context
   /* If -fsave-optimization-record is enabled, the heap-allocated JSON writer
      instance, otherwise NULL.  */
   optrecord_json_writer *m_json_writer;
+
+  /* If -fsave-tree-record is enabled, sets up a writer to collect TREE json.
+   * WIP */
+  tree_json_writer *m_tree_writer;
 
   /* For use in selftests: if non-NULL, then items are to be printed
      to this, using the given flags.  */

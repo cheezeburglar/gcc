@@ -1,4 +1,4 @@
-/* Dump infrastructure for optimizations and intermediate representation.
+;/* Dump infrastructure for optimizations and intermediate representation.
    Copyright (C) 2012-2024 Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -39,6 +39,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "cgraph.h"
 #include "tree-pass.h" /* for "current_pass".  */
 #include "optinfo-emit-json.h"
+#include "tree-emit-json.h"
 #include "stringpool.h" /* for get_identifier.  */
 #include "spellcheck.h"
 #include "make-unique.h"
@@ -541,6 +542,13 @@ dump_context::set_json_writer (optrecord_json_writer *writer)
   m_json_writer = writer;
 }
 
+void
+dump_context::set_tree_json_writer (tree_json_writer *writer)
+{
+  delete m_tree_writer;
+  m_tree_writer = writer;
+}
+
 /* Perform cleanup activity for -fsave-optimization-record.
    Currently, the file is written out here in one go, before cleaning
    up.  */
@@ -554,6 +562,22 @@ dump_context::finish_any_json_writer ()
   m_json_writer->write ();
   delete m_json_writer;
   m_json_writer = NULL;
+}
+
+void
+dump_context::finish_tree_json_writer ()
+{
+  if (!m_tree_writer)
+    return;
+  printf("Flushing to stream TODO\n");
+  delete m_tree_writer;
+  m_tree_writer = NULL;
+}
+
+void
+dump_context::hook_test ()
+{
+  printf("YAY! Hook okay\n");
 }
 
 /* Update the "dumps_are_enabled" global; to be called whenever dump_file
