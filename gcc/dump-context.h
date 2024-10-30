@@ -120,6 +120,7 @@ class dump_context
   // WIP 
   void set_tree_json_writer (tree_json_writer *writer);
   void finish_tree_json_writer ();
+  void add_fndecl_tree (tree fndecl, dump_flags_t flags);
   void hook_test();
 
   void finish_any_json_writer ();

@@ -694,14 +694,9 @@ c_genericize (tree fndecl)
     {
       if (local_dump_flags & TDF_JSON)
         {
-//	  json::object * json_obj;
-//	  char * buffer;
-//
-//	  json_obj = new json::object ();
-//	  json_obj->set()
-	  dump_context:: get().hook_test();
-	  dump_node_json (DECL_SAVED_TREE (fndecl),
-	     TDF_SLIM | local_dump_flags, dump_orig);
+	  dump_context:: get().add_fndecl_tree(fndecl, local_dump_flags);
+  	  dump_node_json (DECL_SAVED_TREE (fndecl),
+  	     TDF_SLIM | local_dump_flags, dump_orig);
         }
       else
         {

@@ -489,7 +489,8 @@ compile_file (void)
     lang_hooks.decls.post_compilation_parsing_cleanups ();
 
   dump_context::get ().finish_any_json_writer ();
-
+  // DO THIS LATER TODO :
+  dump_context::get ().finish_tree_json_writer ();
   if (seen_error ())
     return;
 

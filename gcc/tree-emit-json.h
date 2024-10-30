@@ -73,13 +73,14 @@ class tree_json_writer
 public:
   tree_json_writer ();
   ~tree_json_writer ();
-  void write (FILE *file);
+  void write ();
   void add_node (tree t);
   void add_fndecl_tree (tree fndecl, dump_flags_t flags);
+  void set_stream (tree_dump_index tdi);
 
 private:
   std::unique_ptr<json::array> m_root_tuple;
-
+  FILE *m_stream;
 };
 
 extern std::unique_ptr<json::object> node_emit_json(tree t, dump_info_p di);

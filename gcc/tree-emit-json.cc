@@ -44,6 +44,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "fold-const.h"
 #include "vec.h"
 #include "make-unique.h"
+#include "context.h" // To access dump streams for tree_json_writer
+#include <zlib.h>
 
 static void queue (dump_info_p, const_tree);
 static void dequeue_and_add (dump_info_p);
@@ -3252,7 +3254,7 @@ tree_to_json (const_tree t, dump_flags_t flags)
   return di.json_dump.release();
 }
 
-/* Return T and all it's children as a JSON array. */
+/* Dump T and all it's children as a JSON array. */
 void
 dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
 {
@@ -3289,13 +3291,53 @@ tree_json_writer::~tree_json_writer ()
 }
 
 void
-tree_json_writer::add_fndecl_tree(tree fndecl, dump_flags_t flags)
+tree_json_writer::set_stream (tree_dump_index tdi)
+{
+  if (m_stream)
+    delete m_stream;
+  m_stream = g->get_dumps()->get_dump_file_info(tdi)->pstream;
+}
+
+void
+tree_json_writer::add_fndecl_tree (tree fndecl, dump_flags_t flags)
 {
   auto json_obj = new json::object ();
 
   json_obj->set(lang_hooks.decl_printable_name (fndecl, 2),
                 tree_to_json(DECL_SAVED_TREE(fndecl), flags));
   m_root_tuple->append(json_obj);
+  if (!m_stream)
+    set_stream(TDI_original);
+}
+
+void
+tree_json_writer::write ()
+{
+  pretty_printer pp;
+  m_root_tuple->print (&pp, true);
+
+  bool emitted_error = false;
+  char *filename = concat (dump_base_name, ".tree.json.gz", NULL);
+  gzFile outfile = gzopen (filename, "w");
+  if (outfile == NULL)
+    {
+      goto cleanup;
+    }
+
+  if (gzputs (outfile, pp_formatted_text (&pp)) <= 0)
+    {
+      int tmp;
+      emitted_error = true;
+    }
+
+ cleanup:
+  if (outfile)
+    if (gzclose (outfile) != Z_OK)
+      if (!emitted_error)
+        {}
+
+  free (filename);
+//  m_root_tuple->dump(m_stream, true);
 }
 
 /* c.f. debug_tree(). Logic is same as the above function. */

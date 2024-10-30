@@ -569,7 +569,8 @@ dump_context::finish_tree_json_writer ()
 {
   if (!m_tree_writer)
     return;
-  printf("Flushing to stream TODO\n");
+  m_tree_writer->write();
+  printf("dump context finish HIT");
   delete m_tree_writer;
   m_tree_writer = NULL;
 }
@@ -1292,6 +1293,14 @@ dump_context::emit_item (const optinfo_item &item, dump_flags_t dump_kind)
   /* Support for temp_dump_context in selftests.  */
   if (m_test_pp && apply_dump_filter_p (dump_kind, m_test_pp_flags))
     pp_string (m_test_pp, item.get_text ());
+}
+
+void
+dump_context::add_fndecl_tree (tree fndecl, dump_flags_t flags)
+{
+  printf("FNDECL WRITER HIT!");
+  if (m_tree_writer)
+    m_tree_writer->add_fndecl_tree (fndecl, flags);
 }
 
 /* The current singleton dump_context, and its default.  */
