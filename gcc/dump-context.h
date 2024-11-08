@@ -122,7 +122,7 @@ class dump_context
   void finish_tree_json_writer ();
   void add_fndecl_tree (tree fndecl, dump_flags_t flags);
   void hook_test();
-
+  void set_json_stream (FILE *file);
   void finish_any_json_writer ();
 
   void end_any_optinfo ();
@@ -148,6 +148,8 @@ class dump_context
   /* If -fsave-optimization-record is enabled, the heap-allocated JSON writer
      instance, otherwise NULL.  */
   optrecord_json_writer *m_json_writer;
+
+  FILE* m_json_stream;
 
   /* If -fsave-tree-record is enabled, sets up a writer to collect TREE json.
    * WIP */

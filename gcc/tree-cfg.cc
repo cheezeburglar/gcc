@@ -8294,6 +8294,9 @@ dump_function_to_file (tree fndecl, FILE *file, dump_flags_t flags)
   tree fntype = TREE_TYPE (fndecl);
   tree attrs[] = { DECL_ATTRIBUTES (fndecl), TYPE_ATTRIBUTES (fntype) };
 
+  if (flags & TDF_JSON)
+    printf("JSON HOOK HIT FOR IPA AND GIMPLE");
+
   for (int i = 0; i != 2; ++i)
     {
       if (!attrs[i])

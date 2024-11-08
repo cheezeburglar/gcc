@@ -549,6 +549,14 @@ dump_context::set_tree_json_writer (tree_json_writer *writer)
   m_tree_writer = writer;
 }
 
+void
+dump_context::set_json_stream(FILE * file)
+{
+  if (m_json_stream)
+    delete m_json_stream;
+  m_json_stream = new FILE (*file);
+}
+
 /* Perform cleanup activity for -fsave-optimization-record.
    Currently, the file is written out here in one go, before cleaning
    up.  */
@@ -569,7 +577,7 @@ dump_context::finish_tree_json_writer ()
 {
   if (!m_tree_writer)
     return;
-  m_tree_writer->write();
+  m_tree_writer->write(m_json_stream);
   printf("dump context finish HIT");
   delete m_tree_writer;
   m_tree_writer = NULL;
@@ -1298,7 +1306,6 @@ dump_context::emit_item (const optinfo_item &item, dump_flags_t dump_kind)
 void
 dump_context::add_fndecl_tree (tree fndecl, dump_flags_t flags)
 {
-  printf("FNDECL WRITER HIT!");
   if (m_tree_writer)
     m_tree_writer->add_fndecl_tree (fndecl, flags);
 }
@@ -1574,6 +1581,10 @@ gcc::dump_manager::
 dump_finish (int phase)
 {
   struct dump_file_info *dfi;
+
+  // TODO : JSON hook is here provisionally.
+
+  dump_context:: get ().hook_test ();
 
   if (phase < 0)
     return;
