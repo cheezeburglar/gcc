@@ -1357,35 +1357,35 @@ node_emit_json(tree t, dump_info_p di)
       if (CODE_CONTAINS_STRUCT (code, TS_DECL_COMMON))
         {
           if (DECL_UNSIGNED (t))
-	    json_obj->set_bool ("unsigned", true);
+	    json_obj->set_bool ("decl_unsigned", true);
 	  if (DECL_IGNORED_P (t))
-      	    json_obj->set_bool ("ignored", true);
+      	    json_obj->set_bool ("decl_ignored", true);
 	  if (DECL_ABSTRACT_P (t))
-	    json_obj->set_bool ("abstract", true);
+	    json_obj->set_bool ("decl_abstract", true);
           if (DECL_EXTERNAL (t))
-            json_obj->set_bool ("external", true);
+            json_obj->set_bool ("decl_external", true);
           if (DECL_NONLOCAL (t))
-            json_obj->set_bool ("nonlocal", true);
+            json_obj->set_bool ("decl_nonlocal", true);
 	}
       if (CODE_CONTAINS_STRUCT (code, TS_DECL_WITH_VIS))
         {
 	  if (DECL_WEAK (t))
-	    json_obj->set_bool ("weak", true);
+	    json_obj->set_bool ("decl_weak", true);
 	  if (DECL_IN_SYSTEM_HEADER (t))
-	    json_obj->set_bool ("in_system_header", true);
+	    json_obj->set_bool ("decl_in_system_header", true);
         }
       if (CODE_CONTAINS_STRUCT (code, TS_DECL_WRTL)
 	  && code != LABEL_DECL
 	  && code != FUNCTION_DECL
 	  && DECL_REGISTER (t))
-	json_obj->set_bool ("regdecl", true);
+	json_obj->set_bool ("decl_register", true);
 
       if (code == TYPE_DECL && TYPE_DECL_SUPPRESS_DEBUG (t))
-	json_obj->set_bool ("suppress-debug", true);
+	json_obj->set_bool ("decl_suppress_debug", true);
       
       if (code == FUNCTION_DECL
 	  && DECL_FUNCTION_SPECIFIC_TARGET (t))
-	json_obj->set_bool ("function-specific-target", true);
+	json_obj->set_bool ("decl_function_specific_target", true);
       if (code == FUNCTION_DECL
 	  && DECL_FUNCTION_SPECIFIC_OPTIMIZATION (t))
 	json_obj->set_bool ("function-specific-opt", true);
@@ -2646,6 +2646,7 @@ node_emit_json(tree t, dump_info_p di)
         json_obj->set ("case", node_to_json_brief (CASE_LOW(t), di));
       else
         json_obj->set_string("case", "default");
+      json_obj->set ("case_label", node_to_json_brief (CASE_LABEL (t), di));
       break;
 
     case OBJ_TYPE_REF:
@@ -3220,7 +3221,7 @@ dequeue_and_add (dump_info_p di)
 }
 
 json::array *
-tree_to_json (const_tree t, dump_flags_t flags)
+generic_to_json (const_tree t, dump_flags_t flags)
 {
   struct dump_info di;
   dump_queue_p dq;
@@ -3254,11 +3255,13 @@ tree_to_json (const_tree t, dump_flags_t flags)
   return di.json_dump.release();
 }
 
+}
+
 /* Dump T and all it's children as a JSON array. */
 void
 dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
 {
-  auto json_tree = tree_to_json(t, flags);
+  auto json_tree = generic_to_json(t, flags);
   json_tree->dump(stream, 1);
 }
 
@@ -3306,7 +3309,7 @@ tree_json_writer::add_fndecl_tree (tree fndecl, dump_flags_t flags)
   auto json_obj = new json::object ();
 
   json_obj->set(lang_hooks.decl_printable_name (fndecl, 2),
-                tree_to_json(DECL_SAVED_TREE(fndecl), flags));
+                generic_to_json(DECL_SAVED_TREE(fndecl), flags));
   m_json_root_tuple->append(json_obj);
   if (!m_stream)
     set_stream(TDI_original);
