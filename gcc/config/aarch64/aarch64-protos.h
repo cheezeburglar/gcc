@@ -744,6 +744,104 @@ private:
   bool m_old_general_regs_only;
 };
 
+/* Represents the ISA requirements of an intrinsic function, or of some
+   other similar operation.  It stores separate feature flags for
+   non-streaming mode and for streaming-mode; both requirements must
+   be met in streaming-compatible mode.  */
+struct aarch64_required_extensions
+{
+  /* Return a requirement that includes FLAGS on top of any existing
+     requirements.  */
+  inline CONSTEXPR aarch64_required_extensions
+  and_also (aarch64_feature_flags flags)
+  {
+    return { sm_off ? sm_off | flags : 0,
+	     sm_on ? sm_on | flags : 0 };
+  }
+
+  /* Return a requirement that is as restrictive as possible while still being
+     no more restrictive than THIS and no more restrictive than OTHER.  */
+  inline CONSTEXPR aarch64_required_extensions
+  common_denominator (const aarch64_required_extensions &other)
+  {
+    return { sm_off && other.sm_off
+	     ? sm_off & other.sm_off
+	     : sm_off | other.sm_off,
+	     sm_on && other.sm_on
+	     ? sm_on & other.sm_on
+	     : sm_on | other.sm_on };
+  }
+
+  /* Require non-streaming mode and the features in FLAGS.  */
+  static inline CONSTEXPR aarch64_required_extensions
+  nonstreaming_only (aarch64_feature_flags flags)
+  {
+    return { AARCH64_FL_SM_OFF | flags, 0 };
+  }
+
+  /* Likewise, and also require SVE.  */
+  static inline CONSTEXPR aarch64_required_extensions
+  nonstreaming_sve (aarch64_feature_flags flags)
+  {
+    return nonstreaming_only (AARCH64_FL_SVE | flags);
+  }
+
+  /* Allow both streaming and non-streaming mode, requiring the features
+     in FLAGS for both cases.  */
+  static inline CONSTEXPR aarch64_required_extensions
+  streaming_compatible (aarch64_feature_flags flags)
+  {
+    return { AARCH64_FL_SM_OFF | flags, AARCH64_FL_SM_ON | flags };
+  }
+
+  /* Likewise, and also require SVE for non-streaming mode.  */
+  static inline CONSTEXPR aarch64_required_extensions
+  ssve (aarch64_feature_flags flags)
+  {
+    return streaming_compatible (AARCH64_FL_SVE | flags, flags);
+  }
+
+  /* Allow both streaming and non-streaming mode, requiring the features
+     in SM_OFF for non-streaming mode and the features in SM_ON for
+     streaming mode.  */
+  static inline CONSTEXPR aarch64_required_extensions
+  streaming_compatible (aarch64_feature_flags sm_off,
+			aarch64_feature_flags sm_on)
+  {
+    return { AARCH64_FL_SM_OFF | sm_off, AARCH64_FL_SM_ON | sm_on };
+  }
+
+  /* Likewise, and also require SVE for non-streaming mode.  */
+  static inline CONSTEXPR aarch64_required_extensions
+  sve_and_sme (aarch64_feature_flags sm_off, aarch64_feature_flags sm_on)
+  {
+    return streaming_compatible (AARCH64_FL_SVE | sm_off, sm_on);
+  }
+
+  /* Require streaming mode and the features in FLAGS.  */
+  static inline CONSTEXPR aarch64_required_extensions
+  streaming_only (aarch64_feature_flags flags)
+  {
+    return { 0, AARCH64_FL_SM_ON | flags };
+  }
+
+  /* The ISA requirements in non-streaming mode, or 0 if the operation
+     is only allowed in streaming mode.  When this field is nonzero,
+     it always includes AARCH64_FL_SM_OFF.  */
+  aarch64_feature_flags sm_off;
+
+  /* The ISA requirements in streaming mode, or 0 if the operation is only
+     allowed in non-streaming mode.  When this field is nonzero,
+     it always includes AARCH64_FL_SM_ON.
+
+     This field should not normally include AARCH64_FL_SME, since we
+     would not be in streaming mode if SME wasn't supported.  Excluding
+     AARCH64_FL_SME makes it easier to handle streaming-compatible rules
+     since (for example) svadd_x should be available in streaming-compatible
+     functions even without +sme.  */
+  aarch64_feature_flags sm_on;
+};
+
 void aarch64_post_cfi_startproc (void);
 poly_int64 aarch64_initial_elimination_offset (unsigned, unsigned);
 int aarch64_get_condition_code (rtx);
@@ -766,8 +864,9 @@ bool aarch64_rnd_imm_p (rtx);
 bool aarch64_constant_address_p (rtx);
 bool aarch64_emit_approx_div (rtx, rtx, rtx);
 bool aarch64_emit_approx_sqrt (rtx, rtx, bool);
+bool aarch64_emit_opt_vec_rotate (rtx, rtx, rtx);
 tree aarch64_vector_load_decl (tree);
-rtx aarch64_gen_callee_cookie (aarch64_isa_mode, arm_pcs);
+rtx aarch64_gen_callee_cookie (aarch64_isa_mode, arm_pcs, bool);
 void aarch64_expand_call (rtx, rtx, rtx, bool);
 bool aarch64_expand_cpymem_mops (rtx *, bool);
 bool aarch64_expand_cpymem (rtx *, bool);
@@ -959,7 +1058,7 @@ rtx aarch64_simd_expand_builtin (int, tree, rtx);
 void aarch64_simd_lane_bounds (rtx, HOST_WIDE_INT, HOST_WIDE_INT, const_tree);
 rtx aarch64_endian_lane_rtx (machine_mode, unsigned int);
 
-void aarch64_split_double_move (rtx, rtx, machine_mode);
+void aarch64_split_move (rtx, rtx, machine_mode);
 void aarch64_split_128bit_move (rtx, rtx);
 
 bool aarch64_split_128bit_move_p (rtx, rtx);
@@ -1015,7 +1114,7 @@ void handle_arm_acle_h (void);
 void handle_arm_neon_h (void);
 
 bool aarch64_check_required_extensions (location_t, tree,
-					aarch64_feature_flags);
+					aarch64_required_extensions);
 bool aarch64_general_check_builtin_call (location_t, vec<location_t>,
 					 unsigned int, tree, unsigned int,
 					 tree *);
@@ -1084,7 +1183,6 @@ rtl_opt_pass *make_pass_aarch64_early_ra (gcc::context *);
 rtl_opt_pass *make_pass_fma_steering (gcc::context *);
 rtl_opt_pass *make_pass_track_speculation (gcc::context *);
 rtl_opt_pass *make_pass_late_track_speculation (gcc::context *);
-rtl_opt_pass *make_pass_tag_collision_avoidance (gcc::context *);
 rtl_opt_pass *make_pass_insert_bti (gcc::context *ctxt);
 rtl_opt_pass *make_pass_cc_fusion (gcc::context *ctxt);
 rtl_opt_pass *make_pass_switch_pstate_sm (gcc::context *ctxt);
@@ -1120,5 +1218,7 @@ extern void aarch64_adjust_reg_alloc_order ();
 
 bool aarch64_optimize_mode_switching (aarch64_mode_entity);
 void aarch64_restore_za (rtx);
+
+extern bool aarch64_gcs_enabled ();
 
 #endif /* GCC_AARCH64_PROTOS_H */

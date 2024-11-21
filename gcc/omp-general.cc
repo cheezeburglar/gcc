@@ -987,10 +987,11 @@ find_combined_omp_for (tree *tp, int *walk_subtrees, void *data)
   return NULL_TREE;
 }
 
-/* Return maximum possible vectorization factor for the target.  */
+/* Return maximum possible vectorization factor for the target, or for
+   the OpenMP offload target if one exists.  */
 
 poly_uint64
-omp_max_vf (void)
+omp_max_vf (bool offload)
 {
   if (!optimize
       || optimize_debug
@@ -998,6 +999,18 @@ omp_max_vf (void)
       || (!flag_tree_loop_vectorize
 	  && OPTION_SET_P (flag_tree_loop_vectorize)))
     return 1;
+
+  if (ENABLE_OFFLOADING && offload)
+    {
+      for (const char *c = getenv ("OFFLOAD_TARGET_NAMES"); c;)
+	{
+	  if (startswith (c, "amdgcn"))
+	    return ordered_max (poly_uint64 (64), omp_max_vf (false));
+	  else if ((c = strchr (c, ':')))
+	    c++;
+	}
+      /* Otherwise, fall through to host VF.  */
+    }
 
   auto_vector_modes modes;
   targetm.vectorize.autovectorize_vector_modes (&modes, true);
@@ -1050,7 +1063,7 @@ omp_construct_traits_to_codes (tree ctx, int nconstructs,
   /* Order must match the OMP_TRAIT_CONSTRUCT_* enumerators in
      enum omp_ts_code.  */
   static enum tree_code code_map[]
-    = { OMP_TARGET, OMP_TEAMS, OMP_PARALLEL, OMP_FOR, OMP_SIMD };
+    = { OMP_TARGET, OMP_TEAMS, OMP_PARALLEL, OMP_FOR, OMP_SIMD, OMP_DISPATCH };
 
   for (tree ts = ctx; ts; ts = TREE_CHAIN (ts), i--)
     {
@@ -1254,9 +1267,13 @@ struct omp_ts_info omp_ts_map[] =
      OMP_TRAIT_PROPERTY_CLAUSE_LIST,  false,
      NULL
    },
+   { "dispatch",
+     (1 << OMP_TRAIT_SET_CONSTRUCT),
+     OMP_TRAIT_PROPERTY_NONE,  false,
+     NULL
+   },
    { NULL, 0, OMP_TRAIT_PROPERTY_NONE, false, NULL }  /* OMP_TRAIT_LAST */
   };
-
 
 /* Return a name from PROP, a property in selectors accepting
    name lists.  */
@@ -2580,6 +2597,9 @@ omp_resolve_declare_variant (tree base)
   if (cfun && (cfun->curr_properties & PROP_gimple_any) != 0)
     return omp_resolve_late_declare_variant (base);
 
+  if (omp_has_novariants () == 1)
+    return base;
+
   auto_vec <tree, 16> variants;
   auto_vec <bool, 16> defer;
   bool any_deferred = false;
@@ -2726,6 +2746,8 @@ omp_resolve_declare_variant (tree base)
       (*slot)->variants = entry.variants;
       tree alt = build_decl (DECL_SOURCE_LOCATION (base), FUNCTION_DECL,
 			     DECL_NAME (base), TREE_TYPE (base));
+      if (DECL_ASSEMBLER_NAME_SET_P (base))
+	SET_DECL_ASSEMBLER_NAME (alt, DECL_ASSEMBLER_NAME (base));
       DECL_ARTIFICIAL (alt) = 1;
       DECL_IGNORED_P (alt) = 1;
       TREE_STATIC (alt) = 1;

@@ -604,6 +604,9 @@ package body Rtsfind is
    subtype Interfaces_C_Descendant is Interfaces_Descendant
      range Interfaces_C_Strings .. Interfaces_C_Strings;
 
+   subtype SPARK_Descendant is RTU_Id
+     range SPARK_Big_Integers .. SPARK_Big_Integers;
+
    subtype System_Descendant is RTU_Id
      range System_Address_To_Access_Conversions .. System_Tasking_Stages;
 
@@ -698,6 +701,9 @@ package body Rtsfind is
          if U_Id in Interfaces_C_Descendant then
             Name_Buffer (13) := '.';
          end if;
+
+      elsif U_Id in SPARK_Descendant then
+         Name_Buffer (6) := '.';
 
       elsif U_Id in System_Descendant then
          Name_Buffer (7) := '.';
@@ -1310,11 +1316,11 @@ package body Rtsfind is
                  (U, Defining_Unit_Name (Specification (LibUnit))));
          Ghost_Mode := Saved_GM;
 
-         Set_Corresponding_Spec (Withn, U.Entity);
-         Set_First_Name         (Withn);
-         Set_Is_Implicit_With   (Withn);
-         Set_Library_Unit       (Withn, Cunit (U.Unum));
-         Set_Next_Implicit_With (Withn, U.First_Implicit_With);
+         Set_Corresponding_Spec  (Withn, U.Entity);
+         Set_First_Name          (Withn);
+         Set_Is_Implicit_With    (Withn);
+         Set_Withed_Lib_Unit     (Withn, Cunit (U.Unum));
+         Set_Next_Implicit_With  (Withn, U.First_Implicit_With);
 
          U.First_Implicit_With := Withn;
 

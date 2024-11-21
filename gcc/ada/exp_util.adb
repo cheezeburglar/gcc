@@ -5006,7 +5006,7 @@ package body Exp_Util is
       --  declarations of the package spec.
 
       if Nkind (U) = N_Package_Body then
-         U := Unit (Library_Unit (Cunit (Current_Sem_Unit)));
+         U := Unit (Spec_Lib_Unit (Cunit (Current_Sem_Unit)));
       end if;
 
       if Nkind (U) = N_Package_Declaration then
@@ -6702,7 +6702,7 @@ package body Exp_Util is
       --  then we need to insert at the appropriate (inner) location in
       --  the not as an action on Node_To_Be_Wrapped.
 
-      In_Cond_Expr : constant Boolean := Within_Case_Or_If_Expression (N);
+      In_Cond_Expr : constant Boolean := Within_Conditional_Expression (N);
 
    begin
       --  When the node is inside a case/if expression, the lifetime of any
@@ -8116,9 +8116,9 @@ package body Exp_Util is
             --  If a component association appears within a loop created for
             --  an array aggregate, attach the actions to the association so
             --  they can be subsequently inserted within the loop. For other
-            --  component associations insert outside of the aggregate. For
+            --  component associations, insert outside of the aggregate. For
             --  an association that will generate a loop, its Loop_Actions
-            --  attribute is already initialized (see exp_aggr.adb).
+            --  field is already initialized (see exp_aggr.adb).
 
             --  The list of Loop_Actions can in turn generate additional ones,
             --  that are inserted before the associated node. If the associated
@@ -8131,27 +8131,12 @@ package body Exp_Util is
                | N_Iterated_Element_Association
             =>
                if Nkind (Parent (P)) in N_Aggregate | N_Delta_Aggregate
-
-                 --  We must not climb up out of an N_Iterated_xxx_Association
-                 --  because the actions might contain references to the loop
-                 --  parameter, except if we come from the Discrete_Choices of
-                 --  N_Iterated_Component_Association which cannot contain any.
-                 --  But it turns out that setting the Loop_Actions field in
-                 --  the case of an N_Component_Association when the field was
-                 --  not already set can lead to gigi assertion failures that
-                 --  are presumably due to malformed trees, so don't do that.
-
-                 and then
-                   not (Nkind (P) = N_Iterated_Component_Association
-                          and then Is_List_Member (N)
-                          and then List_Containing (N) = Discrete_Choices (P))
-                 and then
-                   not (Nkind (P) = N_Component_Association
-                          and then No (Loop_Actions (P)))
+                 and then Present (Loop_Actions (P))
                then
                   if Is_Empty_List (Loop_Actions (P)) then
                      Set_Loop_Actions (P, Ins_Actions);
                      Analyze_List (Ins_Actions);
+
                   else
                      declare
                         Decl : Node_Id;
@@ -8355,7 +8340,6 @@ package body Exp_Util is
                | N_Terminate_Alternative
                | N_Triggering_Alternative
                | N_Type_Conversion
-               | N_Unchecked_Expression
                | N_Unchecked_Type_Conversion
                | N_Unconstrained_Array_Definition
                | N_Unused_At_End
@@ -9192,6 +9176,16 @@ package body Exp_Util is
    begin
       return Is_Tagged_Type (Typ) and then Is_Library_Level_Entity (Typ);
    end Is_Library_Level_Tagged_Type;
+
+   --------------------
+   -- Is_LSP_Wrapper --
+   --------------------
+
+   function Is_LSP_Wrapper (E : Entity_Id) return Boolean is
+   begin
+      return Is_Dispatch_Table_Wrapper (E)
+        and then Present (LSP_Subprogram (E));
+   end Is_LSP_Wrapper;
 
    --------------------------
    -- Is_Non_BIP_Func_Call --
@@ -10843,7 +10837,11 @@ package body Exp_Util is
          --  operator on private type might not be visible and won't be
          --  resolved.
 
-         else pragma Assert (Is_RTE (Base_Type (Typ), RE_Big_Integer));
+         else pragma Assert (Is_RTE (Base_Type (Typ), RE_Big_Integer)
+                               or else
+                             Is_RTE (Base_Type (Typ), RO_GH_Big_Integer)
+                               or else
+                             Is_RTE (Base_Type (Typ), RO_SP_Big_Integer));
             return
               Make_Function_Call (Loc,
                 Name                   =>
@@ -12126,6 +12124,22 @@ package body Exp_Util is
          Init_Call := Initialization_Statements (Var);
          Set_Initialization_Statements (Var, Empty);
 
+         --  Note that we rewrite Init_Call into a null statement, rather than
+         --  just removing it, because Freeze_All may rely on this particular
+         --  node still being present in the enclosing list to know where to
+         --  stop freezing (see Explode_Initialization_Compound_Statement).
+
+         if Nkind (Init_Call) = N_Compound_Statement then
+            declare
+               Init_Actions : constant List_Id    := Actions (Init_Call);
+               Loc          : constant Source_Ptr := Sloc (Init_Call);
+
+            begin
+               Rewrite (Init_Call, Make_Null_Statement (Loc));
+               return Make_Compound_Statement (Loc, Init_Actions);
+            end;
+         end if;
+
       elsif not Has_Non_Null_Base_Init_Proc (Typ) then
 
          --  No init proc for the type, so obviously no call to be found
@@ -13301,6 +13315,12 @@ package body Exp_Util is
             elsif Is_Ignored_For_Finalization (Obj_Id) then
                null;
 
+            --  Ignored Ghost objects do not need any cleanup actions because
+            --  they will not appear in the final tree.
+
+            elsif Is_Ignored_Ghost_Entity (Obj_Id) then
+               null;
+
             --  Conversely, if one of the above cases created a Master_Node,
             --  finalization actions are required for the associated object.
 
@@ -13308,12 +13328,6 @@ package body Exp_Util is
               and then Is_RTE (Obj_Typ, RE_Master_Node)
             then
                return True;
-
-            --  Ignored Ghost objects do not need any cleanup actions because
-            --  they will not appear in the final tree.
-
-            elsif Is_Ignored_Ghost_Entity (Obj_Id) then
-               null;
 
             --  The object is of the form:
             --    Obj : [constant] Typ [:= Expr];
@@ -14260,7 +14274,6 @@ package body Exp_Util is
 
          when N_Qualified_Expression
             | N_Type_Conversion
-            | N_Unchecked_Expression
          =>
             return Side_Effect_Free (Expression (N), Name_Req, Variable_Ref);
 
@@ -14619,11 +14632,11 @@ package body Exp_Util is
       Map_Types (Parent_Type, Derived_Type);
    end Update_Primitives_Mapping;
 
-   ----------------------------------
-   -- Within_Case_Or_If_Expression --
-   ----------------------------------
+   -----------------------------------
+   -- Within_Conditional_Expression --
+   -----------------------------------
 
-   function Within_Case_Or_If_Expression (N : Node_Id) return Boolean is
+   function Within_Conditional_Expression (N : Node_Id) return Boolean is
       Nod : Node_Id;
       Par : Node_Id;
 
@@ -14667,7 +14680,7 @@ package body Exp_Util is
       end loop;
 
       return False;
-   end Within_Case_Or_If_Expression;
+   end Within_Conditional_Expression;
 
    ------------------------------
    -- Predicate_Check_In_Scope --

@@ -355,17 +355,20 @@ get_section (const char *name, unsigned int flags, tree decl,
 	      && decl != sect->named.decl)
 	    {
 	      if (decl != NULL && DECL_P (decl))
-		error ("%+qD causes a section type conflict with %qD",
-		       decl, sect->named.decl);
+		error ("%+qD causes a section type conflict with %qD"
+		       " in section %qs",
+		       decl, sect->named.decl, name);
 	      else
-		error ("section type conflict with %qD", sect->named.decl);
+		error ("section type conflict with %qD in section %qs",
+		       sect->named.decl, name);
 	      inform (DECL_SOURCE_LOCATION (sect->named.decl),
 		      "%qD was declared here", sect->named.decl);
 	    }
 	  else if (decl != NULL && DECL_P (decl))
-	    error ("%+qD causes a section type conflict", decl);
+	    error ("%+qD causes a section type conflict for section %qs",
+		   decl, name);
 	  else
-	    error ("section type conflict");
+	    error ("section type conflict for section %qs", name);
 	  /* Make sure we don't error about one section multiple times.  */
 	  sect->common.flags |= SECTION_OVERRIDE;
 	}
@@ -2575,6 +2578,7 @@ process_pending_assemble_externals (void)
   pending_assemble_externals_processed = true;
   pending_libcall_symbols = NULL_RTX;
   delete pending_assemble_externals_set;
+  pending_assemble_externals_set = nullptr;
 #endif
 }
 
@@ -6883,6 +6887,9 @@ default_section_type_flags (tree decl, const char *name, int reloc)
 
   if (decl && TREE_CODE (decl) == FUNCTION_DECL)
     flags = SECTION_CODE;
+  else if (strcmp (name, ".data.rel.ro") == 0
+	   || strcmp (name, ".data.rel.ro.local") == 0)
+    flags = SECTION_WRITE | SECTION_RELRO;
   else if (decl)
     {
       enum section_category category
@@ -6896,12 +6903,7 @@ default_section_type_flags (tree decl, const char *name, int reloc)
 	flags = SECTION_WRITE;
     }
   else
-    {
-      flags = SECTION_WRITE;
-      if (strcmp (name, ".data.rel.ro") == 0
-	  || strcmp (name, ".data.rel.ro.local") == 0)
-	flags |= SECTION_RELRO;
-    }
+    flags = SECTION_WRITE;
 
   if (decl && DECL_P (decl) && DECL_COMDAT_GROUP (decl))
     flags |= SECTION_LINKONCE;
@@ -8893,6 +8895,7 @@ varasm_cc_finalize ()
 
 #ifdef ASM_OUTPUT_EXTERNAL
   pending_assemble_externals_processed = false;
+  delete pending_assemble_externals_set;
   pending_assemble_externals_set = nullptr;
 #endif
 

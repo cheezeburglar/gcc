@@ -1692,9 +1692,30 @@ gfc_check_result_characteristics (gfc_symbol *s1, gfc_symbol *s2,
 	      return false;
 
 	    case -2:
-	      /* FIXME: Implement a warning for this case.
-	      snprintf (errmsg, err_len, "Possible character length mismatch "
-			"in function result");*/
+	      if (r1->ts.u.cl->length->expr_type == EXPR_CONSTANT)
+		{
+		  snprintf (errmsg, err_len,
+			    "Function declared with a non-constant character "
+			    "length referenced with a constant length");
+		  return false;
+		}
+	      else if (r2->ts.u.cl->length->expr_type == EXPR_CONSTANT)
+		{
+		  snprintf (errmsg, err_len,
+			    "Function declared with a constant character "
+			    "length referenced with a non-constant length");
+		  return false;
+		}
+	      /* Warn if length expression types are different, except for
+		  possibly false positives where complex expressions might have
+		  been used.  */
+	      else if ((r1->ts.u.cl->length->expr_type
+			!= r2->ts.u.cl->length->expr_type)
+		       && (r1->ts.u.cl->length->expr_type != EXPR_OP
+			   || r2->ts.u.cl->length->expr_type != EXPR_OP))
+		gfc_warning (0, "Possible character length mismatch in "
+			     "function result between %L and %L",
+			     &r1->declared_at, &r2->declared_at);
 	      break;
 
 	    case 0:
@@ -3513,12 +3534,17 @@ gfc_compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
 
      skip_size_check:
 
-      /* Satisfy F03:12.4.1.3 by ensuring that a procedure pointer actual
-         argument is provided for a procedure pointer formal argument.  */
+      /* Satisfy either: F03:12.4.1.3 by ensuring that a procedure pointer
+	 actual argument is provided for a procedure pointer formal argument;
+	 or: F08:12.5.2.9 (F18:15.5.2.10) by ensuring that the effective
+	 argument shall be an external, internal, module, or dummy procedure.
+	 The interfaces are checked elsewhere.  */
       if (f->sym->attr.proc_pointer
 	  && !((a->expr->expr_type == EXPR_VARIABLE
 		&& (a->expr->symtree->n.sym->attr.proc_pointer
 		    || gfc_is_proc_ptr_comp (a->expr)))
+	       || (a->expr->ts.type == BT_PROCEDURE
+		   && f->sym->ts.interface)
 	       || (a->expr->expr_type == EXPR_FUNCTION
 		   && is_procptr_result (a->expr))))
 	{

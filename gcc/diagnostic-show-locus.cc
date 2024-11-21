@@ -3323,6 +3323,9 @@ diagnostic_source_print_policy::print (pretty_printer &pp,
 void
 layout_printer::print (const diagnostic_source_print_policy &source_policy)
 {
+  diagnostic_prefixing_rule_t saved_rule = pp_prefixing_rule (&m_pp);
+  pp_prefixing_rule (&m_pp) = DIAGNOSTICS_SHOW_PREFIX_EVERY_LINE;
+
   if (get_options ().show_ruler_p)
     show_ruler (m_layout.m_x_offset_display + get_options ().max_width);
 
@@ -3359,6 +3362,8 @@ layout_printer::print (const diagnostic_source_print_policy &source_policy)
 
   if (auto effect_info = m_layout.m_effect_info)
     effect_info->m_trailing_out_edge_column = m_link_rhs_column;
+
+  pp_prefixing_rule (&m_pp) = saved_rule;
 }
 
 #if CHECKING_P
@@ -3582,7 +3587,7 @@ test_layout_x_offset_display_utf8 (const line_table_case &case_)
 			   linemap_position_for_column (line_table,
 							emoji_col));
     layout test_layout (policy, richloc, nullptr);
-    layout_printer lp (*dc.m_printer, test_layout, richloc, DK_ERROR);
+    layout_printer lp (*dc.get_reference_printer (), test_layout, richloc, DK_ERROR);
     lp.print (policy);
     ASSERT_STREQ ("     |         1         \n"
 		  "     |         1         \n"
@@ -3591,7 +3596,7 @@ test_layout_x_offset_display_utf8 (const line_table_case &case_)
 		  "that occupies 8 bytes and 4 display columns, starting at "
 		  "column #102.\n"
 		  "     | ^\n",
-		  pp_formatted_text (dc.m_printer));
+		  pp_formatted_text (dc.get_reference_printer ()));
   }
 
   /* Similar to the previous example, but now the offset called for would split
@@ -3609,7 +3614,7 @@ test_layout_x_offset_display_utf8 (const line_table_case &case_)
 			   linemap_position_for_column (line_table,
 							emoji_col + 2));
     layout test_layout (dc, richloc, nullptr);
-    layout_printer lp (*dc.m_printer, test_layout, richloc, DK_ERROR);
+    layout_printer lp (*dc.get_reference_printer (), test_layout, richloc, DK_ERROR);
     lp.print (policy);
     ASSERT_STREQ ("     |        1         1 \n"
 		  "     |        1         2 \n"
@@ -3618,7 +3623,7 @@ test_layout_x_offset_display_utf8 (const line_table_case &case_)
 		  "that occupies 8 bytes and 4 display columns, starting at "
 		  "column #102.\n"
 		  "     |  ^\n",
-		  pp_formatted_text (dc.m_printer));
+		  pp_formatted_text (dc.get_reference_printer ()));
   }
 
 }
@@ -3690,9 +3695,9 @@ test_layout_x_offset_display_tab (const line_table_case &case_)
       dc.m_tabstop = tabstop;
       diagnostic_source_print_policy policy (dc);
       layout test_layout (policy, richloc, nullptr);
-      layout_printer lp (*dc.m_printer, test_layout, richloc, DK_ERROR);
+      layout_printer lp (*dc.get_reference_printer (), test_layout, richloc, DK_ERROR);
       lp.print (policy);
-      const char *out = pp_formatted_text (dc.m_printer);
+      const char *out = pp_formatted_text (dc.get_reference_printer ());
       ASSERT_EQ (NULL, strchr (out, '\t'));
       const char *left_quote = strchr (out, '`');
       const char *right_quote = strchr (out, '\'');
@@ -3715,7 +3720,7 @@ test_layout_x_offset_display_tab (const line_table_case &case_)
       dc.m_source_printing.show_line_numbers_p = true;
       diagnostic_source_print_policy policy (dc);
       layout test_layout (policy, richloc, nullptr);
-      layout_printer lp (*dc.m_printer, test_layout, richloc, DK_ERROR);
+      layout_printer lp (*dc.get_reference_printer (), test_layout, richloc, DK_ERROR);
       lp.print (policy);
 
       /* We have arranged things so that two columns will be printed before
@@ -3731,7 +3736,7 @@ test_layout_x_offset_display_tab (const line_table_case &case_)
 	  "display columns, starting at column #103.\n"
 	  "     |   ^\n";
       const char *expected_output = (extra_width[tabstop] ? output1 : output2);
-      ASSERT_STREQ (expected_output, pp_formatted_text (dc.m_printer));
+      ASSERT_STREQ (expected_output, pp_formatted_text (dc.get_reference_printer ()));
     }
 }
 
@@ -3887,8 +3892,8 @@ test_one_liner_fixit_remove ()
   /* Test of adding a prefix.  */
   {
     test_diagnostic_context dc;
-    pp_prefixing_rule (dc.m_printer) = DIAGNOSTICS_SHOW_PREFIX_EVERY_LINE;
-    pp_set_prefix (dc.m_printer, xstrdup ("TEST PREFIX:"));
+    pp_prefixing_rule (dc.get_reference_printer ()) = DIAGNOSTICS_SHOW_PREFIX_EVERY_LINE;
+    pp_set_prefix (dc.get_reference_printer (), xstrdup ("TEST PREFIX:"));
     ASSERT_STREQ ("TEST PREFIX: foo = bar.field;\n"
 		  "TEST PREFIX:          ^~~~~~\n"
 		  "TEST PREFIX:          ------\n",
@@ -3914,8 +3919,8 @@ test_one_liner_fixit_remove ()
     test_diagnostic_context dc;
     dc.m_source_printing.show_ruler_p = true;
     dc.m_source_printing.max_width = 50;
-    pp_prefixing_rule (dc.m_printer) = DIAGNOSTICS_SHOW_PREFIX_EVERY_LINE;
-    pp_set_prefix (dc.m_printer, xstrdup ("TEST PREFIX:"));
+    pp_prefixing_rule (dc.get_reference_printer ()) = DIAGNOSTICS_SHOW_PREFIX_EVERY_LINE;
+    pp_set_prefix (dc.get_reference_printer (), xstrdup ("TEST PREFIX:"));
     ASSERT_STREQ ("TEST PREFIX:          1         2         3         4         5\n"
 		  "TEST PREFIX: 12345678901234567890123456789012345678901234567890\n"
 		  "TEST PREFIX: foo = bar.field;\n"
@@ -3930,8 +3935,8 @@ test_one_liner_fixit_remove ()
     dc.m_source_printing.show_ruler_p = true;
     dc.m_source_printing.max_width = 50;
     dc.m_source_printing.show_line_numbers_p = true;
-    pp_prefixing_rule (dc.m_printer) = DIAGNOSTICS_SHOW_PREFIX_EVERY_LINE;
-    pp_set_prefix (dc.m_printer, xstrdup ("TEST PREFIX:"));
+    pp_prefixing_rule (dc.get_reference_printer ()) = DIAGNOSTICS_SHOW_PREFIX_EVERY_LINE;
+    pp_set_prefix (dc.get_reference_printer (), xstrdup ("TEST PREFIX:"));
     ASSERT_STREQ ("TEST PREFIX:      |          1         2         3         4         5\n"
 		  "TEST PREFIX:      | 12345678901234567890123456789012345678901234567890\n"
 		  "TEST PREFIX:    1 | foo = bar.field;\n"

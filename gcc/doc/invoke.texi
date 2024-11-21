@@ -223,7 +223,7 @@ in the following sections.
 -fno-implicit-templates
 -fno-implicit-inline-templates
 -fno-implement-inlines
--fmodule-header@r{[}=@var{kind}@r{]} -fmodule-only -fmodules-ts
+-fmodule-header@r{[}=@var{kind}@r{]} -fmodule-only -fmodules
 -fmodule-implicit-inline
 -fno-module-lazy
 -fmodule-mapper=@var{specification}
@@ -307,6 +307,8 @@ Objective-C and Objective-C++ Dialects}.
 -fdiagnostics-color=@r{[}auto@r{|}never@r{|}always@r{]}
 -fdiagnostics-urls=@r{[}auto@r{|}never@r{|}always@r{]}
 -fdiagnostics-format=@r{[}text@r{|}sarif-stderr@r{|}sarif-file@r{|}json@r{|}json-stderr@r{|}json-file@r{]}
+-fdiagnostics-add-output=@var{DIAGNOSTICS-OUTPUT-SPEC}
+-fdiagnostics-set-output=@var{DIAGNOSTICS-OUTPUT-SPEC}
 -fno-diagnostics-json-formatting
 -fno-diagnostics-show-option  -fno-diagnostics-show-caret
 -fno-diagnostics-show-event-links
@@ -518,12 +520,12 @@ Objective-C and Objective-C++ Dialects}.
 }
 
 @item C and Objective-C-only Warning Options
-@gccoptlist{-Wbad-function-cast  -Wmissing-declarations
--Wmissing-parameter-type -Wdeclaration-missing-parameter-type
--Wmissing-prototypes -Wmissing-variable-declarations
--Wnested-externs -Wold-style-declaration  -Wold-style-definition
--Wstrict-prototypes  -Wtraditional  -Wtraditional-conversion
--Wdeclaration-after-statement  -Wpointer-sign}
+@gccoptlist{-Wbad-function-cast -Wdeprecated-non-prototype -Wmissing-declarations
+-Wmissing-parameter-name -Wmissing-parameter-type
+-Wdeclaration-missing-parameter-type -Wmissing-prototypes
+-Wmissing-variable-declarations -Wnested-externs -Wold-style-declaration
+-Wold-style-definition -Wstrict-prototypes -Wtraditional
+-Wtraditional-conversion -Wdeclaration-after-statement -Wpointer-sign}
 
 @item Debugging Options
 @xref{Debugging Options,,Options for Debugging Your Program}.
@@ -583,7 +585,7 @@ Objective-C and Objective-C++ Dialects}.
 -fipa-bit-cp  -fipa-vrp  -fipa-pta  -fipa-profile  -fipa-pure-const
 -fipa-reference  -fipa-reference-addressable
 -fipa-stack-alignment  -fipa-icf  -fira-algorithm=@var{algorithm}
--flate-combine-instructions  -flive-patching=@var{level}
+-flate-combine-instructions -flifetime-dse -flive-patching=@var{level}
 -fira-region=@var{region}  -fira-hoist-pressure
 -fira-loop-pressure  -fno-ira-share-save-slots
 -fno-ira-share-spill-slots
@@ -593,7 +595,7 @@ Objective-C and Objective-C++ Dialects}.
 -floop-block  -floop-interchange  -floop-strip-mine
 -floop-unroll-and-jam  -floop-nest-optimize
 -floop-parallelize-all  -flra-remat  -flto  -flto-compression-level
--flto-partition=@var{alg}  -fmerge-all-constants
+-flto-partition=@var{alg}  -fmalloc-dce -fmerge-all-constants
 -fmerge-constants  -fmodulo-sched  -fmodulo-sched-allow-regmoves
 -fmove-loop-invariants  -fmove-loop-stores  -fno-branch-count-reg
 -fno-defer-pop  -fno-fp-int-builtin-inexact  -fno-function-cse
@@ -812,7 +814,7 @@ Objective-C and Objective-C++ Dialects}.
 -mpc-relative-literal-loads
 -msign-return-address=@var{scope}
 -mbranch-protection=@var{none}|@var{standard}|@var{pac-ret}[+@var{leaf}
-+@var{b-key}]|@var{bti}
++@var{b-key}]|@var{bti}|@var{gcs}
 -mharden-sls=@var{opts}
 -march=@var{name}  -mcpu=@var{name}  -mtune=@var{name}
 -moverride=@var{string}  -mverbose-cost-dump
@@ -896,7 +898,7 @@ Objective-C and Objective-C++ Dialects}.
 
 @emph{AVR Options}
 @gccoptlist{-mmcu=@var{mcu}  -mabsdata  -maccumulate-args
--mbranch-cost=@var{cost}  -mfuse-add=@var{level}
+-mbranch-cost=@var{cost}  -mfuse-add=@var{level}  -mfuse-move=@var{level}
 -mcall-prologues  -mgas-isr-prologues  -mint8  -mflmap
 -mdouble=@var{bits}  -mlong-double=@var{bits}
 -mn_flash=@var{size}  -mno-interrupts
@@ -1480,11 +1482,11 @@ See RS/6000 and PowerPC Options.
 -mvpclmulqdq  -mavx512bitalg  -mmovdiri  -mmovdir64b  -mavx512vpopcntdq
 -mavx512vnni  -mprfchw  -mrdpid
 -mrdseed  -msgx -mavx512vp2intersect -mserialize -mtsxldtrk
--mamx-tile  -mamx-int8  -mamx-bf16 -muintr -mhreset -mavxvnni
+-mamx-tile  -mamx-int8  -mamx-bf16 -muintr -mhreset -mavxvnni -mamx-fp8
 -mavx512fp16 -mavxifma -mavxvnniint8 -mavxneconvert -mcmpccxadd -mamx-fp16
 -mprefetchi -mraoint -mamx-complex -mavxvnniint16 -msm3 -msha512 -msm4 -mapxf
 -musermsr -mavx10.1 -mavx10.1-256 -mavx10.1-512 -mevex512 -mavx10.2 -mavx10.2-256
--mavx10.2-512
+-mavx10.2-512 -mamx-avx512 -mamx-tf32 -mamx-transpose -mmovrs -mamx-movrs
 -mcldemote  -mms-bitfields  -mno-align-stringops  -minline-all-stringops
 -minline-stringops-dynamically  -mstringop-strategy=@var{alg}
 -mkl -mwidekl
@@ -2477,9 +2479,8 @@ applied with @option{-std=c11}) and a new value of
 @item c23
 @itemx c2x
 @itemx iso9899:2024
-ISO C23, the 2023 revision of the ISO C standard (expected to be
-published in 2024).  The support for this version is experimental and
-incomplete.  The name @samp{c2x} is deprecated.
+ISO C23, the 2023 revision of the ISO C standard (published in 2024).  The
+name @samp{c2x} is deprecated.
 
 @item c2y
 The next version of the ISO C standard, still under development.  The
@@ -2500,12 +2501,12 @@ The name @samp{gnu1x} is deprecated.
 
 @item gnu17
 @itemx gnu18
-GNU dialect of ISO C17.  This is the default for C code.
+GNU dialect of ISO C17.
 
 @item gnu23
 @itemx gnu2x
-GNU dialect of ISO C23.  The support for this version is experimental
-and incomplete.  The name @samp{gnu2x} is deprecated.
+GNU dialect of ISO C23.  This is the default for C code.  The name
+@samp{gnu2x} is deprecated.
 
 @item gnu2y
 The next version of the ISO C standard, still under development, plus
@@ -2566,17 +2567,19 @@ Support is experimental, and could change in incompatible ways in
 future releases.
 The name @samp{gnu++2a} is deprecated.
 
-@item c++2b
-@itemx c++23
-The next revision of the ISO C++ standard, planned for
-2023.  Support is highly experimental, and will almost certainly
-change in incompatible ways in future releases.
+@item c++23
+@itemx c++2b
+The 2023 ISO C++ standard plus amendments (published in 2024).
+Support is experimental, and could change in incompatible ways in
+future releases.
+The name @samp{c++2b} is deprecated.
 
-@item gnu++2b
-@itemx gnu++23
-GNU dialect of @option{-std=c++2b}.  Support is highly experimental,
-and will almost certainly change in incompatible ways in future
-releases.
+@item gnu++23
+@itemx gnu++2b
+GNU dialect of @option{-std=c++23}.
+Support is experimental, and could change in incompatible ways in
+future releases.
+The name @samp{gnu++2b} is deprecated.
 
 @item c++2c
 @itemx c++26
@@ -3502,12 +3505,12 @@ To save space, do not emit out-of-line copies of inline functions
 controlled by @code{#pragma implementation}.  This causes linker
 errors if these functions are not inlined everywhere they are called.
 
-@opindex fmodules-ts
-@opindex fno-modules-ts
-@item -fmodules-ts
-@itemx -fno-modules-ts
+@opindex fmodules
+@opindex fno-modules
+@item -fmodules
+@itemx -fno-modules
 Enable support for C++20 modules (@pxref{C++ Modules}).  The
-@option{-fno-modules-ts} is usually not needed, as that is the
+@option{-fno-modules} is usually not needed, as that is the
 default.  Even though this is a C++20 feature, it is not currently
 implicitly enabled by selecting that standard version.
 
@@ -4748,9 +4751,8 @@ Enabled by default with @option{-std=c++20}.  Before
 
 @opindex Wzero-as-null-pointer-constant
 @opindex Wno-zero-as-null-pointer-constant
-@item -Wzero-as-null-pointer-constant @r{(C++ and Objective-C++ only)}
-Warn when a literal @samp{0} is used as null pointer constant.  This can
-be useful to facilitate the conversion to @code{nullptr} in C++11.
+@item -Wzero-as-null-pointer-constant
+Warn when a literal @samp{0} is used as null pointer constant.
 
 @opindex Waligned-new
 @opindex Wno-aligned-new
@@ -5902,6 +5904,10 @@ Select a different format for printing diagnostics.
 @var{FORMAT} is @samp{text}, @samp{sarif-stderr}, @samp{sarif-file},
 @samp{json}, @samp{json-stderr}, or @samp{json-file}.
 
+Using this option replaces any additional ``output sinks'' added by
+@option{-fdiagnostics-add-output=}, or that set by
+@option{-fdiagnostics-set-output=}.
+
 The default is @samp{text}.
 
 The @samp{sarif-stderr} and @samp{sarif-file} formats both emit
@@ -5915,6 +5921,115 @@ The @samp{json-stderr} and @samp{json-file} formats are identical, apart from
 where the JSON is emitted to.  With @samp{json-stderr}, the JSON is emitted
 to stderr, whereas with @samp{json-file} it is written to
 @file{@var{source}.gcc.json}.
+
+@opindex fdiagnostics-add-output
+@item -fdiagnostics-add-output=@var{DIAGNOSTICS-OUTPUT-SPEC}
+Add an additional ``output sink'' for emitting diagnostics.
+
+@var{DIAGNOSTICS-OUTPUT-SPEC} should specify a scheme, optionally followed
+by @code{:} and one or more @var{KEY}=@var{VALUE} pairs, in this form:
+
+@smallexample
+@var{SCHEME}
+@var{SCHEME}:@var{KEY}=@var{VALUE}
+@var{SCHEME}:@var{KEY}=@var{VALUE},@var{KEY2}=@var{VALUE2}
+@end smallexample
+
+etc.
+
+Schemes, keys, or values with a name prefixed ``experimental'' may change
+or be removed without notice.
+
+@var{SCHEME} can be
+
+@table @gcctabopt
+
+@item text
+Emit diagnostics to stderr using GCC's classic text output format.
+
+Supported keys are:
+
+@table @gcctabopt
+
+@item color=@r{[}yes@r{|}no@r{]}
+Override colorization settings from @option{-fdiagnostics-color} for this
+text output.
+
+@item experimental-nesting=@r{[}yes@r{|}no@r{]}
+Enable an experimental mode that emphasizes hierarchical relationships
+within diagnostics messages, displaying location information on separate
+lines.
+
+@item experimental-nesting-show-locations=@r{[}yes@r{|}no@r{]}
+If @code{experimental-nesting=yes}, then by default locations are
+shown; set this key to @code{no} to disable printing such locations.
+This exists for use by GCC developers, for writing DejaGnu test cases.
+
+@item experimental-nesting-show-levels=@r{[}yes@r{|}no@r{]}
+This is a debugging option for use with @code{experimental-nesting=yes}.
+Set this key to @code{yes} to print explicit nesting levels in the output.
+This exists for use by GCC developers.
+
+@end table
+
+@item sarif
+Emit diagnostics to a file in SARIF format.
+
+Supported keys are:
+
+@table @gcctabopt
+
+@item file=@var{FILENAME}
+Specify the filename to write the SARIF output to, potentially with a
+leading absolute or relative path.  If not specified, it defaults to
+@file{@var{source}.sarif}.
+
+@item version=@r{[}2.1@r{|}2.2-prerelease@r{]}
+Specify the version of SARIF to use for the output.  If not specified,
+defaults to 2.1.  @code{2.2-prerelease} uses an unofficial draft of the
+future SARIF 2.2 specification and should only be used for experimentation
+in this release.
+
+@end table
+
+@end table
+
+For example,
+
+@smallexample
+-fdiagnostics-add-output=sarif:version=2.1,file=foo.2.1.sarif
+-fdiagnostics-add-output=sarif:version=2.2-prerelease,file=foo.2.2.sarif
+@end smallexample
+
+would add a pair of outputs, each writing to a different file, using
+versions 2.1 and 2.2 of the SARIF standard respectively.
+
+In EBNF:
+
+@smallexample
+
+@var{diagnostics-output-specifier} = @var{diagnostics-output-name}
+                                   | @var{diagnostics-output-name}, ":", @var{key-value-pairs};
+
+@var{diagnostics-output-name} = "text" | "sarif";
+
+@var{key-value-pairs} = @var{key-value-pair}
+                      | @var{key-value-pair} "," @var{key-value-pairs};
+
+@var{key-value-pair} = @var{key} "=" @var{value};
+
+@var{key} = ? string without a '=' ? ;
+@var{value} = ? string without a ',' ? ;
+
+@end smallexample
+
+@opindex fdiagnostics-set-output
+@item -fdiagnostics-set-output=@var{DIAGNOSTICS-OUTPUT-SPEC}
+This works in a similar way to @option{-fdiagnostics-add-output=} except
+that instead of adding an additional ``output sink'' for diagnostics, it
+replaces all existing output sinks, such as from @option{-fdiagnostics-format=},
+@option{-fdiagnostics-add-output=}, or a prior call to
+@option{-fdiagnostics-set-output=}.
 
 @opindex fno-diagnostics-json-formatting
 @opindex fdiagnostics-json-formatting
@@ -6274,6 +6389,7 @@ name is still supported, but the newer name is more descriptive.)
 -Wimplicit-fallthrough=3
 -Wmaybe-uninitialized
 -Wmissing-field-initializers
+-Wmissing-parameter-name @r{(C/ObjC only)}
 -Wmissing-parameter-type @r{(C/ObjC only)}
 -Wold-style-declaration @r{(C/ObjC only)}
 -Woverride-init @r{(C/ObjC only)}
@@ -9951,6 +10067,28 @@ even if there is a previous prototype.  A definition using @samp{()}
 is not considered an old-style definition in C23 mode, because it is
 equivalent to @samp{(void)} in that case, but is considered an
 old-style definition for older standards.
+
+@opindex Wdeprecated-non-prototype
+@opindex Wno-deprecated-non-prototype
+@item -Wdeprecated-non-prototype @r{(C and Objective-C only)}
+Warn if a function declarated with an empty parameter list @samp{()} is
+called with one or more arguments, or if a function definition with one
+or more parameters is encountered after such a declaration.  Both cases
+are errors in C23 and later dialects  of C.
+
+This warning is also enabled by @option{-Wc11-c23-compat}.
+
+@opindex Wmissing-parameter-name
+@opindex Wno-missing-parameter-name
+@item -Wmissing-parameter-name @r{(C and Objective-C only)}
+Warn if a function definition omits a parameter name, specifying only
+its type.  This can be used to document that a parameter is unused
+in the definition.  It is part of C23 and later dialects of C,
+and available as a GCC extension in all other dialects.
+
+This warning is also enabled by @option{-Wc11-c23-compat}.  It is turned
+into an error if building for a C version before C23 by
+@option{-pedantic-errors}.
 
 @opindex Wmissing-parameter-type
 @opindex Wno-missing-parameter-type
@@ -14471,8 +14609,12 @@ affected by @option{-flimit-function-alignment}
 
 
 @opindex fno-allocation-dce
+@opindex fallocation-dce
 @item -fno-allocation-dce
-Do not remove unused C++ allocations in dead code elimination.
+Do not remove unused C++ allocations (using operator @code{new} and operator @code{delete})
+in dead code elimination.
+
+See also @option{-fmalloc-dce}.
 
 @opindex fallow-store-data-races
 @item -fallow-store-data-races
@@ -15344,6 +15486,18 @@ complete loop peeling (i.e.@: complete removal of loops with small constant
 number of iterations).
 
 Enabled by @option{-O3}, @option{-fprofile-use}, and @option{-fauto-profile}.
+
+@opindex fno-malloc-dce
+@opindex fmalloc-dce
+@item -fmalloc-dce
+Control whether @code{malloc} (and its variants such as @code{calloc} or
+@code{strdup}),  can be optimized away provided its return value is only used
+as a parameter of @code{free} call or compared with @code{NULL}.  If
+@option{-fmalloc-dce=1} is used, only calls to @code{free} are allowed while
+with @option{-fmalloc-dce=2} also comparsions with @code{NULL} pointer are
+considered safe to remove.
+
+The default is @option{-fmalloc-dce=2}.  See also @option{-fallocation-dce}. 
 
 @opindex fmove-loop-invariants
 @item -fmove-loop-invariants
@@ -21346,12 +21500,12 @@ and the features that they enable by default:
 @item @samp{armv8.4-a} @tab Armv8.4-A @tab @samp{armv8.3-a}, @samp{+flagm}, @samp{+fp16fml}, @samp{+dotprod}
 @item @samp{armv8.5-a} @tab Armv8.5-A @tab @samp{armv8.4-a}, @samp{+sb}, @samp{+ssbs}, @samp{+predres}
 @item @samp{armv8.6-a} @tab Armv8.6-A @tab @samp{armv8.5-a}, @samp{+bf16}, @samp{+i8mm}
-@item @samp{armv8.7-a} @tab Armv8.7-A @tab @samp{armv8.6-a}, @samp{+ls64}
+@item @samp{armv8.7-a} @tab Armv8.7-A @tab @samp{armv8.6-a}
 @item @samp{armv8.8-a} @tab Armv8.8-a @tab @samp{armv8.7-a}, @samp{+mops}
 @item @samp{armv8.9-a} @tab Armv8.9-a @tab @samp{armv8.8-a}
 @item @samp{armv9-a} @tab Armv9-A @tab @samp{armv8.5-a}, @samp{+sve}, @samp{+sve2}
 @item @samp{armv9.1-a} @tab Armv9.1-A @tab @samp{armv9-a}, @samp{+bf16}, @samp{+i8mm}
-@item @samp{armv9.2-a} @tab Armv9.2-A @tab @samp{armv9.1-a}, @samp{+ls64}
+@item @samp{armv9.2-a} @tab Armv9.2-A @tab @samp{armv9.1-a}
 @item @samp{armv9.3-a} @tab Armv9.3-A @tab @samp{armv9.2-a}, @samp{+mops}
 @item @samp{armv9.4-a} @tab Armv9.4-A @tab @samp{armv9.3-a}
 @item @samp{armv8-r} @tab Armv8-R @tab @samp{armv8-r}
@@ -21396,17 +21550,18 @@ performance of the code.  Permissible values for this option are:
 @samp{octeontx2}, @samp{octeontx2t98}, @samp{octeontx2t96}
 @samp{octeontx2t93}, @samp{octeontx2f95}, @samp{octeontx2f95n},
 @samp{octeontx2f95mm},
-@samp{a64fx},
+@samp{a64fx}, @samp{fujitsu-monaka},
 @samp{thunderx}, @samp{thunderxt88},
 @samp{thunderxt88p1}, @samp{thunderxt81}, @samp{tsv110},
 @samp{thunderxt83}, @samp{thunderx2t99}, @samp{thunderx3t110}, @samp{zeus},
 @samp{cortex-a57.cortex-a53}, @samp{cortex-a72.cortex-a53},
 @samp{cortex-a73.cortex-a35}, @samp{cortex-a73.cortex-a53},
 @samp{cortex-a75.cortex-a55}, @samp{cortex-a76.cortex-a55},
-@samp{cortex-r82}, @samp{cortex-x1}, @samp{cortex-x1c}, @samp{cortex-x2},
-@samp{cortex-x3}, @samp{cortex-x4}, @samp{cortex-a510}, @samp{cortex-a520},
-@samp{cortex-a710}, @samp{cortex-a715}, @samp{cortex-a720}, @samp{ampere1},
-@samp{ampere1a}, @samp{ampere1b}, @samp{cobalt-100} and @samp{native}.
+@samp{cortex-r82}, @samp{cortex-r82ae}, @samp{cortex-x1}, @samp{cortex-x1c},
+@samp{cortex-x2}, @samp{cortex-x3}, @samp{cortex-x4}, @samp{cortex-a510},
+@samp{cortex-a520}, @samp{cortex-a520ae}, @samp{cortex-a710}, @samp{cortex-a715},
+@samp{cortex-a720}, @samp{cortex-a720ae}, @samp{ampere1}, @samp{ampere1a},
+@samp{ampere1b}, @samp{cobalt-100} and @samp{native}.
 
 The values @samp{cortex-a57.cortex-a53}, @samp{cortex-a72.cortex-a53},
 @samp{cortex-a73.cortex-a35}, @samp{cortex-a73.cortex-a53},
@@ -21494,7 +21649,7 @@ default value is @samp{none}. This option has been deprecated by
 -mbranch-protection.
 
 @opindex mbranch-protection
-@item -mbranch-protection=@var{none}|@var{standard}|@var{pac-ret}[+@var{leaf}+@var{b-key}]|@var{bti}
+@item -mbranch-protection=@var{none}|@var{standard}|@var{pac-ret}[+@var{leaf}+@var{b-key}]|@var{bti}|@var{gcs}
 Select the branch protection features to use.
 @samp{none} is the default and turns off all types of branch protection.
 @samp{standard} turns on all types of branch protection features.  If a feature
@@ -21507,6 +21662,7 @@ argument @samp{leaf} can be used to extend the signing to include leaf
 functions.  The optional argument @samp{b-key} can be used to sign the functions
 with the B-key instead of the A-key.
 @samp{bti} turns on branch target identification mechanism.
+@samp{gcs} turns on guarded control stack compatible code generation.
 
 @opindex mharden-sls
 @item -mharden-sls=@var{opts}
@@ -21654,6 +21810,8 @@ Enable SVE2 sm4 instructions.  This also enables SVE2 instructions.
 Enable SVE2 aes instructions.  This also enables SVE2 instructions.
 @item sve2-sha3
 Enable SVE2 sha3 instructions.  This also enables SVE2 instructions.
+@item sve2p1
+Enable SVE2.1 instructions.  This also enables SVE2 instructions.
 @item tme
 Enable the Transactional Memory Extension.
 @item i8mm
@@ -21676,7 +21834,6 @@ default for @option{-march=armv8.6-a}.  Use of this option with architectures
 prior to Armv8.2-A is not supported.
 @item ls64
 Enable the 64-byte atomic load and store instructions for accelerators.
-This option is enabled by default for @option{-march=armv8.7-a}.
 @item mops
 Enable the instructions to accelerate memory operations like @code{memcpy},
 @code{memmove}, @code{memset}.  This option is enabled by default for
@@ -21690,11 +21847,22 @@ Enable the Common Short Sequence Compression instructions.
 @item sme
 Enable the Scalable Matrix Extension.
 @item sme-i16i64
-Enable the FEAT_SME_I16I64 extension to SME.
+Enable the FEAT_SME_I16I64 extension to SME.  This also enables SME
+instructions.
 @item sme-f64f64
-Enable the FEAT_SME_F64F64 extension to SME.
+Enable the FEAT_SME_F64F64 extension to SME.  This also enables SME
+instructions.
 @item sme2
 Enable the Scalable Matrix Extension 2.  This also enables SME instructions.
+@item sme-b16b16
+Enable the FEAT_SME_B16B16 extension to SME.  This also enables SME2
+and SVE_B16B16 instructions.
+@item sme-f16f16
+Enable the FEAT_SME_F16F16 extension to SME.  This also enables SME2
+instructions.
+@item sme2p1
+Enable the Scalable Matrix Extension version 2.1.  This also enables SME2
+instructions.
 @item lse128
 Enable the LSE128 128-bit atomic instructions extension.  This also
 enables LSE instructions.
@@ -21711,6 +21879,9 @@ Enable the RCpc3 (Release Consistency) extension.
 Enable the fp8 (8-bit floating point) extension.
 @item faminmax
 Enable the Floating Point Absolute Maximum/Minimum extension.
+@item sve-b16b16
+Enable the SVE non-widening brain floating-point (@code{bf16}) extension.
+This only has an effect when @code{sve2} or @code{sme2} are also enabled.
 
 @end table
 
@@ -23949,6 +24120,18 @@ The default uses @code{@var{level}=1} for optimizations @option{-Og}
 and @option{-O1}, and @code{@var{level}=2} for higher optimizations.
 Valid values for @var{level} are @code{0}, @code{1} and @code{2}.
 
+@opindex mfuse-move
+@item -mfuse-move
+@itemx -mno-fuse-move
+@itemx -mfuse-move=@var{level}
+Run a post reload optimization pass that tries to fuse move instructions
+and to split multi-byte instructions into 8-bit operations.
+The default uses @code{@var{level}=3} for optimization @option{-O1},
+and @code{@var{level}=23} for higher optimizations.
+Valid values for @var{level} are in the range @code{0} @dots{} @code{23}
+which is a 3:2:2:2 mixed radix value.  Each digit controls some
+aspect of the optimization.
+
 @opindex mdouble
 @opindex mlong-double
 @item -mdouble=@var{bits}
@@ -25901,8 +26084,7 @@ I/O functions are needed.
 
 @opindex mlra
 @item -mlra
-Enable Local Register Allocation.  This is still experimental for FT32,
-so by default the compiler uses standard reload.
+Does nothing.  Preserved for backward compatibility.
 
 @opindex mnodiv
 @item -mnodiv
@@ -34620,6 +34802,20 @@ MOVDIRI, MOVDIR64B, ENQCMD, CLDEMOTE, PTWRITE, WAITPKG, SERIALIZE, TSXLDTRK,
 UINTR, AMX-BF16, AMX-TILE, AMX-INT8, AVX-VNNI, AVX512FP16, AVX512BF16, AMX-FP16,
 PREFETCHI and AMX-COMPLEX instruction set support.
 
+@item diamondrapids
+Intel Diamond Rapids CPU with 64-bit extensions, MOVBE, MMX, SSE, SSE2, SSE3,
+SSSE3, SSE4.1, SSE4.2, POPCNT, CX16, SAHF, FXSR, AVX, XSAVE, PCLMUL, FSGSBASE,
+RDRND, F16C, AVX2, BMI, BMI2, LZCNT, FMA, MOVBE, HLE, RDSEED, ADCX, PREFETCHW,
+AES, CLFLUSHOPT, XSAVEC, XSAVES, SGX, AVX512F, AVX512VL, AVX512BW, AVX512DQ,
+AVX512CD, PKU, AVX512VBMI, AVX512IFMA, SHA, AVX512VNNI, GFNI, VAES, AVX512VBMI2,
+VPCLMULQDQ, AVX512BITALG, RDPID, AVX512VPOPCNTDQ, PCONFIG, WBNOINVD, CLWB,
+MOVDIRI, MOVDIR64B, ENQCMD, CLDEMOTE, PTWRITE, WAITPKG, SERIALIZE, TSXLDTRK,
+UINTR, AMX-BF16, AMX-TILE, AMX-INT8, AVX-VNNI, AVX512FP16, AVX512BF16, AMX-FP16,
+PREFETCHI, AMX-COMPLEX, AVX10.1-512, AVX-IFMA, AVX-NE-CONVERT, AVX-VNNI-INT16,
+AVX-VNNI-INT8, CMPccXADD, SHA512, SM3, SM4, AVX10.2-512, APX_F, AMX-AVX512,
+AMX-FP8, AMX-TF32, AMX-TRANSPOSE, MOVRS, AMX-MOVRS and USER_MSR instruction set
+support.
+
 @item bonnell
 @itemx atom
 Intel Bonnell CPU with 64-bit extensions, MOVBE, MMX, SSE, SSE2, SSE3 and SSSE3
@@ -35579,6 +35775,24 @@ preferred alignment to @option{-mpreferred-stack-boundary=2}.
 @need 200
 @opindex mavx10.2-512
 @itemx -mavx10.2-512
+@need 200
+@opindex mamx-avx512
+@itemx -mamx-avx512
+@need 200
+@opindex mamx-tf32
+@itemx -mamx-tf32
+@need 200
+@opindex mamx-transpose
+@itemx -mamx-transpose
+@need 200
+@itemx -mamx-fp8
+@opindex mamx-fp8
+@need 200
+@opindex mmovrs
+@itemx -mmovrs
+@need 200
+@opindex mamx-movrs
+@itemx -mamx-movrs
 These switches enable the use of instructions in the MMX, SSE,
 AVX512CD, AVX512VL, AVX512BW, AVX512DQ, AVX512IFMA, AVX512VBMI, SHA, AES,
 PCLMUL, CLFLUSHOPT, CLWB, FSGSBASE, PTWRITE, RDRND, F16C, FMA, PCONFIG,
@@ -35589,9 +35803,9 @@ WAITPKG, VPCLMULQDQ, AVX512BITALG, MOVDIRI, MOVDIR64B, AVX512BF16, ENQCMD,
 AVX512VPOPCNTDQ, AVX512VNNI, SERIALIZE, UINTR, HRESET, AMXTILE, AMXINT8,
 AMXBF16, KL, WIDEKL, AVXVNNI, AVX512-FP16, AVXIFMA, AVXVNNIINT8, AVXNECONVERT,
 CMPCCXADD, AMX-FP16, PREFETCHI, RAOINT, AMX-COMPLEX, AVXVNNIINT16, SM3, SHA512,
-SM4, APX_F, USER_MSR, AVX10.1, AVX10.2 or CLDEMOTE extended instruction sets.
-Each has a corresponding @option{-mno-} option to disable use of these
-instructions.
+SM4, APX_F, USER_MSR, AVX10.1, AVX10.2, AMX-AVX512, AMX-TF32, AMX-TRANSPOSE,
+AMX-FP8, MOVRS, AMX-MOVRS or CLDEMOTE extended instruction sets. Each has a
+corresponding @option{-mno-} option to disable use of these instructions.
 
 These extensions are also available as built-in functions: see
 @ref{x86 Built-in Functions}, for details of the functions enabled and
@@ -35815,25 +36029,52 @@ all of the reciprocal approximations, except for square root.
 
 @opindex mveclibabi
 @item -mveclibabi=@var{type}
-Specifies the ABI type to use for vectorizing intrinsics using an
-external library.  Supported values for @var{type} are @samp{svml}
-for the Intel short
-vector math library and @samp{acml} for the AMD math core library.
+Specifies the ABI type to use for vectorizing intrinsics using an external
+library.  Supported values for @var{type} are @samp{svml} for the Intel short
+vector math library, @samp{aocl} for the math library (LibM) from AMD
+Optimizing CPU Libraries (AOCL) and @samp{acml} for the end-of-life AMD core
+math library (to which AOCL-LibM is the successor).
 To use this option, both @option{-ftree-vectorize} and
 @option{-funsafe-math-optimizations} have to be enabled, and an SVML or ACML
 ABI-compatible library must be specified at link time.
 
-GCC currently emits calls to @code{vmldExp2},
-@code{vmldLn2}, @code{vmldLog102}, @code{vmldPow2},
-@code{vmldTanh2}, @code{vmldTan2}, @code{vmldAtan2}, @code{vmldAtanh2},
-@code{vmldCbrt2}, @code{vmldSinh2}, @code{vmldSin2}, @code{vmldAsinh2},
-@code{vmldAsin2}, @code{vmldCosh2}, @code{vmldCos2}, @code{vmldAcosh2},
-@code{vmldAcos2}, @code{vmlsExp4}, @code{vmlsLn4},
-@code{vmlsLog104}, @code{vmlsPow4}, @code{vmlsTanh4}, @code{vmlsTan4},
-@code{vmlsAtan4}, @code{vmlsAtanh4}, @code{vmlsCbrt4}, @code{vmlsSinh4},
-@code{vmlsSin4}, @code{vmlsAsinh4}, @code{vmlsAsin4}, @code{vmlsCosh4},
-@code{vmlsCos4}, @code{vmlsAcosh4} and @code{vmlsAcos4} for corresponding
-function type when @option{-mveclibabi=svml} is used, and @code{__vrd2_sin},
+GCC currently emits calls to @code{vmldExp2}, @code{vmldLn2},
+@code{vmldLog102}, @code{vmldPow2}, @code{vmldTanh2}, @code{vmldTan2},
+@code{vmldAtan2}, @code{vmldAtanh2}, @code{vmldCbrt2}, @code{vmldSinh2},
+@code{vmldSin2}, @code{vmldAsinh2}, @code{vmldAsin2}, @code{vmldCosh2},
+@code{vmldCos2}, @code{vmldAcosh2}, @code{vmldAcos2}, @code{vmlsExp4},
+@code{vmlsLn4}, @code{vmlsLog104}, @code{vmlsPow4}, @code{vmlsTanh4},
+@code{vmlsTan4}, @code{vmlsAtan4}, @code{vmlsAtanh4}, @code{vmlsCbrt4},
+@code{vmlsSinh4}, @code{vmlsSin4}, @code{vmlsAsinh4}, @code{vmlsAsin4},
+@code{vmlsCosh4}, @code{vmlsCos4}, @code{vmlsAcosh4} and @code{vmlsAcos4} for
+corresponding function type when @option{-mveclibabi=svml} is used,
+@code{amd_vrs4_acosf}, @code{amd_vrs16_acosf}, @code{amd_vrd8_asin},
+@code{amd_vrs4_asinf}, @code{amd_vrs8_asinf}, @code{amd_vrs16_asinf},
+@code{amd_vrd2_atan}, @code{amd_vrd8_atan}, @code{amd_vrs4_atanf},
+@code{amd_vrs8_atanf}, @code{amd_vrs16_atanf}, @code{amd_vrd2_cos},
+@code{amd_vrd4_cos}, @code{amd_vrd8_cos}, @code{amd_vrs4_cosf},
+@code{amd_vrs8_cosf}, @code{amd_vrs16_cosf}, @code{amd_vrs4_coshf},
+@code{amd_vrs8_coshf}, @code{amd_vrd2_erf}, @code{amd_vrd4_erf},
+@code{amd_vrd8_erf}, @code{amd_vrs4_erff}, @code{amd_vrs8_erff},
+@code{amd_vrs16_erff}, @code{amd_vrd2_exp}, @code{amd_vrd4_exp},
+@code{amd_vrd8_exp}, @code{amd_vrs4_expf}, @code{amd_vrs8_expf},
+@code{amd_vrs16_expf}, @code{amd_vrd2_exp10}, @code{amd_vrs4_exp10f},
+@code{amd_vrd2_exp2}, @code{amd_vrd4_exp2}, @code{amd_vrd8_exp2},
+@code{amd_vrs4_exp2f}, @code{amd_vrs8_exp2f}, @code{amd_vrs16_exp2f},
+@code{amd_vrs4_expm1f}, @code{amd_vrd2_log}, @code{amd_vrd4_log},
+@code{amd_vrd8_log}, @code{amd_vrs4_logf}, @code{amd_vrs8_logf},
+@code{amd_vrs16_logf}, @code{amd_vrd2_log10}, @code{amd_vrs4_log10f},
+@code{amd_vrs8_log10f}, @code{amd_vrs16_log10f}, @code{amd_vrd2_log1p},
+@code{amd_vrs4_log1pf}, @code{amd_vrd2_log2}, @code{amd_vrd4_log2},
+@code{amd_vrd8_log2}, @code{amd_vrs4_log2f}, @code{amd_vrs8_log2f},
+@code{amd_vrs16_log2f}, @code{amd_vrd2_pow}, @code{amd_vrd4_pow},
+@code{amd_vrd8_pow}, @code{amd_vrs4_powf}, @code{amd_vrs8_powf},
+@code{amd_vrs16_powf}, @code{amd_vrd2_sin}, @code{amd_vrd4_sin},
+@code{amd_vrd8_sin}, @code{amd_vrs4_sinf}, @code{amd_vrs8_sinf},
+@code{amd_vrs16_sinf}, @code{amd_vrd2_tan}, @code{amd_vrd4_tan},
+@code{amd_vrd8_tan}, @code{amd_vrs16_tanf}, @code{amd_vrs4_tanhf},
+@code{amd_vrs8_tanhf}, @code{amd_vrs16_tanhf} for the corresponding function
+type when @option{-mveclibabi=aocl} is used, and @code{__vrd2_sin},
 @code{__vrd2_cos}, @code{__vrd2_exp}, @code{__vrd2_log}, @code{__vrd2_log2},
 @code{__vrd2_log10}, @code{__vrs4_sinf}, @code{__vrs4_cosf},
 @code{__vrs4_expf}, @code{__vrs4_logf}, @code{__vrs4_log2f},
@@ -37796,7 +38037,7 @@ Acyclic Graph (DAG).  You must build imports before the importer.
 Header files may themselves be compiled to header units, which are a
 transitional ability aiming at faster compilation.  The
 @option{-fmodule-header} option is used to enable this, and implies
-the @option{-fmodules-ts} option.  These CMIs are named by the fully
+the @option{-fmodules} option.  These CMIs are named by the fully
 resolved underlying header file, and thus may be a complete pathname
 containing subdirectories.  If the header file is found at an absolute
 pathname, the CMI location is still relative to a CMI root directory.
@@ -37805,7 +38046,7 @@ As header files often have no suffix, you commonly have to specify a
 @option{-x} option to tell the compiler the source is a header file.
 You may use @option{-x c++-header}, @option{-x c++-user-header} or
 @option{-x c++-system-header}.  When used in conjunction with
-@option{-fmodules-ts}, these all imply an appropriate
+@option{-fmodules}, these all imply an appropriate
 @option{-fmodule-header} option.  The latter two variants use the
 user or system include path to search for the file specified.  This
 allows you to, for instance, compile standard library header files as
@@ -37813,6 +38054,11 @@ header units, without needing to know exactly where they are
 installed.  Specifying the language as one of these variants also
 inhibits output of the object file, as header files have no associated
 object file.
+
+Alternately, or for a module interface unit in an installed location,
+you can use @option{-fsearch-include-path} to specify that the main
+source file should be found on the include path rather than the
+current directory.
 
 Header units can be used in much the same way as precompiled headers
 (@pxref{Precompiled Headers}), but with fewer restrictions: an
@@ -37823,8 +38069,8 @@ the bits/stdc++.h header used for libstdc++ precompiled headers you
 can
 
 @smallexample
-g++ -fmodules-ts -x c++-system-header -c bits/stdc++.h
-g++ -fmodules-ts -include bits/stdc++.h mycode.C
+g++ -fmodules -x c++-system-header -c bits/stdc++.h
+g++ -fmodules -include bits/stdc++.h mycode.C
 @end smallexample
 
 and any standard library #includes in mycode.C will be skipped,
@@ -38008,8 +38254,8 @@ output.  Usually you also want to use this option when explicitly
 preprocessing a header-unit, or consuming such preprocessed output:
 
 @smallexample
-g++ -fmodules-ts -E -fdirectives-only my-header.hh -o my-header.ii
-g++ -x c++-header -fmodules-ts -fpreprocessed -fdirectives-only my-header.ii
+g++ -fmodules -E -fdirectives-only my-header.hh -o my-header.ii
+g++ -x c++-header -fmodules -fpreprocessed -fdirectives-only my-header.ii
 @end smallexample
 
 @node C++ Compiled Module Interface

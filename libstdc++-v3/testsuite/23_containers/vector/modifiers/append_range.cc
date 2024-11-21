@@ -1,4 +1,4 @@
-// { dg-do compile { target c++23 } }
+// { dg-do run { target c++23 } }
 
 #include <vector>
 #include <span>
@@ -69,7 +69,7 @@ test_ranges()
   do_test_a<test_forward_range<short>>();
   do_test_a<test_input_range<short>>();
 
-  // Not lvalue-convertible to bool
+  // Not lvalue-convertible to int
   struct C {
     C(int v) : val(v) { }
     operator int() && { return val; }
@@ -86,7 +86,7 @@ constexpr bool
 test_constexpr()
 {
   // XXX: this doesn't test the non-forward_range code paths are constexpr.
-  do_test<std::span<short>, std::allocator<int>>;
+  do_test<std::span<short>, std::allocator<int>>();
   return true;
 }
 

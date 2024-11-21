@@ -215,8 +215,10 @@ test_intraprocedural_path (pretty_printer *event_pp)
   ASSERT_EQ (path.num_events (), 2);
   ASSERT_EQ (path.num_threads (), 1);
   ASSERT_FALSE (path.interprocedural_p ());
-  ASSERT_STREQ (path.get_event (0).get_desc ().get (), "first `free'");
-  ASSERT_STREQ (path.get_event (1).get_desc ().get (), "double `free'");
+  ASSERT_STREQ (path.get_event (0).get_desc (*event_pp).get (),
+		"first `free'");
+  ASSERT_STREQ (path.get_event (1).get_desc (*event_pp).get (),
+		"double `free'");
 }
 
 /* Run all of the selftests within this file.  */
@@ -226,7 +228,7 @@ simple_diagnostic_path_cc_tests ()
 {
   /* In a few places we use the global dc's printer to determine
      colorization so ensure this off during the tests.  */
-  pretty_printer *global_pp = global_dc->m_printer;
+  pretty_printer *global_pp = global_dc->get_reference_printer ();
   const bool saved_show_color = pp_show_color (global_pp);
   pp_show_color (global_pp) = false;
 

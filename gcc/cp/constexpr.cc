@@ -2327,18 +2327,7 @@ cxx_replaceable_global_alloc_fn (tree fndecl)
 static inline bool
 cxx_placement_new_fn (tree fndecl)
 {
-  if (cxx_dialect >= cxx20
-      && IDENTIFIER_NEW_OP_P (DECL_NAME (fndecl))
-      && CP_DECL_CONTEXT (fndecl) == global_namespace
-      && !DECL_IS_REPLACEABLE_OPERATOR_NEW_P (fndecl)
-      && TREE_CODE (TREE_TYPE (fndecl)) == FUNCTION_TYPE)
-    {
-      tree first_arg = TREE_CHAIN (TYPE_ARG_TYPES (TREE_TYPE (fndecl)));
-      if (TREE_VALUE (first_arg) == ptr_type_node
-	  && TREE_CHAIN (first_arg) == void_list_node)
-	return true;
-    }
-  return false;
+  return (cxx_dialect >= cxx20 && std_placement_new_fn_p (fndecl));
 }
 
 /* Return true if FNDECL is std::construct_at.  */
@@ -2363,20 +2352,28 @@ is_std_construct_at (const constexpr_call *call)
 	  && is_std_construct_at (call->fundef->decl));
 }
 
-/* True if CTX is an instance of std::allocator.  */
+/* True if CTX is an instance of std::NAME class.  */
 
 bool
-is_std_allocator (tree ctx)
+is_std_class (tree ctx, const char *name)
 {
   if (ctx == NULL_TREE || !CLASS_TYPE_P (ctx) || !TYPE_MAIN_DECL (ctx))
     return false;
 
   tree decl = TYPE_MAIN_DECL (ctx);
-  tree name = DECL_NAME (decl);
-  if (name == NULL_TREE || !id_equal (name, "allocator"))
+  tree dname = DECL_NAME (decl);
+  if (dname == NULL_TREE || !id_equal (dname, name))
     return false;
 
   return decl_in_std_namespace_p (decl);
+}
+
+/* True if CTX is an instance of std::allocator.  */
+
+bool
+is_std_allocator (tree ctx)
+{
+  return is_std_class (ctx, "allocator");
 }
 
 /* Return true if FNDECL is std::allocator<T>::{,de}allocate.  */

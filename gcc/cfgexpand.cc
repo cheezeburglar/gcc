@@ -703,6 +703,11 @@ add_scope_conflicts_1 (basic_block bb, bitmap work, bool for_conflict)
 static void
 add_scope_conflicts (void)
 {
+  /* If there is only one variable, there is nothing to be done as
+     there is only possible partition.  */
+  if (stack_vars_num == 1)
+    return;
+
   basic_block bb;
   bool changed;
   bitmap work = BITMAP_ALLOC (NULL);
@@ -4068,8 +4073,13 @@ expand_gimple_stmt_1 (gimple *stmt)
 	    else
 	      {
 		temp = force_operand (temp, target);
-		if (temp != target)
+		if (temp == target)
+		  ;
+		else if (GET_MODE (target) != BLKmode)
 		  emit_move_insn (target, temp);
+		else
+		  emit_block_move (target, temp, expr_size (lhs),
+				   BLOCK_OP_NORMAL);
 	      }
 	  }
       }

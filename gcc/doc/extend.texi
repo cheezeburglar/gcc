@@ -90,6 +90,7 @@ extensions, accepted by GCC in C90 mode and in C++.
 * x86 specific memory model extensions for transactional memory:: x86 memory models.
 * Object Size Checking:: Built-in functions for limited buffer overflow
                         checking.
+* New/Delete Builtins:: Built-in functions for C++ allocations and deallocations.
 * Other Builtins::      Other built-in functions.
 * Target Builtins::     Built-in functions specific to particular targets.
 * Target Format Checks:: Format checks specific to particular targets.
@@ -4760,6 +4761,16 @@ Enable or disable calls to out-of-line helpers to implement atomic operations.
 This corresponds to the behavior of the command-line options
 @option{-moutline-atomics} and @option{-mno-outline-atomics}.
 
+@cindex @code{indirect_return} function attribute, AArch64
+@item indirect_return
+The @code{indirect_return} attribute can be applied to a function type
+to indicate that the function may return via an indirect branch instead
+of via a normal return instruction.  For example, this can be true of
+functions that implement manual context switching between user space
+threads, such as the POSIX @code{swapcontext} function.  This attribute
+adds a @code{BTI J} instruction when BTI is enabled e.g. via
+@option{-mbranch-protection}.
+
 @end table
 
 The above target attributes can be specified as follows:
@@ -7543,6 +7554,36 @@ Enable/disbale the generation of the AVX10.2 instructions.
 @item avx10.2-512
 @itemx no-avx10.2-512
 Enable/disable the generation of the AVX10.2 512 bit instructions.
+
+@cindex @code{target("amx-avx512")} function attribute, x86
+@item amx-avx512
+@itemx no-amx-avx512
+Enable/disable the generation of the AMX-AVX512 instructions.
+
+@cindex @code{target("amx-tf32")} function attribute, x86
+@item amx-tf32
+@itemx no-amx-tf32
+Enable/disable the generation of the AMX-TF32 instructions.
+
+@cindex @code{target("amx-transpose")} function attribute, x86
+@item amx-transpose
+@itemx no-amx-transpose
+Enable/disable the generation of the AMX-TRANSPOSE instructions.
+
+@cindex @code{target("amx-fp8")} function attribute, x86
+@item amx-fp8
+@itemx no-amx-fp8
+Enable/disable the generation of the AMX-FP8 instructions.
+
+@cindex @code{target("movrs")} function attribute, x86
+@item movrs
+@itemx no-movrs
+Enable/disable the generation of the MOVRS instructions.
+
+@cindex @code{target("amx-movrs")} function attribute, x86
+@item amx-movrs
+@itemx no-amx-movrs
+Enable/disable the generation of the AMX-MOVRS instructions.
 
 @cindex @code{target("cld")} function attribute, x86
 @item cld
@@ -14283,6 +14324,33 @@ format string @var{fmt}.  If the compiler is able to optimize them to
 is called and the @var{flag} argument passed to it.
 @enddefbuiltin
 
+@node New/Delete Builtins
+@section Built-in functions for C++ allocations and deallocations
+@findex __builtin_operator_new
+@findex __builtin_operator_delete
+Calling these C++ built-in functions is similar to calling
+@code{::operator new} or @code{::operator delete} with the same arguments,
+except that it is an error if the selected @code{::operator new} or
+@code{::operator delete} overload is not a replaceable global operator
+and for optimization purposes calls to pairs of these functions can be
+omitted if access to the allocation is optimized out, or could be replaced
+with implementation provided buffer on the stack, or multiple allocation
+calls can be merged into a single allocation.  In C++ such optimizations
+are normally allowed just for calls to such replaceable global operators
+from @code{new} and @code{delete} expressions.
+
+@smallexample
+void foo () @{
+  int *a = new int;
+  delete a; // This pair of allocation/deallocation operators can be omitted
+	    // or replaced with int _temp; int *a = &_temp; etc.@:
+  void *b = ::operator new (32);
+  ::operator delete (b); // This one cannnot.
+  void *c = __builtin_operator_new (32);
+  __builtin_operator_delete (c); // This one can.
+@}
+@end smallexample
+
 @node Other Builtins
 @section Other Built-in Functions Provided by GCC
 @cindex built-in functions
@@ -15525,8 +15593,7 @@ This built-in inhibits re-association of the floating-point expression
 @var{expr} with expressions consuming the return value of the built-in. The
 expression @var{expr} itself can be reordered, and the whole expression
 @var{expr} can be reordered with operands after the barrier. The barrier is
-only relevant when @code{-fassociative-math} is active, since otherwise
-floating-point is not treated as associative.
+relevant when @code{-fassociative-math} is active.
 
 @smallexample
 float x0 = a + b - b;
@@ -15536,6 +15603,19 @@ float x1 = __builtin_assoc_barrier(a + b) - b;
 @noindent
 means that, with @code{-fassociative-math}, @code{x0} can be optimized to
 @code{x0 = a} but @code{x1} cannot.
+
+It is also relevant when @code{-ffp-contract=fast} is active;
+it will prevent contraction between expressions.
+
+@smallexample
+float x0 = a * b + c;
+float x1 = __builtin_assoc_barrier (a * b) + c;
+@end smallexample
+
+@noindent
+means that, with @code{-ffp-contract=fast}, @code{x0} may be optimized to
+use a fused multiply-add instruction but @code{x1} cannot.
+
 @enddefbuiltin
 
 @defbuiltin{{void *} __builtin_assume_aligned (const void *@var{exp}, size_t @var{align}, ...)}
@@ -16127,6 +16207,32 @@ in C.  It is type-generic, the argument can be any unsigned integer
 (standard, extended or bit-precise).  No integral argument promotions are
 performed on the argument.  It is equivalent to
 @code{(unsigned int) __builtin_ctzg (@var{arg}, @var{prec})}
+@enddefbuiltin
+
+@defbuiltin{@var{type1} __builtin_stdc_rotate_left (@var{type1} @var{arg1}, @var{type2} @var{arg2})}
+The @code{__builtin_stdc_rotate_left} function is available only
+in C.  It is type-generic, the first argument can be any unsigned integer
+(standard, extended or bit-precise) and second argument any signed or
+unsigned integer or @code{char}.  No integral argument promotions are
+performed on the arguments.  It is equivalent to
+@code{(@var{type1}) ((@var{arg1} << (@var{arg2} % @var{prec}))
+| (@var{arg1} >> ((-(unsigned @var{type2}) @var{arg2}) % @var{prec})))}
+where @var{prec} is bit width of @var{type1}, except that side-effects
+in @var{arg1} and @var{arg2} are evaluated just once.  The behavior is
+undefined if @var{arg2} is negative.
+@enddefbuiltin
+
+@defbuiltin{@var{type1} __builtin_stdc_rotate_right (@var{type1} @var{arg1}, @var{type2} @var{arg2})}
+The @code{__builtin_stdc_rotate_right} function is available only
+in C.  It is type-generic, the first argument can be any unsigned integer
+(standard, extended or bit-precise) and second argument any signed or
+unsigned integer or @code{char}.  No integral argument promotions are
+performed on the arguments.  It is equivalent to
+@code{(@var{type1}) ((@var{arg1} >> (@var{arg2} % @var{prec}))
+| (@var{arg1} << ((-(unsigned @var{type2}) @var{arg2}) % @var{prec})))}
+where @var{prec} is bit width of @var{type1}, except that side-effects
+in @var{arg1} and @var{arg2} are evaluated just once.  The behavior is
+undefined if @var{arg2} is negative.
 @enddefbuiltin
 
 @defbuiltin{double __builtin_powi (double, int)}
@@ -26576,6 +26682,9 @@ Intel Core i7 Arrow Lake S CPU.
 
 @item pantherlake
 Intel Core i7 Panther Lake CPU.
+
+@item diamondrapids
+Intel Core i7 Diamond Rapids CPU.
 
 @item bonnell
 Intel Atom Bonnell CPU.

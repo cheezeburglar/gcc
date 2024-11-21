@@ -363,9 +363,8 @@ struct function_group_info
   const group_suffix_index *groups;
   const predication_index *preds;
 
-  /* The architecture extensions that the functions require, as a set of
-     AARCH64_FL_* flags.  */
-  aarch64_feature_flags required_extensions;
+  /* The architecture extensions that the functions require.  */
+  aarch64_required_extensions required_extensions;
 };
 
 /* Describes a single fully-resolved function (i.e. one that has a
@@ -432,9 +431,9 @@ public:
   ~function_builder ();
 
   void add_unique_function (const function_instance &, tree,
-			    vec<tree> &, aarch64_feature_flags, bool);
+			    vec<tree> &, aarch64_required_extensions, bool);
   void add_overloaded_function (const function_instance &,
-				aarch64_feature_flags);
+				aarch64_required_extensions);
   void add_overloaded_functions (const function_group_info &,
 				 mode_suffix_index);
 
@@ -446,11 +445,11 @@ private:
 
   char *get_name (const function_instance &, bool);
 
-  tree get_attributes (const function_instance &, aarch64_feature_flags);
+  tree get_attributes (const function_instance &, aarch64_required_extensions);
 
   registered_function &add_function (const function_instance &,
 				     const char *, tree, tree,
-				     aarch64_feature_flags, bool, bool);
+				     aarch64_required_extensions, bool, bool);
 
   /* The function type to use for functions that are resolved by
      function_resolver.  */
@@ -489,6 +488,7 @@ public:
 class function_resolver : public function_call_info
 {
 public:
+  enum target_type_restrictions { TARGET_ANY, TARGET_32_64 };
   enum { SAME_SIZE = 256, HALF_SIZE, QUARTER_SIZE };
   static const type_class_index SAME_TYPE_CLASS = NUM_TYPE_CLASSES;
 
@@ -519,7 +519,8 @@ public:
   vector_type_index infer_predicate_type (unsigned int);
   type_suffix_index infer_integer_scalar_type (unsigned int);
   type_suffix_index infer_64bit_scalar_integer_pair (unsigned int);
-  type_suffix_index infer_pointer_type (unsigned int, bool = false);
+  type_suffix_index infer_pointer_type (unsigned int, bool = false,
+					target_type_restrictions = TARGET_ANY);
   sve_type infer_sve_type (unsigned int);
   sve_type infer_vector_or_tuple_type (unsigned int, unsigned int);
   type_suffix_index infer_vector_type (unsigned int);
@@ -695,7 +696,7 @@ public:
   rtx use_pred_x_insn (insn_code);
   rtx use_cond_insn (insn_code, unsigned int = DEFAULT_MERGE_ARGNO);
   rtx use_vcond_mask_insn (insn_code, unsigned int = DEFAULT_MERGE_ARGNO);
-  rtx use_contiguous_load_insn (insn_code);
+  rtx use_contiguous_load_insn (insn_code, bool = false);
   rtx use_contiguous_prefetch_insn (insn_code);
   rtx use_contiguous_store_insn (insn_code);
 
@@ -784,6 +785,8 @@ public:
      This isn't meaningful for pre-SME intrinsics, and true is
      more common than false, so provide a default definition.  */
   virtual bool explicit_group_suffix_p () const { return true; }
+
+  virtual type_suffix_index vector_base_type (type_suffix_index) const;
 
   /* Define all functions associated with the given group.  */
   virtual void build (function_builder &,

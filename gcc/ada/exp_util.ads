@@ -182,9 +182,9 @@ package Exp_Util is
    --  N is a node for which atomic synchronization may be required (it is
    --  either an identifier, expanded name, or selected/indexed component or
    --  an explicit dereference). The caller has checked the basic conditions
-   --  (atomic variable appearing and Atomic_Sync not disabled). This function
-   --  checks if atomic synchronization is required and if so sets the flag
-   --  and if appropriate generates a warning (in -gnatw.n mode).
+   --  (atomic variable appearing and Atomic_Synchronization enabled). This
+   --  function checks if atomic synchronization is required and if so sets
+   --  the flag and (in -gnatw.n mode) generates a warning.
 
    procedure Adjust_Condition (N : Node_Id);
    --  The node N is an expression whose root-type is Boolean, and which
@@ -789,6 +789,11 @@ package Exp_Util is
    --  Return True if Typ is a library level tagged type. Currently we use
    --  this information to build statically allocated dispatch tables.
 
+   function Is_LSP_Wrapper (E : Entity_Id) return Boolean;
+   --  Return True if E is a wrapper built when a subprogram has class-wide
+   --  preconditions or postconditions affected by overriding (AI12-0195).
+   --  LSP stands for Liskov Substitution Principle.
+
    function Is_Non_BIP_Func_Call (Expr : Node_Id) return Boolean;
    --  Determine whether node Expr denotes a non build-in-place function call
 
@@ -1278,11 +1283,11 @@ package Exp_Util is
    --  when elaborating a contract for a subprogram, and when freezing a type
    --  extension to verify legality rules on inherited conditions.
 
-   function Within_Case_Or_If_Expression (N : Node_Id) return Boolean;
+   function Within_Conditional_Expression (N : Node_Id) return Boolean;
    --  Determine whether arbitrary node N is immediately within a dependent
-   --  expression of a case or an if expression. The criterion is whether
+   --  expression of a conditional expression. The criterion is whether
    --  temporaries created by the actions attached to N need to outlive an
-   --  enclosing case or if expression.
+   --  enclosing conditional expression.
 
 private
    pragma Inline (Duplicate_Subexpr);

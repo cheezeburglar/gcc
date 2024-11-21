@@ -54,6 +54,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "analyzer/exploded-graph.h"
 #include "analyzer/analysis-plan.h"
 #include "analyzer/inlining-iterator.h"
+#include "make-unique.h"
 
 #if ENABLE_ANALYZER
 
@@ -280,7 +281,7 @@ function_point::print_source_line (pretty_printer *pp) const
   diagnostic_source_print_policy source_policy (tmp_dc);
   gcc_assert (pp);
   source_policy.print (*pp, richloc, DK_ERROR, nullptr);
-  pp_string (pp, pp_formatted_text (tmp_dc.m_printer));
+  pp_string (pp, pp_formatted_text (tmp_dc.get_reference_printer ()));
 }
 
 /* class program_point.  */
@@ -313,10 +314,10 @@ program_point::dump () const
     "stmt_idx": int (only for kind=='PK_BEFORE_STMT',
     "call_string": object for the call_string}.  */
 
-json::object *
+std::unique_ptr<json::object>
 program_point::to_json () const
 {
-  json::object *point_obj = new json::object ();
+  auto point_obj = ::make_unique<json::object> ();
 
   point_obj->set_string ("kind", point_kind_to_string (get_kind ()));
 

@@ -176,7 +176,7 @@ c_diagnostic_text_finalizer (diagnostic_text_output_format &text_output,
 {
   pretty_printer *const pp = text_output.get_printer ();
   char *saved_prefix = pp_take_prefix (pp);
-  pp_set_prefix (pp, NULL);
+  pp_set_prefix (pp, text_output.build_indent_prefix (false));
   pp_newline (pp);
   diagnostic_show_locus (&text_output.get_context (),
 			 diagnostic->richloc, diagnostic->kind, pp);
@@ -261,8 +261,8 @@ c_common_init_options (unsigned int decoded_options_count,
 
   if (c_language == clk_c)
     {
-      /* The default for C is gnu17.  */
-      set_std_c17 (false /* ISO */);
+      /* The default for C is gnu23.  */
+      set_std_c23 (false /* ISO */);
 
       /* If preprocessing assembly language, accept any of the C-family
 	 front end options since the driver may pass them through.  */
@@ -770,6 +770,19 @@ c_common_handle_option (size_t scode, const char *arg, HOST_WIDE_INT value,
       cpp_opts->traditional = 1;
       break;
 
+    case OPT_fsearch_include_path:
+      cpp_opts->main_search = CMS_user;
+      break;
+
+    case OPT_fsearch_include_path_:
+      if (!strcmp (arg, "user"))
+	cpp_opts->main_search = CMS_user;
+      else if (!strcmp (arg, "system"))
+	cpp_opts->main_search = CMS_system;
+      else
+	error ("invalid argument %qs to %<-fsearch-include-path%>", arg);
+      break;
+
     case OPT_v:
       verbose = true;
       break;
@@ -985,6 +998,16 @@ c_common_post_options (const char **pfilename)
   /* -Wshift-overflow is enabled by default in C99 and C++11 modes.  */
   if (warn_shift_overflow == -1)
     warn_shift_overflow = cxx_dialect >= cxx11 || flag_isoc99;
+
+  /* -Wmissing-parameter-name is enabled by -pedantic before C23,
+     and for -Wc11-c23-compat.  */
+  if (warn_missing_parameter_name == -1)
+    warn_missing_parameter_name
+      = ((pedantic && !flag_isoc23 && warn_c11_c23_compat != 0)
+	 || warn_c11_c23_compat > 0);
+
+  if (warn_deprecated_non_prototype == -1)
+    warn_deprecated_non_prototype = warn_c11_c23_compat > 0;
 
   /* -Wshift-negative-value is enabled by -Wextra in C99 and C++11 to C++17
      modes.  */

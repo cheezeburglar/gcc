@@ -307,6 +307,9 @@ UrlSuffix(gcc/C_002b_002b-Dialect-Options.html#index-Wdeprecated-enum-float-conv
 Wdeprecated-literal-operator
 UrlSuffix(gcc/C_002b_002b-Dialect-Options.html#index-Wdeprecated-literal-operator)
 
+Wdeprecated-non-prototype
+UrlSuffix(gcc/Warning-Options.html#index-Wdeprecated-non-prototype)
+
 Wdesignated-init
 UrlSuffix(gcc/Warning-Options.html#index-Wdesignated-init)
 
@@ -549,6 +552,9 @@ UrlSuffix(gcc/Warning-Options.html#index-Wmissing-format-attribute)
 
 Wmissing-include-dirs
 UrlSuffix(gcc/Warning-Options.html#index-Wmissing-include-dirs)
+
+Wmissing-parameter-name
+UrlSuffix(gcc/Warning-Options.html#index-Wmissing-parameter-name)
 
 Wmissing-parameter-type
 UrlSuffix(gcc/Warning-Options.html#index-Wmissing-parameter-type)
@@ -1154,8 +1160,8 @@ UrlSuffix(gcc/Optimize-Options.html#index-fkeep-inline-dllexport)
 flax-vector-conversions
 UrlSuffix(gcc/C-Dialect-Options.html#index-flax-vector-conversions)
 
-fmodules-ts
-UrlSuffix(gcc/C_002b_002b-Dialect-Options.html#index-fmodules-ts)
+fmodules
+UrlSuffix(gcc/C_002b_002b-Dialect-Options.html#index-fmodules)
 
 fmodule-header
 UrlSuffix(gcc/C_002b_002b-Dialect-Options.html#index-fmodule-header)
@@ -1297,6 +1303,12 @@ UrlSuffix(gcc/Objective-C-and-Objective-C_002b_002b-Dialect-Options.html#index-f
 
 frtti
 UrlSuffix(gcc/C_002b_002b-Dialect-Options.html#index-fno-rtti) LangUrlSuffix_D(gdc/Runtime-Options.html#index-fno-rtti)
+
+fsearch-include-path
+UrlSuffix(gcc/Preprocessor-Options.html#index-fsearch-include-path)
+
+fsearch-include-path=
+UrlSuffix(gcc/Preprocessor-Options.html#index-fsearch-include-path)
 
 ; skipping UrlSuffix for 'fshort-enums' due to multiple URLs:
 ;   duplicate: 'gcc/Code-Gen-Options.html#index-fshort-enums'

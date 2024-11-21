@@ -967,7 +967,9 @@ can_init_array_with_p (tree type, tree init)
 	return true;
     }
 
-  return false;
+  permerror (input_location, "array must be initialized "
+	     "with a brace-enclosed initializer");
+  return true;
 }
 
 /* Initialize MEMBER, a FIELD_DECL, with INIT, a TREE_LIST of
@@ -2974,14 +2976,17 @@ malloc_alignment ()
 
 /* Determine whether an allocation function is a namespace-scope
    non-replaceable placement new function. See DR 1748.  */
-static bool
+bool
 std_placement_new_fn_p (tree alloc_fn)
 {
-  if (DECL_NAMESPACE_SCOPE_P (alloc_fn))
+  if (DECL_NAMESPACE_SCOPE_P (alloc_fn)
+      && IDENTIFIER_NEW_OP_P (DECL_NAME (alloc_fn))
+      && !DECL_IS_REPLACEABLE_OPERATOR_NEW_P (alloc_fn))
     {
       tree first_arg = TREE_CHAIN (TYPE_ARG_TYPES (TREE_TYPE (alloc_fn)));
-      if ((TREE_VALUE (first_arg) == ptr_type_node)
-	  && TREE_CHAIN (first_arg) == void_list_node)
+      if (first_arg
+	  && (TREE_VALUE (first_arg) == ptr_type_node)
+	  && (TREE_CHAIN (first_arg) == void_list_node))
 	return true;
     }
   return false;

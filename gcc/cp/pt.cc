@@ -12163,7 +12163,10 @@ tsubst_attribute (tree t, tree *decl_p, tree args,
 	    }
 	  OMP_TSS_TRAIT_SELECTORS (tss) = nreverse (selectors);
 	}
-      val = tree_cons (varid, ctx, chain);
+      if (varid == error_mark_node)
+	val = error_mark_node;
+      else
+	val = tree_cons (varid, ctx, chain);
     }
   /* If the first attribute argument is an identifier, don't
      pass it through tsubst.  Attributes like mode, format,
@@ -17796,6 +17799,16 @@ tsubst_omp_clauses (tree clauses, enum c_omp_region_type ort,
 	    = tsubst_expr (OMP_CLAUSE_SIZES_LIST (oc), args, complain,
 			   in_decl);
 	  break;
+	case OMP_CLAUSE_NOCONTEXT:
+	  OMP_CLAUSE_NOCONTEXT_EXPR (nc)
+	    = tsubst_expr (OMP_CLAUSE_NOCONTEXT_EXPR (oc), args, complain,
+			   in_decl);
+	  break;
+	case OMP_CLAUSE_NOVARIANTS:
+	  OMP_CLAUSE_NOVARIANTS_EXPR (nc)
+	    = tsubst_expr (OMP_CLAUSE_NOVARIANTS_EXPR (oc), args, complain,
+			   in_decl);
+	  break;
 	case OMP_CLAUSE_REDUCTION:
 	case OMP_CLAUSE_IN_REDUCTION:
 	case OMP_CLAUSE_TASK_REDUCTION:
@@ -19456,6 +19469,16 @@ tsubst_stmt (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 
       t = copy_node (t);
       OMP_BODY (t) = stmt;
+      add_stmt (t);
+      break;
+
+    case OMP_DISPATCH:
+      tmp = tsubst_omp_clauses (OMP_DISPATCH_CLAUSES (t), C_ORT_OMP, args,
+				complain, in_decl);
+      stmt = RECUR (OMP_DISPATCH_BODY (t));
+      t = copy_node (t);
+      OMP_DISPATCH_BODY (t) = stmt;
+      OMP_DISPATCH_CLAUSES (t) = tmp;
       add_stmt (t);
       break;
 
@@ -21202,6 +21225,14 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 		}
 	      break;
 
+	    case IFN_GOMP_DISPATCH:
+	      ret = build_call_expr_internal_loc (EXPR_LOCATION (t),
+						  IFN_GOMP_DISPATCH,
+						  TREE_TYPE (call_args[0]), 1,
+						  call_args[0]);
+	      RETURN (ret);
+	      break;
+
 	    default:
 	      /* Unsupported internal function with arguments.  */
 	      gcc_unreachable ();
@@ -21239,6 +21270,30 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 		  else if (TREE_CODE (call) == AGGR_INIT_EXPR)
 		    AGGR_INIT_EXPR_MUST_TAIL (call) = mtc;
 		}
+	    if (CALL_FROM_NEW_OR_DELETE_P (t))
+	      {
+		tree call = extract_call_expr (ret);
+		tree fn = cp_get_callee_fndecl_nofold (call);
+		if (fn ? !DECL_IS_REPLACEABLE_OPERATOR (fn)
+		       : !processing_template_decl)
+		  {
+		    auto_diagnostic_group d;
+		    location_t loc = cp_expr_loc_or_input_loc (t);
+		    if (!fn || IDENTIFIER_NEW_OP_P (DECL_NAME (fn)))
+		      error_at (loc, "call to %<__builtin_operator_new%> "
+				     "does not select replaceable global "
+				     "allocation function");
+		    else 
+		      error_at (loc, "call to %<__builtin_operator_delete%> "
+				     "does not select replaceable global "
+				     "deallocation function");
+		    if (fn)
+		      inform (DECL_SOURCE_LOCATION (fn),
+			      "selected function declared here");
+		  }
+		else if (call && TREE_CODE (call) == CALL_EXPR)
+		  CALL_FROM_NEW_OR_DELETE_P (call) = 1;
+	      }
 	    if (warning_suppressed_p (t, OPT_Wpessimizing_move))
 	      /* This also suppresses -Wredundant-move.  */
 	      suppress_warning (ret, OPT_Wpessimizing_move);
@@ -31728,12 +31783,16 @@ add_mergeable_specialization (bool decl_p, spec_entry *elt, tree decl,
       auto *slot = type_specializations->find_slot (elt, INSERT);
 
       /* We don't distinguish different constrained partial type
-	 specializations, so there could be duplicates.  Everything else
-	 must be new.   */
-      if (!(flags & 2 && *slot))
+	 specializations, so there could be duplicates.  In that case we
+	 must propagate TYPE_CANONICAL so that they are treated as the
+	 same type.  Everything else must be new.   */
+      if (*slot)
 	{
-	  gcc_checking_assert (!*slot);
-
+	  gcc_checking_assert (flags & 2);
+	  TYPE_CANONICAL (elt->spec) = TYPE_CANONICAL ((*slot)->spec);
+	}
+      else
+	{
 	  auto entry = ggc_alloc<spec_entry> ();
 	  *entry = *elt;
 	  *slot = entry;

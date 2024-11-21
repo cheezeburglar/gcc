@@ -1557,7 +1557,17 @@ define(gcc_UNLOCKED_FUNCS, clearerr_unlocked feof_unlocked dnl
 AC_CHECK_FUNCS(times clock kill getrlimit setrlimit atoq \
 	popen sysconf strsignal getrusage nl_langinfo \
 	gettimeofday mbstowcs wcswidth mmap posix_fallocate setlocale \
-	gcc_UNLOCKED_FUNCS madvise mallinfo mallinfo2 fstatat getauxval)
+	gcc_UNLOCKED_FUNCS madvise mallinfo mallinfo2 fstatat getauxval \
+	clock_gettime)
+
+# At least for glibc, clock_gettime is in librt.  But don't pull that
+# in if it still doesn't give us the function we want.
+if test $ac_cv_func_clock_gettime = no; then
+  AC_CHECK_LIB(rt, clock_gettime,
+    [LIBS="-lrt $LIBS"
+     AC_DEFINE(HAVE_CLOCK_GETTIME, 1,
+	       [Define to 1 if you have the `clock_gettime' function.])])
+fi
 
 if test x$ac_cv_func_mbstowcs = xyes; then
   AC_CACHE_CHECK(whether mbstowcs works, gcc_cv_func_mbstowcs_works,
@@ -4392,14 +4402,14 @@ case "$target" in
     AC_ARG_ENABLE(standard-branch-protection,
     [
 AS_HELP_STRING([--enable-standard-branch-protection],
-        [enable Branch Target Identification Mechanism and Return Address Signing by default for AArch64])
+        [enable Branch Target Identification Mechanism, Return Address Signing, and Guarded Control Stack by default for AArch64])
 AS_HELP_STRING([--disable-standard-branch-protection],
-        [disable Branch Target Identification Mechanism and Return Address Signing by default for AArch64])
+        [disable Branch Target Identification Mechanism, Return Address Signing, and Guarded Control Stack by default for AArch64])
     ],
       [
         case $enableval in
           yes)
-            tm_defines="${tm_defines} TARGET_ENABLE_BTI=1 TARGET_ENABLE_PAC_RET=1"
+            tm_defines="${tm_defines} TARGET_ENABLE_BTI=1 TARGET_ENABLE_PAC_RET=1 TARGET_ENABLE_GCS=1"
             ;;
           no)
             ;;
@@ -7370,6 +7380,9 @@ for language in $all_selected_languages
 do
 	check_languages="$check_languages check-$language"
 done
+if test x$enable_libdiagnostics = xyes; then
+	check_languages="$check_languages check-libdiagnostics check-sarif-replay"
+fi
 
 selftest_languages=
 for language in $all_selected_languages
@@ -7601,6 +7614,19 @@ AC_ARG_ENABLE(host-pie,
 [AS_HELP_STRING([--enable-host-pie],
 		[build host code as PIE])])
 AC_SUBST(enable_host_pie)
+
+AC_ARG_ENABLE(libdiagnostics,
+[AS_HELP_STRING([--enable-libdiagnostics],
+		[build libdiagnostics shared library])])
+AC_SUBST(enable_libdiagnostics)
+
+if test "$enable_libdiagnostics" = "yes"; then
+  LIBDIAGNOSTICS='libdiagnostics sarif-replay'
+else
+  LIBDIAGNOSTICS=''
+fi
+AC_SUBST(LIBDIAGNOSTICS)
+
 
 # Enable --enable-host-bind-now
 AC_ARG_ENABLE(host-bind-now,

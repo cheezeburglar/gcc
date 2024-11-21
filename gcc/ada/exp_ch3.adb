@@ -32,7 +32,6 @@ with Einfo;          use Einfo;
 with Einfo.Entities; use Einfo.Entities;
 with Einfo.Utils;    use Einfo.Utils;
 with Errout;         use Errout;
-with Expander;       use Expander;
 with Exp_Aggr;       use Exp_Aggr;
 with Exp_Atag;       use Exp_Atag;
 with Exp_Ch4;        use Exp_Ch4;
@@ -2692,11 +2691,23 @@ package body Exp_Ch3 is
            and then Tagged_Type_Expansion
            and then Nkind (Exp_Q) /= N_Raise_Expression
          then
-            Append_To (Res,
-              Make_Tag_Assignment_From_Type
-                (Default_Loc,
-                 New_Copy_Tree (Lhs, New_Scope => Proc_Id),
-                 Underlying_Type (Typ)));
+            --  Get the relevant type for the call to
+            --  Make_Tag_Assignment_From_Type, which, for concurrent types is
+            --  their corresponding record.
+
+            declare
+               T : Entity_Id := Underlying_Type (Typ);
+            begin
+               if Ekind (T) in E_Protected_Type | E_Task_Type then
+                  T := Corresponding_Record_Type (T);
+               end if;
+
+               Append_To (Res,
+                 Make_Tag_Assignment_From_Type
+                   (Default_Loc,
+                    New_Copy_Tree (Lhs, New_Scope => Proc_Id),
+                    T));
+            end;
          end if;
 
          --  Adjust the component if controlled except if it is an aggregate
@@ -7351,8 +7362,9 @@ package body Exp_Ch3 is
 
          --  However, there are exceptions in the latter case for interfaces
          --  (see Analyze_Object_Declaration), as well as class-wide types and
-         --  types with unknown discriminants if they are additionally limited
-         --  (see Expand_Subtype_From_Expr), so we must cope with them.
+         --  types with unknown discriminants if they have no underlying record
+         --  view or are inherently limited (see Expand_Subtype_From_Expr), so
+         --  we must cope with them.
 
          elsif Is_Interface (Typ) then
             pragma Assert (Is_Class_Wide_Type (Typ));
@@ -7384,7 +7396,8 @@ package body Exp_Ch3 is
 
          else pragma Assert (Is_Definite_Subtype (Typ)
            or else (Has_Unknown_Discriminants (Typ)
-                     and then Is_Inherently_Limited_Type (Typ)));
+                     and then (No (Underlying_Record_View (Typ))
+                                or else Is_Inherently_Limited_Type (Typ))));
 
             Alloc_Typ := Typ;
          end if;
@@ -7640,16 +7653,25 @@ package body Exp_Ch3 is
             end if;
          end if;
 
+         --  For a special return object, the initialization must wait until
+         --  after the object is turned into an allocator.
+
          if not Special_Ret_Obj then
             Default_Initialize_Object (Init_After);
 
-            --  Check whether an access object has been initialized above
+            --  Check whether the object has been initialized above
 
-            if Is_Access_Type (Typ) and then Present (Expression (N)) then
-               if Known_Non_Null (Expression (N)) then
-                  Set_Is_Known_Non_Null (Def_Id);
-               elsif Known_Null (Expression (N)) then
-                  Set_Is_Known_Null (Def_Id);
+            if Present (Expression (N)) then
+               if Is_Access_Type (Typ) then
+                  if Known_Non_Null (Expression (N)) then
+                     Set_Is_Known_Non_Null (Def_Id);
+                  elsif Known_Null (Expression (N)) then
+                     Set_Is_Known_Null (Def_Id);
+                  end if;
+               end if;
+
+               if Is_Delayed_Aggregate (Expression (N)) then
+                  Convert_Aggr_In_Object_Decl (N);
                end if;
             end if;
          end if;
@@ -7678,27 +7700,12 @@ package body Exp_Ch3 is
 
          Expr_Q := Unqualify (Expr);
 
-         --  When we have the appropriate type of aggregate in the expression
-         --  (it has been determined during analysis of the aggregate by
-         --  setting the delay flag), let's perform in place assignment and
-         --  thus avoid creating a temporary.
+         --  When we have the appropriate kind of aggregate in the expression
+         --  (this has been determined during analysis of the aggregate by
+         --  setting the Expansion_Delayed flag), let's perform in place
+         --  assignment and thus avoid creating a temporary.
 
          if Is_Delayed_Aggregate (Expr_Q) then
-
-            --  An aggregate that must be built in place is not resolved and
-            --  expanded until the enclosing construct is expanded. This will
-            --  happen when the aggregate is limited and the declared object
-            --  has a following address clause. Resolution is done without
-            --  expansion because it will take place when the declaration
-            --  itself is expanded.
-
-            if Is_Limited_Type (Typ)
-              and then not Analyzed (Expr)
-            then
-               Expander_Mode_Save_And_Set (False);
-               Resolve (Expr, Typ);
-               Expander_Mode_Restore;
-            end if;
 
             --  For a special return object, the transformation must wait until
             --  after the object is turned into an allocator.

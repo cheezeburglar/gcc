@@ -2414,14 +2414,17 @@ isa_matches_agent (struct agent_info *agent, Elf64_Ehdr *image)
 
   if (isa_field != agent->device_isa)
     {
-      char msg[120];
+      char msg[204];
       const char *agent_isa_s = isa_name (agent->device_isa);
       assert (agent_isa_s);
 
       snprintf (msg, sizeof msg,
-		"GCN code object ISA '%s' does not match GPU ISA '%s'.\n"
-		"Try to recompile with '-foffload-options=-march=%s'.\n",
-		isa_s, agent_isa_s, agent_isa_s);
+		"GCN code object ISA '%s' does not match GPU ISA '%s' "
+		"(device %d).\n"
+		"Try to recompile with '-foffload-options=-march=%s',\n"
+		"or use ROCR_VISIBLE_DEVICES to disable incompatible "
+		"devices.\n",
+		isa_s, agent_isa_s, agent->device_id, agent_isa_s);
 
       hsa_error (msg, HSA_STATUS_ERROR);
       return false;
@@ -4385,7 +4388,9 @@ GOMP_OFFLOAD_openacc_async_exec (void (*fn_ptr) (void *),
   gcn_exec (kernel, devaddrs, dims, targ_mem_desc, true, aq);
 }
 
-/* Create a new asynchronous thread and queue for running future kernels.  */
+/* Create a new asynchronous thread and queue for running future kernels;
+   issues a fatal error if the queue cannot be created as all callers expect
+   that the queue exists.  */
 
 struct goacc_asyncqueue *
 GOMP_OFFLOAD_openacc_async_construct (int device)
@@ -4413,18 +4418,18 @@ GOMP_OFFLOAD_openacc_async_construct (int device)
 
   if (pthread_mutex_init (&aq->mutex, NULL))
     {
-      GOMP_PLUGIN_error ("Failed to initialize a GCN agent queue mutex");
-      return false;
+      GOMP_PLUGIN_fatal ("Failed to initialize a GCN agent queue mutex");
+      return NULL;
     }
   if (pthread_cond_init (&aq->queue_cond_in, NULL))
     {
-      GOMP_PLUGIN_error ("Failed to initialize a GCN agent queue cond");
-      return false;
+      GOMP_PLUGIN_fatal ("Failed to initialize a GCN agent queue cond");
+      return NULL;
     }
   if (pthread_cond_init (&aq->queue_cond_out, NULL))
     {
-      GOMP_PLUGIN_error ("Failed to initialize a GCN agent queue cond");
-      return false;
+      GOMP_PLUGIN_fatal ("Failed to initialize a GCN agent queue cond");
+      return NULL;
     }
 
   hsa_status_t status = hsa_fns.hsa_queue_create_fn (agent->id,

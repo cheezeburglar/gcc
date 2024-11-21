@@ -780,16 +780,8 @@ typedef struct
   AARCH64_SIMD_BUILTIN_##T##_##N##A,
 
 #undef ENTRY
-#define ENTRY(N, S, M, U, F) \
+#define ENTRY(N, S, M, U) \
   AARCH64_##N,
-
-#undef ENTRY_VHSDF
-#define ENTRY_VHSDF(NAME, SIGNATURE, UNSPEC, EXTENSIONS) \
-  AARCH64_##NAME##_f16, \
-  AARCH64_##NAME##q_f16, \
-  AARCH64_##NAME##_f32, \
-  AARCH64_##NAME##q_f32, \
-  AARCH64_##NAME##q_f64,
 
 enum aarch64_builtins
 {
@@ -884,6 +876,11 @@ enum aarch64_builtins
   AARCH64_PLDX,
   AARCH64_PLI,
   AARCH64_PLIX,
+  /* Armv8.9-A / Armv9.4-A builtins.  */
+  AARCH64_BUILTIN_CHKFEAT,
+  AARCH64_BUILTIN_GCSPR,
+  AARCH64_BUILTIN_GCSPOPM,
+  AARCH64_BUILTIN_GCSSS,
   AARCH64_BUILTIN_MAX
 };
 
@@ -1602,16 +1599,9 @@ enum class aarch64_builtin_signatures
 };
 
 #undef ENTRY
-#define ENTRY(N, S, M, U, F) \
-  {#N, aarch64_builtin_signatures::S, E_##M##mode, U, F},
-
-#undef ENTRY_VHSDF
-#define ENTRY_VHSDF(NAME, SIGNATURE, UNSPEC, EXTENSIONS) \
-  ENTRY (NAME##_f16, SIGNATURE, V4HF, UNSPEC, EXTENSIONS) \
-  ENTRY (NAME##q_f16, SIGNATURE, V8HF, UNSPEC, EXTENSIONS) \
-  ENTRY (NAME##_f32, SIGNATURE, V2SF, UNSPEC, EXTENSIONS) \
-  ENTRY (NAME##q_f32, SIGNATURE, V4SF, UNSPEC, EXTENSIONS) \
-  ENTRY (NAME##q_f64, SIGNATURE, V2DF, UNSPEC, EXTENSIONS)
+#define ENTRY(N, S, M, U) \
+  {#N, aarch64_builtin_signatures::S, E_##M##mode, U, \
+   aarch64_required_extensions::REQUIRED_EXTENSIONS},
 
 /* Initialize pragma builtins.  */
 
@@ -1621,7 +1611,7 @@ struct aarch64_pragma_builtins_data
   aarch64_builtin_signatures signature;
   machine_mode mode;
   int unspec;
-  aarch64_feature_flags required_extensions;
+  aarch64_required_extensions required_extensions;
 };
 
 static aarch64_pragma_builtins_data aarch64_pragma_builtins[] = {
@@ -2253,6 +2243,29 @@ aarch64_init_fpsr_fpcr_builtins (void)
 				   AARCH64_BUILTIN_SET_FPSR64);
 }
 
+/* Add builtins for Guarded Control Stack instructions.  */
+
+static void
+aarch64_init_gcs_builtins (void)
+{
+  tree ftype;
+
+  ftype = build_function_type_list (ptr_type_node, NULL);
+  aarch64_builtin_decls[AARCH64_BUILTIN_GCSPR]
+    = aarch64_general_add_builtin ("__builtin_aarch64_gcspr", ftype,
+				   AARCH64_BUILTIN_GCSPR);
+
+  ftype = build_function_type_list (uint64_type_node, NULL);
+  aarch64_builtin_decls[AARCH64_BUILTIN_GCSPOPM]
+    = aarch64_general_add_builtin ("__builtin_aarch64_gcspopm", ftype,
+				   AARCH64_BUILTIN_GCSPOPM);
+
+  ftype = build_function_type_list (ptr_type_node, ptr_type_node, NULL);
+  aarch64_builtin_decls[AARCH64_BUILTIN_GCSSS]
+    = aarch64_general_add_builtin ("__builtin_aarch64_gcsss", ftype,
+				   AARCH64_BUILTIN_GCSSS);
+}
+
 /* Initialize all builtins in the AARCH64_BUILTIN_GENERAL group.  */
 
 void
@@ -2293,6 +2306,14 @@ aarch64_general_init_builtins (void)
      register them.  */
   if (!TARGET_ILP32)
     aarch64_init_pauth_hint_builtins ();
+
+  tree ftype_chkfeat
+    = build_function_type_list (uint64_type_node, uint64_type_node, NULL);
+  aarch64_builtin_decls[AARCH64_BUILTIN_CHKFEAT]
+    = aarch64_general_add_builtin ("__builtin_aarch64_chkfeat", ftype_chkfeat,
+				   AARCH64_BUILTIN_CHKFEAT);
+
+  aarch64_init_gcs_builtins ();
 
   if (in_lto_p)
     handle_arm_acle_h ();
@@ -2349,37 +2370,45 @@ aarch64_report_missing_registers (location_t location, tree fndecl)
   reported_missing_registers_p = true;
 }
 
-/* Check whether all the AARCH64_FL_* values in REQUIRED_EXTENSIONS are
-   enabled, given that those extensions are required for function FNDECL.
-   Report an error against LOCATION if not.  */
+/* Check whether the requirements in REQUIRED_EXTENSIONS are met, given that
+   those requirements come from calling function FNDECL.  Report an error
+   against LOCATION if not.  */
 bool
 aarch64_check_required_extensions (location_t location, tree fndecl,
-				   aarch64_feature_flags required_extensions)
+				   aarch64_required_extensions
+				     required_extensions)
 {
-  if ((required_extensions & ~aarch64_isa_flags) == 0)
+  aarch64_feature_flags sm_state_extensions = 0;
+  if (!TARGET_STREAMING)
+    {
+      if (required_extensions.sm_off == 0)
+	{
+	  error_at (location, "ACLE function %qD can only be called when"
+		    " SME streaming mode is enabled", fndecl);
+	  return false;
+	}
+      sm_state_extensions |= required_extensions.sm_off & ~AARCH64_FL_SM_OFF;
+    }
+  if (!TARGET_NON_STREAMING)
+    {
+      if (required_extensions.sm_on == 0)
+	{
+	  error_at (location, "ACLE function %qD cannot be called when"
+		    " SME streaming mode is enabled", fndecl);
+	  return false;
+	}
+      sm_state_extensions |= required_extensions.sm_on & ~AARCH64_FL_SM_ON;
+    }
+
+  if ((sm_state_extensions & ~aarch64_isa_flags) == 0)
     return true;
 
-  auto missing_extensions = required_extensions & ~aarch64_asm_isa_flags;
-
+  auto missing_extensions = sm_state_extensions & ~aarch64_asm_isa_flags;
   if (missing_extensions == 0)
     {
       /* All required extensions are enabled in aarch64_asm_isa_flags, so the
 	 error must be the use of general-regs-only.  */
       aarch64_report_missing_registers (location, fndecl);
-      return false;
-    }
-
-  if (missing_extensions & AARCH64_FL_SM_OFF)
-    {
-      error_at (location, "ACLE function %qD cannot be called when"
-		" SME streaming mode is enabled", fndecl);
-      return false;
-    }
-
-  if (missing_extensions & AARCH64_FL_SM_ON)
-    {
-      error_at (location, "ACLE function %qD can only be called when"
-		" SME streaming mode is enabled", fndecl);
       return false;
     }
 
@@ -2408,12 +2437,47 @@ aarch64_check_required_extensions (location_t location, tree fndecl,
   gcc_unreachable ();
 }
 
+/* Return the ISA extensions required by function CODE.  */
+static aarch64_required_extensions
+aarch64_general_required_extensions (unsigned int code)
+{
+  using ext = aarch64_required_extensions;
+  switch (code)
+    {
+    case AARCH64_TME_BUILTIN_TSTART:
+    case AARCH64_TME_BUILTIN_TCOMMIT:
+    case AARCH64_TME_BUILTIN_TTEST:
+    case AARCH64_TME_BUILTIN_TCANCEL:
+      return ext::streaming_compatible (AARCH64_FL_TME);
+
+    case AARCH64_LS64_BUILTIN_LD64B:
+    case AARCH64_LS64_BUILTIN_ST64B:
+    case AARCH64_LS64_BUILTIN_ST64BV:
+    case AARCH64_LS64_BUILTIN_ST64BV0:
+      return ext::streaming_compatible (AARCH64_FL_LS64);
+
+    default:
+      if (code >= AARCH64_MEMTAG_BUILTIN_START
+	  && code <= AARCH64_MEMTAG_BUILTIN_END)
+	return ext::streaming_compatible (AARCH64_FL_MEMTAG);
+
+      if (auto builtin_data = aarch64_get_pragma_builtin (code))
+	return builtin_data->required_extensions;
+    }
+  return ext::streaming_compatible (0);
+}
+
 bool
 aarch64_general_check_builtin_call (location_t location, vec<location_t>,
-			    unsigned int code, tree fndecl,
-			    unsigned int nargs ATTRIBUTE_UNUSED, tree *args)
+				    unsigned int code, tree fndecl,
+				    unsigned int nargs ATTRIBUTE_UNUSED,
+				    tree *args)
 {
   tree decl = aarch64_builtin_decls[code];
+  auto required_extensions = aarch64_general_required_extensions (code);
+  if (!aarch64_check_required_extensions (location, decl, required_extensions))
+    return false;
+
   switch (code)
     {
     case AARCH64_RSR:
@@ -2439,34 +2503,6 @@ aarch64_general_check_builtin_call (location_t location, vec<location_t>,
 	  }
 	break;
       }
-
-    case AARCH64_TME_BUILTIN_TSTART:
-    case AARCH64_TME_BUILTIN_TCOMMIT:
-    case AARCH64_TME_BUILTIN_TTEST:
-    case AARCH64_TME_BUILTIN_TCANCEL:
-      return aarch64_check_required_extensions (location, decl,
-						AARCH64_FL_TME);
-
-    case AARCH64_LS64_BUILTIN_LD64B:
-    case AARCH64_LS64_BUILTIN_ST64B:
-    case AARCH64_LS64_BUILTIN_ST64BV:
-    case AARCH64_LS64_BUILTIN_ST64BV0:
-      return aarch64_check_required_extensions (location, decl,
-						AARCH64_FL_LS64);
-
-    default:
-      break;
-    }
-
-  if (code >= AARCH64_MEMTAG_BUILTIN_START
-      && code <= AARCH64_MEMTAG_BUILTIN_END)
-    return aarch64_check_required_extensions (location, decl,
-					      AARCH64_FL_MEMTAG);
-
-  if (auto builtin_data = aarch64_get_pragma_builtin (code))
-    {
-      auto flags = builtin_data->required_extensions;
-      return aarch64_check_required_extensions (location, decl, flags);
     }
 
   return true;
@@ -3373,6 +3409,48 @@ aarch64_expand_fpsr_fpcr_getter (enum insn_code icode, machine_mode mode,
   return op.value;
 }
 
+/* Expand GCS builtin EXP with code FCODE, putting the result
+   into TARGET.  If IGNORE is true the return value is ignored.  */
+
+rtx
+aarch64_expand_gcs_builtin (tree exp, rtx target, int fcode, int ignore)
+{
+  if (fcode == AARCH64_BUILTIN_GCSPR)
+    {
+      expand_operand op;
+      create_output_operand (&op, target, DImode);
+      expand_insn (CODE_FOR_aarch64_load_gcspr, 1, &op);
+      return op.value;
+    }
+  if (fcode == AARCH64_BUILTIN_GCSPOPM && ignore)
+    {
+      expand_insn (CODE_FOR_aarch64_gcspopm_xzr, 0, 0);
+      return target;
+    }
+  if (fcode == AARCH64_BUILTIN_GCSPOPM)
+    {
+      expand_operand ops[2];
+      create_output_operand (&ops[0], target, DImode);
+      create_input_operand (&ops[1], const0_rtx, DImode);
+      expand_insn (CODE_FOR_aarch64_gcspopm, 2, ops);
+      return gen_lowpart (ptr_mode, ops[0].value);
+    }
+  if (fcode == AARCH64_BUILTIN_GCSSS)
+    {
+      expand_operand opnd;
+      rtx arg = expand_normal (CALL_EXPR_ARG (exp, 0));
+      arg = convert_modes (DImode, ptr_mode, arg, true);
+      create_input_operand (&opnd, arg, DImode);
+      expand_insn (CODE_FOR_aarch64_gcsss1, 1, &opnd);
+      expand_operand ops[2];
+      create_output_operand (&ops[0], target, DImode);
+      create_input_operand (&ops[1], const0_rtx, DImode);
+      expand_insn (CODE_FOR_aarch64_gcsss2, 2, ops);
+      return gen_lowpart (ptr_mode, ops[0].value);
+    }
+  gcc_unreachable ();
+}
+
 /* Expand an expression EXP that calls built-in function FCODE,
    with result going to TARGET if that's convenient.  IGNORE is true
    if the result of the builtin is ignored.  */
@@ -3498,6 +3576,20 @@ aarch64_general_expand_builtin (unsigned int fcode, tree exp, rtx target,
     case AARCH64_PLIX:
       aarch64_expand_prefetch_builtin (exp, fcode);
       return target;
+
+    case AARCH64_BUILTIN_CHKFEAT:
+      {
+	rtx x16_reg = gen_rtx_REG (DImode, R16_REGNUM);
+	op0 = expand_normal (CALL_EXPR_ARG (exp, 0));
+	emit_move_insn (x16_reg, op0);
+	expand_insn (CODE_FOR_aarch64_chkfeat, 0, 0);
+	return copy_to_reg (x16_reg);
+      }
+
+    case AARCH64_BUILTIN_GCSPR:
+    case AARCH64_BUILTIN_GCSPOPM:
+    case AARCH64_BUILTIN_GCSSS:
+      return aarch64_expand_gcs_builtin (exp, target, fcode, ignore);
     }
 
   if (fcode >= AARCH64_SIMD_BUILTIN_BASE && fcode <= AARCH64_SIMD_BUILTIN_MAX)

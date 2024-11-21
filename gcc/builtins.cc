@@ -1296,8 +1296,8 @@ expand_builtin_prefetch (tree exp)
     }
   else
     op1 = expand_normal (arg1);
-  /* Argument 1 must be either zero or one.  */
-  if (INTVAL (op1) != 0 && INTVAL (op1) != 1)
+  /* Argument 1 must be 0, 1 or 2.  */
+  if (!IN_RANGE (INTVAL (op1), 0, 2))
     {
       warning (0, "invalid second argument to %<__builtin_prefetch%>;"
 	       " using zero");
@@ -1315,7 +1315,7 @@ expand_builtin_prefetch (tree exp)
   else
     op2 = expand_normal (arg2);
   /* Argument 2 must be 0, 1, 2, or 3.  */
-  if (INTVAL (op2) < 0 || INTVAL (op2) > 3)
+  if (!IN_RANGE (INTVAL (op2), 0, 3))
     {
       warning (0, "invalid third argument to %<__builtin_prefetch%>; using zero");
       op2 = const0_rtx;
@@ -7851,6 +7851,7 @@ expand_builtin (tree exp, rtx target, rtx subtarget, machine_mode mode,
     case BUILT_IN_FABSD32:
     case BUILT_IN_FABSD64:
     case BUILT_IN_FABSD128:
+    case BUILT_IN_FABSD64X:
       target = expand_builtin_fabs (exp, target, subtarget);
       if (target)
 	return target;
@@ -9377,7 +9378,8 @@ fold_builtin_fabs (location_t loc, tree arg, tree type)
   return fold_build1_loc (loc, ABS_EXPR, type, arg);
 }
 
-/* Fold a call to abs, labs, llabs or imaxabs with argument ARG.  */
+/* Fold a call to abs, labs, llabs, imaxabs, uabs, ulabs, ullabs or uimaxabs
+   with argument ARG.  */
 
 static tree
 fold_builtin_abs (location_t loc, tree arg, tree type)
@@ -9385,6 +9387,14 @@ fold_builtin_abs (location_t loc, tree arg, tree type)
   if (!validate_arg (arg, INTEGER_TYPE))
     return NULL_TREE;
 
+  if (TYPE_UNSIGNED (type))
+    {
+      if (TYPE_PRECISION (TREE_TYPE (arg))
+	  != TYPE_PRECISION (type)
+	  || TYPE_UNSIGNED (TREE_TYPE (arg)))
+	return NULL_TREE;
+      return fold_build1_loc (loc, ABSU_EXPR, type, arg);
+    }
   arg = fold_convert_loc (loc, type, arg);
   return fold_build1_loc (loc, ABS_EXPR, type, arg);
 }
@@ -10447,6 +10457,7 @@ fold_builtin_0 (location_t loc, tree fndecl)
     case BUILT_IN_INFD32:
     case BUILT_IN_INFD64:
     case BUILT_IN_INFD128:
+    case BUILT_IN_INFD64X:
       return fold_builtin_inf (loc, type, true);
 
     CASE_FLT_FN (BUILT_IN_HUGE_VAL):
@@ -10509,12 +10520,17 @@ fold_builtin_1 (location_t loc, tree expr, tree fndecl, tree arg0)
     case BUILT_IN_FABSD32:
     case BUILT_IN_FABSD64:
     case BUILT_IN_FABSD128:
+    case BUILT_IN_FABSD64X:
       return fold_builtin_fabs (loc, arg0, type);
 
     case BUILT_IN_ABS:
     case BUILT_IN_LABS:
     case BUILT_IN_LLABS:
     case BUILT_IN_IMAXABS:
+    case BUILT_IN_UABS:
+    case BUILT_IN_ULABS:
+    case BUILT_IN_ULLABS:
+    case BUILT_IN_UIMAXABS:
       return fold_builtin_abs (loc, arg0, type);
 
     CASE_FLT_FN (BUILT_IN_CONJ):
@@ -12580,6 +12596,8 @@ builtin_fnspec (tree callee)
 	 by its first argument.  */
       case BUILT_IN_POSIX_MEMALIGN:
 	return ".cOt";
+      case BUILT_IN_OMP_GET_MAPPED_PTR:
+	return ". R ";
 
       default:
 	return "";

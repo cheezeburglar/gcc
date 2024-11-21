@@ -40,7 +40,7 @@ static void prune_options (struct cl_decoded_option **, unsigned int *);
    example, we want -gno-statement-frontiers to be taken as a negation
    of -gstatement-frontiers, but without catching the gno- prefix and
    signaling it's to be used for option remapping, it would end up
-   backtracked to g with no-statemnet-frontiers as the debug level.  */
+   backtracked to g with no-statement-frontiers as the debug level.  */
 
 static bool
 remapping_prefix_p (const struct cl_option *opt)
@@ -1656,8 +1656,8 @@ read_cmdline_option (struct gcc_options *opts,
 
 void
 set_option (struct gcc_options *opts, struct gcc_options *opts_set,
-	    int opt_index, HOST_WIDE_INT value, const char *arg, int kind,
-	    location_t loc, diagnostic_context *dc,
+	    size_t opt_index, HOST_WIDE_INT value, const char *arg,
+	    int kind, location_t loc, diagnostic_context *dc,
 	    HOST_WIDE_INT mask /* = 0 */)
 {
   const struct cl_option *option = &cl_options[opt_index];

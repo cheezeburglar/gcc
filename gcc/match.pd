@@ -3146,13 +3146,10 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 (match (unsigned_integer_sat_add @0 @1)
  (bit_ior:c (usadd_left_part_2 @0 @1) (usadd_right_part_2 @0 @1)))
 
-/* Simplify SAT_U_ADD to the cheap form
-   From: SAT_U_ADD = (X + Y) >= x ? (X + Y) : -1.
-   To:   SAT_U_ADD = (X + Y) | - ((X + Y) < X).  */
-(simplify (cond (ge (plus:c@2 @0 @1) @0) @2 integer_minus_onep)
- (if (INTEGRAL_TYPE_P (type) && TYPE_UNSIGNED (type)
-      && types_match (type, @0, @1))
-  (bit_ior @2 (negate (convert (lt @2 @0))))))
+/* Unsigned saturation add, case 3 (branch with ge):
+   SAT_U_ADD = (X + Y) >= x ? (X + Y) : -1.  */
+(match (unsigned_integer_sat_add @0 @1)
+ (cond^ (ge (usadd_left_part_1@2 @0 @1) @0) @2 integer_minus_onep))
 
 /* Unsigned saturation add, case 4 (branch with lt):
    SAT_U_ADD = (X + Y) < x ? -1 : (X + Y).  */
@@ -3277,6 +3274,19 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 	@2)
  (if (INTEGRAL_TYPE_P (type) && !TYPE_UNSIGNED (type))))
 
+/* Signed saturation add, case 6 (one op is imm):
+   T sum = (T)((UT)X + (UT)IMM);
+   SAT_S_ADD = (X ^ IMM) < 0 ? sum : (X ^ sum) >= 0 ? sum : (x < 0) ? MIN : MAX;
+   The T and UT are type pair like T=int8_t, UT=uint8_t.  */
+
+(match (signed_integer_sat_add @0 @1)
+(cond^ (lt (bit_and:c (bit_xor:c @0 (nop_convert@2 (plus (nop_convert @0)
+		       INTEGER_CST@1)))
+		       (bit_xor:c @0 INTEGER_CST@3)) integer_zerop)
+       (bit_xor:c (negate (convert (lt @0 integer_zerop))) max_value) @2)
+(if (INTEGRAL_TYPE_P (type) && !TYPE_UNSIGNED (type)
+     && wi::bit_and (wi::to_wide (@1), wi::to_wide (@3)) == 0)))
+
 /* Unsigned saturation sub, case 1 (branch with gt):
    SAT_U_SUB = X > Y ? X - Y : 0  */
 (match (unsigned_integer_sat_sub @0 @1)
@@ -3390,6 +3400,17 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
    wide_int sum = wi::add (c1, c2);
   }
   (if (wi::eq_p (sum, wi::uhwi (0, precision)))))))
+
+/* The boundary condition for case 10: IMM = 1:
+   SAT_U_SUB = X >= IMM ? (X - IMM) : 0.
+   simplify (X != 0 ? X + ~0 : 0) to X - (X != 0).  */
+(simplify
+ (cond (ne@1 @0 integer_zerop)
+       (nop_convert1? (plus (nop_convert2?@2 @0) integer_all_onesp))
+       integer_zerop)
+ (if (INTEGRAL_TYPE_P (type))
+   (with { tree itype = TREE_TYPE (@2); }
+    (convert (minus @2 (convert:itype @1))))))
 
 /* Signed saturation sub, case 1:
    T minus = (T)((UT)X - (UT)Y);
@@ -4636,6 +4657,13 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
     @0
     @2)))
 
+/* min (a, b) op max (a, b) -> a op b */
+(for op (plus mult bit_and bit_xor bit_ior eq ne min max)
+ (simplify
+  (op:c (min:c @0 @1) (max @0 @1))
+   (if (!HONOR_NANS (@0))
+    (op @0 @1))))
+
 /* Simplify min (&var[off0], &var[off1]) etc. depending on whether
    the addresses are known to be less, equal or greater.  */
 (for minmax (min max)
@@ -4766,6 +4794,16 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
  (simplify
   (cmp (minmax @0 INTEGER_CST@1) INTEGER_CST@2)
   (comb (cmp @0 @2) (cmp @1 @2))))
+
+/* MAX (A, B) == 0 -> (A|B) == 0 iff unsigned.
+   MAX (A, B) != 0 -> (A|B) != 0 iff unsigned.  */
+(for cmp (eq ne)
+ (simplify
+  (cmp (max @0 @1) integer_zerop)
+  (if (TYPE_UNSIGNED (TREE_TYPE (@0)))
+   (with { tree utype = unsigned_type_for (TREE_TYPE (@0)); }
+    (cmp (bit_ior (convert:utype @0) (convert:utype @1))
+         { build_zero_cst (utype); } )))))
 
 /* Undo fancy ways of writing max/min or other ?: expressions, like
    a - ((a - b) & -(a < b))  and  a - (a - b) * (a < b) into (a < b) ? b : a.
@@ -4998,6 +5036,15 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
  (rrotate @0 { const_binop (MINUS_EXPR, TREE_TYPE (@1),
 			    build_int_cst (TREE_TYPE (@1),
 					   element_precision (type)), @1); }))
+
+/* a rrotate (32-b) -> a lrotate b */
+/* a lrotate (32-b) -> a rrotate b */
+(for rotate (lrotate rrotate)
+     orotate (rrotate lrotate)
+ (simplify
+  (rotate @0 (minus INTEGER_CST@1 @2))
+   (if (element_precision (TREE_TYPE (@0)) == wi::to_wide (@1))
+     (orotate @0 @2))))
 
 /* Turn (a OP c1) OP c2 into a OP (c1+c2).  */
 (for op (lrotate rrotate rshift lshift)
@@ -8323,7 +8370,20 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
    /* Simplify logN(a)-logN(b) into logN(a/b).  */
    (simplify
     (minus (logs:s @0) (logs:s @1))
-     (logs (rdiv @0 @1)))))
+     (logs (rdiv @0 @1))))
+
+   (for cmp (le ge)
+    (for logs (LOG LOG2 LOG10)
+	 exps (EXP EXP2 EXP10)
+    /* Simplify logN (x) CMP CST into x CMP expN (CST) */
+    (simplify
+    (cmp:c (logs:s @0) REAL_CST@1)
+     (cmp @0 (exps @1)))
+
+    /* Simplify expN (x) CMP CST into x CMP logN (CST) */
+    (simplify
+    (cmp:c (exps:s @0) REAL_CST@1)
+     (cmp @0 (logs @1))))))
 
  (for logs (LOG LOG2 LOG10 LOG10)
       exps (EXP EXP2 EXP10 POW10)
@@ -8450,6 +8510,31 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
    (if (real_compare (GT_EXPR, TREE_REAL_CST_PTR (@0), &dconst0)
 	&& real_isfinite (TREE_REAL_CST_PTR (@0)))
     (exps (plus (mult (logs @0) @1) @2)))))
+
+ /* Simplify powi (powof2, i) to ldexp (1, i * log2 (powof2)). */
+ (simplify
+  (POWI REAL_CST@0 @1)
+  (with { HOST_WIDE_INT tmp = 0; }
+   (if (real_isinteger (&TREE_REAL_CST (@0), &tmp)
+	&& tmp > 0 && pow2p_hwi (tmp))
+    (LDEXP { build_one_cst (type); }
+       (mult @1 {build_int_cst (integer_type_node,
+	     exact_log2 (tmp)); })))))
+
+ /* Simplify powof2 * ldexp (x, i) to ldexp (x, i + log2 (powof2)) */
+ (simplify
+  (mult:c REAL_CST@0 (LDEXP @1 @2))
+  (with { HOST_WIDE_INT tmp = 0; }
+   (if (real_isinteger (&TREE_REAL_CST (@0), &tmp)
+	&& tmp > 0 && pow2p_hwi (tmp))
+    (LDEXP @1 (plus {build_int_cst (integer_type_node,
+	     exact_log2 (tmp)); } @2)))))
+
+ /* Simplify a * ldexp (1., i) to ldexp (a, i). */
+ (simplify
+  (mult:c @0 (LDEXP REAL_CST@1 @2))
+  (if (real_equal (TREE_REAL_CST_PTR (@1), &dconst1))
+   (LDEXP @0 @2)))
 
  (for sqrts (SQRT)
       cbrts (CBRT)
@@ -9515,7 +9600,8 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
  (if (VECTOR_TYPE_P (type)
       && (VECTOR_MODE_P (TYPE_MODE (type))
 	  || optimize_vectors_before_lowering_p ())
-      && types_match (@0, @1)
+      && operand_equal_p (TYPE_SIZE (TREE_TYPE (@0)),
+			  TYPE_SIZE (TREE_TYPE (@1)), 0)
       && types_match (TREE_TYPE (TREE_TYPE (@0)), TREE_TYPE (@2))
       && TYPE_VECTOR_SUBPARTS (type).is_constant ()
       && multiple_p (wi::to_poly_offset (@rpos),
@@ -9523,7 +9609,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
   (with
    {
      unsigned HOST_WIDE_INT elsz
-       = tree_to_uhwi (TYPE_SIZE (TREE_TYPE (TREE_TYPE (@1))));
+       = tree_to_uhwi (TYPE_SIZE (TREE_TYPE (TREE_TYPE (@0))));
      poly_uint64 relt = exact_div (tree_to_poly_uint64 (@rpos), elsz);
      poly_uint64 ielt = exact_div (tree_to_poly_uint64 (@ipos), elsz);
      unsigned nunits = TYPE_VECTOR_SUBPARTS (type).to_constant ();
@@ -9534,9 +9620,11 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
      vec_perm_indices sel (builder, 2, nunits);
    }
    (if (!VECTOR_MODE_P (TYPE_MODE (type))
-	|| can_vec_perm_const_p (TYPE_MODE (type), TYPE_MODE (type), sel, false))
-    (vec_perm @0 @1 { vec_perm_indices_to_tree
-                        (build_vector_type (ssizetype, nunits), sel); })))))
+	|| can_vec_perm_const_p (TYPE_MODE (type),
+				 TYPE_MODE (type), sel, false))
+    (vec_perm @0 (view_convert @1)
+     { vec_perm_indices_to_tree (build_vector_type (ssizetype, nunits),
+				 sel); })))))
 
 (if (canonicalize_math_after_vectorization_p ())
  (for fmas (FMA)

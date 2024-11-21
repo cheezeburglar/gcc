@@ -828,11 +828,9 @@ package Sinfo is
    --    for a number of purposes, including initialization of constants and
    --    limited type objects (such as tasks), setting discriminant fields,
    --    setting tag values, etc. N_Object_Declaration nodes also have this
-   --    flag defined. Here it is used to indicate that an initialization
+   --    flag defined: here it is used to indicate that an initialization
    --    expression is valid, even where it would normally not be allowed
-   --    (e.g. where the type involved is limited). It is also used to stop
-   --    a Force_Evaluation call for an unchecked conversion, but this usage
-   --    is unclear and not documented ???
+   --    (e.g. where the type involved is limited).
 
    --  Associated_Node
    --    Present in nodes that can denote an entity: identifiers, character
@@ -1911,9 +1909,11 @@ package Sinfo is
    --    for further details.
 
    --  Kill_Range_Check
-   --    Used in an N_Unchecked_Type_Conversion node to indicate that the
-   --    result should not be subjected to range checks. This is used for the
-   --    implementation of Normalize_Scalars.
+   --    Used in N_Indexed_Component to indicate that its expressions should
+   --    not be subjected to range checks and in N_Unchecked_Type_Conversion
+   --    to indicate that the result of the conversion should not be subjected
+   --    to range checks. This is used for the implementation of aggregates and
+   --    Normalize_Scalars respectively.
 
    --  Label_Construct
    --    Used in an N_Implicit_Label_Declaration node. Refers to an N_Label,
@@ -1923,34 +1923,18 @@ package Sinfo is
    --    handler.
 
    --  Library_Unit
-   --    In a stub node, Library_Unit points to the compilation unit node of
-   --    the corresponding subunit.
+   --    Direct use of this field should be avoided; use the wrappers in
+   --    Sinfo.Utils instead.
    --
-   --    In a with clause node, Library_Unit points to the spec of the with'ed
-   --    unit.
+   --    This field is used to store the following:
    --
-   --    In a compilation unit node, the usage depends on the unit type:
+   --    In N_Compilation_Unit: Spec_Lib_Unit, Body_Lib_Unit, Subunit_Parent.
    --
-   --     For a library unit body, Library_Unit points to the compilation unit
-   --     node of the corresponding spec, unless it's a subprogram body with
-   --     Acts_As_Spec set, in which case it points to itself.
+   --    In N_Body_Stub: Stub_Subunit.
    --
-   --     For a spec, Library_Unit points to the compilation unit node of the
-   --     corresponding body, if present. The body will be present if the spec
-   --     is or contains generics that we needed to instantiate. Similarly, the
-   --     body will be present if we needed it for inlining purposes. Thus, if
-   --     we have a spec/body pair, both of which are present, they point to
-   --     each other via Library_Unit.
+   --    In N_With_Clause: Withed_Lib_Unit
    --
-   --     For a subunit, Library_Unit points to the compilation unit node of
-   --     the parent body.
-   --     ??? not (always) true, in (at least some, maybe all?) cases it points
-   --     to the corresponding spec for the parent body.
-   --
-   --    Note that this field is not used to hold the parent pointer for child
-   --    unit (which might in any case need to use it for some other purpose as
-   --    described above). Instead for a child unit, implicit with's are
-   --    generated for all parents.
+   --    See Sinfo.Utils for details.
 
    --  Local_Raise_Statements
    --    This field is present in exception handler nodes. It is set to
@@ -3848,8 +3832,9 @@ package Sinfo is
       --  Sloc contains a copy of the Sloc value of the Prefix
       --  Prefix
       --  Expressions
-      --  Generalized_Indexing
       --  Atomic_Sync_Required
+      --  Generalized_Indexing
+      --  Kill_Range_Check
       --  plus fields for expression
 
       --  Note: if any of the subscripts requires a range check, then the
@@ -6553,7 +6538,7 @@ package Sinfo is
       --  | CONTEXT_CLAUSE SUBUNIT
 
       --  The N_Compilation_Unit node itself represents the above syntax.
-      --  However, there are two additional items not reflected in the above
+      --  However, there are additional items not reflected in the above
       --  syntax. First we have the global declarations that are added by the
       --  code generator. These are outer level declarations (so they cannot
       --  be represented as being inside the units). An example is the wrapper
@@ -6566,19 +6551,15 @@ package Sinfo is
       --  of elaboration of the library unit (notably the statement that sets
       --  the Boolean flag indicating that elaboration is complete).
 
-      --  The third item not reflected in the syntax is pragmas that appear
-      --  after the compilation unit. As always pragmas are a problem since
-      --  they are not part of the formal syntax, but can be stuck into the
-      --  source following a set of ad hoc rules, and we have to find an ad
-      --  hoc way of sticking them into the tree. For pragmas that appear
-      --  before the library unit, we just consider them to be part of the
-      --  context clause, and pragmas can appear in the Context_Items list
-      --  of the compilation unit. However, pragmas can also appear after
-      --  the library item.
+      --  Pragmas that appear after the compilation unit are not reflected
+      --  in the syntax. (Pragmas that appear before the library unit, are
+      --  considered part of the context clause. Pragmas can also appear in
+      --  the Context_Items list of the compilation unit.)
 
-      --  To deal with all these problems, we create an auxiliary node for
-      --  a compilation unit, referenced from the N_Compilation_Unit node,
-      --  that contains these items.
+      --  ???For historical reasons, the above information is stored in a
+      --  separate N_Compilation_Unit_Aux node associated with each
+      --  N_Compilation_Unit node. This information could be moved into
+      --  N_Compilation_Unit at this point.
 
       --  N_Compilation_Unit
       --  Sloc points to first token of defining unit name
@@ -6594,6 +6575,10 @@ package Sinfo is
       --  Has_Pragma_Suppress_All
       --  Context_Pending
       --  Has_No_Elaboration_Code
+
+      --  Note: The Unit field can be any of N_Lib_Unit_Declaration,
+      --  N_Lib_Unit_Body, N_Lib_Unit_Renaming_Declaration, N_Subunit,
+      --  or (in the case of ignored ghost code) N_Null_Statement.
 
       --  N_Compilation_Unit_Aux
       --  Sloc is a copy of the Sloc from the N_Compilation_Unit node
@@ -6689,7 +6674,7 @@ package Sinfo is
       --  Private_Present set if with_clause has private keyword
       --  Limited_Present set if LIMITED is present
       --  Next_Implicit_With
-      --  Library_Unit
+      --  Library_Unit (i.e. Withed_Lib_Unit)
       --  Corresponding_Spec
       --  First_Name (set to True if first name or only one name)
       --  Last_Name (set to True if last name or only one name)
@@ -6748,7 +6733,7 @@ package Sinfo is
       --  Sloc points to FUNCTION or PROCEDURE
       --  Specification
       --  Corresponding_Spec_Of_Stub
-      --  Library_Unit points to the subunit
+      --  Library_Unit (i.e. Stub_Subunit)
       --  Corresponding_Body
 
       -------------------------------
@@ -6763,7 +6748,7 @@ package Sinfo is
       --  Sloc points to PACKAGE
       --  Defining_Identifier
       --  Corresponding_Spec_Of_Stub
-      --  Library_Unit points to the subunit
+      --  Library_Unit (i.e. Stub_Subunit)
       --  Corresponding_Body
 
       ----------------------------
@@ -6778,7 +6763,7 @@ package Sinfo is
       --  Sloc points to TASK
       --  Defining_Identifier
       --  Corresponding_Spec_Of_Stub
-      --  Library_Unit points to the subunit
+      --  Library_Unit (i.e. Stub_Subunit)
       --  Corresponding_Body
       --  At_End_Proc (set to Empty if no clean up procedure)
 
@@ -6796,7 +6781,7 @@ package Sinfo is
       --  Sloc points to PROTECTED
       --  Defining_Identifier
       --  Corresponding_Spec_Of_Stub
-      --  Library_Unit points to the subunit
+      --  Library_Unit (i.e. Stub_Subunit)
       --  Corresponding_Body
 
       ---------------------
@@ -8445,28 +8430,6 @@ package Sinfo is
       --  An N_Scil_Membership_Test node may be associated (via Get_SCIL_Node)
       --  with the N_In node (or a rewriting thereof) corresponding to a
       --  classwide membership test.
-
-      --------------------------
-      -- Unchecked Expression --
-      --------------------------
-
-      --  An unchecked expression is one that must be analyzed and resolved
-      --  with all checks off, regardless of the current setting of scope
-      --  suppress flags.
-
-      --  Sprint syntax: `(expression)
-
-      --  Note: this node is always removed from the tree (and replaced by
-      --  its constituent expression) on completion of analysis, so it only
-      --  appears in intermediate trees, and will never be seen by Gigi.
-
-      --  N_Unchecked_Expression
-      --  Sloc is a copy of the Sloc of the expression
-      --  Expression
-      --  plus fields for expression
-
-      --  Note: in the case where a debug source file is generated, the Sloc
-      --  for this node points to the back quote in the Sprint file output.
 
       -------------------------------
       -- Unchecked Type Conversion --

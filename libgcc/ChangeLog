@@ -1,3 +1,44 @@
+2024-11-19  Evgeny Karpov  <evgeny.karpov@microsoft.com>
+
+	* config.host: Update.
+	* config/aarch64/t-mingw: New.
+
+2024-11-18  Jeff Law  <jlaw@ventanamicro.com>
+
+	PR target/117628
+	* config/arm/freebsd-atomic.c (bool): Remove unnecessary typedef.
+	* config/arm/linux-atomic-64bit.c: Likewise.
+	* config/arm/linux-atomic.c: Likewise.
+	* config/nds32/linux-atomic.c: Likewise.
+	* config/nios2/linux-atomic.c: Likewise.
+
+2024-11-18  Jeff Law  <jlaw@ventanamicro.com>
+
+	PR target/117628
+	* config/csky/linux-atomic.c (bool): Remove unnecessary typedef.
+	* unwind-arm-common.inc (bool): Similarly.
+
+2024-11-17  John David Anglin  <danglin@gcc.gnu.org>
+
+	PR target/117627
+	* config/pa/linux-atomic.c: Remove typedef for bool type.
+
+2024-11-16  Jakub Jelinek  <jakub@redhat.com>
+
+	PR libgcc/117624
+	* libgcc2.c (INFINITY): Add #undef before #define.
+
+2024-11-14  Szabolcs Nagy  <szabolcs.nagy@arm.com>
+
+	* config/aarch64/aarch64-asm.h (FEATURE_1_GCS): Define.
+	(GCS_FLAG): Define if GCS is enabled.
+	(GNU_PROPERTY): Add GCS_FLAG.
+
+2024-11-14  Szabolcs Nagy  <szabolcs.nagy@arm.com>
+
+	* config/aarch64/aarch64-unwind.h (_Unwind_Frames_Extra): Update.
+	(_Unwind_Frames_Increment): Define.
+
 2024-10-25  Jakub Jelinek  <jakub@redhat.com>
 
 	* crtstuff.c: Remove trailing whitespace.

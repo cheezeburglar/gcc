@@ -76,6 +76,7 @@
 #include "opts.h"
 #include "aarch-common.h"
 #include "aarch-common-protos.h"
+#include "machmode.h"
 
 /* This file should be included last.  */
 #include "target-def.h"
@@ -33491,6 +33492,15 @@ aarch_gen_bti_j (void)
   return gen_bti_nop ();
 }
 
+/* For AArch32, we always return false because indirect_return attribute
+   is only supported on AArch64 targets.  */
+
+bool
+aarch_fun_is_indirect_return (rtx_insn *)
+{
+  return false;
+}
+
 /* Implement TARGET_SCHED_CAN_SPECULATE_INSN.  Return true if INSN can be
    scheduled for speculative execution.  Reject the long-running division
    and square-root instructions.  */
@@ -35369,9 +35379,10 @@ arm_mve_dlstp_check_dec_counter (loop *loop, rtx_insn* vctp_insn,
     return NULL;
   else if (REG_P (condconst))
     {
-      basic_block pre_loop_bb = single_pred (loop_preheader_edge (loop)->src);
-      if (!pre_loop_bb)
+      basic_block preheader_b = loop_preheader_edge (loop)->src;
+      if (!single_pred_p (preheader_b))
 	return NULL;
+      basic_block pre_loop_bb = single_pred (preheader_b);
 
       rtx initial_compare = NULL_RTX;
       if (!(prev_nonnote_nondebug_insn_bb (BB_END (pre_loop_bb))
@@ -36099,9 +36110,57 @@ arm_get_mask_mode (machine_mode mode)
 }
 
 /* Helper function to determine whether SEQ represents a sequence of
+   instructions representing the vsel<cond> floating point instructions.
+   This is an heuristic to check whether the proposed optimisation is desired,
+   the choice has no consequence for correctness.  */
+static bool
+arm_is_vsel_fp_insn (rtx_insn *seq)
+{
+  rtx_insn *curr_insn = seq;
+  rtx set = NULL_RTX;
+  /* The pattern may start with a simple set with register operands.  Skip
+     through any of those.  */
+  while (curr_insn)
+    {
+      set = single_set (curr_insn);
+      if (!set
+	  || !REG_P (SET_DEST (set)))
+	return false;
+
+      if (!REG_P (SET_SRC (set)))
+	break;
+      curr_insn = NEXT_INSN (curr_insn);
+    }
+
+  if (!set)
+    return false;
+
+  /* The next instruction should be a compare.  */
+  if (!REG_P (SET_DEST (set))
+      || GET_CODE (SET_SRC (set)) != COMPARE)
+    return false;
+
+  curr_insn = NEXT_INSN (curr_insn);
+  if (!curr_insn)
+    return false;
+
+  /* And the last instruction should be an IF_THEN_ELSE.  */
+  set = single_set (curr_insn);
+  if (!set
+      || !REG_P (SET_DEST (set))
+      || GET_CODE (SET_SRC (set)) != IF_THEN_ELSE)
+    return false;
+
+  return !NEXT_INSN (curr_insn);
+}
+
+
+/* Helper function to determine whether SEQ represents a sequence of
    instructions representing the Armv8.1-M Mainline conditional arithmetic
    instructions: csinc, csneg and csinv. The cinc instruction is generated
-   using a different mechanism.  */
+   using a different mechanism.
+   This is an heuristic to check whether the proposed optimisation is desired,
+   the choice has no consequence for correctness.  */
 
 static bool
 arm_is_v81m_cond_insn (rtx_insn *seq)
@@ -36170,13 +36229,18 @@ arm_is_v81m_cond_insn (rtx_insn *seq)
    hook to only allow "noce" to generate the patterns that are profitable.  */
 
 bool
-arm_noce_conversion_profitable_p (rtx_insn *seq, struct noce_if_info *)
+arm_noce_conversion_profitable_p (rtx_insn *seq, struct noce_if_info *if_info)
 {
   if (!TARGET_COND_ARITH
       || reload_completed)
-    return true;
+    return default_noce_conversion_profitable_p (seq, if_info);
 
   if (arm_is_v81m_cond_insn (seq))
+    return true;
+
+  /* Look for vsel<cond> opportunities as we still want to codegen these for
+     Armv8.1-M Mainline targets.  */
+  if (arm_is_vsel_fp_insn (seq))
     return true;
 
   return false;
@@ -36210,6 +36274,20 @@ arm_output_load_tpidr (rtx dst, bool pred_p)
 	    pred_p ? "%?" : "", tpidr_coproc_num);
   output_asm_insn (buf, &dst);
   return "";
+}
+
+/* Return the MVE vector mode that has NUNITS elements of mode INNER_MODE.  */
+opt_machine_mode
+arm_mve_data_mode (scalar_mode inner_mode, poly_uint64 nunits)
+{
+  enum mode_class mclass
+    = (SCALAR_FLOAT_MODE_P (inner_mode) ? MODE_VECTOR_FLOAT : MODE_VECTOR_INT);
+  machine_mode mode;
+  FOR_EACH_MODE_IN_CLASS (mode, mclass)
+    if (inner_mode == GET_MODE_INNER (mode)
+	&& known_eq (nunits, GET_MODE_NUNITS (mode)))
+      return mode;
+  return opt_machine_mode ();
 }
 
 #include "gt-arm.h"

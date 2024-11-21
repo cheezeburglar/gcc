@@ -564,6 +564,13 @@ enum omp_clause_code {
 
   /* OpenACC clause: nohost.  */
   OMP_CLAUSE_NOHOST,
+
+  /* OpenMP clause: novariants (scalar-expression).  */
+  OMP_CLAUSE_NOVARIANTS,
+
+  /* OpenMP clause: nocontext (scalar-expression).  */
+  OMP_CLAUSE_NOCONTEXT,
+
 };
 
 #undef DEFTREESTRUCT
@@ -781,6 +788,7 @@ enum tree_index : unsigned {
   TI_DFLOAT32_TYPE,
   TI_DFLOAT64_TYPE,
   TI_DFLOAT128_TYPE,
+  TI_DFLOAT64X_TYPE,
 
   TI_VOID_LIST_NODE,
 

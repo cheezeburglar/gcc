@@ -1,3 +1,61 @@
+2024-11-13  David Malcolm  <dmalcolm@redhat.com>
+
+	* checker-path.cc (checker_path::debug): Explicitly use
+	global_dc's reference printer.
+	* diagnostic-manager.cc
+	(diagnostic_manager::prune_interproc_events): Likewise.
+	(diagnostic_manager::prune_system_headers): Likewise.
+
+2024-11-02  David Malcolm  <dmalcolm@redhat.com>
+
+	* analyzer.cc: Include "make-unique.h".  Convert "to_json"
+	functions to use std::unique_ptr.
+	* call-string.cc: Likewise.
+	* constraint-manager.cc: Likewise.
+	* diagnostic-manager.cc: Likewise.
+	* engine.cc: Likewise.
+	* program-point.cc: Likewise.
+	* program-state.cc: Likewise.
+	* ranges.cc: Likewise.
+	* region-model.cc: Likewise.
+	* region.cc: Likewise.
+	* svalue.cc: Likewise.
+	* sm.cc: Likewise.
+	* store.cc: Likewise.
+	* supergraph.cc: Likewise.
+	* analyzer.h: Convert "to_json" functions to return
+	std::unique_ptr.
+	* call-string.h: Likewise.
+	* constraint-manager.h: Likewise.
+	(bounded_range::set_json_attr): Pass "obj" by reference.
+	* diagnostic-manager.h: Convert "to_json" functions to return
+	std::unique_ptr.
+	* exploded-graph.h: Likewise.
+	* program-point.h: Likewise.
+	* program-state.h: Likewise.
+	* ranges.h: Likewise.
+	* region-model.h: Likewise.
+	* region.h: Likewise.
+	* sm.h: Likewise.
+	* store.h: Likewise.
+	* supergraph.h: Likewise.
+	* svalue.h: Likewise.
+
+2024-11-01  David Malcolm  <dmalcolm@redhat.com>
+
+	PR analyzer/117373
+	* infinite-loop.cc
+	(infinite_loop_diagnostic::describe_final_event): Fix
+	-Wunused-parameter warning
+
+2024-10-29  David Malcolm  <dmalcolm@redhat.com>
+
+	PR other/116613
+	* analyzer-language.cc (on_finish_translation_unit): Update for
+	m_printer becoming reference printer.
+	* engine.cc (run_checkers): Likewise.
+	* program-point.cc (function_point::print_source_line): Likewise.
+
 2024-10-25  Jakub Jelinek  <jakub@redhat.com>
 
 	* state-purge.cc: Remove trailing whitespace.

@@ -466,6 +466,9 @@ extern unsigned char ix86_tune_features[X86_TUNE_LAST];
 #define TARGET_USE_RCR ix86_tune_features[X86_TUNE_USE_RCR]
 #define TARGET_SSE_MOVCC_USE_BLENDV \
 	ix86_tune_features[X86_TUNE_SSE_MOVCC_USE_BLENDV]
+#define TARGET_ALIGN_TIGHT_LOOPS \
+	 ix86_tune_features[X86_TUNE_ALIGN_TIGHT_LOOPS]
+
 
 /* Feature tests against the various architecture variations.  */
 enum ix86_arch_indices {
@@ -1158,9 +1161,10 @@ extern const char *host_detect_local_cpu (int argc, const char **argv);
 #define SSE_FLOAT_MODE_P(MODE) \
   ((TARGET_SSE && (MODE) == SFmode) || (TARGET_SSE2 && (MODE) == DFmode))
 
-#define SSE_FLOAT_MODE_SSEMATH_OR_HF_P(MODE)				\
-  ((SSE_FLOAT_MODE_P (MODE) && TARGET_SSE_MATH)				\
-   || (TARGET_AVX512FP16 && (MODE) == HFmode))
+#define SSE_FLOAT_MODE_SSEMATH_OR_HFBF_P(MODE)                          \
+  ((SSE_FLOAT_MODE_P (MODE) && TARGET_SSE_MATH)                         \
+   || (TARGET_AVX512FP16 && (MODE) == HFmode)                           \
+   || (TARGET_AVX10_2_256 && (MODE) == BFmode))
 
 #define FMA4_VEC_FLOAT_MODE_P(MODE) \
   (TARGET_FMA4 && ((MODE) == V4SFmode || (MODE) == V2DFmode \
@@ -2310,6 +2314,7 @@ enum processor_type
   PROCESSOR_ARROWLAKE,
   PROCESSOR_ARROWLAKE_S,
   PROCESSOR_PANTHERLAKE,
+  PROCESSOR_DIAMONDRAPIDS,
   PROCESSOR_INTEL,
   PROCESSOR_LUJIAZUI,
   PROCESSOR_YONGFENG,
@@ -2433,6 +2438,16 @@ constexpr wide_int_bitmask PTA_CLEARWATERFOREST = PTA_SIERRAFOREST
   | PTA_AVXVNNIINT16 | PTA_SHA512 | PTA_SM3 | PTA_SM4 | PTA_USER_MSR
   | PTA_PREFETCHI;
 constexpr wide_int_bitmask PTA_PANTHERLAKE = PTA_ARROWLAKE_S | PTA_PREFETCHI;
+constexpr wide_int_bitmask PTA_DIAMONDRAPIDS = PTA_SKYLAKE | PTA_PKU | PTA_SHA
+  | PTA_GFNI | PTA_VAES | PTA_VPCLMULQDQ | PTA_RDPID | PTA_PCONFIG
+  | PTA_WBNOINVD | PTA_CLWB | PTA_MOVDIRI | PTA_MOVDIR64B | PTA_ENQCMD
+  | PTA_CLDEMOTE | PTA_PTWRITE | PTA_WAITPKG | PTA_SERIALIZE | PTA_TSXLDTRK
+  | PTA_AMX_TILE | PTA_AMX_INT8 | PTA_AMX_BF16 | PTA_UINTR | PTA_AVXVNNI
+  | PTA_AMX_FP16 | PTA_PREFETCHI | PTA_AMX_COMPLEX | PTA_AVX10_1_512
+  | PTA_AVXIFMA | PTA_AVXNECONVERT | PTA_AVXVNNIINT16 | PTA_AVXVNNIINT8
+  | PTA_CMPCCXADD | PTA_SHA512 | PTA_SM3 | PTA_SM4 | PTA_AVX10_2_512
+  | PTA_APX_F | PTA_AMX_AVX512 | PTA_AMX_FP8 | PTA_AMX_TF32 | PTA_AMX_TRANSPOSE
+  | PTA_MOVRS | PTA_AMX_MOVRS | PTA_USER_MSR;
 
 constexpr wide_int_bitmask PTA_BDVER1 = PTA_64BIT | PTA_MMX | PTA_SSE
   | PTA_SSE2 | PTA_SSE3 | PTA_SSE4A | PTA_CX16 | PTA_ABM | PTA_SSSE3
@@ -2539,8 +2554,7 @@ enum ix86_fpcmp_strategy {
 
 enum ix86_stack_slot
 {
-  SLOT_TEMP = 0,
-  SLOT_CW_STORED,
+  SLOT_CW_STORED = 0,
   SLOT_CW_ROUNDEVEN,
   SLOT_CW_TRUNC,
   SLOT_CW_FLOOR,

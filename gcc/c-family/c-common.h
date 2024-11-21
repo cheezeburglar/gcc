@@ -111,7 +111,7 @@ enum rid
   RID_BUILTIN_SHUFFLEVECTOR,   RID_BUILTIN_CONVERTVECTOR,  RID_BUILTIN_TGMATH,
   RID_BUILTIN_HAS_ATTRIBUTE,   RID_BUILTIN_ASSOC_BARRIER,  RID_BUILTIN_STDC,
   RID_BUILTIN_COUNTED_BY_REF,
-  RID_DFLOAT32, RID_DFLOAT64, RID_DFLOAT128,
+  RID_DFLOAT32, RID_DFLOAT64, RID_DFLOAT128, RID_DFLOAT64X,
 
   /* TS 18661-3 keywords, in the same sequence as the TI_* values.  */
   RID_FLOAT16,
@@ -168,6 +168,7 @@ enum rid
   RID_ADDRESSOF,
   RID_BUILTIN_LAUNDER,
   RID_BUILTIN_BIT_CAST,
+  RID_BUILTIN_OPERATOR_NEW, RID_BUILTIN_OPERATOR_DELETE,
 
   /* C++11 */
   RID_CONSTEXPR, RID_DECLTYPE, RID_NOEXCEPT, RID_NULLPTR, RID_STATIC_ASSERT,
@@ -840,7 +841,7 @@ extern bool in_late_binary_op;
 extern const char *c_addr_space_name (addr_space_t as);
 extern tree identifier_global_value (tree);
 extern tree identifier_global_tag (tree);
-extern bool names_builtin_p (const char *);
+extern int names_builtin_p (const char *);
 extern tree c_linkage_bindings (tree);
 extern void record_builtin_type (enum rid, const char *, tree);
 extern void start_fname_decls (void);

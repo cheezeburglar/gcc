@@ -1,3 +1,160 @@
+2024-11-20  Paul-Antoine Arras  <parras@baylibre.com>
+
+	* c-attribs.cc (c_common_gnu_attributes): Add attribute for adjust_args
+	need_device_ptr.
+	* c-omp.cc (c_omp_directives): Uncomment dispatch.
+	* c-pragma.cc (omp_pragmas): Add dispatch.
+	* c-pragma.h (enum pragma_kind): Add PRAGMA_OMP_DISPATCH.
+	(enum pragma_omp_clause): Add PRAGMA_OMP_CLAUSE_NOCONTEXT and
+	PRAGMA_OMP_CLAUSE_NOVARIANTS.
+
+2024-11-19  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/117641
+	* c-common.cc (sync_resolve_size): For size == 16 fetch of
+	BITINT_TYPE if TImode isn't supported scalar mode diagnose
+	and return 0 if orig_format instead of returning 16.
+
+2024-11-18  David Malcolm  <dmalcolm@redhat.com>
+
+	PR other/116253
+	* c-opts.cc (c_diagnostic_text_finalizer): Use
+	text_output.build_indent_prefix for prefix to
+	diagnostic_show_locus.
+
+2024-11-17  Jason Merrill  <jason@redhat.com>
+
+	* c.opt.urls: Regenerate.
+
+2024-11-17  Florian Weimer  <fweimer@redhat.com>
+
+	PR c/95445
+	* c-opts.cc (c_common_post_options): Initialize
+	warn_deprecated_non_prototype.
+	* c.opt (Wdeprecated-non-prototype): New option.
+	* c.opt.urls: Regenerate.
+
+2024-11-17  Jason Merrill  <jason@redhat.com>
+
+	* c-ppoutput.cc (preprocess_file): Don't set directives_only here.
+
+2024-11-17  Jason Merrill  <jason@redhat.com>
+
+	* c.opt: Add -fsearch-include-path.
+	* c-opts.cc (c_common_post_options): Handle it.
+
+2024-11-15  Joseph Myers  <josmyers@redhat.com>
+
+	* c-opts.cc (c_common_init_options): Default to C23.
+
+2024-11-15  Florian Weimer  <fweimer@redhat.com>
+
+	* c.opt.urls: Regenerate.
+
+2024-11-15  Florian Weimer  <fweimer@redhat.com>
+
+	* c-opts.cc (c_common_post_options): Initialize
+	warn_missing_parameter_name.
+	* c.opt (Wmissing-parameter-name): New.
+
+2024-11-15  Jakub Jelinek  <jakub@redhat.com>
+
+	* c-common.h (enum rid): Add RID_DFLOAT64X.
+	* c-common.cc (c_global_trees): Fix comment typo.  Add
+	dfloat64x_type_node.
+	(c_common_nodes_and_builtins): Handle RID_DFLOAT64X.
+	* c-cppbuiltin.cc (c_cpp_builtins): Call
+	builtin_define_decimal_float_constants also for dfloat64x_type_node
+	if non-NULL.
+	* c-lex.cc (interpret_float): Handle d64x suffixes.
+	* c-pretty-print.cc (pp_c_floating_constant): Print d64x suffixes
+	on dfloat64x_type_node typed constants.
+
+2024-11-13  Martin Uecker  <uecker@tugraz.at>
+
+	PR c/117059
+	* c.opt (Wzero-as-null-pointer-constant): Enable for C and ObjC.
+
+2024-11-13  Jakub Jelinek  <jakub@redhat.com>
+
+	* c-lex.cc (interpret_float): Subtract 3 or 4 from copylen
+	rather than 2 if last character of CPP_N_DFLOAT is a digit.
+
+2024-11-12  Jason Merrill  <jason@redhat.com>
+
+	* c.opt.urls: Regenerate.
+
+2024-11-11  Jason Merrill  <jason@redhat.com>
+
+	* c.opt: Add -fmodules with same effect as -fmodules-ts.
+
+2024-11-11  Jakub Jelinek  <jakub@redhat.com>
+
+	* c-common.h (enum rid): Add RID_BUILTIN_OPERATOR_NEW
+	and RID_BUILTIN_OPERATOR_DELETE.
+	(names_builtin_p): Change return type from bool to int.
+	* c-common.cc (c_common_reswords): Add __builtin_operator_new
+	and __builtin_operator_delete.
+
+2024-11-07  Paul Iannetta  <piannetta@kalrayinc.com>
+
+	* c-pragma.cc (struct pragma_pp_data): Use (struct internal_pragma_handler);
+	(c_register_pragma_1): Always register name and space for all pragmas.
+	(c_invoke_pragma_handler): Adapt.
+	(c_invoke_early_pragma_handler): Likewise.
+	(c_pp_invoke_early_pragma_handler): Likewise.
+
+2024-11-01  Jakub Jelinek  <jakub@redhat.com>
+
+	* c.opt (std=c++2b, std=c++23, std=gnu++2b, std=gnu++23): Adjust
+	description now that ISO C++ 14882:2024 is published.
+
+2024-10-31  Martin Uecker  <uecker@tugraz.at>
+
+	PR c/117145
+	PR c/117245
+	PR c/100420
+	* c-pretty-print.cc (c_pretty_printer::direct_abstract_declarator):
+	Detect arrays of unspecified size.
+
+2024-10-30  Joseph Myers  <josmyers@redhat.com>
+
+	* c.opt (std=c23, std=gnu23, std=iso9899:2024): Do not mark as
+	experimental and incomplete.
+
+2024-10-30  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/117021
+	* c-common.cc (c_add_case_label): Emit different diagnostics for C
+	on case ranges.  Diagnose for C using pedwarn conversions of range
+	expressions changing value and don't emit further conversion
+	diagnostics if the pedwarn has been diagnosed.  For empty ranges
+	bail out after emitting warning, don't add anything into splay
+	trees nor add a CASE_LABEL_EXPR.
+
+2024-10-29  David Malcolm  <dmalcolm@redhat.com>
+
+	PR other/116613
+	* c-format.cc (selftest::test_type_mismatch_range_labels): Update
+	for m_printer becoming reference printer.
+	(selftest::test_type_mismatch_range_labels): Likewise.
+
+2024-10-29  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/117313
+	* c-common.cc (complete_array_type): For RAW_DATA_CST elements
+	advance curindex by RAW_DATA_LENGTH or one less than that if
+	ce->index is non-NULL.  Handle even the first element if
+	it is RAW_DATA_CST.  Formatting fix.
+
+2024-10-29  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/117030
+	* c-common.cc (c_common_reswords): Add __builtin_stdc_rotate_left
+	and __builtin_stdc_rotate_right.
+	* c-ubsan.cc (ubsan_instrument_shift): For {L,R}ROTATE_EXPR
+	just check if op1 is negative.
+
 2024-10-27  Jakub Jelinek  <jakub@redhat.com>
 
 	* c.opt (warn_trailing_whitespace_kind): Change blank

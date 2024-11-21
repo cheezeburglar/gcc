@@ -332,6 +332,8 @@ unsigned const char omp_clause_num_ops[] =
   0, /* OMP_CLAUSE_IF_PRESENT */
   0, /* OMP_CLAUSE_FINALIZE */
   0, /* OMP_CLAUSE_NOHOST */
+  1, /* OMP_CLAUSE_NOVARIANTS */
+  1, /* OMP_CLAUSE_NOCONTEXT */
 };
 
 const char * const omp_clause_code_name[] =
@@ -428,6 +430,8 @@ const char * const omp_clause_code_name[] =
   "if_present",
   "finalize",
   "nohost",
+  "novariants",
+  "nocontext",
 };
 
 /* Unless specific to OpenACC, we tend to internally maintain OpenMP-centric
@@ -9698,6 +9702,11 @@ build_common_tree_nodes (bool signed_char)
       TYPE_PRECISION (dfloat128_type_node) = DECIMAL128_TYPE_SIZE;
       SET_TYPE_MODE (dfloat128_type_node, TDmode);
       layout_type (dfloat128_type_node);
+
+      dfloat64x_type_node = make_node (REAL_TYPE);
+      TYPE_PRECISION (dfloat64x_type_node) = DECIMAL128_TYPE_SIZE;
+      SET_TYPE_MODE (dfloat64x_type_node, TDmode);
+      layout_type (dfloat64x_type_node);
     }
 
   complex_integer_type_node = build_complex_type (integer_type_node, true);
@@ -12429,7 +12438,7 @@ escaped_string::escape (const char *unescaped)
 	  continue;
 	}
 
-      if (c != '\n' || !pp_is_wrapping_line (global_dc->m_printer))
+      if (c != '\n' || !pp_is_wrapping_line (global_dc->get_reference_printer ()))
 	{
 	  if (escaped == NULL)
 	    {
@@ -15081,7 +15090,7 @@ valid_new_delete_pair_p (tree new_asm, tree delete_asm,
 	       && !memcmp (new_name + 4, "St11align_val_tRKSt9nothrow_t", 29)))
     {
       /* _ZnXYSt11align_val_t or _ZnXYSt11align_val_tRKSt9nothrow_t matches
-	 _ZdXPvSt11align_val_t or _ZdXPvYSt11align_val_t or  or
+	 _ZdXPvSt11align_val_t or _ZdXPvYSt11align_val_t or
 	 _ZdXPvSt11align_val_tRKSt9nothrow_t.  */
       if (delete_len == 20 && !memcmp (delete_name + 5, "St11align_val_t", 15))
 	return true;
@@ -15229,7 +15238,9 @@ get_target_clone_attr_len (tree arglist)
       const char *str = TREE_STRING_POINTER (TREE_VALUE (arg));
       size_t len = strlen (str);
       str_len_sum += len + 1;
-      for (const char *p = strchr (str, ','); p; p = strchr (p + 1, ','))
+      for (const char *p = strchr (str, TARGET_CLONES_ATTR_SEPARATOR);
+	   p;
+	   p = strchr (p + 1, TARGET_CLONES_ATTR_SEPARATOR))
 	argnum++;
       argnum++;
     }
@@ -15901,7 +15912,7 @@ test_escaped_strings (void)
   ASSERT_STREQ ("foobar", (const char *) msg);
 
   /* Ensure that we have -fmessage-length set to 0.  */
-  pretty_printer *pp = global_dc->m_printer;
+  pretty_printer *pp = global_dc->get_reference_printer ();
   saved_cutoff = pp_line_cutoff (pp);
   pp_line_cutoff (pp) = 0;
 
