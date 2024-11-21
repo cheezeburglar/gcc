@@ -2662,7 +2662,7 @@ node_emit_json(tree t, dump_info_p di)
       {
       if (SSA_NAME_IDENTIFIER (t))
         json_obj->set("ssa_name_identifier",
-                   node_to_json_brief (SSA_NAME_IDENTIFIER (t), di));
+                      node_to_json_brief (SSA_NAME_IDENTIFIER (t), di));
       if (SSA_NAME_IS_DEFAULT_DEF (t))
         json_obj->set_bool("ssa_default_def", true);
       if (SSA_NAME_OCCURS_IN_ABNORMAL_PHI (t))
