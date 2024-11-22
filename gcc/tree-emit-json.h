@@ -88,4 +88,5 @@ extern std::unique_ptr<json::object> node_emit_json(tree t, dump_info_p di);
 extern json::array * generic_to_json (tree t, dump_flags_t flag);
 extern void dump_node_json (const_tree t, dump_flags_t flags, FILE *stream);
 extern void set_xloc_as (json::object & json_obj, expanded_location xloc, const char *label);
+extern json::object * omp_atomic_memory_order_emit_json (omp_memory_order omp); // for gimple-emit-json
 #endif /* ! GCC_TREE_JSON_H */
