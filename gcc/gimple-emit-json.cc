@@ -24,9 +24,28 @@ gimple_seq_to_json (gimple_seq seq, dump_flags_t flags)
 }
 
 void
+add_gimple_omp_single_to_json (const gomp_single *gs, dump_flags_t flags,
+			       json::object &json_obj)
+{
+  
+}
+
+void
+add_gimple_omp_continue_to_json (const gomp_continue * gs, dump_flags_t flags,
+				 json::object &json_obj)
+{
+  json_obj.set("def", generic_to_json (gimple_omp_continue_control_def (gs));
+  json_obj.set("use", generic_to_json (gimple_omp_continue_control_use (gs));
+}
+
+
+void
 add_gimple_omp_for (const gomp_for * gs, dump_flags_t flags,
 		    json::object &json_obj)
 {
+  json::array * json_iter;
+  auto json_iter = new json::array ();
+
   switch (gimple_omp_for_kind (gs))
     {
     case GF_OMP_FOR_KIND_FOR
@@ -43,9 +62,20 @@ add_gimple_omp_for (const gomp_for * gs, dump_flags_t flags,
       gcc_unreachable();
     }
   json_obj.set_integer("collapse", gimple_omp_for_collapse (gs));
-  json_obj.set("pre_body", gimple_sequence_to_json (gimple_omp_for_pre_body (gs)));
+  json_obj.set("clauses", generic_to_json (gimple_omp_for_clauses (gs)));
   json_obj.set("body", gimple_sequence_to_json (gimple_omp_body (gs))); // TODO : this is statement_omp class
-  json_obj.set()
+  for (i = 0; i < gimple_omp_for_collapse (gs); i++)
+    {
+      auto json_gomp_for_iter = new json::object ();
+      json_gomp_for_iter.set("index", gimple_omp_for_index (gs, i));
+      json_gomp_for_iter.set("init", gimple_omp_for_initial (gs, i));
+      json_gomp_for_iter.set("final", gimple_omp_for_final (gs, i));
+      json_gomp_for_iter.set("cond", get_tree_code_name (gimple_omp_for_cond (gs, i)));
+      json_gomp_for_iter.set("incr", gimple_omp_for_incr (gs, i));
+      json_iter->append(json_gomp_for_iter);
+    }
+    json_obj.set("iter", json_iter);
+  json_obj.set("pre_body", gimple_sequence_to_json (gimple_omp_for_pre_body (gs)));
 }
 
 void
@@ -488,7 +518,9 @@ gimple_to_json (gimple * gs, dump_flags_t flags)
   auto json_obj = new json::object ();
   code = gimple_code_name[gimple_code (gs)];
   address = sprintf(address, HOST_PTR_PRINTF, (void *) gs);
-  json_obj->set_string("gimple_code", code);
   json_obj->set_string("address", address);
+  json_obj->set_string("gimple_code", code);
+  // TODO: hit things that are in all base classes
+  json_obj->set_integer("no_warning", gs->no_warning);
 }
 
