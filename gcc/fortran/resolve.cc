@@ -18,7 +18,6 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
-#define INCLUDE_MEMORY
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -3228,6 +3227,24 @@ pure_stmt_function (gfc_expr *e, gfc_symbol *sym)
 static bool check_pure_function (gfc_expr *e)
 {
   const char *name = NULL;
+  code_stack *stack;
+  bool saw_block = false;
+  
+  /* A BLOCK construct within a DO CONCURRENT construct leads to 
+     gfc_do_concurrent_flag = 0 when the check for an impure function
+     occurs.  Check the stack to see if the source code has a nested
+     BLOCK construct.  */
+  for (stack = cs_base; stack; stack = stack->prev)
+    {
+      if (stack->current->op == EXEC_BLOCK) saw_block = true;
+      if (saw_block && stack->current->op == EXEC_DO_CONCURRENT)
+	{
+	  gfc_error ("Reference to impure function at %L inside a "
+		     "DO CONCURRENT", &e->where);
+	  return false;
+	}
+    }
+
   if (!gfc_pure_function (e, &name) && name)
     {
       if (forall_flag)
@@ -16288,6 +16305,10 @@ resolve_fl_derived (gfc_symbol *sym)
       && sym->ns->proc_name
       && sym->ns->proc_name->attr.flavor == FL_MODULE
       && sym->attr.access != ACCESS_PRIVATE
+      && !(sym->attr.extension
+	   && sym->attr.zero_comp
+	   && !sym->f2k_derived->tb_sym_root
+	   && !sym->f2k_derived->tb_uop_root)
       && !(sym->attr.vtype || sym->attr.pdt_template))
     {
       gfc_symbol *vtab = gfc_find_derived_vtab (sym);

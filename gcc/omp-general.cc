@@ -19,7 +19,6 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
-#define INCLUDE_MEMORY
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -3501,7 +3500,7 @@ static const char* omp_interop_fr_str[] = {"cuda", "cuda_driver", "opencl",
 
 /* Returns the foreign-runtime ID if found or 0 otherwise.  */
 
-int
+char
 omp_get_fr_id_from_name (const char *str)
 {
   static_assert (GOMP_INTEROP_IFR_LAST == ARRAY_SIZE (omp_interop_fr_str), "");
@@ -3509,7 +3508,7 @@ omp_get_fr_id_from_name (const char *str)
   for (unsigned i = 0; i < ARRAY_SIZE (omp_interop_fr_str); ++i)
     if (!strcmp (str, omp_interop_fr_str[i]))
       return i + 1;
-  return 0;
+  return GOMP_INTEROP_IFR_UNKNOWN;
 }
 
 /* Returns the string value to a foreign-runtime integer value or NULL if value
@@ -3519,7 +3518,7 @@ const char *
 omp_get_name_from_fr_id (int fr_id)
 {
   if (fr_id < 1 || fr_id > (int) ARRAY_SIZE (omp_interop_fr_str))
-    return NULL;
+    return "<unknown>";
   return omp_interop_fr_str[fr_id-1];
 }
 

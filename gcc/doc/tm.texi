@@ -7355,6 +7355,14 @@ the @code{POLY_VALUE_MIN}, @code{POLY_VALUE_MAX} and
 implementation returns the lowest possible value of @var{val}.
 @end deftypefn
 
+@deftypefn {Target Hook} bool TARGET_AVOID_STORE_FORWARDING_P (vec<store_fwd_info>, @var{rtx}, @var{int}, @var{bool})
+Given a list of stores and a load instruction that reads from the location
+of the stores, this hook decides if it's profitable to emit additional code
+to avoid a potential store forwarding stall.  The additional instructions
+needed, the sequence cost and additional relevant information is given in
+the arguments so that the target can make an informed decision.
+@end deftypefn
+
 @node Scheduling
 @section Adjusting the Instruction Scheduler
 
@@ -12611,7 +12619,11 @@ is zero, which disables this optimization.
 Return the offset bitwise ored into shifted address to get corresponding
 Address Sanitizer shadow memory address.  NULL if Address Sanitizer is not
 supported by the target.  May return 0 if Address Sanitizer is not supported
-by a subtarget.
+or using dynamic shadow offset by a subtarget.
+@end deftypefn
+
+@deftypefn {Target Hook} bool TARGET_ASAN_DYNAMIC_SHADOW_OFFSET_P (void)
+Return true if asan should use dynamic shadow offset.
 @end deftypefn
 
 @deftypefn {Target Hook} {unsigned HOST_WIDE_INT} TARGET_MEMMODEL_CHECK (unsigned HOST_WIDE_INT @var{val})

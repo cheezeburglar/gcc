@@ -27,7 +27,6 @@ along with GCC; see the file COPYING3.  If not see
    It is intended to be language-independent but can occasionally
    calls language-dependent routines.  */
 
-#define INCLUDE_MEMORY
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -271,6 +270,10 @@ unsigned const char omp_clause_num_ops[] =
   1, /* OMP_CLAUSE_HAS_DEVICE_ADDR  */
   1, /* OMP_CLAUSE_DOACROSS  */
   2, /* OMP_CLAUSE__CACHE_  */
+  1, /* OMP_CLAUSE_DESTROY  */
+  2, /* OMP_CLAUSE_INIT  */
+  1, /* OMP_CLAUSE_USE  */
+  1, /* OMP_CLAUSE_INTEROP  */
   2, /* OMP_CLAUSE_GANG  */
   1, /* OMP_CLAUSE_ASYNC  */
   1, /* OMP_CLAUSE_WAIT  */
@@ -369,6 +372,10 @@ const char * const omp_clause_code_name[] =
   "has_device_addr",
   "doacross",
   "_cache_",
+  "destroy",
+  "init",
+  "use",
+  "interop",
   "gang",
   "async",
   "wait",

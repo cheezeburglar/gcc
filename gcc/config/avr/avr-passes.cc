@@ -43,6 +43,7 @@
 #include "context.h"
 #include "tree-pass.h"
 #include "insn-attr.h"
+#include "tm-constrs.h"
 
 
 #define CONST_INT_OR_FIXED_P(X) (CONST_INT_P (X) || CONST_FIXED_P (X))
@@ -1227,7 +1228,7 @@ public:
 
   unsigned int execute (function *func) final override
   {
-    if (optimize > 0 && avr_fuse_move > 0)
+    if (optimize > 0 && avropt_fuse_move > 0)
       {
 	df_note_add_problem ();
 	df_analyze ();
@@ -2412,6 +2413,7 @@ bbinfo_t::find_plies (int len, const insninfo_t &ii, const memento_t &memo0)
 
       bool profitable = (cost < SCALE * fpd->max_ply_cost
 			 || (bbinfo_t::try_split_any_p
+			     && fpd->solution.n_plies == 0
 			     && cost / SCALE <= fpd->max_ply_cost
 			     && cost / SCALE == fpd->movmode_cost));
       if (! profitable)
@@ -3181,13 +3183,13 @@ bbinfo_t::optimize_one_function (function *func)
   // use arith                                     1 1 1 1  1 1 1 1      3
 
   // Which optimization(s) to perform.
-  bbinfo_t::try_fuse_p = avr_fuse_move & 0x1;      // Digit 0 in [0, 1].
-  bbinfo_t::try_bin_arg1_p = avr_fuse_move & 0x2;  // Digit 1 in [0, 1].
-  bbinfo_t::try_split_any_p = avr_fuse_move & 0x4; // Digit 2 in [0, 1].
-  bbinfo_t::try_split_ldi_p = avr_fuse_move >> 3;       // Digit 3 in [0, 2].
-  bbinfo_t::use_arith_p = (avr_fuse_move >> 3) >= 2;    // Digit 3 in [0, 2].
+  bbinfo_t::try_fuse_p = avropt_fuse_move & 0x1;      // Digit 0 in [0, 1].
+  bbinfo_t::try_bin_arg1_p = avropt_fuse_move & 0x2;  // Digit 1 in [0, 1].
+  bbinfo_t::try_split_any_p = avropt_fuse_move & 0x4; // Digit 2 in [0, 1].
+  bbinfo_t::try_split_ldi_p = avropt_fuse_move >> 3;    // Digit 3 in [0, 2].
+  bbinfo_t::use_arith_p = (avropt_fuse_move >> 3) >= 2; // Digit 3 in [0, 2].
   bbinfo_t::use_set_some_p = bbinfo_t::try_split_ldi_p; // Digit 3 in [0, 2].
-  bbinfo_t::try_simplify_p = avr_fuse_move != 0;
+  bbinfo_t::try_simplify_p = avropt_fuse_move != 0;
 
   // Topologically sort BBs from last to first.
 
@@ -4221,7 +4223,7 @@ public:
     func->machine->n_avr_fuse_add_executed += 1;
     n_avr_fuse_add_executed = func->machine->n_avr_fuse_add_executed;
 
-    if (optimize && avr_fuse_add > 0)
+    if (optimize && avropt_fuse_add > 0)
       return execute1 (func);
     return 0;
   }
@@ -4349,7 +4351,7 @@ avr_maybe_adjust_cfa (rtx_insn *insn, rtx reg, int addend)
   if (addend
       && frame_pointer_needed
       && REGNO (reg) == FRAME_POINTER_REGNUM
-      && avr_fuse_add == 3)
+      && avropt_fuse_add == 3)
     {
       rtx plus = plus_constant (Pmode, reg, addend);
       RTX_FRAME_RELATED_P (insn) = 1;
@@ -4443,7 +4445,7 @@ avr_pass_fuse_add::avr_pass_fuse_add::Mem_Insn::Mem_Insn (rtx_insn *insn)
 
   addr_regno = REGNO (addr_reg);
 
-  if (avr_fuse_add == 2
+  if (avropt_fuse_add == 2
       && frame_pointer_needed
       && addr_regno == FRAME_POINTER_REGNUM)
     MEM_VOLATILE_P (mem) = 0;
@@ -4829,7 +4831,7 @@ avr_shift_is_3op ()
   // For OPTIMIZE_SIZE_BALANCED (-Os), we still split because
   // the size overhead (if exists at all) is marginal.
 
-  return (avr_split_bit_shift
+  return (avropt_split_bit_shift
 	  && optimize > 0
 	  && avr_optimize_size_level () < OPTIMIZE_SIZE_MAX);
 }
@@ -4840,37 +4842,54 @@ avr_shift_is_3op ()
    LSHIFTRT, ASHIFT } into a byte shift and a residual bit shift.  */
 
 bool
-avr_split_shift_p (int n_bytes, int offset, rtx_code)
+avr_split_shift_p (int n_bytes, int offset, rtx_code code)
 {
   gcc_assert (n_bytes == 4);
 
-  return (avr_shift_is_3op ()
-	  && offset % 8 != 0 && IN_RANGE (offset, 17, 30));
+  if (avr_shift_is_3op ()
+      && offset % 8 != 0)
+    return select<bool>()
+      : code == ASHIFT ? IN_RANGE (offset, 17, 30)
+      : code == ASHIFTRT ? IN_RANGE (offset, 9, 29)
+      : code == LSHIFTRT ? IN_RANGE (offset, 9, 30) && offset != 15
+      : bad_case<bool> ();
+
+  return false;
 }
 
+
+/* Emit a DEST = SRC <code> OFF shift of QImode, HImode or PSImode.
+   SCRATCH is a QImode d-register, scratch:QI, or NULL_RTX.  */
 
 static void
 avr_emit_shift (rtx_code code, rtx dest, rtx src, int off, rtx scratch)
 {
-  machine_mode mode = GET_MODE (dest);
+  const machine_mode mode = GET_MODE (dest);
+  rtx xoff = GEN_INT (off);
+  bool is_3op = (off % 8 == 0
+		 || off == GET_MODE_BITSIZE (mode) - 1
+		 || (code == ASHIFTRT && off == GET_MODE_BITSIZE (mode) - 2)
+		 || (mode == HImode
+		     && (code == ASHIFT || code == LSHIFTRT)
+		     && satisfies_constraint_C7c (xoff) /* 7...12 */));
   rtx shift;
 
-  if (off == GET_MODE_BITSIZE (mode) - 1)
+  if (is_3op)
     {
-      shift = gen_rtx_fmt_ee (code, mode, src, GEN_INT (off));
+      shift = gen_rtx_fmt_ee (code, mode, src, xoff);
     }
   else
     {
       if (REGNO (dest) != REGNO (src))
 	emit_valid_move_clobbercc (dest, src);
-      shift = gen_rtx_fmt_ee (code, mode, dest, GEN_INT (off));
+      shift = gen_rtx_fmt_ee (code, mode, dest, xoff);
     }
 
   emit_valid_move_clobbercc (dest, shift, scratch);
 }
 
 
-/* Worker for define_split that run when -msplit-bit-shift is on.
+/* Worker for define_split that runs when -msplit-bit-shift is on.
    Split a shift of code CODE into a 3op byte shift and a residual bit shift.
    Return 'true' when a split has been performed and insns have been emitted.
    Otherwise, return 'false'.  */
@@ -4887,25 +4906,73 @@ avr_split_shift (rtx xop[], rtx scratch, rtx_code code)
 
   if (code == ASHIFT)
     {
-      if (ioff >= 25)
+      if (IN_RANGE (ioff, 25, 30))
 	{
 	  rtx dst8 = avr_byte (dest, 3);
 	  rtx src8 = avr_byte (src, 0);
-	  avr_emit_shift (code, dst8, src8, ioff % 8, NULL_RTX);
+	  avr_emit_shift (code, dst8, src8, ioff - 24, NULL_RTX);
 	  emit_valid_move_clobbercc (avr_byte (dest, 2), const0_rtx);
 	  emit_valid_move_clobbercc (avr_word (dest, 0), const0_rtx);
 	  return true;
 	}
-      else if (ioff >= 17)
+      else if (IN_RANGE (ioff, 17, 23))
 	{
 	  rtx dst16 = avr_word (dest, 2);
 	  rtx src16 = avr_word (src, 0);
-	  avr_emit_shift (code, dst16, src16, ioff % 16, scratch);
+	  avr_emit_shift (code, dst16, src16, ioff - 16, scratch);
 	  emit_valid_move_clobbercc (avr_word (dest, 0), const0_rtx);
 	  return true;
 	}
-      else
-	gcc_unreachable ();
+    }
+  else if (code == ASHIFTRT
+	   || code == LSHIFTRT)
+    {
+      if (IN_RANGE (ioff, 25, 30))
+	{
+	  rtx dst8 = avr_byte (dest, 0);
+	  rtx src8 = avr_byte (src, 3);
+	  avr_emit_shift (code, dst8, src8, ioff - 24, NULL_RTX);
+	  if (code == ASHIFTRT)
+	    {
+	      rtx signs = avr_byte (dest, 1);
+	      avr_emit_shift (code, signs, src8, 7, NULL_RTX);
+	      emit_valid_move_clobbercc (avr_byte (dest, 2), signs);
+	      emit_valid_move_clobbercc (avr_byte (dest, 3), signs);
+	    }
+	  else
+	    {
+	      emit_valid_move_clobbercc (avr_byte (dest, 1), const0_rtx);
+	      emit_valid_move_clobbercc (avr_word (dest, 2), const0_rtx);
+	    }
+	  return true;
+	}
+      else if (IN_RANGE (ioff, 17, 23))
+	{
+	  rtx dst16 = avr_word (dest, 0);
+	  rtx src16 = avr_word (src, 2);
+	  avr_emit_shift (code, dst16, src16, ioff - 16, scratch);
+	  if (code == ASHIFTRT)
+	    {
+	      rtx msb = avr_byte (src, 3);
+	      rtx signs = avr_byte (dest, 2);
+	      avr_emit_shift (code, signs, msb, 7, NULL_RTX);
+	      emit_valid_move_clobbercc (avr_byte (dest, 3), signs);
+	    }
+	  else
+	    emit_valid_move_clobbercc (avr_word (dest, 2), const0_rtx);
+
+	  return true;
+	}
+      else if (IN_RANGE (ioff, 9, 15))
+	{
+	  avr_emit_shift (code, dest, src, 8, NULL_RTX);
+	  rtx dst24 = avr_chunk (PSImode, dest, 0);
+	  rtx src24 = avr_chunk (PSImode, dest, 0);
+	  if (! scratch)
+	    scratch = gen_rtx_SCRATCH (QImode);
+	  avr_emit_shift (code, dst24, src24, ioff - 8, scratch);
+	  return true;
+	}
     }
   else
     gcc_unreachable ();
@@ -4947,7 +5014,7 @@ public:
 
   unsigned int execute (function *fun) final override
   {
-    if (avr_gasisr_prologues
+    if (avropt_gasisr_prologues
 	// Whether this function is an ISR worth scanning at all.
 	&& !fun->machine->is_no_gccisr
 	&& (fun->machine->is_interrupt
@@ -5100,15 +5167,15 @@ avr_split_fake_addressing_move (rtx_insn * /*insn*/, rtx *xop)
   if (frame_pointer_needed
       && REGNO (base) == FRAME_POINTER_REGNUM)
     {
-      if (avr_fuse_add < 2
+      if (avropt_fuse_add < 2
 	  // Be a projection (we always split PLUS).
-	  || (avr_fuse_add == 2 && volatile_p && addr_code != PLUS))
+	  || (avropt_fuse_add == 2 && volatile_p && addr_code != PLUS))
 	return false;
 
       // Changing the frame pointer locally may confuse later passes
       // like .dse2 which don't track changes of FP, not even when
       // respective CFA notes are present.  An example is pr22141-1.c.
-      if (avr_fuse_add == 2)
+      if (avropt_fuse_add == 2)
 	mem_volatile_p = true;
     }
 

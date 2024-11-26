@@ -19,7 +19,6 @@ along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
 #include "config.h"
-#define INCLUDE_MEMORY
 #define INCLUDE_VECTOR
 #include "system.h"
 #include "coretypes.h"
@@ -188,8 +187,8 @@ checker_event::dump (pretty_printer *pp) const
       if (m_effective_fndecl != m_original_fndecl)
 	pp_printf (pp, " corrected from %qE", m_original_fndecl);
     }
-  pp_printf (pp, ", m_loc=%x)",
-	     get_location ());
+  pp_printf (pp, ", m_loc=%llx)",
+	     (unsigned long long) get_location ());
 }
 
 /* Dump this event to stderr (for debugging/logging purposes).  */

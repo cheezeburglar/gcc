@@ -827,7 +827,6 @@ proc check_profiling_available { test_what } {
 	     || [istarget moxie-*-elf*]
 	     || [istarget msp430-*-*]
 	     || [istarget nds32*-*-elf]
-	     || [istarget nios2-*-elf]
 	     || [istarget nvptx-*-*]
 	     || [istarget powerpc-*-eabi*]
 	     || [istarget powerpc-*-elf]
@@ -2201,10 +2200,13 @@ proc check_effective_target_riscv_v_misalign_ok { } {
     return 0
 }
 
+# Deduce the string for the RISC-V architecture targeted by the compiler
+# under test.  Also take into account the global compiler flags passed
+# by testsuite.
 proc riscv_get_arch { } {
     set gcc_march ""
     # ??? do we neeed to add more extensions to the list below?
-    foreach ext { i m a f d q c b v zicsr zifencei zfh zba zbb zbc zbs zvbb zvfh ztso zaamo zalrsc zabha zacas } {
+    foreach ext { i e m a f d q c b v zicsr zifencei zfh zba zbb zbc zbs zvbb zvfh ztso zaamo zalrsc zabha zacas } {
 	if { [check_no_compiler_messages  riscv_ext_$ext assembly [string map [list DEF __riscv_$ext] {
 		#ifndef DEF
 		#error "Not DEF"
@@ -3982,7 +3984,7 @@ proc add_options_for_float16 { flags } {
 	return "$flags -mfp16-format=ieee"
     }
     if { [istarget i?86-*-*] || [istarget x86_64-*-*] } {
-	return "$flags -msse2"
+	return "$flags -msse2 -mfpmath=sse"
     }
     return "$flags"
 }
@@ -10805,7 +10807,7 @@ proc check_effective_target_avx10_2 { } {
 	  __asm__ volatile ("vcvtph2ibs\t%ymm5, %ymm6");
 	  __asm__ volatile ("vminmaxpd\t$123, %ymm4, %ymm5, %ymm6");
 	}
-    } "-mavx10.2" ]
+    } "" ]
 }
 
 # Return 1 if avx10.2-512 instructions can be compiled.
@@ -10820,7 +10822,7 @@ proc check_effective_target_avx10_2_512 { } {
 	  __asm__ volatile ("vcvtph2ibs\t%zmm5, %zmm6");
 	  __asm__ volatile ("vminmaxpd\t$123, %zmm4, %zmm5, %zmm6");
 	}
-    } "-mavx10.2-512" ]
+    } "" ]
 }
 
 # Return 1 if amx-avx512 instructions can be compiled.
@@ -12056,12 +12058,16 @@ proc check_vect_support_and_set_flags { } {
 	    if [check_effective_target_riscv_v_misalign_ok] {
 		lappend DEFAULT_VECTCFLAGS "-mno-vector-strict-align"
 	    }
-	} else {
+	} elseif [check_effective_target_riscv_v_ok] {
 	    foreach item [add_options_for_riscv_v ""] {
 		lappend DEFAULT_VECTCFLAGS $item
 	    }
 	    set dg-do-what-default compile
-	}
+	} else {
+	    # Current architecture cannot support vectors (e.g. the
+	    # dependent D extension is missing).
+	    return 0
+        }
     } elseif [istarget loongarch*-*-*] {
       # Set the default vectorization option to "-mlsx" due to the problem
       # of non-aligned memory access when using 256-bit vectorization.

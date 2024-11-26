@@ -17,7 +17,6 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
-#define INCLUDE_MEMORY
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -664,6 +663,16 @@ c_parser_gimple_compound_statement (gimple_parser &parser, gimple_seq *seq)
 	    gimple_seq_add_stmt_without_update (seq, nop);
 	    break;
 	  }
+
+	case CPP_CLOSE_PAREN:
+	case CPP_CLOSE_SQUARE:
+	  /* Avoid infinite loop in error recovery:
+	     c_parser_skip_until_found stops at a closing nesting
+	     delimiter without consuming it, but here we need to consume
+	     it to proceed further.  */
+	  c_parser_error (parser, "expected statement");
+	  c_parser_consume_token (parser);
+	break;
 
 	default:
 expr_stmt:

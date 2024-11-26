@@ -23,7 +23,6 @@ along with GCC; see the file COPYING3.  If not see
    including computing the types of the result, C-specific error checks,
    and some optimization.  */
 
-#define INCLUDE_MEMORY
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
@@ -568,8 +567,8 @@ c_build_functype_attribute_variant (tree ntype, tree otype, tree attrs)
       && lookup_attribute ("format", attrs))
     {
       warning_at (input_location, OPT_Wattributes,
-		  "%qs attribute cannot be applied to a function that "
-		  "does not take variable arguments", "format");
+		  "%qs attribute can only be applied to variadic functions",
+		  "format");
       attrs = remove_attribute ("format", attrs);
     }
   return c_build_type_attribute_variant (ntype, attrs);
@@ -5071,13 +5070,16 @@ cas_loop:
   rhs = convert_for_assignment (loc, UNKNOWN_LOCATION, nonatomic_lhs_type,
 				rhs, NULL_TREE, ic_assign, false, NULL_TREE,
 				NULL_TREE, 0);
-  if (rhs != error_mark_node)
-    {
-      rhs = build4 (TARGET_EXPR, nonatomic_lhs_type, newval, rhs, NULL_TREE,
-		    NULL_TREE);
-      SET_EXPR_LOCATION (rhs, loc);
-      add_stmt (rhs);
-    }
+  /* The temporary variable for NEWVAL is only gimplified correctly (in
+     particular, given a DECL_CONTEXT) if used in a TARGET_EXPR.  To avoid
+     subsequent ICEs in nested function processing after an error, ensure such
+     a TARGET_EXPR is built even after an error.  */
+  if (rhs == error_mark_node)
+    rhs = old;
+  rhs = build4 (TARGET_EXPR, nonatomic_lhs_type, newval, rhs, NULL_TREE,
+		NULL_TREE);
+  SET_EXPR_LOCATION (rhs, loc);
+  add_stmt (rhs);
 
   /* if (__atomic_compare_exchange (addr, &old, &new, false, SEQ_CST, SEQ_CST))
        goto done;  */
@@ -7049,6 +7051,7 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
 
   /* Types that aren't fully specified cannot be used in assignments.  */
   lhs = require_complete_type (location, lhs);
+  rhs = require_complete_type (location, rhs);
 
   /* Avoid duplicate error messages from operands that had errors.  */
   if (TREE_CODE (lhs) == ERROR_MARK || TREE_CODE (rhs) == ERROR_MARK)
@@ -15670,6 +15673,10 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
   tree *full_seen = NULL;
   bool partial_seen = false;
   bool openacc = (ort & C_ORT_ACC) != 0;
+  bool init_seen = false;
+  bool init_use_destroy_seen = false;
+  tree init_no_targetsync_clause = NULL_TREE;
+  tree depend_clause = NULL_TREE;
 
   bitmap_obstack_initialize (NULL);
   bitmap_initialize (&generic_head, &bitmap_default_obstack);
@@ -16292,7 +16299,7 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 	    }
 	  else if (bitmap_bit_p (&aligned_head, DECL_UID (t)))
 	    {
-	      warning_at (OMP_CLAUSE_LOCATION (c), 0,
+	      warning_at (OMP_CLAUSE_LOCATION (c), OPT_Wopenmp,
 			  "%qE appears more than once in %<allocate%> clauses",
 			  t);
 	      remove = true;
@@ -16339,6 +16346,8 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 	    }
 	  gcc_unreachable ();
 	case OMP_CLAUSE_DEPEND:
+	  depend_clause = c;
+	  /* FALLTHRU */
 	case OMP_CLAUSE_AFFINITY:
 	  t = OMP_CLAUSE_DECL (c);
 	  if (TREE_CODE (t) == TREE_LIST
@@ -17071,6 +17080,43 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 	    }
 	  break;
 
+	case OMP_CLAUSE_INIT:
+	  init_seen = true;
+	  if (!OMP_CLAUSE_INIT_TARGETSYNC (c))
+	    init_no_targetsync_clause = c;
+	  /* FALLTHRU */
+	case OMP_CLAUSE_DESTROY:
+	case OMP_CLAUSE_USE:
+	  init_use_destroy_seen = true;
+	  t = OMP_CLAUSE_DECL (c);
+	  if (bitmap_bit_p (&generic_head, DECL_UID (t)))
+	    {
+	      error_at (OMP_CLAUSE_LOCATION (c),
+			"%qD appears more than once in action clauses", t);
+	      remove = true;
+	      break;
+	    }
+	  bitmap_set_bit (&generic_head, DECL_UID (t));
+	  /* FALLTHRU */
+	case OMP_CLAUSE_INTEROP:
+	  if (/* ort == C_ORT_OMP_INTEROP [uncomment for depobj init]  */
+		   !c_omp_interop_t_p (TREE_TYPE (OMP_CLAUSE_DECL (c))))
+	    {
+	      error_at (OMP_CLAUSE_LOCATION (c),
+			"%qD must be of %<omp_interop_t%>",
+			OMP_CLAUSE_DECL (c));
+	      remove = true;
+	    }
+	  else if ((OMP_CLAUSE_CODE (c) == OMP_CLAUSE_INIT
+		    || OMP_CLAUSE_CODE (c) == OMP_CLAUSE_DESTROY)
+		   && TREE_READONLY (OMP_CLAUSE_DECL (c)))
+	    {
+	      error_at (OMP_CLAUSE_LOCATION (c),
+		      "%qD shall not be const", OMP_CLAUSE_DECL (c));
+	      remove = true;
+	    }
+	  pc = &OMP_CLAUSE_CHAIN (c);
+	  break;
 	default:
 	  gcc_unreachable ();
 	}
@@ -17340,6 +17386,19 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 		pc = &OMP_CLAUSE_CHAIN (c);
 	    }
 	}
+    }
+
+  if (ort == C_ORT_OMP_INTEROP
+      && depend_clause
+      && (!init_use_destroy_seen
+	  || (init_seen && init_no_targetsync_clause)))
+    {
+      error_at (OMP_CLAUSE_LOCATION (depend_clause),
+		"%<depend%> clause requires action clauses with "
+		"%<targetsync%> interop-type");
+      if (init_no_targetsync_clause)
+	inform (OMP_CLAUSE_LOCATION (init_no_targetsync_clause),
+		"%<init%> clause lacks the %<targetsync%> modifier");
     }
 
   bitmap_obstack_release (NULL);

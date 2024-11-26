@@ -407,13 +407,14 @@ case "${ENABLE_LD}" in
 esac
 
 AC_ARG_ENABLE(gprofng,
-[AS_HELP_STRING([[--enable-gprofng[=ARG]]],
-		[build gprofng @<:@ARG={yes,no}@:>@])],
+[AS_HELP_STRING([[--disable-gprofng]], [do not build gprofng])],
 enable_gprofng=$enableval,
 enable_gprofng=yes)
 if test "$enable_gprofng" = "yes"; then
   case "${target}" in
-    x86_64-*-linux* | i?86-*-linux* | aarch64-*-linux*)
+    *-musl*)
+      ;;
+    x86_64-*-linux* | i?86-*-linux* | aarch64-*-linux* | riscv64-*-linux*)
     configdirs="$configdirs gprofng"
     ;;
   esac
@@ -892,6 +893,15 @@ case "${target}" in
   cris-*-* | crisv32-*-*)
     libgloss_dir=cris
     ;;
+  kvx-*-elf)
+    libgloss_dir=kvx-elf
+    ;;
+  kvx-*-mbr)
+    libgloss_dir=kvx-mbr
+    ;;
+  kvx-*-cos)
+    libgloss_dir=kvx-cos
+    ;;
   hppa*-*-*)
     libgloss_dir=pa
     ;;
@@ -1192,6 +1202,9 @@ case "${target}" in
     ;;
   i[[3456789]]86-*-rdos*)
     noconfigdirs="$noconfigdirs gdb"
+    ;;
+  kvx-*-*)
+    noconfigdirs="$noconfigdirs gdb gdbserver sim"
     ;;
   mmix-*-*)
     noconfigdirs="$noconfigdirs gdb"
@@ -2965,9 +2978,6 @@ case "${target}" in
   mips*-*-*linux* | mips*-*-gnu*)
     target_makefile_frag="config/mt-mips-gnu"
     ;;
-  nios2-*-elf*)
-    target_makefile_frag="config/mt-nios2-elf"
-    ;;
   *-*-linux-android*)
     target_makefile_frag="config/mt-android"
     ;;
@@ -3543,7 +3553,8 @@ hbaseargs="$hbaseargs --disable-option-checking"
 tbaseargs="$tbaseargs --disable-option-checking"
 
 if test "$enable_year2038" = no; then
-  baseargs="$baseargs --disable-year2038"
+  bbaseargs="$bbaseargs --disable-year2038"
+  hbaseargs="$hbaseargs --disable-year2038"
   tbaseargs="$tbaseargs --disable-year2038"
 fi
 

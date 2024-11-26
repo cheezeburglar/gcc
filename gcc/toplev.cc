@@ -23,7 +23,6 @@ along with GCC; see the file COPYING3.  If not see
    Error messages and low-level interface to malloc also handled here.  */
 
 #include "config.h"
-#define INCLUDE_MEMORY
 #include "system.h"
 #include "coretypes.h"
 #include "backend.h"
@@ -1695,7 +1694,8 @@ process_options ()
 
   if ((flag_sanitize & SANITIZE_USER_ADDRESS)
       && ((targetm.asan_shadow_offset == NULL)
-	  || (targetm.asan_shadow_offset () == 0)))
+	  || ((targetm.asan_shadow_offset () == 0)
+	      && !targetm.asan_dynamic_shadow_offset_p ())))
     {
       warning_at (UNKNOWN_LOCATION, 0,
 		  "%<-fsanitize=address%> not supported for this target");

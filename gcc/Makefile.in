@@ -1694,6 +1694,7 @@ OBJS = \
 	statistics.o \
 	stmt.o \
 	stor-layout.o \
+	avoid-store-forwarding.o \
 	store-motion.o \
 	streamer-hooks.o \
 	stringpool.o \

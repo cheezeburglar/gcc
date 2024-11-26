@@ -17,7 +17,6 @@ You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
-#define INCLUDE_MEMORY
 #define INCLUDE_STRING
 #define IN_TARGET_CODE 1
 
@@ -25341,9 +25340,11 @@ ix86_vector_costs::add_stmt_cost (int count, vect_cost_for_stmt kind,
 	       || (STMT_VINFO_MEMORY_ACCESS_TYPE (stmt_info)
 		   == VMAT_GATHER_SCATTER)))
 	  || (node
-	      && ((SLP_TREE_MEMORY_ACCESS_TYPE (node) == VMAT_ELEMENTWISE
-		  && (TREE_CODE (DR_STEP (STMT_VINFO_DATA_REF
-					    (SLP_TREE_REPRESENTATIVE (node))))
+	      && (((SLP_TREE_MEMORY_ACCESS_TYPE (node) == VMAT_ELEMENTWISE
+		    || (SLP_TREE_MEMORY_ACCESS_TYPE (node) == VMAT_STRIDED_SLP
+			&& SLP_TREE_LANES (node) == 1))
+		   && (TREE_CODE (DR_STEP (STMT_VINFO_DATA_REF
+					     (SLP_TREE_REPRESENTATIVE (node))))
 		      != INTEGER_CST))
 		  || (SLP_TREE_MEMORY_ACCESS_TYPE (node)
 		      == VMAT_GATHER_SCATTER)))))
@@ -25495,6 +25496,13 @@ ix86_vector_costs::finish_cost (const vector_costs *scalar_costs)
 	       && GET_MODE_SIZE (loop_vinfo->vector_mode) == 32)
 	m_suggested_epilogue_mode = V16QImode;
     }
+  /* When a 128bit SSE vectorized epilogue still has a VF of 16 or larger
+     enable a 64bit SSE epilogue.  */
+  if (loop_vinfo
+      && LOOP_VINFO_EPILOGUE_P (loop_vinfo)
+      && GET_MODE_SIZE (loop_vinfo->vector_mode) == 16
+      && LOOP_VINFO_VECT_FACTOR (loop_vinfo).to_constant () >= 16)
+    m_suggested_epilogue_mode = V8QImode;
 
   vector_costs::finish_cost (scalar_costs);
 }

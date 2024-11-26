@@ -1,3 +1,1130 @@
+2024-11-25  Gaius Mulley  <gaiusmod2@gmail.com>
+
+	PR modula2/117777
+	* gm2/extensions/asm/pass/conststr.mod: New test.
+
+2024-11-25  H.J. Lu  <hjl.tools@gmail.com>
+
+	PR middle-end/117098
+	* gcc.dg/sibcall-12.c: New test.
+
+2024-11-25  Vladimir N. Makarov  <vmakarov@redhat.com>
+
+	PR target/117105
+	* gcc.target/i386/pr117105.c: New test.
+
+2024-11-25  Sandra Loosemore  <sloosemore@baylibre.com>
+
+	* g++.target/nios2/*: Delete entire directory.
+	* gcc.target/nios2/*: Delete entire directory.
+	* g++.dg/cpp0x/constexpr-rom.C: Remove refences to nios2.
+	* g++.old-deja/g++.jason/thunk3.C: Likewise.
+	* gcc.c-torture/execute/20101011-1.c: Likewise.
+	* gcc.c-torture/execute/pr47237.c: Likewise.
+	* gcc.dg/20020312-2.c: Likewise.
+	* gcc.dg/20021029-1.c: Likewise.
+	* gcc.dg/debug/btf/btf-datasec-1.c: Likewise.
+	* gcc.dg/ifcvt-4.c: Likewise.
+	* gcc.dg/stack-usage-1.c: Likewise.
+	* gcc.dg/struct-by-value-1.c: Likewise.
+	* gcc.dg/tree-ssa/reassoc-33.c: Likewise.
+	* gcc.dg/tree-ssa/reassoc-34.c: Likewise.
+	* gcc.dg/tree-ssa/reassoc-35.c: Likewise.
+	* gcc.dg/tree-ssa/reassoc-36.c: Likewise.
+	* lib/target-supports.exp: Likewise.
+
+2024-11-25  Steve Kargl  <kargls@comcast.net>
+
+	PR fortran/117765
+	* gfortran.dg/impure_fcn_do_concurrent.f90: New test.
+
+2024-11-25  Robin Dapp  <rdapp@ventanamicro.com>
+
+	PR target/117544
+	* gcc.target/riscv/rvv/base/abi-call-args-4.c: Expect vsetvl.
+	* gcc.target/riscv/rvv/base/pr117544.c: New test.
+
+2024-11-25  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/117767
+	* gcc.dg/vect/pr117767.c: New testcase.
+
+2024-11-25  Jakub Jelinek  <jakub@redhat.com>
+
+	PR testsuite/117663
+	* gcc.target/powerpc/pr58673-1.c: Add -std=gnu17 to dg-options.
+	* gcc.target/powerpc/pr64505.c: Likewise.
+	* gcc.target/powerpc/pr116170.c: Likewise.
+	* gcc.target/powerpc/pr58673-2.c: Likewise.
+	* gcc.target/powerpc/pr64019.c: Likewise.
+	* gcc.target/powerpc/pr96506-1.c: Likewise.
+	* gcc.target/powerpc/swaps-stack-protector.c: Likewise.
+	* gcc.target/powerpc/pr78543.c: Likewise.
+	* gcc.dg/vect/pr48765.c: Add -std=gnu17 to dg-additional-options.
+
+2024-11-25  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/115825
+	* gcc.dg/tree-ssa/cunroll-17.c: New testcase.
+	* gcc.dg/tree-ssa/cunroll-2.c: Adjust to not expect unrolling.
+	* gcc.dg/pr94600-1.c: Force unrolling.
+	* c-c++-common/ubsan/unreachable-3.c: Likewise.
+	* g++.dg/warn/Warray-bounds-20.C: XFAIL cases we rely on
+	unrolling loops created by new expressions and not inlined
+	CTOR invocations.
+
+2024-11-25  Kito Cheng  <kito.cheng@sifive.com>
+
+	* g++.dg/asan/asan_test.cc: Update the testcase for dynamic
+	offset.
+
+2024-11-25  Dongyan Chen  <chendongyan@isrc.iscas.ac.cn>
+
+	* gcc.target/riscv/arch-44.c: New test.
+
+2024-11-25  Haochen Jiang  <haochen.jiang@intel.com>
+
+	* lib/target-supports.exp (check_effective_target_avx10_2):
+	Remove AVX10.2 option.
+	(check_effective_target_avx10_2_512): Ditto.
+
+2024-11-25  Konstantinos Eleftheriou  <konstantinos.eleftheriou@vrull.eu>
+	    Philipp Tomsich  <philipp.tomsich@vrull.eu>
+
+	* gcc.target/aarch64/avoid-store-forwarding-1.c: New test.
+	* gcc.target/aarch64/avoid-store-forwarding-2.c: New test.
+	* gcc.target/aarch64/avoid-store-forwarding-3.c: New test.
+	* gcc.target/aarch64/avoid-store-forwarding-4.c: New test.
+	* gcc.target/aarch64/avoid-store-forwarding-5.c: New test.
+	* gcc.target/x86_64/abi/callabi/avoid-store-forwarding-1.c: New test.
+	* gcc.target/x86_64/abi/callabi/avoid-store-forwarding-2.c: New test.
+
+2024-11-24  Uros Bizjak  <ubizjak@gmail.com>
+
+	* lib/target-supports.exp (add_options_for_float16): Add -mpfpmath=sse.
+
+2024-11-24  Uros Bizjak  <ubizjak@gmail.com>
+
+	PR target/36503
+	* gcc.target/i386/pr36503-1.c: New test.
+	* gcc.target/i386/pr36503-2.c: New test.
+
+2024-11-24  Andrew Pinski  <quic_apinski@quicinc.com>
+
+	PR c/117741
+	* gcc.dg/gimplefe-54.c: New test.
+
+2024-11-24  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc.target/sparc/20230328-1.c: Adjust to new mnemonics.
+	* gcc.target/sparc/20230328-4.c: Likewise.
+	* gcc.target/sparc/fcmp.c: Likewise.
+	* gcc.target/sparc/fucmp.c: Likewise.
+
+2024-11-24  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gnat.dg/specs/bss1.ads: New test.
+
+2024-11-24  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/84869
+	* gfortran.dg/pr84869.f90: Copy of test below with number
+				   corrected.
+	* gfortran.dg/pr85869.f90: deleted.
+
+2024-11-24  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/85869
+	* gfortran.dg/pr85869.f90: Comment out test of component refs.
+
+2024-11-24  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/117730
+	PR fortran/84674
+	* gfortran.dg/pr117730_a.f90: New test.
+	* gfortran.dg/pr117730_b.f90: New test.
+	* gfortran.dg/pr84674.f90: New test.
+
+2024-11-24  Pan Li  <pan2.li@intel.com>
+
+	* gcc.target/riscv/rvv/autovec/strided/strided_ld_st-1-f16.c: Take
+	the target any-ops instead of xfail.
+	* gcc.target/riscv/rvv/autovec/strided/strided_ld_st-1-f32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/strided/strided_ld_st-1-f64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/strided/strided_ld_st-1-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/strided/strided_ld_st-1-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/strided/strided_ld_st-1-i64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/strided/strided_ld_st-1-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/strided/strided_ld_st-1-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/strided/strided_ld_st-1-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/strided/strided_ld_st-1-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/strided/strided_ld_st-1-u8.c: Ditto.
+
+2024-11-24  Pan Li  <pan2.li@intel.com>
+
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-1-i16.c: Refine
+	the include file, remove unnecessary options and reconcile the
+	dump check based on options.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-1-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-1-i64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-1-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-2-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-2-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-2-i64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-2-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-3-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-3-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-3-i64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-3-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-4-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-4-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-4-i64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-4-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-1-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-1-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-1-i64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-1-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-2-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-2-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-2-i64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-2-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-3-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-3-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-3-i64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-3-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-4-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-4-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-4-i64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-4-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-1-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-1-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-1-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-1-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-1-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-1-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-2-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-2-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-2-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-2-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-2-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-2-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-3-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-3-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-3-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-3-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-3-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-3-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-4-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-4-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-4-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-4-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-4-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-4-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-5-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-5-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-5-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-5-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-5-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-5-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-6-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-6-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-6-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-6-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-6-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-6-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-7-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-7-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-7-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-7-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-7-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-7-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-8-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-8-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-8-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-8-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-8-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-8-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-1-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-1-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-1-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-1-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-1-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-1-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-2-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-2-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-2-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-2-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-2-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-2-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-3-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-3-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-3-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-3-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-3-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-3-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-4-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-4-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-4-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-4-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-4-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-4-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-5-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-5-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-5-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-5-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-5-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-5-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-6-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-6-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-6-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-6-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-6-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-6-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-7-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-7-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-7-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-7-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-7-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-7-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-8-i16-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-8-i32-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-8-i32-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-8-i64-to-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-8-i64-to-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-8-i64-to-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_zip-run.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_zip.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vec_sat_arith.h: Removed.
+
+2024-11-24  Pan Li  <pan2.li@intel.com>
+
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-1-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-1-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-1-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-1-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-1-i64.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-1-i64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-1-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-1-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-2-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-2-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-2-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-2-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-2-i64.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-2-i64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-2-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-2-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-3-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-3-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-3-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-3-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-3-i64.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-3-i64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-3-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-3-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-4-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-4-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-4-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-4-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-4-i64.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-4-i64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-4-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-4-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-1-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-1-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-1-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-1-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-1-i64.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-1-i64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-1-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-1-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-2-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-2-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-2-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-2-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-2-i64.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-2-i64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-2-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-2-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-3-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-3-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-3-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-3-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-3-i64.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-3-i64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-3-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-3-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-4-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-4-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-4-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-4-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-4-i64.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-4-i64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_s_sub-run-4-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_sub-run-4-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-1-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-1-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-1-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-1-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-1-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-1-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-1-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-1-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-1-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-1-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-1-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-1-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-2-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-2-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-2-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-2-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-2-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-2-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-2-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-2-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-2-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-2-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-2-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-2-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-3-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-3-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-3-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-3-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-3-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-3-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-3-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-3-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-3-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-3-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-3-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-3-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-4-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-4-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-4-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-4-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-4-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-4-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-4-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-4-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-4-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-4-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-4-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-4-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-5-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-5-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-5-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-5-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-5-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-5-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-5-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-5-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-5-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-5-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-5-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-5-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-6-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-6-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-6-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-6-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-6-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-6-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-6-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-6-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-6-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-6-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-6-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-6-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-7-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-7-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-7-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-7-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-7-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-7-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-7-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-7-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-7-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-7-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-7-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-7-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-8-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-8-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-8-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-8-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-8-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-8-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-8-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-8-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-8-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-8-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-8-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-8-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-1-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-1-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-1-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-1-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-1-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-1-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-1-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-1-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-1-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-1-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-1-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-1-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-2-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-2-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-2-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-2-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-2-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-2-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-2-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-2-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-2-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-2-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-2-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-2-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-3-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-3-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-3-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-3-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-3-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-3-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-3-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-3-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-3-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-3-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-3-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-3-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-4-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-4-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-4-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-4-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-4-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-4-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-4-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-4-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-4-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-4-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-4-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-4-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-5-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-5-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-5-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-5-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-5-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-5-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-5-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-5-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-5-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-5-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-5-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-5-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-6-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-6-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-6-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-6-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-6-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-6-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-6-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-6-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-6-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-6-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-6-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-6-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-7-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-7-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-7-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-7-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-7-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-7-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-7-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-7-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-7-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-7-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-7-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-7-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-8-i16-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-8-i16-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-8-i32-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-8-i32-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-8-i32-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-8-i32-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-8-i64-to-i16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-8-i64-to-i16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-8-i64-to-i32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-8-i64-to-i32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_s_trunc-run-8-i64-to-i8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_s_trunc-run-8-i64-to-i8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_zip-run.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_zip-run.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_zip.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_zip.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_binary_vvv_run.h: Removed.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_binary_vvx_run.h: Removed.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_binary_vx_run.h: Removed.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_data.h: Removed.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_data.h: Removed.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_unary_vv_run.h: Removed.
+
+2024-11-24  Pan Li  <pan2.li@intel.com>
+
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-1-u16.c:
+	Refine the include file and remove unnecessary optimization options.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-1-u32.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-1-u64.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-1-u8.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-2-u16.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-2-u32.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-2-u64.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-2-u8.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-3-u16.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-3-u32.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-3-u64.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-3-u8.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-4-u16.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-4-u32.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-4-u64.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-4-u8.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-5-u16.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-5-u32.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-5-u64.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-5-u8.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-6-u16.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-6-u32.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-6-u64.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-6-u8.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-1-u16.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-1-u32.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-1-u64.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-1-u8.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-2-u16.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-2-u32.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-2-u64.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-2-u8.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-3-u16.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-3-u32.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-3-u64.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-3-u8.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-4-u16.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-4-u32.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-4-u64.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-4-u8.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-5-u16.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-5-u32.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-5-u64.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-5-u8.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-6-u16.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-6-u32.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-6-u64.c: Ditto
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-6-u8.c: Ditto
+
+2024-11-24  Pan Li  <pan2.li@intel.com>
+
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_data.h: Merge the
+	same file name under autovec/unop.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-2.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-1-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-3.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-1-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-4.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-1-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-1.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-1-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-6.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-2-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-7.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-2-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-2-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-5.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-2-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-10.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-3-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-11.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-3-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-12.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-3-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-9.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-3-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-14.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-4-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-15.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-4-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-4-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-13.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-4-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-18.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-5-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-19.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-5-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-20.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-5-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-17.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-5-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-22.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-6-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-23.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-6-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-24.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-6-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-21.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-6-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-2.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-1-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-21.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-1-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-22.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-1-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-1.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-1-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-24.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-2-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-7.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-2-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-2-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-23.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-2-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-10.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-3-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-11.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-3-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-12.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-3-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-9.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-3-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-14.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-4-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-15.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-4-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-4-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-13.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-4-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-18.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-5-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-19.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-5-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-20.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-5-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-17.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-5-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-4.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-6-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-5.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-6-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-6.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-6-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/unop/vec_sat_u_trunc-run-3.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_trunc-run-6-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_unary_vv_run.h: New test.
+
+2024-11-24  Pan Li  <pan2.li@intel.com>
+
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-1-u16.c:
+	Refactor the test case for include, unnecessary option and
+	target on opts.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-1-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-1-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-1-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-10-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-10-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-10-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-10-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-2-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-2-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-2-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-2-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-3-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-3-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-3-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-3-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-4-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-4-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-4-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-4-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-5-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-5-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-5-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-5-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-6-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-6-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-6-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-6-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-7-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-7-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-7-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-7-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-8-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-8-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-8-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-8-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-9-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-9-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-9-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-9-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-1-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-1-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-1-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-1-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-10-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-10-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-10-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-10-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-2-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-2-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-2-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-2-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-3-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-3-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-3-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-3-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-4-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-4-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-4-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-4-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-5-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-5-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-5-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-5-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-6-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-6-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-6-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-6-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-7-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-7-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-7-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-7-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-8-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-8-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-8-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-8-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-9-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-9-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-9-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-9-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-1-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-1-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-1-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-1-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-run-1-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-run-1-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-run-1-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-run-1-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_trunc-1-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_trunc-1-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_trunc-1-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_trunc-run-1-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_trunc-run-1-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_trunc-run-1-u8.c: Ditto.
+
+2024-11-24  Pan Li  <pan2.li@intel.com>
+
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-2.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-1-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-3.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-1-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-4.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-1-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-1.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-1-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-38.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-10-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-39.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-10-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-40.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-10-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-37.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-10-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-6.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-2-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-7.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-2-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-2-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-5.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-2-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-10.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-3-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-11.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-3-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-12.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-3-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-9.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-3-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-14.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-4-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-15.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-4-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-4-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-13.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-4-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-18.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-5-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-19.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-5-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-20.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-5-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-17.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-5-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-22.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-6-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-23.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-6-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-24.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-6-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-21.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-6-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-26.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-7-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-27.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-7-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-28.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-7-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-25.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-7-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-30.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-8-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-31.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-8-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-8-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-29.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-8-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-34.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-9-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-35.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-9-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-36.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-9-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-33.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-9-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-2.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-1-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-3.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-1-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-4.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-1-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-1.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-1-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-38.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-10-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-39.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-10-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-40.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-10-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-37.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-10-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-6.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-2-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-7.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-2-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-8.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-2-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-5.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-2-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-10.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-3-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-11.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-3-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-12.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-3-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-9.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-3-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-14.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-4-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-15.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-4-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-16.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-4-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-13.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-4-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-18.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-5-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-19.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-5-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-20.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-5-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-17.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-5-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-22.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-6-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-23.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-6-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-24.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-6-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-21.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-6-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-26.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-7-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-27.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-7-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-28.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-7-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-25.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-7-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-30.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-8-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-31.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-8-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-32.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-8-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-29.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-8-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-34.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-9-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-35.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-9-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-36.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-9-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub-run-33.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub-run-9-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_imm-2.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-1-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_imm-3.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-1-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_imm-4.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-1-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_imm-1.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-1-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_imm-run-2.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-run-1-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_imm-run-3.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-run-1-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_imm-run-4.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-run-1-u64.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_imm-run-1.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_imm-run-1-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_trunc-2.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_trunc-1-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_trunc-3.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_trunc-1-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_trunc-1.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_trunc-1-u8.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_trunc-run-2.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_trunc-run-1-u16.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_trunc-run-3.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_trunc-run-1-u32.c: ...here.
+	* gcc.target/riscv/rvv/autovec/binop/vec_sat_u_sub_trunc-run-1.c: Move to...
+	* gcc.target/riscv/rvv/autovec/sat/vec_sat_u_sub_trunc-run-1-u8.c: ...here.
+
+2024-11-23  Lewis Hyatt  <lhyatt@gmail.com>
+
+	PR preprocessor/117118
+	* c-c++-common/raw-string-directive-3.c: New test.
+	* c-c++-common/raw-string-directive-4.c: New test.
+
+2024-11-23  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/88052
+	* gfortran.dg/comma_format_extension_4.f: Add missing comma.
+	* gfortran.dg/dollar_edit_descriptor_2.f: Likewise.
+	* gfortran.dg/fmt_error_9.f: Likewise.
+	* gfortran.dg/fmt_g0_5.f08: Likewise.
+	* gfortran.dg/fmt_t_2.f90: Likewise.
+	* gfortran.dg/pr88052.f90: New test.
+
+2024-11-23  Maciej W. Rozycki  <macro@orcam.me.uk>
+
+	* gcc.c-torture/execute/memcpy-a1.c: New file.
+	* gcc.c-torture/execute/memcpy-a2.c: New file.
+	* gcc.c-torture/execute/memcpy-a4.c: New file.
+	* gcc.c-torture/execute/memcpy-a8.c: New file.
+	* gcc.c-torture/execute/memcpy-ax.h: New file.
+
+2024-11-22  Jeff Law  <jlaw@ventanamicro.com>
+
+	PR target/109279
+	* gcc.target/riscv/synthesis-16.c: New test.
+
+2024-11-22  Joseph Myers  <josmyers@redhat.com>
+
+	PR c/112841
+	* gcc.dg/c23-typeof-4.c: New test.
+
+2024-11-22  Siddhesh Poyarekar  <siddhesh@gotplt.org>
+
+	PR tree-optimization/117355
+	* g++.dg/ext/builtin-object-size2.C (test9): New test.
+	(main): Call it.
+	* gcc.dg/builtin-object-size-3.c (test10): Adjust expected size.
+
+2024-11-22  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/110137
+	PR middle-end/101480
+	* g++.dg/tree-ssa/pr110137-1.C: New test.
+	* g++.dg/tree-ssa/pr110137-2.C: New test.
+	* g++.dg/tree-ssa/pr110137-3.C: New test.
+	* g++.dg/tree-ssa/pr110137-4.C: New test.
+	* g++.dg/torture/pr10148.C: Add -fno-assume-sane-operators-new-delete
+	as dg-additional-options.
+	* g++.dg/warn/Warray-bounds-16.C: Revert 2021-11-10 changes.
+
+2024-11-22  Jakub Jelinek  <jakub@redhat.com>
+
+	PR tree-optimization/117420
+	* gcc.dg/torture/pr117420.c: New test.
+
+2024-11-22  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/117641
+	* gcc.dg/bitint-117.c: New test.
+
+2024-11-22  Dimitar Dimitrov  <dimitar@dinux.eu>
+
+	PR target/117603
+	* lib/target-supports.exp (riscv_get_arch): Add comment about
+	function purpose.  Add E ISA to list of possible
+	modifiers.
+	(check_vect_support_and_set_flags): Do not advertise vector
+	support if V extension cannot be enabled.
+
+2024-11-22  Tobias Burnus  <tburnus@baylibre.com>
+
+	* c-c++-common/gomp/dispatch-11.c: New test.
+	* c-c++-common/gomp/dispatch-12.c: New test.
+
+2024-11-22  Tobias Burnus  <tburnus@baylibre.com>
+
+	* gfortran.dg/gomp/interop-1.f90: Update for parser changes,
+	spec changes and add new tests.
+	* gfortran.dg/gomp/interop-2.f90: Likewise.
+	* gfortran.dg/gomp/interop-3.f90: Likewise.
+	* c-c++-common/gomp/interop-1.c: New test.
+	* c-c++-common/gomp/interop-2.c: New test.
+	* c-c++-common/gomp/interop-3.c: New test.
+	* c-c++-common/gomp/interop-4.c: New test.
+	* g++.dg/gomp/interop-5.C: New test.
+	* gfortran.dg/gomp/interop-4.f90: New test.
+
+2024-11-22  Jakub Jelinek  <jakub@redhat.com>
+
+	PR target/117165
+	* gcc.target/i386/pr117165.c: New test.
+
+2024-11-22  Jakub Jelinek  <jakub@redhat.com>
+
+	* gcc.dg/tree-ssa/satd-hadamard.c: Add -msse2 as dg-additional-options
+	on x86.  Also scan-tree-dump on i?86-*-*.
+	* gcc.dg/tree-ssa/vector-8.c: Likewise.
+	* gcc.dg/tree-ssa/vector-9.c: Likewise.
+	* gcc.dg/tree-ssa/vector-10.c: Add -Wno-psabi to dg-additional-options.
+
+2024-11-22  Haochen Jiang  <haochen.jiang@intel.com>
+
+	PR target/117697
+	* gcc.target/i386/avx10_2-vmovd-1.c: Both check %esp and %ebp.
+	* gcc.target/i386/avx10_2-vmovw-1.c: Ditto.
+
+2024-11-22  Xi Ruoyao  <xry111@xry111.site>
+
+	* gcc.target/loongarch/vector/lsx/lsx-builtin.c (__lsx_vorn_v):
+	Change arguments and return value to v16u8.
+	* gcc.target/loongarch/vector/lasx/lasx-builtin.c
+	(__lasx_xvorn_v): Change arguments and return value to v32u8.
+
 2024-11-21  Jeff Law  <jlaw@ventanamicro.com>
 
 	PR target/117690

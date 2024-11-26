@@ -390,7 +390,7 @@ avr_adiw_reg_p (rtx reg)
 static bool
 ra_in_progress ()
 {
-  return avr_lra_p ? lra_in_progress : reload_in_progress;
+  return avropt_lra_p ? lra_in_progress : reload_in_progress;
 }
 
 
@@ -402,8 +402,8 @@ avr_set_core_architecture (void)
 {
   /* Search for mcu core architecture.  */
 
-  if (!avr_mmcu)
-    avr_mmcu = AVR_MMCU_DEFAULT;
+  if (!avropt_mmcu)
+    avropt_mmcu = AVR_MMCU_DEFAULT;
 
   avr_arch = &avr_arch_types[0];
 
@@ -417,18 +417,18 @@ avr_set_core_architecture (void)
 	     with -mmcu=<device>. */
 
 	  error ("unknown core architecture %qs specified with %qs",
-		 avr_mmcu, "-mmcu=");
+		 avropt_mmcu, "-mmcu=");
 	  avr_inform_core_architectures ();
 	  break;
 	}
-      else if (strcmp (mcu->name, avr_mmcu) == 0
+      else if (strcmp (mcu->name, avropt_mmcu) == 0
 	       // Is this a proper architecture ?
 	       && mcu->macro == NULL)
 	{
 	  avr_arch = &avr_arch_types[mcu->arch_id];
 	  avr_arch_index = mcu->arch_id;
-	  if (avr_n_flash < 0)
-	    avr_n_flash = 1 + (mcu->flash_size - 1) / 0x10000;
+	  if (avropt_n_flash < 0)
+	    avropt_n_flash = 1 + (mcu->flash_size - 1) / 0x10000;
 
 	  return true;
 	}
@@ -451,7 +451,7 @@ avr_option_override (void)
      with the challenge of AVR's very few address registers and fails to
      perform the requested spills.  */
 
-  if (avr_strict_X)
+  if (avropt_strict_X)
     flag_caller_saves = 0;
 
   /* Unwind tables currently require a frame pointer for correctness,
@@ -485,14 +485,14 @@ avr_option_override (void)
     warning (OPT_fPIE, "%<-fPIE%> is not supported");
 
 #if !defined (HAVE_AS_AVR_MGCCISR_OPTION)
-  avr_gasisr_prologues = 0;
+  avropt_gasisr_prologues = 0;
 #endif
 
   if (!avr_set_core_architecture())
     return;
 
   /* Sould be set by avr-common.cc */
-  gcc_assert (avr_long_double >= avr_double && avr_double >= 32);
+  gcc_assert (avropt_long_double >= avropt_double && avropt_double >= 32);
 
   /* RAM addresses of some SFRs common to all devices in respective arch. */
 
@@ -3182,7 +3182,7 @@ avr_xload_libgcc_p (machine_mode mode)
   int n_bytes = GET_MODE_SIZE (mode);
 
   return (n_bytes > 1
-	  || avr_n_flash > 1);
+	  || avropt_n_flash > 1);
 }
 
 
@@ -4055,11 +4055,11 @@ avr_out_movqi_r_mr_reg_disp_tiny (rtx_insn *insn, rtx op[], int *plen)
       rtx base2 = all_regs_rtx[1 ^ REGNO (dest)];
 
       if (!reg_unused_after (insn, base2))
-	avr_asm_len ("mov __tmp_reg__,%0" , &base2, plen, 1);
+	avr_asm_len ("mov __tmp_reg__,%0", &base2, plen, 1);
       avr_asm_len (TINY_ADIW (%I1, %J1, %o1) CR_TAB
 		   "ld %0,%b1", op, plen, 3);
       if (!reg_unused_after (insn, base2))
-	avr_asm_len ("mov %0,__tmp_reg__" , &base2, plen, 1);
+	avr_asm_len ("mov %0,__tmp_reg__", &base2, plen, 1);
     }
 
   return "";
@@ -4086,40 +4086,66 @@ out_movqi_r_mr (rtx_insn *insn, rtx op[], int *plen)
     {
       /* memory access by reg+disp */
 
-      int disp = INTVAL (XEXP (x, 1));
-
       if (AVR_TINY)
 	return avr_out_movqi_r_mr_reg_disp_tiny (insn, op, plen);
 
+      if (plen)
+	*plen = 0;
+
+      int disp = INTVAL (XEXP (x, 1));
+      rtx base = XEXP (x, 0);
+      rtx base2 = all_regs_rtx[1 ^ REGNO (dest)];
+      bool partial_clobber = (reg_overlap_mentioned_p (dest, base)
+			      && ! reg_unused_after (insn, base2));
+
       if (disp - GET_MODE_SIZE (GET_MODE (src)) >= 63)
 	{
+	  // PR117744: The base register overlaps dest and is
+	  // only partially clobbered.
+	  if (partial_clobber)
+	    avr_asm_len ("mov __tmp_reg__,%0", &base2, plen, 1);
+
 	  if (REGNO (XEXP (x, 0)) != REG_Y)
 	    fatal_insn ("incorrect insn:",insn);
 
 	  if (disp <= 63 + MAX_LD_OFFSET (GET_MODE (src)))
-	    return avr_asm_len ("adiw r28,%o1-63" CR_TAB
-				"ldd %0,Y+63"     CR_TAB
-				"sbiw r28,%o1-63", op, plen, -3);
+	    avr_asm_len ("adiw r28,%o1-63" CR_TAB
+			 "ldd %0,Y+63"     CR_TAB
+			 "sbiw r28,%o1-63", op, plen, 3);
+	  else
+	    avr_asm_len ("subi r28,lo8(-%o1)" CR_TAB
+			 "sbci r29,hi8(-%o1)" CR_TAB
+			 "ld %0,Y"            CR_TAB
+			 "subi r28,lo8(%o1)"  CR_TAB
+			 "sbci r29,hi8(%o1)", op, plen, 5);
 
-	  return avr_asm_len ("subi r28,lo8(-%o1)" CR_TAB
-			      "sbci r29,hi8(-%o1)" CR_TAB
-			      "ld %0,Y"            CR_TAB
-			      "subi r28,lo8(%o1)"  CR_TAB
-			      "sbci r29,hi8(%o1)", op, plen, -5);
+	  if (partial_clobber)
+	    avr_asm_len ("mov __tmp_reg__,%0", &base2, plen, 1);
+
+	  return "";
 	}
       else if (REGNO (XEXP (x, 0)) == REG_X)
 	{
 	  /* This is a paranoid case LEGITIMIZE_RELOAD_ADDRESS must exclude
 	     it but I have this situation with extremal optimizing options.  */
 
-	  avr_asm_len ("adiw r26,%o1" CR_TAB
-		       "ld %0,X", op, plen, -2);
+	  // PR117744: The base register overlaps dest and is
+	  // only partially clobbered.
+	  bool clobber_r26 = (partial_clobber
+			      && REGNO (base) == (REGNO (base) & ~1));
+	  if (partial_clobber
+	      && ! clobber_r26)
+	    avr_asm_len ("mov __tmp_reg__,%0", &base2, plen, 1);
 
-	  if (!reg_overlap_mentioned_p (dest, XEXP (x, 0))
-	      && !reg_unused_after (insn, XEXP (x, 0)))
-	    {
-	      avr_asm_len ("sbiw r26,%o1", op, plen, 1);
-	    }
+	  avr_asm_len ("adiw r26,%o1" CR_TAB
+		       "ld %0,X", op, plen, 2);
+
+	  if (clobber_r26)
+	    avr_asm_len ("subi r26,lo8(%o1)", op, plen, 1);
+	  else if (partial_clobber)
+	    avr_asm_len ("mov %0,__tmp_reg__", &base2, plen, 1);
+	  else if (! reg_unused_after (insn, base))
+	    avr_asm_len ("sbiw r26,%o1", op, plen, 1);
 
 	  return "";
 	}
@@ -6809,6 +6835,7 @@ ashlhi3_out (rtx_insn *insn, rtx operands[], int *plen)
 		      && XVECLEN (PATTERN (insn), 0) == 3
 		      && REG_P (operands[3]));
       bool ldi_ok = test_hard_reg_class (LD_REGS, operands[0]);
+      bool reg1_unused_after = reg_unused_after (insn, operands[1]);
 
       if (plen)
 	*plen = 0;
@@ -6878,43 +6905,50 @@ ashlhi3_out (rtx_insn *insn, rtx operands[], int *plen)
 			      "mov %B0,%A0"     CR_TAB
 			      "mov %A0,__tmp_reg__", operands, plen, 9);
 	case 7:
-	  return avr_asm_len ("lsr %B0"     CR_TAB
-			      "mov %B0,%A0" CR_TAB
-			      "clr %A0"     CR_TAB
-			      "ror %B0"     CR_TAB
-			      "ror %A0", operands, plen, 5);
+	  return reg1_unused_after
+	    ? avr_asm_len ("lsr %B1"     CR_TAB
+			   "mov %B0,%A1" CR_TAB
+			   "clr %A0"     CR_TAB
+			   "ror %B0"     CR_TAB
+			   "ror %A0", operands, plen, 5)
+	    : avr_asm_len ("bst %B1,0"   CR_TAB
+			   "mov %B0,%A1" CR_TAB
+			   "clr %A0"     CR_TAB
+			   "ror %B0"     CR_TAB
+			   "ror %A0"     CR_TAB
+			   "bld %B0,7", operands, plen, 6);
 	case 8:
 	  return avr_asm_len ("mov %B0,%A1" CR_TAB
 			      "clr %A0", operands, plen, 2);
 	case 9:
-	  return avr_asm_len ("mov %B0,%A0" CR_TAB
+	  return avr_asm_len ("mov %B0,%A1" CR_TAB
 			      "clr %A0"     CR_TAB
 			      "lsl %B0", operands, plen, 3);
 	case 10:
-	  return avr_asm_len ("mov %B0,%A0" CR_TAB
+	  return avr_asm_len ("mov %B0,%A1" CR_TAB
 			      "clr %A0"     CR_TAB
 			      "lsl %B0"     CR_TAB
 			      "lsl %B0", operands, plen, 4);
 	case 11:
-	  return avr_asm_len ("mov %B0,%A0" CR_TAB
+	  return avr_asm_len ("mov %B0,%A1" CR_TAB
 			      "clr %A0"     CR_TAB
 			      "lsl %B0"     CR_TAB
 			      "lsl %B0"     CR_TAB
 			      "lsl %B0", operands, plen, 5);
 	case 12:
 	  if (ldi_ok)
-	    return avr_asm_len ("mov %B0,%A0" CR_TAB
+	    return avr_asm_len ("mov %B0,%A1" CR_TAB
 				"clr %A0"     CR_TAB
 				"swap %B0"    CR_TAB
 				"andi %B0,0xf0", operands, plen, 4);
 	  if (scratch)
-	    return avr_asm_len ("mov %B0,%A0" CR_TAB
+	    return avr_asm_len ("mov %B0,%A1" CR_TAB
 				"clr %A0"     CR_TAB
 				"swap %B0"    CR_TAB
 				"ldi %3,0xf0" CR_TAB
 				"and %B0,%3", operands, plen, 5);
 
-	  return avr_asm_len ("mov %B0,%A0" CR_TAB
+	  return avr_asm_len ("mov %B0,%A1" CR_TAB
 			      "clr %A0"     CR_TAB
 			      "lsl %B0"     CR_TAB
 			      "lsl %B0"     CR_TAB
@@ -7164,6 +7198,7 @@ ashrqi3_out (rtx_insn *insn, rtx operands[], int *plen)
 	*plen = 0;
 
       const int offs = INTVAL (operands[2]);
+      bool reg1_unused_after = reg_unused_after (insn, operands[1]);
 
       if (IN_RANGE (offs, 0, 5))
 	{
@@ -7173,10 +7208,16 @@ ashrqi3_out (rtx_insn *insn, rtx operands[], int *plen)
 	}
       else if (offs == 6)
 	{
-	  return avr_asm_len ("bst %0,6"  CR_TAB
-			      "lsl %0"    CR_TAB
-			      "sbc %0,%0" CR_TAB
-			      "bld %0,0", operands, plen, 4);
+	  return reg1_unused_after
+	    ? avr_asm_len ("bst %1,6"  CR_TAB
+			   "lsl %1"    CR_TAB
+			   "sbc %0,%0" CR_TAB
+			   "bld %0,0", operands, plen, 4)
+	    : avr_asm_len ("mov %0,%1" CR_TAB
+			   "bst %0,6"  CR_TAB
+			   "lsl %0"    CR_TAB
+			   "sbc %0,%0" CR_TAB
+			   "bld %0,0", operands, plen, 5);
 	}
       else if (offs >= 7)
 	{
@@ -7210,6 +7251,7 @@ ashrhi3_out (rtx_insn *insn, rtx operands[], int *plen)
 		      && XVECLEN (PATTERN (insn), 0) == 3
 		      && REG_P (operands[3]));
       bool ldi_ok = test_hard_reg_class (LD_REGS, operands[0]);
+      bool reg1_unused_after = reg_unused_after (insn, operands[1]);
 
       if (plen)
 	*plen = 0;
@@ -7312,11 +7354,18 @@ ashrhi3_out (rtx_insn *insn, rtx operands[], int *plen)
 			      "asr %A0"     CR_TAB
 			      "asr %A0", operands, plen, 8);
 	case 14:
-	  return avr_asm_len ("lsl %B0"     CR_TAB
-			      "sbc %A0,%A0" CR_TAB
-			      "lsl %B0"     CR_TAB
-			      "mov %B0,%A0" CR_TAB
-			      "rol %A0", operands, plen, 5);
+	  return reg1_unused_after
+	    ? avr_asm_len ("bst %B1,6"   CR_TAB
+			   "lsl %B1"     CR_TAB
+			   "sbc %B0,%B0" CR_TAB
+			   "sbc %A0,%A0" CR_TAB
+			   "bld %A0,0", operands, plen, 5)
+	    : avr_asm_len ("mov %B0,%B1"   CR_TAB
+			   "bst %B0,6"   CR_TAB
+			   "lsl %B0"     CR_TAB
+			   "sbc %B0,%B0" CR_TAB
+			   "sbc %A0,%A0" CR_TAB
+			   "bld %A0,0", operands, plen, 6);
 	default:
 	  if (INTVAL (operands[2]) < 16)
 	    break;
@@ -7357,6 +7406,8 @@ avr_out_ashrpsi3 (rtx_insn *insn, rtx *op, int *plen)
       if (plen)
 	*plen = 0;
 
+      bool reg1_unused_after = reg_unused_after (insn, op[1]);
+
       switch (INTVAL (op[2]))
 	{
 	case 8:
@@ -7378,6 +7429,22 @@ avr_out_ashrpsi3 (rtx_insn *insn, rtx *op, int *plen)
 			      "sbrc %A0,7"  CR_TAB
 			      "com %B0"     CR_TAB
 			      "mov %C0,%B0", op, plen, 4);
+	case 22:
+	  {
+	    rtx xop[2] = { op[0], op[1] };
+	    if (! reg1_unused_after)
+	      {
+		avr_asm_len ("mov %C0,%C1", xop, plen, 1);
+		xop[1] = xop[0];
+	      }
+	    return avr_asm_len ("bst %C1,6"   CR_TAB
+				"lsl %C1"     CR_TAB
+				"sbc %C0,%C0" CR_TAB
+				"sbc %B0,%B0" CR_TAB
+				"sbc %A0,%A0" CR_TAB
+				"bld %A0,0", xop, plen, 6);
+	  }
+
 	default:
 	  if (INTVAL (op[2]) < 24)
 	    break;
@@ -7387,7 +7454,7 @@ avr_out_ashrpsi3 (rtx_insn *insn, rtx *op, int *plen)
 	case 23:
 	  {
 	    rtx xop[2] = { op[0], op[1] };
-	    if (! reg_unused_after (insn, xop[1]))
+	    if (! reg1_unused_after)
 	      {
 		avr_asm_len ("mov %C0,%C1", xop, plen, 1);
 		xop[1] = xop[0];
@@ -7419,6 +7486,7 @@ ashrsi3_out (rtx_insn *insn, rtx operands[], int *plen)
 
       int reg0 = true_regnum (operands[0]);
       int reg1 = true_regnum (operands[1]);
+      bool reg1_unused_after = reg_unused_after (insn, operands[1]);
 
       switch (INTVAL (operands[2]))
 	{
@@ -7461,6 +7529,26 @@ ashrsi3_out (rtx_insn *insn, rtx operands[], int *plen)
 			      "com %D0"     CR_TAB
 			      "mov %B0,%D0" CR_TAB
 			      "mov %C0,%D0", operands, plen, 6);
+	case 30:
+	  {
+	    rtx xop[2] = { operands[0], operands[1] };
+	    if (! reg1_unused_after)
+	      {
+		avr_asm_len ("mov %D0,%D1", xop, plen, 1);
+		xop[1] = xop[0];
+	      }
+	    avr_asm_len ("bst %D1,6" CR_TAB
+			 "lsl %D1" CR_TAB
+			 "sbc %A0,%A0" CR_TAB
+			 "sbc %B0,%B0", xop, plen, 4);
+	    return AVR_HAVE_MOVW
+	      ? avr_asm_len ("movw %C0,%A0" CR_TAB
+			     "bld %A0,0", xop, plen, 2)
+	      : avr_asm_len ("mov %C0,%A0" CR_TAB
+			     "mov %D0,%A0" CR_TAB
+			     "bld %A0,0", xop, plen, 3);
+	  }
+
 	default:
 	  if (INTVAL (operands[2]) < 32)
 	    break;
@@ -7470,7 +7558,7 @@ ashrsi3_out (rtx_insn *insn, rtx operands[], int *plen)
 	case 31:
 	  {
 	    rtx xop[2] = { operands[0], operands[1] };
-	    if (! reg_unused_after (insn, xop[1]))
+	    if (! reg1_unused_after)
 	      {
 		avr_asm_len ("mov %D0,%D1", xop, plen, 1);
 		xop[1] = xop[0];
@@ -7566,6 +7654,7 @@ lshrhi3_out (rtx_insn *insn, rtx operands[], int *plen)
 		      && XVECLEN (PATTERN (insn), 0) == 3
 		      && REG_P (operands[3]));
       bool ldi_ok = test_hard_reg_class (LD_REGS, operands[0]);
+      bool reg1_unused_after = reg_unused_after (insn, operands[1]);
 
       if (plen)
 	*plen = 0;
@@ -7635,42 +7724,49 @@ lshrhi3_out (rtx_insn *insn, rtx operands[], int *plen)
 			      "mov %A0,%B0"     CR_TAB
 			      "mov %B0,__tmp_reg__", operands, plen, 9);
 	case 7:
-	  return avr_asm_len ("lsl %A0"     CR_TAB
-			      "mov %A0,%B0" CR_TAB
-			      "rol %A0"     CR_TAB
-			      "sbc %B0,%B0" CR_TAB
-			      "neg %B0", operands, plen, 5);
+	  return reg1_unused_after
+	    ? avr_asm_len ("lsl %A1"     CR_TAB
+			   "mov %A0,%B1" CR_TAB
+			   "rol %A0"     CR_TAB
+			   "sbc %B0,%B0" CR_TAB
+			   "neg %B0", operands, plen, 5)
+	    : avr_asm_len ("bst %A1,7"   CR_TAB
+			   "mov %A0,%B1" CR_TAB
+			   "rol %A0"     CR_TAB
+			   "sbc %B0,%B0" CR_TAB
+			   "neg %B0"     CR_TAB
+			   "bld %A0,0", operands, plen, 6);
 	case 8:
 	  return avr_asm_len ("mov %A0,%B1" CR_TAB
 			      "clr %B0", operands, plen, 2);
 	case 9:
-	  return avr_asm_len ("mov %A0,%B0" CR_TAB
+	  return avr_asm_len ("mov %A0,%B1" CR_TAB
 			      "clr %B0"     CR_TAB
 			      "lsr %A0", operands, plen, 3);
 	case 10:
-	  return avr_asm_len ("mov %A0,%B0" CR_TAB
+	  return avr_asm_len ("mov %A0,%B1" CR_TAB
 			      "clr %B0"     CR_TAB
 			      "lsr %A0"     CR_TAB
 			      "lsr %A0", operands, plen, 4);
 	case 11:
-	  return avr_asm_len ("mov %A0,%B0" CR_TAB
+	  return avr_asm_len ("mov %A0,%B1" CR_TAB
 			      "clr %B0"     CR_TAB
 			      "lsr %A0"     CR_TAB
 			      "lsr %A0"     CR_TAB
 			      "lsr %A0", operands, plen, 5);
 	case 12:
 	  if (ldi_ok)
-	    return avr_asm_len ("mov %A0,%B0" CR_TAB
+	    return avr_asm_len ("mov %A0,%B1" CR_TAB
 				"clr %B0"     CR_TAB
 				"swap %A0"    CR_TAB
 				"andi %A0,0x0f", operands, plen, 4);
 	  return scratch
-	    ? avr_asm_len ("mov %A0,%B0" CR_TAB
+	    ? avr_asm_len ("mov %A0,%B1" CR_TAB
 			   "clr %B0"     CR_TAB
 			   "swap %A0"    CR_TAB
 			   "ldi %3,0x0f" CR_TAB
 			   "and %A0,%3", operands, plen, 5)
-	    : avr_asm_len ("mov %A0,%B0" CR_TAB
+	    : avr_asm_len ("mov %A0,%B1" CR_TAB
 			   "clr %B0"     CR_TAB
 			   "lsr %A0"     CR_TAB
 			   "lsr %A0"     CR_TAB
@@ -7816,6 +7912,7 @@ lshrsi3_out (rtx_insn *insn, rtx operands[], int *plen)
     {
       int reg0 = true_regnum (operands[0]);
       int reg1 = true_regnum (operands[1]);
+      bool reg1_unused_after_p = reg_unused_after (insn, operands[1]);
 
       if (plen)
 	*plen = 0;
@@ -7844,6 +7941,30 @@ lshrsi3_out (rtx_insn *insn, rtx operands[], int *plen)
 			   "mov %C0,%D1" CR_TAB
 			   "mov %B0,%C1" CR_TAB
 			   "mov %A0,%B1", operands, plen, 4);
+	case 15:
+	  avr_asm_len (reg1_unused_after_p
+		       ? "lsl %B1"
+		       : "bst %B1,7", operands, plen, 1);
+	  if (reg0 != reg1 + 2)
+	    {
+	      if (AVR_HAVE_MOVW)
+		avr_asm_len ("movw %A0,%C1", operands, plen, 1);
+	      else
+		avr_asm_len ("mov %A0,%C1"  CR_TAB
+			     "mov %B0,%D1", operands, plen, 2);
+	    }
+	  return reg1_unused_after_p
+	    ? avr_asm_len ("clr %D0"  CR_TAB
+			   "clr %C0"  CR_TAB
+			   "rol %A0"  CR_TAB
+			   "rol %B0"  CR_TAB
+			   "rol %C0", operands, plen, 5)
+	    : avr_asm_len ("clr %D0"  CR_TAB
+			   "clr %C0"  CR_TAB
+			   "lsl %A0"  CR_TAB
+			   "rol %B0"  CR_TAB
+			   "rol %C0"  CR_TAB
+			   "bld %A0,0", operands, plen, 6);
 	case 16:
 	  if (reg0 == reg1 + 2)
 	    return avr_asm_len ("clr %C0"  CR_TAB
@@ -8182,7 +8303,7 @@ avr_out_plus_1 (rtx insn, rtx *xop, int *plen, rtx_code code,
 	  // When that pass adjusts the frame pointer, then we know that
 	  // reg Y points to ordinary memory, and the only side-effect
 	  // of -Y and Y+ is the side effect on Y.
-	  && avr_fuse_add >= 2
+	  && avropt_fuse_add >= 2
 	  && frame_pointer_needed
 	  && REGNO (xop[0]) == FRAME_POINTER_REGNUM)
 	{
@@ -10742,12 +10863,12 @@ avr_addr_space_supported_p (addr_space_t as, location_t loc)
 		  "Tiny devices");
       return false;
     }
-  else if (avr_addrspace[as].segment >= avr_n_flash)
+  else if (avr_addrspace[as].segment >= avropt_n_flash)
     {
       if (loc != UNKNOWN_LOCATION)
 	error_at (loc, "address space %qs not supported for devices with "
 		  "flash size up to %d KiB", avr_addrspace[as].name,
-		  64 * avr_n_flash);
+		  64 * avropt_n_flash);
       return false;
     }
 
@@ -11070,10 +11191,10 @@ avr_rodata_in_flash_p ()
       return have_avrxmega3_rodata_in_flash;
 
     case ARCH_AVRXMEGA2:
-      return avr_flmap && have_avrxmega2_flmap && avr_rodata_in_ram != 1;
+      return avropt_flmap && have_avrxmega2_flmap && avropt_rodata_in_ram != 1;
 
     case ARCH_AVRXMEGA4:
-      return avr_flmap && have_avrxmega4_flmap && avr_rodata_in_ram != 1;
+      return avropt_flmap && have_avrxmega4_flmap && avropt_rodata_in_ram != 1;
     }
 
   return false;
@@ -11550,7 +11671,7 @@ avr_file_start (void)
   int sfr_offset = avr_arch->sfr_offset;
 
   if (avr_arch->asm_only)
-    error ("architecture %qs supported for assembler only", avr_mmcu);
+    error ("architecture %qs supported for assembler only", avropt_mmcu);
 
   default_file_start ();
 
@@ -12556,6 +12677,9 @@ avr_rtx_costs_1 (rtx x, machine_mode mode, int outer_code,
 	      case 8:
 		*total = COSTS_N_INSNS (5);
 		break;
+	      case 22:
+		*total = COSTS_N_INSNS (6);
+		break;
 	      case 23:
 		*total = COSTS_N_INSNS (4);
 		break;
@@ -12588,6 +12712,9 @@ avr_rtx_costs_1 (rtx x, machine_mode mode, int outer_code,
 		break;
 	      case 2:
 		*total = COSTS_N_INSNS (!speed ? 7 : 8);
+		break;
+	      case 30:
+		*total = COSTS_N_INSNS (7 - AVR_HAVE_MOVW);
 		break;
 	      case 31:
 		*total = COSTS_N_INSNS (AVR_HAVE_MOVW ? 4 : 5);
@@ -12723,8 +12850,13 @@ avr_rtx_costs_1 (rtx x, machine_mode mode, int outer_code,
 	      case 2:
 		*total = COSTS_N_INSNS (!speed ? 7 : 8);
 		break;
-	      case 8:
+	      case 15:
+		*total = COSTS_N_INSNS (8 - AVR_HAVE_MOVW);
+		break;
 	      case 16:
+		*total = COSTS_N_INSNS (4 - AVR_HAVE_MOVW);
+		break;
+	      case 8:
 	      case 24:
 		*total = COSTS_N_INSNS (4);
 		break;
@@ -13143,7 +13275,7 @@ avr_hard_regno_mode_ok (unsigned int regno, machine_mode mode)
   if (GET_MODE_SIZE (mode) >= 4
       && regno >= REG_X
       // This problem only concerned the old reload.
-      && ! avr_lra_p)
+      && ! avropt_lra_p)
     return false;
 
   /* All modes larger than 8 bits should start in an even register.  */
@@ -13192,7 +13324,7 @@ avr_mode_code_base_reg_class (machine_mode /*mode*/, addr_space_t as,
     // will rectify it (register allocation cannot do it).
     return POINTER_REGS;
 
-  if (!avr_strict_X)
+  if (!avropt_strict_X)
     return reload_completed ? BASE_POINTER_REGS : POINTER_REGS;
 
   return PLUS == outer_code ? BASE_POINTER_REGS : POINTER_REGS;
@@ -13250,7 +13382,7 @@ avr_regno_mode_code_ok_for_base_p (int regno, machine_mode /*mode*/,
 	}
     }
 
-  if (avr_strict_X
+  if (avropt_strict_X
       // On Reduced Tiny, all registers are equal in that they do not
       // support PLUS addressing; respective addresses will be fake,
       // even for the frame pointer.  They must be handled in the
@@ -13924,7 +14056,7 @@ avr_convert_to_type (tree type, tree expr)
 	    code with progmem and pgm_read_xxx.
   */
 
-  if (avr_warn_addr_space_convert
+  if (avropt_warn_addr_space_convert
       && expr != error_mark_node
       && POINTER_TYPE_P (type)
       && POINTER_TYPE_P (TREE_TYPE (expr)))
@@ -14136,7 +14268,7 @@ avr_emit_cpymemhi (rtx *xop)
       int segment = avr_addrspace[as].segment;
 
       if (segment
-	  && avr_n_flash > 1)
+	  && avropt_n_flash > 1)
 	{
 	  a_hi8 = GEN_INT (segment);
 	  emit_move_insn (rampz_rtx, a_hi8 = copy_to_mode_reg (QImode, a_hi8));
@@ -15415,9 +15547,9 @@ static machine_mode
 avr_c_mode_for_floating_type (tree_index ti)
 {
   if (ti == TI_DOUBLE_TYPE)
-    return avr_double == 32 ? SFmode : DFmode;
+    return avropt_double == 32 ? SFmode : DFmode;
   if (ti == TI_LONG_DOUBLE_TYPE)
-    return avr_long_double == 32 ? SFmode : DFmode;
+    return avropt_long_double == 32 ? SFmode : DFmode;
   return default_mode_for_floating_type (ti);
 }
 
@@ -15444,7 +15576,7 @@ avr_float_lib_compare_returns_bool (machine_mode mode, rtx_code)
 static bool
 avr_use_lra_p ()
 {
-  return avr_lra_p;
+  return avropt_lra_p;
 }
 
 
