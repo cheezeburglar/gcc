@@ -23,11 +23,204 @@ gimple_seq_to_json (gimple_seq seq, dump_flags_t flags)
   return json_seq;
 }
 
+// TODO : this ones kinda weird.
+
+void
+add_gimple_predict_to_json ()
+{
+
+}
+
+void
+add_gimple_eh_else_to_json (const geh_else *gs, dump_flags_t flags,
+			 json::object &json_obj)
+{
+  json_obj.set("n_body", gimple_seq_to_json (gimple_eh_else_n_body (gs)));
+  json_obj.set("e_body", gimple_seq_to_json (gimple_eh_else_e_body (gs)));
+}
+
+void
+add_gimple_omp_critical_to_json (const gomp_critical *gs, dump_flags_t flags,
+			     json::object &json_obj)
+{
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
+  json_obj.set("clauses", generic_to_json (gimple_omp_critical_clauses (gs)));
+  json_obj.set("name", generic_to_json (gimple_omp_critical_name (gs)));
+}
+
+void
+add_gimple_omp_scan_to_json (const gomp_scan *gs, dump_flags_t flags,
+			     json::object &json_obj)
+{
+  
+}
+
+void
+add_gimple_omp_structured_block_to_json (const gimple *gs, dump_flags_t flags,
+				 json::object &json_obj)
+{
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
+}
+
+void
+add_gimple_omp_section_to_json (const gomp_sections *gs, dump_flags_t flags,
+			       json::object &json_obj)
+{
+  if (gimple_omp_section_last_p (gs))
+    json_obj.set_bool("last", true);
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
+  json_obj.set("clauses", generic_to_json (gimple_omp_sections_clauses (gs)));
+  json_obj.set("control", generic_to_json (gimple_omp_sections_control (gs)));
+}
+
+void
+add_gimple_omp_master_to_json (const gimple *gs, dump_flags_t flags,
+			       json::object &json_obj)
+{
+  if (gimple)
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
+}
+
+void
+add_gimple_omp_dispatch_to_json (const gimple *gs, dump_flags_t flags,
+			 json::object &json_obj)
+{
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
+  json_obj.set("clauses", generic_to_json (gimple_omp_dispatch_clauses (gs)));
+}
+
+void
+add_gimple_omp_scope_to_json (const gimple*gs, dump_flags_t flags,
+			      json::object &json_obj)
+{
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
+  json_obj.set("clauses", generic_to_json (gimple_omp_scope_clauses (gs)));
+}
+
+void
+add_gimple_omp_masked_to_json (const gimple *gs, dump_flags_t flags,
+				  json::object &json_obj)
+{
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
+  json_obj.set("clauses", generic_to_json (gimple_omp_masked_clauses (gs)));
+}
+
+void
+add_gimple_omp_taskgroup_to_json (const gimple *gs, dump_flags_t flags,
+				  json::object &json_obj)
+{
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
+  json_obj.set("clauses", generic_to_json (gimple_omp_taskgroup_clauses (gs)));
+}
+
+void
+add_gimple_omp_sections_swtich_to_json (const gomp_sections *gs, dump_flags_t flags,
+					json::object &json_obj)
+{}
+
+void
+add_gimple_omp_sections_to_json (const gomp_sections *gs, dump_flags_t flags,
+				 json::object &json_obj)
+{
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
+  json_obj.set("clauses", generic_to_json (gimple_omp_sections_control (gs)));
+  json_obj.set("control", generic_to_json (gimple_omp_sections_control (gs)));
+}
+
+void
+add_gimple_omp_return_to_json (const gomp_teams *gs, dump_flags_t flags,
+			       json::object &json_obj)
+{
+  if (gimple_omp_return_nowait_p (gs))
+    json_obj.set_bool("nowait", true);
+  json_obj.set("lhs", generic_to_json (gimple_omp_return_lhs (gs)));
+}
+
+void
+add_gimple_omp_teams_to_json (const gomp_teams *gs, dump_flags_t flags,
+			      json::object &json_obj)
+{
+  if (gimple_omp_teams_host (gs))
+    json_obj.set_bool("host", true);
+  json_obj.set("clauses", generic_to_json (gimple_omp_teams_clauses (gs)));
+  json_obj.set("body", gimple_sequence_to_json (gimple_omp_teams_body (gs)));
+  json_obj.set("child_fn", generic_to_json (gimple_omp_teams_child_fn (gs)));
+  json_obj.set("data_arg", generic_to_json (gimple_omp_teams_data_arg(gs)));
+  
+}
+
+void
+add_gimple_omp_target_to_json (const gomp_target *gs, dump_flags_t flags, 
+			       json::object &json_obj)
+{
+  switch (gimple_omp_target_kind (gs))
+    {
+    case GF_OMP_TARGET_KIND_REGION:
+      json_obj.set_bool ("kind_region", true);
+      break;
+    case GF_OMP_TARGET_KIND_DATA:
+      json_obj.set_bool ("kind_data", true);
+      break;
+    case GF_OMP_TARGET_KIND_UPDATE:
+      json_obj.set_bool ("kind_update", true);
+      break;
+    case GF_OMP_TARGET_KIND_ENTER_DATA:
+      json_obj.set_bool ("kind_enter data", true);
+      break;
+    case GF_OMP_TARGET_KIND_EXIT_DATA:
+      json_obj.set_bool ("kind_exit data", true);
+      break;
+    case GF_OMP_TARGET_KIND_OACC_KERNELS:
+      json_obj.set_bool ("kind_oacc_kernels", true);
+      break;
+    case GF_OMP_TARGET_KIND_OACC_PARALLEL:
+      json_obj.set_bool ("kind_oacc_parallel", true);
+      break;
+    case GF_OMP_TARGET_KIND_OACC_SERIAL:
+      json_obj.set_bool ("kind_oacc_serial", true);
+      break;
+    case GF_OMP_TARGET_KIND_OACC_DATA:
+      json_obj.set_bool ("kind_oacc_data", true);
+      break;
+    case GF_OMP_TARGET_KIND_OACC_UPDATE:
+      json_obj.set_bool ("kind_oacc_update", true);
+      break;
+    case GF_OMP_TARGET_KIND_OACC_ENTER_DATA:
+      json_obj.set_bool ("kind_oacc_enter_data", true);
+      break;
+    case GF_OMP_TARGET_KIND_OACC_EXIT_DATA:
+      json_obj.set_bool ("kind_oacc_exit_data", true);
+      break;
+    case GF_OMP_TARGET_KIND_OACC_DECLARE:
+      json_obj.set_bool ("kind_oacc_declare", true);
+      break;
+    case GF_OMP_TARGET_KIND_OACC_HOST_DATA:
+      json_obj.set_bool ("kind_oacc_host_data", true);
+      break;
+    case GF_OMP_TARGET_KIND_OACC_PARALLEL_KERNELS_PARALLELIZED:
+      json_obj.set_bool ("kind_oacc_parallel_kernels_parallelized", true);
+      break;
+    case GF_OMP_TARGET_KIND_OACC_PARALLEL_KERNELS_GANG_SINGLE:
+      json_obj.set_bool ("kind_oacc_parallel_kernels_gang_single", true);
+      break;
+    case GF_OMP_TARGET_KIND_OACC_DATA_KERNELS:
+      json_obj.set_bool ("kind_oacc_data_kernels", true);
+      break;
+    default:
+      gcc_unreachable ();
+    }
+  json_obj.set("clauses", generic_to_json (gimple_omp_target_clauses (gs)));
+  json_obj.set("body", gimple_sequence_to_json (gimple_omp_target_body (gs)));
+  json_obj.set("child_fn", generic_to_json (gimple_omp_target_child_fn (gs)));
+  json_obj.set("data_arg", generic_to_json (gimple_omp_target_data_arg(gs)));
+}
+
 void
 add_gimple_omp_single_to_json (const gomp_single *gs, dump_flags_t flags,
 			       json::object &json_obj)
 {
-  
+  json_obj.set("body". gimple_sequence_to_json (gimple_omp_body (gs)));
+  json_obj.set("clauses", gimple_omp_single_clauses (gs));
 }
 
 void
@@ -49,15 +242,15 @@ add_gimple_omp_for (const gomp_for * gs, dump_flags_t flags,
   switch (gimple_omp_for_kind (gs))
     {
     case GF_OMP_FOR_KIND_FOR
-      json_obj.set_string("kind", "for");
+      json_obj.set_bool("kind_for", true);
     case GF_OMP_FOR_KIND_DISTRIBUTE
-      json_obj.set_string("kind", "distribute");
+      json_obj.set_bool("kind_distribute", true);
     case GF_OMP_FOR_KIND_TASKLOOP
-      json_obj.set_string("kind", "taskloop");
+      json_obj.set_bool("kind_taskloop", true);
     case GF_OMP_FOR_KIND_OACC_LOOP
-      json_obj.set_string("kind", "oacc_loop");
+      json_obj.set_bool("kind_oacc_loop", true);
     case GF_OMP_FOR_KIND_SIMD
-      json_obj.set_string("kind", "simd");
+      json_obj.set_bool("kind_simd", true);
     default:
       gcc_unreachable();
     }
