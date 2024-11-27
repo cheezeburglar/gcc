@@ -706,14 +706,165 @@ json::object *
 gimple_to_json (gimple * gs, dump_flags_t flags)
 {
   char * code, address;
-
   // TODO : DO ALL THINGS FOR GIMPLE BASE CLASS
   auto json_obj = new json::object ();
   code = gimple_code_name[gimple_code (gs)];
   address = sprintf(address, HOST_PTR_PRINTF, (void *) gs);
   json_obj->set_string("address", address);
   json_obj->set_string("gimple_code", code);
+
   // TODO: hit things that are in all base classes
   json_obj->set_integer("no_warning", gs->no_warning);
+  json_obj->set_integer("visited", gs->visited);
+  json_obj->set_integer("nontemporal_move", gs->nontemporal_move);
+  json_obj->set_integer("plf", gs->plf);
+  json_obj->set_integer("modified", gs->modified);
+  json_obj->set_integer("has_volatile_ops", gs->has_volatile_ops);
+  json_obj->set_integer("uid", gs->uid);
+
+  switch (code)
+    {
+    case GIMPLE_ASM:
+      add_gimple_asm_to_json (as_a <const gasm *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_ASSIGN:
+      add_gimple_assign_to_json (as_a <const gassign *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_ASSUME:
+      add_gimple_asm_to_json (as_a <const gasm *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_BIND:
+      add_gimple_bind_to_json (as_a <const gbind *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_CALL:
+      add_gimple_call_to_json (as_a <const gcall *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_CATCH:
+      add_gimple_catch_to_json (as_a <const gasm *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_COND:
+      add_gimple_cond_to_json (as_a <const gcond *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_DEBUG:
+      add_gimple_asm_to_json (as_a <const gasm *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_EH_DISPATCH:
+      add_gimple_asm_to_json (as_a <const gasm *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_EH_ELSE:
+      add_gimple_asm_to_json (as_a <const gasm *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_EH_FILTER:
+      add_gimple_asm_to_json (as_a <const gasm *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_EH_MUST_NOT_THROW:
+      add_gimple_asm_to_json (as_a <const gasm *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_ERROR_MARK:
+      add_gimple_asm_to_json (as_a <const gasm *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_GOTO:
+      add_gimple_asm_to_json (as_a <const gasm *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_LABEL:
+      add_gimple_asm_to_json (as_a <const gasm *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_NOP:
+      add_gimple_asm_to_json (as_a <const gasm *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_OMP_ATOMIC_LOAD:
+      add_gimple_omp_atomic_load_to_json (as_a <const gomp_atomic_load *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_OMP_ATOMIC_STORE:
+      add_gimple_omp_atomic_store_to_json (as_a <const gomp_atomic_store *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_OMP_CONTINUE:
+      add_gimple_omp_continue_to_json (as_a <const gomp_continue *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_OMP_CRITICAL:
+      add_gimple_omp_critical_to_json (as_a <const gomp_critical *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_OMP_DISPATCH:
+      add_gimple_omp_dispatch_to_json (gs, flags, json_obj);
+      break;
+    case GIMPLE_OMP_FOR:
+      add_gimple_omp_for_to_json (as_a <const gomp_for *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_OMP_MASKED:
+      add_gimple_omp_masked_to_json (gs, flags, json_obj);
+      break;
+    case GIMPLE_OMP_MASTER:
+      add_gimple_omp_master_to_json (gs, flags, json_obj);
+      break;
+    case GIMPLE_OMP_ORDERED:
+      add_gimple_omp_ordered_to_json (as_a <const gomp_ordered *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_OMP_PARALLEL:
+      add_gimple_omp_parallel_to_json (as_a <const gomp_parallel *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_OMP_RETURN:
+      add_gimple_omp_return_to_json (gs, flags, json_obj);
+      break;
+    case GIMPLE_OMP_SCAN:
+      add_gimple_omp_scan_to_json (as_a <const gomp_scan *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_OMP_SCOPE:
+      add_gimple_omp_scope_to_json (gs, flags, json_obj);
+      break;
+    case GIMPLE_OMP_SECTION:
+      add_gimple_asm_to_json (gs, flags, json_obj);
+      break;
+    case GIMPLE_OMP_SECTIONS:
+      add_gimple_omp_sections_to_json (as_a <const gomp_sections *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_OMP_SECTIONS_SWITCH:
+      add_gimple_omp_sections_switch_to_json (gs, flags, json_obj);
+      break;
+    case GIMPLE_OMP_SINGLE:
+      add_gimple_omp_single_to_json (gs, flags, json_obj);
+      break;
+    case GIMPLE_OMP_STRUCTURED_BLOCK:
+      add_gimple_omp_structured_block_to_json (gs, flags, json_obj);
+      break;
+    case GIMPLE_OMP_TARGET:
+      add_gimple_omp_target_to_json (as_a <const gomp_target *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_OMP_TASK:
+      add_gimple_omp_task_to_json (as_a <const gomp_task *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_OMP_TASKGROUP:
+      add_gimple_omp_taskgroup_to_json (gs, flags, json_obj);
+      break;
+    case GIMPLE_OMP_TEAMS:
+      add_gimple_omp_teams_to_json (as_a <const gomp_teams *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_PHI:
+      add_gimple_phi_to_json (as_a <const gphi *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_PREDICT:
+      add_gimple_predict_to_json (gs, flags, json_obj);
+      break;
+    case GIMPLE_RESX:
+      add_gimple_resx_to_json (as_a <const gresx *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_RETURN:
+      add_gimple_return_to_json (as_a <const greturn *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_SWITCH:
+      add_gimple_switch_to_json (as_a <const gswitch *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_TRANSACTION:
+      add_gimple_transaction_to_json (as_a <const gtransaction *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_TRY:
+      add_gimple_try_to_json (as_a <const gtry *> (gs), flags, json_obj);
+      break;
+    case GIMPLE_WITH_CLEANUP_EXPR:
+      add_gimple_with_cleanup_expr_to_json (as_a <const gimple_statement_wce *> (gs), flags, json_obj);
+      break;
+    default:
+      gcc_unreachable ();
+      break;
+    }
 }
 
