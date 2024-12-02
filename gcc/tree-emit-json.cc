@@ -60,7 +60,7 @@ static void omp_clause_add_json(tree, json::object &,
                                 dump_info_p);
 static void omp_atomic_memory_order_add_json (json::object &,
                                               enum omp_memory_order);
-static json::object * omp_atomic_memory_order_emit_json(
+extern json::object * omp_atomic_memory_order_emit_json(
                                          omp_memory_order);
 static json::array * omp_clause_emit_json(tree, dump_info_p);
 
@@ -1213,7 +1213,7 @@ omp_atomic_memory_order_add_json (json::object & json_obj, enum omp_memory_order
 
 // 
 
-static void
+extern void
 set_xloc_as (json::object & json_obj, expanded_location xloc, const char *label)
 {
   int buff_length = 1 + snprintf(nullptr, 0, "%s:%d:%d", 
@@ -3255,8 +3255,6 @@ generic_to_json (const_tree t, dump_flags_t flags)
   return di.json_dump.release();
 }
 
-}
-
 /* Dump T and all it's children as a JSON array. */
 void
 dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
@@ -3264,14 +3262,6 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
   auto json_tree = generic_to_json(t, flags);
   json_tree->dump(stream, 1);
 }
-
-///* Dump T, and all its children, on STREAM as JSON array. */
-//void
-//dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
-//{
-//  dump_node_json(t, flags, stream)->dump(stream, true);
-//  fputs("\n", stream);
-//}
 
 //json::object*
 //fndecl_to_json (tree t, dump_flags_t flags, FILE *stream)
@@ -3304,11 +3294,13 @@ tree_json_writer::set_stream (tree_dump_index tdi)
 }
 
 void
-tree_json_writer::add_fndecl_tree (tree fndecl, dump_flags_t flags)
+tree_json_writer::add_fndecl_tree (const_tree fndecl, dump_flags_t flags)
 {
   auto json_obj = new json::object ();
 
-  json_obj->set(lang_hooks.decl_printable_name (fndecl, 2),
+  // TODO: figure out a good name for this.
+
+  json_obj->set("TODO",
                 generic_to_json(DECL_SAVED_TREE(fndecl), flags));
   m_json_root_tuple->append(json_obj);
   if (!m_stream)

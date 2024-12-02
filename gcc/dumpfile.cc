@@ -1583,7 +1583,7 @@ dump_finish (int phase)
 
   // TODO : JSON hook is here provisionally.
 
-  dump_context:: get ().hook_test ();
+//  dump_context:: get ().hook_test ();
 
   if (phase < 0)
     return;
