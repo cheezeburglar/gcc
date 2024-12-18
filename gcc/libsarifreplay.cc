@@ -1,5 +1,5 @@
 /* A library for re-emitting diagnostics saved in SARIF form
-   via libdiagnostics.
+   via libgdiagnostics.
    Copyright (C) 2022-2024 Free Software Foundation, Inc.
    Contributed by David Malcolm <dmalcolm@redhat.com>.
 
@@ -26,7 +26,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "make-unique.h"
-#include "libdiagnostics++.h"
+#include "libgdiagnostics++.h"
 #include "json-parsing.h"
 #include "intl.h"
 #include "sarif-spec-urls.def"
@@ -39,7 +39,7 @@ namespace {
    Issue an error to MGR and return nullptr if there are any problems.  */
 
 static std::unique_ptr<std::vector<char>>
-read_file (const char *path, libdiagnostics::manager &mgr)
+read_file (const char *path, libgdiagnostics::manager &mgr)
 {
   FILE *f_in = fopen (path, "r");
   if (!f_in)
@@ -83,26 +83,26 @@ read_file (const char *path, libdiagnostics::manager &mgr)
   return result;
 }
 
-static libdiagnostics::physical_location
-make_physical_location (libdiagnostics::manager &mgr,
-			libdiagnostics::file f,
+static libgdiagnostics::physical_location
+make_physical_location (libgdiagnostics::manager &mgr,
+			libgdiagnostics::file f,
 			const json::location_map::point &point)
 {
   /* json::location_map::point uses 0-based columns,
-     whereas libdiagnostics uses 1-based columns.  */
+     whereas libgdiagnostics uses 1-based columns.  */
   return mgr.new_location_from_file_line_column (f,
 						 point.m_line,
 						 point.m_column + 1);
 }
 
-static libdiagnostics::physical_location
-make_physical_location (libdiagnostics::manager &mgr,
-			libdiagnostics::file f,
+static libgdiagnostics::physical_location
+make_physical_location (libgdiagnostics::manager &mgr,
+			libgdiagnostics::file f,
 			const json::location_map::range &range)
 {
-  libdiagnostics::physical_location start
+  libgdiagnostics::physical_location start
     = make_physical_location (mgr, f, range.m_start);
-  libdiagnostics::physical_location end
+  libgdiagnostics::physical_location end
     = make_physical_location (mgr, f, range.m_end);
   return mgr.new_location_from_range (start, start, end);
 }
@@ -202,8 +202,8 @@ struct string_property_value
 class sarif_replayer
 {
 public:
-  sarif_replayer (libdiagnostics::manager &&output_manager,
-		  libdiagnostics::manager &&control_manager)
+  sarif_replayer (libgdiagnostics::manager &&output_manager,
+		  libgdiagnostics::manager &&control_manager)
   : m_output_mgr (std::move (output_manager)),
     m_control_mgr (std::move (control_manager)),
     m_driver_obj (nullptr),
@@ -249,7 +249,7 @@ private:
   // "artifactLocation" object (§3.4)
   enum status
   handle_artifact_location_object (const json::object &artifact_loc,
-				   libdiagnostics::file &out);
+				   libgdiagnostics::file &out);
 
   // Message string lookup algorithm (§3.11.7)
   const char *
@@ -270,6 +270,10 @@ private:
   enum status
   handle_tool_obj (const json::object &tool_obj);
 
+  // "artifact" object (§3.24).  */
+  void
+  handle_artifact_obj (const json::object &artifact_obj);
+
   // "result" object (§3.27)
   enum status
   handle_result_obj (const json::object &result_obj,
@@ -280,34 +284,34 @@ private:
   // "location" object (§3.28)
   enum status
   handle_location_object (const json::object &location_obj,
-			  libdiagnostics::physical_location &out_physical_loc,
-			  libdiagnostics::logical_location &out_logical_loc);
+			  libgdiagnostics::physical_location &out_physical_loc,
+			  libgdiagnostics::logical_location &out_logical_loc);
 
   // "physicalLocation" object (§3.29)
   enum status
   handle_physical_location_object (const json::object &phys_loc_obj,
-				   libdiagnostics::physical_location &out);
+				   libgdiagnostics::physical_location &out);
 
   // "region" object (§3.30)
   enum status
   handle_region_object (const json::object &region_obj,
-			libdiagnostics::file file,
-			libdiagnostics::physical_location &out);
+			libgdiagnostics::file file,
+			libgdiagnostics::physical_location &out);
 
   // "logicalLocation" object (§3.33)
   enum status
   handle_logical_location_object (const json::object &logical_loc_obj,
-				  libdiagnostics::logical_location &out);
+				  libgdiagnostics::logical_location &out);
 
   // "threadFlow" object (§3.37)
   enum status
   handle_thread_flow_object (const json::object &thread_flow_obj,
-			     libdiagnostics::execution_path &out);
+			     libgdiagnostics::execution_path &out);
 
   // "threadFlowLocation" object (§3.38)
   enum status
   handle_thread_flow_location_object (const json::object &tflow_loc_obj,
-				      libdiagnostics::execution_path &out);
+				      libgdiagnostics::execution_path &out);
 
   // reportingDescriptor lookup (§3.52.3)
   const json::object *
@@ -328,7 +332,7 @@ private:
   report_invalid_sarif (const json::value &jv,
 			const spec_ref &ref,
 			const char *gmsgid, ...)
-    LIBDIAGNOSTICS_PARAM_GCC_FORMAT_STRING (4, 5)
+    LIBGDIAGNOSTICS_PARAM_GCC_FORMAT_STRING (4, 5)
   {
     va_list ap;
     va_start (ap, gmsgid);
@@ -344,7 +348,7 @@ private:
   report_unhandled_sarif (const json::value &jv,
 			  const spec_ref &ref,
 			  const char *gmsgid, ...)
-    LIBDIAGNOSTICS_PARAM_GCC_FORMAT_STRING (4, 5)
+    LIBGDIAGNOSTICS_PARAM_GCC_FORMAT_STRING (4, 5)
   {
     va_list ap;
     va_start (ap, gmsgid);
@@ -359,7 +363,7 @@ private:
 		  const char *gmsgid,
 		  va_list *args,
 		  enum diagnostic_level level)
-    LIBDIAGNOSTICS_PARAM_GCC_FORMAT_STRING (4, 0)
+    LIBGDIAGNOSTICS_PARAM_GCC_FORMAT_STRING (4, 0)
   {
     auto diag (m_control_mgr.begin_diagnostic (level));
 
@@ -535,18 +539,18 @@ private:
 			      size_t num_values);
 
   /* The manager to replay the SARIF files to.  */
-  libdiagnostics::manager m_output_mgr;
+  libgdiagnostics::manager m_output_mgr;
 
   /* The manager for reporting issues loading SARIF files.  */
-  libdiagnostics::manager m_control_mgr;
+  libgdiagnostics::manager m_control_mgr;
 
   /* The file within m_control_mgr representing the .sarif file.  */
-  libdiagnostics::file m_loaded_file;
+  libgdiagnostics::file m_loaded_file;
 
   replayer_location_map m_json_location_map;
 
   const json::object *m_driver_obj;
-  const json::value *m_artifacts_arr;
+  const json::array *m_artifacts_arr;
 };
 
 static const char *
@@ -766,10 +770,18 @@ sarif_replayer::handle_run_obj (const json::object &run_obj)
   if (!m_driver_obj)
     return status::err_invalid_sarif;
 
-#if 0
-  m_artifacts_arr = get_optional_property<json::array>
-    (run_obj, property_spec_ref ("run", "artifacts","3.14.15"));
-#endif
+  const property_spec_ref prop_artifacts ("run", "artifacts", "3.14.15");
+  m_artifacts_arr
+    = get_optional_property<json::array> (run_obj, prop_artifacts);
+  if (m_artifacts_arr)
+    for (auto element : *m_artifacts_arr)
+      {
+	if (const json::object *artifact_obj
+	    = require_object_for_element (*element, prop_artifacts))
+	  handle_artifact_obj (*artifact_obj);
+	else
+	  return status::err_invalid_sarif;
+      }
 
   /* If present, run.results must be null or be an array.  */
   const property_spec_ref prop_results ("run", "results", "3.14.23");
@@ -803,6 +815,58 @@ sarif_replayer::handle_run_obj (const json::object &run_obj)
       }
 
   return status::ok;
+}
+
+/* Process an artifact object (SARIF v2.1.0 section 3.24).
+   Create a libgdiagnostics::file for each artifact that has a uri,
+   effectively prepopulating a cache with source language and contents.  */
+
+void
+sarif_replayer::handle_artifact_obj (const json::object &artifact_obj)
+{
+  const property_spec_ref location ("artifact", "location", "3.24.2");
+  auto artifact_loc_obj
+    = get_optional_property<json::object> (artifact_obj, location);
+  if (!artifact_loc_obj)
+    return;
+
+  // we should now have an artifactLocation object (§3.4)
+
+  // 3.4.3 uri property
+  const property_spec_ref prop_uri ("artifactLocation", "uri", "3.4.3");
+  auto artifact_loc_uri
+    = get_optional_property<json::string> (*artifact_loc_obj, prop_uri);
+  if (!artifact_loc_uri)
+    return;
+
+  const char *sarif_source_language = nullptr;
+  const property_spec_ref prop_source_lang
+    ("artifact", "sourceLanguage", "3.24.10");
+  if (auto source_lang_jstr
+      = get_optional_property<json::string> (artifact_obj,
+					     prop_source_lang))
+    sarif_source_language = source_lang_jstr->get_string ();
+
+  /* Create the libgdiagnostics::file.  */
+  auto file = m_output_mgr.new_file (artifact_loc_uri->get_string (),
+				     sarif_source_language);
+
+  // Set contents, if available
+  const property_spec_ref prop_contents
+    ("artifact", "contents", "3.24.8");
+  if (auto content_obj
+      = get_optional_property<json::object> (artifact_obj,
+					     prop_contents))
+    {
+      // We should have an artifactContent object (§3.3)
+      const property_spec_ref prop_text
+	("artifactContent", "text", "3.3.2");
+      if (auto text_jstr
+	  = get_optional_property<json::string> (*content_obj,
+						 prop_text))
+	file.set_buffered_content (text_jstr->get_string (),
+				   text_jstr->get_length ());
+    }
 }
 
 /* Process a tool object (SARIF v2.1.0 section 3.18).  */
@@ -946,8 +1010,8 @@ sarif_replayer::handle_result_obj (const json::object &result_obj,
     return status::err_invalid_sarif;
 
   // §3.27.12 "locations" property
-  libdiagnostics::physical_location physical_loc;
-  libdiagnostics::logical_location logical_loc;
+  libgdiagnostics::physical_location physical_loc;
+  libgdiagnostics::logical_location logical_loc;
   const property_spec_ref locations_prop ("result", "locations", "3.27.12");
   const json::array *locations_arr
     = get_required_property<json::array> (result_obj, locations_prop);
@@ -969,7 +1033,7 @@ sarif_replayer::handle_result_obj (const json::object &result_obj,
     }
 
   // §3.27.18 "codeFlows" property
-  libdiagnostics::execution_path path;
+  libgdiagnostics::execution_path path;
   const property_spec_ref code_flows ("result", "codeFlows", "3.27.18");
   if (auto code_flows_arr = get_optional_property<json::array> (result_obj,
 								code_flows))
@@ -1001,10 +1065,23 @@ sarif_replayer::handle_result_obj (const json::object &result_obj,
 	}
     }
 
-  libdiagnostics::group g (m_output_mgr);
+  libgdiagnostics::group g (m_output_mgr);
   auto err (m_output_mgr.begin_diagnostic (level));
   if (rule_id)
-    err.add_rule (rule_id->get_string (), nullptr);
+    {
+      const char *url = nullptr;
+      if (rule_obj)
+	{
+	  /* rule_obj should be a reportingDescriptor object (3.49).
+	     Get any §3.49.12 helpUri property.  */
+	  const property_spec_ref prop_help_uri
+	    ("reportingDescriptor", "helpUri", "3.49.12");
+	  if (auto url_val = get_optional_property<json::string>(*rule_obj,
+								 prop_help_uri))
+	    url = url_val->get_string ();
+	}
+      err.add_rule (rule_id->get_string (), url);
+    }
   err.set_location (physical_loc);
   err.set_logical_location (logical_loc);
   if (path.m_inner)
@@ -1020,8 +1097,8 @@ sarif_replayer::handle_result_obj (const json::object &result_obj,
     {
       for (auto rel_loc : *related_locations_arr)
 	{
-	  libdiagnostics::physical_location physical_loc;
-	  libdiagnostics::logical_location logical_loc;
+	  libgdiagnostics::physical_location physical_loc;
+	  libgdiagnostics::logical_location logical_loc;
 	  const json::object *location_obj
 	    = require_object_for_element (*rel_loc,
 					  prop_related_locations);
@@ -1099,11 +1176,91 @@ maybe_consume_placeholder (const char *&iter_src, unsigned *out_arg_idx)
   return false;
 }
 
+struct embedded_link
+{
+  std::string text;
+  std::string destination;
+};
+
+/*  If ITER_SRC starts with an embedded link as per §3.11.6, advance ITER_SRC
+    to immediately beyond the link, and return the link.
+
+    Otherwise, leave ITER_SRC untouched and return nullptr.  */
+
+static std::unique_ptr<embedded_link>
+maybe_consume_embedded_link (const char *&iter_src)
+{
+  if (*iter_src != '[')
+    return nullptr;
+
+  /* This *might* be an embedded link.
+     See §3.11.6 ("Messages with embedded links") and
+     https://github.com/oasis-tcs/sarif-spec/issues/657 */
+
+  /* embedded link = "[", link text, "](", link destination, ")"; */
+
+  embedded_link result;
+
+  /* Try to get the link text.  */
+  const char *iter = iter_src + 1;
+  while (char ch = *(iter++))
+    {
+      if (ch == '\\')
+	{
+	  char next_ch = *iter;
+	  switch (next_ch)
+	    {
+	    case '\\':
+	    case '[':
+	    case ']':
+	      /* escaped link character = "\" | "[" | "]";  */
+	      result.text += next_ch;
+	      iter++;
+	      continue;
+
+	    default:
+	      /* Malformed link text; assume this is not an
+		 embedded link.  */
+	      return nullptr;
+	    }
+	}
+      else if (ch == ']')
+	/* End of link text.  */
+	break;
+      else
+	result.text += ch;
+    }
+
+  if (*iter++ != '(')
+    return nullptr;
+
+  /* Try to get the link destination.  */
+  while (1)
+    {
+      char ch = *(iter++);
+      if (ch == '\0')
+	{
+	  /* String ended before terminating ')'.
+	     Assume this is not an embedded link.  */
+	  return nullptr;
+	}
+      else if (ch == ')')
+	/* Terminator.  */
+	break;
+      else
+	result.destination += ch;
+    }
+
+  iter_src = iter;
+  return ::make_unique<embedded_link> (std::move (result));
+}
+
 /* Lookup the plain text string within a result.message (§3.27.11),
-   and substitute for any placeholders (§3.11.5).
+   and substitute for any placeholders (§3.11.5) and handle any
+   embedded links (§3.11.6).
 
    Limitations:
-   - we don't yet support embedded links
+   - we don't preserve destinations within embedded links
 
    MESSAGE_OBJ is "theMessage"
    RULE_OBJ is "theRule".  */
@@ -1177,6 +1334,13 @@ make_plain_text_within_result_message (const json::object *tool_component_obj,
 				    ch);
 	      return label_text::borrow (nullptr);
 	    }
+	}
+      else if (auto link = maybe_consume_embedded_link (iter_src))
+	{
+	  accum += link->text;
+	  /* TODO: use the destination.  */
+	  /* TODO: potentially could try to convert
+	     intra-sarif links into event ids.  */
 	}
       else
 	{
@@ -1274,7 +1438,7 @@ lookup_plain_text_within_result_message (const json::object *tool_component_obj,
 
 enum status
 sarif_replayer::handle_thread_flow_object (const json::object &thread_flow_obj,
-					   libdiagnostics::execution_path &out)
+					   libgdiagnostics::execution_path &out)
 {
   const property_spec_ref locations ("threadFlow", "locations", "3.37.6");
   const json::array *locations_arr
@@ -1302,10 +1466,10 @@ sarif_replayer::handle_thread_flow_object (const json::object &thread_flow_obj,
 enum status
 sarif_replayer::
 handle_thread_flow_location_object (const json::object &tflow_loc_obj,
-				    libdiagnostics::execution_path &path)
+				    libgdiagnostics::execution_path &path)
 {
-  libdiagnostics::physical_location physical_loc;
-  libdiagnostics::logical_location logical_loc;
+  libgdiagnostics::physical_location physical_loc;
+  libgdiagnostics::logical_location logical_loc;
   label_text message;
   int stack_depth = 0;
 
@@ -1349,7 +1513,7 @@ handle_thread_flow_location_object (const json::object &tflow_loc_obj,
 	  kind_strs.push_back (kind_str->get_string ());
 	  // TODO: handle meaning?
 	  /*  TOOD: probably just want to add sarif kinds to
-	      the libdiagnostics event, and have libdiagnostics
+	      the libgdiagnostics event, and have libgdiagnostics
 	      turn that back into a "meaning".  */
 	}
     }
@@ -1388,8 +1552,8 @@ handle_thread_flow_location_object (const json::object &tflow_loc_obj,
 enum status
 sarif_replayer::
 handle_location_object (const json::object &location_obj,
-			libdiagnostics::physical_location &out_physical_loc,
-			libdiagnostics::logical_location &out_logical_loc)
+			libgdiagnostics::physical_location &out_physical_loc,
+			libgdiagnostics::logical_location &out_logical_loc)
 {
   // §3.28.3 "physicalLocation" property
   {
@@ -1438,9 +1602,9 @@ handle_location_object (const json::object &location_obj,
 enum status
 sarif_replayer::
 handle_physical_location_object (const json::object &phys_loc_obj,
-				 libdiagnostics::physical_location &out)
+				 libgdiagnostics::physical_location &out)
 {
-  libdiagnostics::file artifact_file;
+  libgdiagnostics::file artifact_file;
 
   // §3.29.3 "artifactLocation" property
   const property_spec_ref artifact_location_prop
@@ -1487,7 +1651,7 @@ handle_physical_location_object (const json::object &phys_loc_obj,
 
 enum status
 sarif_replayer::handle_artifact_location_object (const json::object &artifact_loc,
-						 libdiagnostics::file &out)
+						 libgdiagnostics::file &out)
 {
   // §3.4.3 "uri" property
   const property_spec_ref uri_prop ("artifactLocation", "uri", "3.4.3");
@@ -1521,15 +1685,15 @@ sarif_replayer::handle_artifact_location_object (const json::object &artifact_lo
 enum status
 sarif_replayer::
 handle_region_object (const json::object &region_obj,
-		      libdiagnostics::file file,
-		      libdiagnostics::physical_location &out)
+		      libgdiagnostics::file file,
+		      libgdiagnostics::physical_location &out)
 {
   gcc_assert (file.m_inner);
 
   // §3.30.5 "startLine" property
   const property_spec_ref start_line_prop ("region", "startLine", "3.30.5");
-  libdiagnostics::physical_location start;
-  libdiagnostics::physical_location end;
+  libgdiagnostics::physical_location start;
+  libgdiagnostics::physical_location end;
   if (auto start_line_jnum
       = get_optional_property<json::integer_number> (region_obj,
 						     start_line_prop))
@@ -1586,7 +1750,7 @@ handle_region_object (const json::object &region_obj,
 enum status
 sarif_replayer::
 handle_logical_location_object (const json::object &logical_loc_obj,
-				libdiagnostics::logical_location &out)
+				libgdiagnostics::logical_location &out)
 {
   const property_spec_ref name_prop ("logicalLocation", "name", "3.33.4");
   const char *short_name = nullptr;
@@ -1643,7 +1807,7 @@ handle_logical_location_object (const json::object &logical_loc_obj,
       kind = result.m_val;
     }
 
-  libdiagnostics::logical_location parent;
+  libgdiagnostics::logical_location parent;
   out = m_output_mgr.new_logical_location (kind,
 					   parent,
 					   short_name,
@@ -1740,7 +1904,7 @@ sarif_replay_path (const char *sarif_file,
   FAIL_IF_NULL (control_manager);
   FAIL_IF_NULL (options);
 
-  sarif_replayer r (libdiagnostics::manager (output_manager, false),
-		    libdiagnostics::manager (control_manager, false));
+  sarif_replayer r (libgdiagnostics::manager (output_manager, false),
+		    libgdiagnostics::manager (control_manager, false));
   return (int)r.replay_file (sarif_file, *options);
 }

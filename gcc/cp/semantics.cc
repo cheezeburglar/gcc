@@ -2136,12 +2136,13 @@ finish_compound_stmt (tree stmt)
 /* Finish an asm-statement, whose components are a STRING, some
    OUTPUT_OPERANDS, some INPUT_OPERANDS, some CLOBBERS and some
    LABELS.  Also note whether the asm-statement should be
-   considered volatile, and whether it is asm inline.  */
+   considered volatile, and whether it is asm inline.  TOPLEV_P
+   is true if finishing namespace scope extended asm.  */
 
 tree
 finish_asm_stmt (location_t loc, int volatile_p, tree string,
 		 tree output_operands, tree input_operands, tree clobbers,
-		 tree labels, bool inline_p)
+		 tree labels, bool inline_p, bool toplev_p)
 {
   tree r;
   tree t;
@@ -2215,9 +2216,45 @@ finish_asm_stmt (location_t loc, int volatile_p, tree string,
 		 mark it addressable.  */
 	      if (!allows_reg && !cxx_mark_addressable (*op))
 		operand = error_mark_node;
+	      if (allows_reg && toplev_p)
+		{
+		  error_at (loc, "constraint allows registers outside of "
+				 "a function");
+		  operand = error_mark_node;
+		}
 	    }
 	  else
 	    operand = error_mark_node;
+
+	  if (toplev_p && operand != error_mark_node)
+	    {
+	      if (TREE_SIDE_EFFECTS (operand))
+		{
+		  error_at (loc, "side-effects in output operand outside "
+				 "of a function");
+		  operand = error_mark_node;
+		}
+	      else
+		{
+		  tree addr
+		    = cp_build_addr_expr (operand, tf_warning_or_error);
+		  if (addr == error_mark_node)
+		    operand = error_mark_node;
+		  else
+		    {
+		      addr = maybe_constant_value (addr);
+		      if (!initializer_constant_valid_p (addr,
+							 TREE_TYPE (addr)))
+			{
+			  error_at (loc, "output operand outside of a "
+					 "function is not constant");
+			  operand = error_mark_node;
+			}
+		      else
+			operand = build_fold_indirect_ref (addr);
+		    }
+		}
+	    }
 
 	  TREE_VALUE (t) = operand;
 	}
@@ -2283,9 +2320,55 @@ finish_asm_stmt (location_t loc, int volatile_p, tree string,
 		  if (TREE_CONSTANT (constop))
 		    operand = constop;
 		}
+	      if (allows_reg && toplev_p)
+		{
+		  error_at (loc, "constraint allows registers outside of "
+				 "a function");
+		  operand = error_mark_node;
+		}
 	    }
 	  else
 	    operand = error_mark_node;
+
+	  if (toplev_p && operand != error_mark_node)
+	    {
+	      if (TREE_SIDE_EFFECTS (operand))
+		{
+		  error_at (loc, "side-effects in input operand outside "
+				 "of a function");
+		  operand = error_mark_node;
+		}
+	      else if (allows_mem && lvalue_or_else (operand, lv_asm, tf_none))
+		{
+		  tree addr = cp_build_addr_expr (operand, tf_warning_or_error);
+		  if (addr == error_mark_node)
+		    operand = error_mark_node;
+		  else
+		    {
+		      addr = maybe_constant_value (addr);
+		      if (!initializer_constant_valid_p (addr,
+							 TREE_TYPE (addr)))
+			{
+			  error_at (loc, "input operand outside of a "
+					 "function is not constant");
+			  operand = error_mark_node;
+			}
+		      else
+			operand = build_fold_indirect_ref (addr);
+		    }
+		}
+	      else
+		{
+		  operand = maybe_constant_value (operand);
+		  if (!initializer_constant_valid_p (operand,
+						     TREE_TYPE (operand)))
+		    {
+		      error_at (loc, "input operand outside of a "
+				     "function is not constant");
+		      operand = error_mark_node;
+		    }
+		}
+	    }
 
 	  TREE_VALUE (t) = operand;
 	}
@@ -2296,6 +2379,11 @@ finish_asm_stmt (location_t loc, int volatile_p, tree string,
 		  clobbers, labels);
   ASM_VOLATILE_P (r) = volatile_p || noutputs == 0;
   ASM_INLINE_P (r) = inline_p;
+  if (toplev_p)
+    {
+      symtab->finalize_toplevel_asm (r);
+      return r;
+    }
   r = maybe_cleanup_point_expr_void (r);
   return add_stmt (r);
 }
@@ -2452,6 +2540,8 @@ finish_parenthesized_expr (cp_expr expr)
   tree stripped_expr = tree_strip_any_location_wrapper (expr);
   if (TREE_CODE (stripped_expr) == STRING_CST)
     PAREN_STRING_LITERAL_P (stripped_expr) = 1;
+  else if (TREE_CODE (stripped_expr) == PACK_INDEX_EXPR)
+    PACK_INDEX_PARENTHESIZED_P (stripped_expr) = true;
 
   expr = cp_expr (force_paren_expr (expr), expr.get_location ());
 
@@ -3197,7 +3287,8 @@ finish_call_expr (tree fn, vec<tree, va_gc> **args, bool disallow_virtual,
       if (TREE_CODE (fn) == FUNCTION_DECL
 	  && (DECL_BUILT_IN_CLASS (fn) == BUILT_IN_NORMAL
 	      || DECL_BUILT_IN_CLASS (fn) == BUILT_IN_MD))
-	result = resolve_overloaded_builtin (input_location, fn, *args);
+	result = resolve_overloaded_builtin (input_location, fn, *args,
+					     complain & tf_error);
 
       if (!result)
 	{
@@ -4848,22 +4939,36 @@ finish_type_pack_element (tree idx, tree types, tsubst_flags_t complain)
   if (TREE_CODE (idx) != INTEGER_CST || !INTEGRAL_TYPE_P (TREE_TYPE (idx)))
     {
       if (complain & tf_error)
-	error ("%<__type_pack_element%> index is not an integral constant");
+	error ("pack index is not an integral constant");
       return error_mark_node;
     }
   if (tree_int_cst_sgn (idx) < 0)
     {
       if (complain & tf_error)
-	error ("%<__type_pack_element%> index is negative");
+	error ("pack index is negative");
       return error_mark_node;
     }
   if (wi::to_widest (idx) >= TREE_VEC_LENGTH (types))
     {
       if (complain & tf_error)
-	error ("%<__type_pack_element%> index is out of range");
+	error ("pack index is out of range");
       return error_mark_node;
     }
   return TREE_VEC_ELT (types, tree_to_shwi (idx));
+}
+
+/* In a pack-index T...[N], return the element at index IDX within TYPES.
+   PARENTHESIZED_P is true iff the pack index was wrapped in ().  */
+
+tree
+pack_index_element (tree idx, tree types, bool parenthesized_p,
+		    tsubst_flags_t complain)
+{
+  tree r = finish_type_pack_element (idx, types, complain);
+  if (parenthesized_p)
+    /* For the benefit of decltype(auto).  */
+    r = force_paren_expr (r);
+  return r;
 }
 
 /* Implement the __direct_bases keyword: Return the direct base classes

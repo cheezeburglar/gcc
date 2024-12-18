@@ -1020,7 +1020,7 @@
        the address into a DImode MEM so that aarch64_print_operand knows
        how to print it.  */
     operands[0] = gen_rtx_MEM (DImode, operands[0]);
-    return pftype[INTVAL(operands[1])][locality];
+    return pftype[INTVAL (operands[1]) & 1][locality];
   }
   [(set_attr "type" "load_4")]
 )
@@ -4670,6 +4670,63 @@
       return "<crc_variant>\\t%w0, %w1, %w2";
   }
   [(set_attr "type" "crc")]
+)
+
+;; Reversed CRC
+(define_expand "crc_rev<ALLI:mode><ALLX:mode>4"
+  [;; return value (calculated CRC)
+   (match_operand:ALLX 0 "register_operand" "=r")
+   ;; initial CRC
+   (match_operand:ALLX 1 "register_operand" "r")
+   ;; data
+   (match_operand:ALLI 2 "register_operand" "r")
+   ;; polynomial without leading 1
+   (match_operand:ALLX 3)]
+  ""
+  {
+    /* If the polynomial is the same as the polynomial of crc32c* instruction,
+       put that instruction.  crc32c uses iSCSI polynomial.  */
+    if (TARGET_CRC32 && INTVAL (operands[3]) == 0x1EDC6F41
+	&& <ALLX:MODE>mode == SImode)
+      emit_insn (gen_aarch64_crc32c<ALLI:crc_data_type> (operands[0],
+							 operands[1],
+							 operands[2]));
+    /* If the polynomial is the same as the polynomial of crc32* instruction,
+	put that instruction.  crc32 uses HDLC etc.  polynomial.  */
+    else if (TARGET_CRC32 && INTVAL (operands[3]) == 0x04C11DB7
+	     && <ALLX:MODE>mode == SImode)
+      emit_insn (gen_aarch64_crc32<ALLI:crc_data_type> (operands[0],
+							operands[1],
+							operands[2]));
+    else if (TARGET_AES && <ALLI:sizen> <= <ALLX:sizen>)
+      aarch64_expand_reversed_crc_using_pmull (<ALLX:MODE>mode,
+					       <ALLI:MODE>mode,
+					       operands);
+    else
+      /* Otherwise, generate table-based CRC.  */
+      expand_reversed_crc_table_based (operands[0], operands[1], operands[2],
+				       operands[3], <ALLI:MODE>mode,
+				       generate_reflecting_code_standard);
+    DONE;
+  }
+)
+
+;; Bit-forward CRC
+(define_expand "crc<ALLI:mode><ALLX:mode>4"
+  [;; return value (calculated CRC)
+   (match_operand:ALLX 0 "register_operand" "=r")
+   ;; initial CRC
+   (match_operand:ALLX 1 "register_operand" "r")
+   ;; data
+   (match_operand:ALLI 2 "register_operand" "r")
+   ;; polynomial without leading 1
+   (match_operand:ALLX 3)]
+  "TARGET_AES && <ALLI:sizen> <= <ALLX:sizen>"
+  {
+    aarch64_expand_crc_using_pmull (<ALLX:MODE>mode, <ALLI:MODE>mode,
+				    operands);
+    DONE;
+  }
 )
 
 (define_insn "*csinc2<mode>_insn"

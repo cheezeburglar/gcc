@@ -1751,6 +1751,9 @@ static const scoped_attribute_specs *const rs6000_attribute_table[] =
 #undef TARGET_CAN_CHANGE_MODE_CLASS
 #define TARGET_CAN_CHANGE_MODE_CLASS rs6000_can_change_mode_class
 
+#undef TARGET_REDZONE_CLOBBER
+#define TARGET_REDZONE_CLOBBER rs6000_redzone_clobber
+
 #undef TARGET_CONSTANT_ALIGNMENT
 #define TARGET_CONSTANT_ALIGNMENT rs6000_constant_alignment
 
@@ -13725,6 +13728,24 @@ rs6000_can_change_mode_class (machine_mode from,
   return true;
 }
 
+/* Implement TARGET_REDZONE_CLOBBER.  */
+
+static rtx
+rs6000_redzone_clobber ()
+{
+  cfun->machine->asm_redzone_clobber_seen = true;
+  if (DEFAULT_ABI != ABI_V4)
+    {
+      int red_zone_size = TARGET_32BIT ? 220 : 288;
+      rtx base = plus_constant (Pmode, stack_pointer_rtx,
+				GEN_INT (-red_zone_size));
+      rtx mem = gen_rtx_MEM (BLKmode, base);
+      set_mem_size (mem, red_zone_size);
+      return mem;
+    }
+  return NULL_RTX;
+}
+
 /* Debug version of rs6000_can_change_mode_class.  */
 static bool
 rs6000_debug_can_change_mode_class (machine_mode from,
@@ -17341,16 +17362,21 @@ rs6000_hash_constant (rtx k)
 	result = result * 613 + (unsigned) XINT (k, fidx);
 	break;
       case 'w':
-	if (sizeof (unsigned) >= sizeof (HOST_WIDE_INT))
-	  result = result * 613 + (unsigned) XWINT (k, fidx);
-	else
-	  {
-	    size_t i;
-	    for (i = 0; i < sizeof (HOST_WIDE_INT) / sizeof (unsigned); i++)
-	      result = result * 613 + (unsigned) (XWINT (k, fidx)
-						  >> CHAR_BIT * i);
-	  }
-	break;
+      case 'L':
+	{
+	  const HOST_WIDE_INT val
+	    = (format[fidx] == 'L' ? XLOC (k, fidx) : XWINT (k, fidx));
+	  if (sizeof (unsigned) >= sizeof (HOST_WIDE_INT))
+	    result = result * 613 + (unsigned) val;
+	  else
+	    {
+	      size_t i;
+	      for (i = 0; i < sizeof (HOST_WIDE_INT) / sizeof (unsigned); i++)
+		result = result * 613 + (unsigned) (val
+						    >> CHAR_BIT * i);
+	    }
+	  break;
+	}
       case '0':
 	break;
       default:
@@ -29286,6 +29312,9 @@ rs6000_opaque_type_invalid_use_p (gimple *stmt)
 
   return false;
 }
+
+#undef TARGET_DOCUMENTATION_NAME
+#define TARGET_DOCUMENTATION_NAME "PowerPC"
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 

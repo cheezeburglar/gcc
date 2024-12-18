@@ -438,7 +438,6 @@ extern GTY(()) tree cp_global_trees[CPTI_MAX];
       TINFO_HAS_ACCESS_ERRORS (in TEMPLATE_INFO)
       SIZEOF_EXPR_TYPE_P (in SIZEOF_EXPR)
       COMPOUND_REQ_NOEXCEPT_P (in COMPOUND_REQ)
-      WILDCARD_PACK_P (in WILDCARD_DECL)
       BLOCK_OUTER_CURLY_BRACE_P (in BLOCK)
       FOLD_EXPR_MODIFY_P (*_FOLD_EXPR)
       IF_STMT_CONSTEXPR_P (IF_STMT)
@@ -451,6 +450,7 @@ extern GTY(()) tree cp_global_trees[CPTI_MAX];
       ATOMIC_CONSTR_MAP_INSTANTIATED_P (in ATOMIC_CONSTR)
       contract_semantic (in ASSERTION_, PRECONDITION_, POSTCONDITION_STMT)
       RETURN_EXPR_LOCAL_ADDR_P (in RETURN_EXPR)
+      PACK_INDEX_PARENTHESIZED_P (in PACK_INDEX_*)
    1: IDENTIFIER_KIND_BIT_1 (in IDENTIFIER_NODE)
       TI_PENDING_TEMPLATE_FLAG.
       TEMPLATE_PARMS_FOR_INLINE.
@@ -989,6 +989,53 @@ public:
   lkp_range (tree t): t(t) { }
   lkp_iterator begin() { return lkp_iterator (t); }
   lkp_iterator end() { return lkp_iterator (NULL_TREE); }
+};
+
+/* Iterator for a RAW_DATA_CST.  */
+
+class raw_data_iterator {
+  tree t;
+  unsigned int n;
+
+ public:
+  explicit raw_data_iterator (tree t, unsigned int n)
+    : t (t), n (n)
+  {
+  }
+
+  operator bool () const
+  {
+    return n < (unsigned) RAW_DATA_LENGTH (t);
+  }
+
+  raw_data_iterator &operator++ ()
+  {
+    ++n;
+    return *this;
+  }
+
+  tree operator* () const
+  {
+    return build_int_cst (TREE_TYPE (t), RAW_DATA_UCHAR_ELT (t, n));
+  }
+
+  bool operator== (const raw_data_iterator &o) const
+  {
+    return t == o.t && n == o.n;
+  }
+};
+
+/* Treat a tree as a range of raw_data_iterator, e.g.
+   for (tree f : raw_data_range (d)) { ... }  */
+
+class raw_data_range
+{
+  tree t;
+public:
+  raw_data_range (tree t) : t (t) { }
+  raw_data_iterator begin () { return raw_data_iterator (t, 0); }
+  raw_data_iterator end ()
+  { return raw_data_iterator (t, RAW_DATA_LENGTH (t)); }
 };
 
 /* hash traits for declarations.  Hashes potential overload sets via
@@ -2258,7 +2305,8 @@ enum languages { lang_c, lang_cplusplus };
    || TREE_CODE (T) == BOUND_TEMPLATE_TEMPLATE_PARM	\
    || TREE_CODE (T) == DECLTYPE_TYPE			\
    || TREE_CODE (T) == TRAIT_TYPE			\
-   || TREE_CODE (T) == DEPENDENT_OPERATOR_TYPE)
+   || TREE_CODE (T) == DEPENDENT_OPERATOR_TYPE		\
+   || TREE_CODE (T) == PACK_INDEX_TYPE)
 
 /* Nonzero if T is a class (or struct or union) type.  Also nonzero
    for template type parameters, typename types, and instantiated
@@ -4001,6 +4049,9 @@ struct GTY(()) lang_decl {
 #define PACK_EXPANSION_CHECK(NODE) \
   TREE_CHECK2 (NODE, TYPE_PACK_EXPANSION, EXPR_PACK_EXPANSION)
 
+#define PACK_INDEX_CHECK(NODE) \
+  TREE_CHECK2 (NODE, PACK_INDEX_TYPE, PACK_INDEX_EXPR)
+
 /* Extracts the type or expression pattern from a TYPE_PACK_EXPANSION or
    EXPR_PACK_EXPANSION.  */
 #define PACK_EXPANSION_PATTERN(NODE)                            \
@@ -4025,6 +4076,22 @@ struct GTY(()) lang_decl {
     ? &TYPE_MAX_VALUE_RAW (NODE)			\
     : &TREE_OPERAND ((NODE), 2))
 
+/* True if NODE is a pack index.  */
+#define PACK_INDEX_P(NODE)                 \
+  (TREE_CODE (NODE) == PACK_INDEX_TYPE     \
+   || TREE_CODE (NODE) == PACK_INDEX_EXPR)
+
+/* For a pack index T...[N], the pack expansion 'T...'.  */
+#define PACK_INDEX_PACK(NODE) \
+  (TREE_CODE (PACK_INDEX_CHECK (NODE)) == PACK_INDEX_TYPE \
+   ? TREE_TYPE (NODE) : TREE_OPERAND (NODE, 0))
+
+/* For a pack index T...[N], the index N.  */
+#define PACK_INDEX_INDEX(NODE) \
+  *(TREE_CODE (PACK_INDEX_CHECK (NODE)) == PACK_INDEX_TYPE \
+    ? &TYPE_MAX_VALUE_RAW (NODE)			\
+    : &TREE_OPERAND ((NODE), 1))
+
 /* True iff this pack expansion is within a function context.  */
 #define PACK_EXPANSION_LOCAL_P(NODE) \
   TREE_LANG_FLAG_0 (PACK_EXPANSION_CHECK (NODE))
@@ -4042,8 +4109,10 @@ struct GTY(()) lang_decl {
 #define PACK_EXPANSION_FORCE_EXTRA_ARGS_P(NODE) \
   TREE_LANG_FLAG_3 (PACK_EXPANSION_CHECK (NODE))
 
-/* True iff the wildcard can match a template parameter pack.  */
-#define WILDCARD_PACK_P(NODE) TREE_LANG_FLAG_0 (NODE)
+/* Indicates whether a pack expansion has been parenthesized.  Used for
+   a pack expansion in a decltype.  */
+#define PACK_INDEX_PARENTHESIZED_P(NODE) \
+  TREE_LANG_FLAG_1 (TREE_CHECK (NODE, PACK_INDEX_EXPR))
 
 /* Determine if this is an argument pack.  */
 #define ARGUMENT_PACK_P(NODE)                          \
@@ -6686,6 +6755,7 @@ extern cp_parameter_declarator *no_parameters;
 extern int class_dump_id;
 extern int module_dump_id;
 extern int raw_dump_id;
+extern int coro_dump_id;
 
 /* Whether the current context is manifestly constant-evaluated.
    Used by the constexpr machinery to control folding of
@@ -7200,9 +7270,10 @@ extern location_t location_of                   (tree);
 extern void qualified_name_lookup_error		(tree, tree, tree,
 						 location_t);
 
-using erroneous_templates_t
-  = hash_map<tree, location_t, simple_hashmap_traits<tree_decl_hash, location_t>>;
-extern erroneous_templates_t *erroneous_templates;
+struct decl_location_traits
+  : simple_cache_map_traits<tree_decl_hash, location_t> { };
+typedef hash_map<tree, location_t, decl_location_traits> erroneous_templates_t;
+extern GTY((cache)) erroneous_templates_t *erroneous_templates;
 
 extern bool cp_seen_error ();
 #define seen_error() cp_seen_error ()
@@ -7532,9 +7603,6 @@ extern tree do_auto_deduction                   (tree, tree, tree,
 						 int = LOOKUP_NORMAL,
 						 tree = NULL_TREE);
 extern tree type_uses_auto			(tree);
-extern tree type_uses_auto_or_concept		(tree);
-extern void append_type_to_template_for_access_check (tree, tree, tree,
-						      location_t);
 extern tree convert_generic_types_to_packs	(tree, int, int);
 extern tree splice_late_return_type		(tree, tree);
 extern bool is_auto				(const_tree);
@@ -7582,6 +7650,7 @@ extern bool template_parameter_pack_p           (const_tree);
 extern bool function_parameter_pack_p		(const_tree);
 extern bool function_parameter_expanded_from_pack_p (tree, tree);
 extern tree make_pack_expansion                 (tree, tsubst_flags_t = tf_warning_or_error);
+extern tree make_pack_index			(tree, tree);
 extern bool check_for_bare_parameter_packs      (tree, location_t = UNKNOWN_LOCATION);
 extern tree build_template_info			(tree, tree);
 extern tree get_template_info			(const_tree);
@@ -7855,7 +7924,7 @@ extern tree begin_compound_stmt			(unsigned int);
 
 extern void finish_compound_stmt		(tree);
 extern tree finish_asm_stmt			(location_t, int, tree, tree,
-						 tree, tree, tree, bool);
+						 tree, tree, tree, bool, bool);
 extern tree finish_label_stmt			(tree);
 extern void finish_label_decl			(tree);
 extern cp_expr finish_parenthesized_expr	(cp_expr);
@@ -7907,6 +7976,8 @@ extern tree finish_underlying_type	        (tree);
 extern tree calculate_bases                     (tree, tsubst_flags_t);
 extern tree finish_bases                        (tree, bool);
 extern tree calculate_direct_bases              (tree, tsubst_flags_t);
+extern tree pack_index_element			(tree, tree, bool,
+						 tsubst_flags_t);
 extern tree finish_offsetof			(tree, tree, location_t);
 extern void finish_decl_cleanup			(tree, tree);
 extern void finish_eh_cleanup			(tree);
@@ -8598,15 +8669,9 @@ extern tree build_type_constraint		(tree, tree, tsubst_flags_t);
 extern tree build_concept_check                 (tree, tree, tsubst_flags_t);
 extern tree build_concept_check                 (tree, tree, tree, tsubst_flags_t);
 
-extern tree_pair finish_type_constraints	(tree, tree, tsubst_flags_t);
 extern tree build_constrained_parameter         (tree, tree, tree = NULL_TREE);
-extern void placeholder_extract_concept_and_args (tree, tree&, tree&);
 extern bool equivalent_placeholder_constraints  (tree, tree);
 extern hashval_t iterative_hash_placeholder_constraint	(tree, hashval_t);
-extern bool deduce_constrained_parameter        (tree, tree&, tree&);
-extern tree resolve_constraint_check            (tree);
-extern bool valid_requirements_p                (tree);
-extern tree finish_concept_name                 (tree);
 extern tree finish_shorthand_constraint         (tree, tree);
 extern tree finish_requires_expr                (location_t, tree, tree);
 extern tree finish_simple_requirement           (location_t, tree);
@@ -8891,17 +8956,9 @@ variable_template_p (tree t)
 /* True iff T is a concept.  */
 
 inline bool
-concept_definition_p (tree t)
-{
-  return TREE_CODE (STRIP_TEMPLATE (t)) == CONCEPT_DECL;
-}
-
-/* Same as above, but for const trees.  */
-
-inline bool
 concept_definition_p (const_tree t)
 {
-  return concept_definition_p (const_cast<tree> (t));
+  return TREE_CODE (STRIP_TEMPLATE (t)) == CONCEPT_DECL;
 }
 
 /* True if t is an expression that checks a concept.  */
@@ -8912,6 +8969,19 @@ concept_check_p (const_tree t)
   if (t && TREE_CODE (t) == TEMPLATE_ID_EXPR)
     return concept_definition_p (TREE_OPERAND (t, 0));
   return false;
+}
+
+/* Return the prototype parameter of the concept T,
+   i.e. its first declared template parameter.  */
+
+inline tree
+concept_prototype_parameter (const_tree t)
+{
+  gcc_checking_assert (concept_definition_p (t));
+  if (TREE_CODE (t) == CONCEPT_DECL)
+    t = DECL_TI_TEMPLATE (t);
+  tree parms = DECL_INNERMOST_TEMPLATE_PARMS (t);
+  return TREE_VALUE (TREE_VEC_ELT (parms, 0));
 }
 
 /* Helpers for IMPLICIT_RVALUE_P to look through automatic dereference.  */

@@ -1516,7 +1516,7 @@ No_Raise aspect
 
 The ``No_Raise`` aspect can be applied to a subprogram to declare that this subprogram is not
 expected to raise any exceptions. Should an exception still occur during the execution of
-this subpropgram, ``Program_Error`` is raised.
+this subprogram, ``Program_Error`` is raised.
 
 New specification for ``Ada.Finalization.Controlled``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1720,6 +1720,6 @@ Example:
 
 - mandatory ``Path``: the path the compiler uses to access the binary resource.
 
-``Path`` is resolved according to the same rules the compiler uses for loading the source files.
+If ``Path`` is a relative path, it is interpreted relatively to the directory of the file that contains the aspect specification.
 
 .. attention:: The maximum size of loaded files is limited to 2\ :sup:`31` bytes.

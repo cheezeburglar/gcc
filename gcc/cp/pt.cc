@@ -1788,6 +1788,11 @@ iterative_hash_template_arg (tree arg, hashval_t val)
       val = iterative_hash_template_arg (PACK_EXPANSION_PATTERN (arg), val);
       return iterative_hash_template_arg (PACK_EXPANSION_EXTRA_ARGS (arg), val);
 
+    case PACK_INDEX_TYPE:
+    case PACK_INDEX_EXPR:
+      val = iterative_hash_template_arg (PACK_INDEX_PACK (arg), val);
+      return iterative_hash_template_arg (PACK_INDEX_INDEX (arg), val);
+
     case TYPE_ARGUMENT_PACK:
     case NONTYPE_ARGUMENT_PACK:
       return iterative_hash_template_arg (ARGUMENT_PACK_ARGS (arg), val);
@@ -4030,6 +4035,15 @@ find_parameter_packs_r (tree *tp, int *walk_subtrees, void* data)
       *walk_subtrees = 0;
       return NULL_TREE;
 
+    case PACK_INDEX_TYPE:
+    case PACK_INDEX_EXPR:
+      /* We can have an expansion of an expansion, such as "Ts...[Is]...",
+	 so do look into the index (but not the pack).  */
+      cp_walk_tree (&PACK_INDEX_INDEX (t), &find_parameter_packs_r, ppd,
+		    ppd->visited);
+      *walk_subtrees = 0;
+      return NULL_TREE;
+
     case INTEGER_TYPE:
       cp_walk_tree (&TYPE_MAX_VALUE (t), &find_parameter_packs_r,
 		    ppd, ppd->visited);
@@ -4254,6 +4268,36 @@ make_pack_expansion (tree arg, tsubst_flags_t complain)
     PACK_EXPANSION_FORCE_EXTRA_ARGS_P (result) = true;
 
   return result;
+}
+
+/* Create a PACK_INDEX_* using the pack expansion PACK and index INDEX.  */
+
+tree
+make_pack_index (tree pack, tree index)
+{
+  if (pack == error_mark_node)
+    return error_mark_node;
+
+  bool for_types;
+  if (TREE_CODE (pack) == TYPE_PACK_EXPANSION)
+    for_types = true;
+  else if (TREE_CODE (pack) == EXPR_PACK_EXPANSION)
+    for_types = false;
+  else
+    {
+      /* Maybe we've already partially substituted the pack.  */
+      gcc_checking_assert (TREE_CODE (pack) == TREE_VEC);
+      for_types = TYPE_P (TREE_VEC_ELT (pack, 0));
+    }
+
+  tree t = (for_types
+	    ? cxx_make_type (PACK_INDEX_TYPE)
+	    : make_node (PACK_INDEX_EXPR));
+  PACK_INDEX_PACK (t) = pack;
+  PACK_INDEX_INDEX (t) = index;
+  if (TREE_CODE (t) == PACK_INDEX_TYPE)
+    SET_TYPE_STRUCTURAL_EQUALITY (t);
+  return t;
 }
 
 /* Checks T for any "bare" parameter packs, which have not yet been
@@ -8540,16 +8584,6 @@ is_compatible_template_arg (tree parm, tree arg, tree args)
   return ttp_subsumes (parm_cons, arg);
 }
 
-// Convert a placeholder argument into a binding to the original
-// parameter. The original parameter is saved as the TREE_TYPE of
-// ARG.
-static inline tree
-convert_wildcard_argument (tree parm, tree arg)
-{
-  TREE_TYPE (arg) = parm;
-  return arg;
-}
-
 /* We can't fully resolve ARG given as a non-type template argument to TYPE,
    because one of them is dependent.  But we need to represent the
    conversion for the benefit of cp_tree_equal.  */
@@ -8603,10 +8637,6 @@ convert_template_argument (tree parm,
 
   if (parm == error_mark_node || error_operand_p (arg))
     return error_mark_node;
-
-  /* Trivially convert placeholders. */
-  if (TREE_CODE (arg) == WILDCARD_DECL)
-    return convert_wildcard_argument (parm, arg);
 
   if (arg == any_targ_node)
     return arg;
@@ -8988,16 +9018,6 @@ coerce_template_parameter_pack (tree parms,
         }
 
       packed_args = make_tree_vec (TREE_VEC_LENGTH (packed_parms));
-    }
-  /* Check if we have a placeholder pack, which indicates we're
-     in the context of a introduction list.  In that case we want
-     to match this pack to the single placeholder.  */
-  else if (arg_idx < nargs
-           && TREE_CODE (TREE_VEC_ELT (inner_args, arg_idx)) == WILDCARD_DECL
-           && WILDCARD_PACK_P (TREE_VEC_ELT (inner_args, arg_idx)))
-    {
-      nargs = arg_idx + 1;
-      packed_args = make_tree_vec (1);
     }
   else
     packed_args = make_tree_vec (nargs - arg_idx);
@@ -13647,11 +13667,12 @@ add_extra_args (tree extra, tree args, tsubst_flags_t complain, tree in_decl)
   return args;
 }
 
-/* Substitute ARGS into T, which is an pack expansion
-   (i.e. TYPE_PACK_EXPANSION or EXPR_PACK_EXPANSION). Returns a
+/* Substitute ARGS into T, which is a pack expansion
+   (i.e. TYPE_PACK_EXPANSION or EXPR_PACK_EXPANSION).  Returns a
    TREE_VEC with the substituted arguments, a PACK_EXPANSION_* node
    (if only a partial substitution could be performed) or
    ERROR_MARK_NODE if there was an error.  */
+
 tree
 tsubst_pack_expansion (tree t, tree args, tsubst_flags_t complain,
 		       tree in_decl)
@@ -13950,6 +13971,32 @@ tsubst_pack_expansion (tree t, tree args, tsubst_flags_t complain,
     return TREE_VEC_ELT (result, 0);
 
   return result;
+}
+
+/* Substitute ARGS into T, which is a pack index (i.e., PACK_INDEX_TYPE or
+   PACK_INDEX_EXPR).  Returns a single type or expression, a PACK_INDEX_*
+   node if only a partial substitution could be performed, or ERROR_MARK_NODE
+   if there was an error.  */
+
+tree
+tsubst_pack_index (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+{
+  tree pack = PACK_INDEX_PACK (t);
+  if (PACK_EXPANSION_P (pack))
+    pack = tsubst_pack_expansion (pack, args, complain, in_decl);
+  if (TREE_CODE (pack) == TREE_VEC && TREE_VEC_LENGTH (pack) == 0)
+    {
+      if (complain & tf_error)
+	error ("cannot index an empty pack");
+      return error_mark_node;
+    }
+  tree index = tsubst_expr (PACK_INDEX_INDEX (t), args, complain, in_decl);
+  const bool parenthesized_p = (TREE_CODE (t) == PACK_INDEX_EXPR
+				&& PACK_INDEX_PARENTHESIZED_P (t));
+  if (!value_dependent_expression_p (index) && TREE_CODE (pack) == TREE_VEC)
+    return pack_index_element (index, pack, parenthesized_p, complain);
+  else
+    return make_pack_index (pack, index);
 }
 
 /* Make an argument pack out of the TREE_VEC VEC.  */
@@ -16340,7 +16387,8 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
       && code != TEMPLATE_PARM_INDEX
       && code != IDENTIFIER_NODE
       && code != FUNCTION_TYPE
-      && code != METHOD_TYPE)
+      && code != METHOD_TYPE
+      && code != PACK_INDEX_TYPE)
     type = tsubst (type, args, complain, in_decl);
   if (type == error_mark_node)
     return error_mark_node;
@@ -16492,13 +16540,6 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 	    if (code == TEMPLATE_TYPE_PARM)
 	      {
 		int quals;
-
-		/* When building concept checks for the purpose of
-		   deducing placeholders, we can end up with wildcards
-		   where types are expected. Adjust this to the deduced
-		   value.  */
-		if (TREE_CODE (arg) == WILDCARD_DECL)
-		  arg = TREE_TYPE (TREE_TYPE (arg));
 
 		gcc_assert (TYPE_P (arg));
 
@@ -16900,9 +16941,15 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 	    ctx = tsubst_pack_expansion (ctx, args,
 					 complain | tf_qualifying_scope,
 					 in_decl);
-	    if (ctx == error_mark_node
-		|| TREE_VEC_LENGTH (ctx) > 1)
+	    if (ctx == error_mark_node)
 	      return error_mark_node;
+	    if (TREE_VEC_LENGTH (ctx) > 1)
+		{
+		  if (complain & tf_error)
+		    error ("%qD expanded to more than one element",
+			   TYPENAME_TYPE_FULLNAME (t));
+		  return error_mark_node;
+		}
 	    if (TREE_VEC_LENGTH (ctx) == 0)
 	      {
 		if (complain & tf_error)
@@ -17076,6 +17123,9 @@ tsubst (tree t, tree args, tsubst_flags_t complain, tree in_decl)
     case TYPE_ARGUMENT_PACK:
     case NONTYPE_ARGUMENT_PACK:
       return tsubst_argument_pack (t, args, complain, in_decl);
+
+    case PACK_INDEX_TYPE:
+      return tsubst_pack_index (t, args, complain, in_decl);
 
     case VOID_CST:
     case INTEGER_CST:
@@ -19022,7 +19072,7 @@ tsubst_stmt (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 						complain, in_decl);
 	tmp = finish_asm_stmt (EXPR_LOCATION (t), ASM_VOLATILE_P (t), string,
 			       outputs, inputs, clobbers, labels,
-			       ASM_INLINE_P (t));
+			       ASM_INLINE_P (t), false);
 	tree asm_expr = tmp;
 	if (TREE_CODE (asm_expr) == CLEANUP_POINT_EXPR)
 	  asm_expr = TREE_OPERAND (asm_expr, 0);
@@ -21869,6 +21919,9 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 	RETURN (r);
       }
 
+    case PACK_INDEX_EXPR:
+    RETURN (tsubst_pack_index (t, args, complain, in_decl));
+
     case EXPR_PACK_EXPANSION:
       error ("invalid use of pack expansion expression");
       RETURN (error_mark_node);
@@ -21902,6 +21955,14 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 	    r = copy_node (t);
 	    TREE_TYPE (r) = type;
 	  }
+	RETURN (r);
+      }
+
+    case RAW_DATA_CST:
+      {
+	tree type = tsubst (TREE_TYPE (t), args, complain, in_decl);
+	r = copy_node (t);
+	TREE_TYPE (r) = type;
 	RETURN (r);
       }
 
@@ -28209,8 +28270,9 @@ dependent_type_p_r (tree type)
     }
 
   /* All TYPE_PACK_EXPANSIONs are dependent, because parameter packs must
-     be template parameters.  */
-  if (TREE_CODE (type) == TYPE_PACK_EXPANSION)
+     be template parameters.  This includes pack-index-specifiers.  */
+  if (TREE_CODE (type) == TYPE_PACK_EXPANSION
+      || TREE_CODE (type) == PACK_INDEX_TYPE)
     return true;
 
   if (TREE_CODE (type) == DEPENDENT_OPERATOR_TYPE)
@@ -28655,8 +28717,7 @@ type_dependent_expression_p (tree expression)
 
   /* An unresolved name is always dependent.  */
   if (identifier_p (expression)
-      || TREE_CODE (expression) == USING_DECL
-      || TREE_CODE (expression) == WILDCARD_DECL)
+      || TREE_CODE (expression) == USING_DECL)
     return true;
 
   /* A lambda-expression in template context is dependent.  dependent_type_p is
@@ -28836,6 +28897,11 @@ type_dependent_expression_p (tree expression)
   /* Always dependent, on the number of arguments if nothing else.  */
   if (TREE_CODE (expression) == EXPR_PACK_EXPANSION)
     return true;
+
+  /* [temp.dep.expr]: "A pack-index-expression is type-dependent if its
+     id-expression is type-dependent."  */
+  if (TREE_CODE (expression) == PACK_INDEX_EXPR)
+    return type_dependent_expression_p (PACK_INDEX_PACK (expression));
 
   if (TREE_TYPE (expression) == unknown_type_node)
     {
@@ -29654,11 +29720,8 @@ make_constrained_placeholder_type (tree type, tree con, tree args)
 {
   /* Build the constraint. */
   tree tmpl = DECL_TI_TEMPLATE (con);
-  tree expr = tmpl;
-  if (TREE_CODE (con) == FUNCTION_DECL)
-    expr = ovl_make (tmpl);
   ++processing_template_decl;
-  expr = build_concept_check (expr, type, args, tf_warning_or_error);
+  tree expr = build_concept_check (tmpl, type, args, tf_warning_or_error);
   --processing_template_decl;
 
   PLACEHOLDER_TYPE_CONSTRAINTS_INFO (type)
@@ -29703,8 +29766,7 @@ placeholder_type_constraint_dependent_p (tree t)
       args = expand_template_argument_pack (args);
       first = TREE_VEC_ELT (args, 0);
     }
-  gcc_checking_assert (TREE_CODE (first) == WILDCARD_DECL
-		       || is_auto (first));
+  gcc_checking_assert (is_auto (first));
   for (int i = 1; i < TREE_VEC_LENGTH (args); ++i)
     if (dependent_template_arg_p (TREE_VEC_ELT (args, i)))
       return true;

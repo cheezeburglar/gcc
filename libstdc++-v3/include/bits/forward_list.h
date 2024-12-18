@@ -40,11 +40,19 @@
 #include <bits/stl_algobase.h>
 #include <bits/stl_function.h>
 #include <bits/allocator.h>
+#include <bits/allocated_ptr.h>
+#include <bits/ptr_traits.h>
+#include <debug/assertions.h>
 #include <ext/alloc_traits.h>
 #include <ext/aligned_buffer.h>
+#include <debug/assertions.h>
 #if __glibcxx_ranges_to_container // C++ >= 23
 # include <bits/ranges_base.h> // ranges::begin, ranges::distance etc.
 # include <bits/ranges_util.h> // ranges::subrange
+#endif
+
+#if ! defined _GLIBCXX_USE_ALLOC_PTR_FOR_FWD_LIST
+# define _GLIBCXX_USE_ALLOC_PTR_FOR_FWD_LIST 1
 #endif
 
 namespace std _GLIBCXX_VISIBILITY(default)
@@ -54,11 +62,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   /**
    *  @brief  A helper basic node class for %forward_list.
+   *
    *          This is just a linked list with nothing inside it.
    *          There are purely list shuffling utility methods here.
    */
   struct _Fwd_list_node_base
   {
+    using _Base_ptr = _Fwd_list_node_base*;
+
     _Fwd_list_node_base() = default;
     _Fwd_list_node_base(_Fwd_list_node_base&& __x) noexcept
       : _M_next(__x._M_next)
@@ -107,6 +118,9 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	  _M_next->_M_next = __keep;
 	}
     }
+
+    _Fwd_list_node_base* _M_base_ptr() { return this; }
+    const _Fwd_list_node_base* _M_base_ptr() const { return this; }
   };
 
   /**
@@ -119,6 +133,8 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     struct _Fwd_list_node
     : public _Fwd_list_node_base
     {
+      using _Node_ptr = _Fwd_list_node*;
+
       _Fwd_list_node() = default;
 
       __gnu_cxx::__aligned_buffer<_Tp> _M_storage;
@@ -130,7 +146,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       const _Tp*
       _M_valptr() const noexcept
       { return _M_storage._M_ptr(); }
+
+      _Node_ptr
+      _M_node_ptr()
+      { return this; }
     };
+
+  template<typename _Tp> struct _Fwd_list_const_iterator;
 
   /**
    *   @brief A forward_list::iterator.
@@ -198,6 +220,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       operator!=(const _Self& __x, const _Self& __y) noexcept
       { return __x._M_node != __y._M_node; }
 #endif
+
+    private:
+      template<typename, typename>
+	friend class forward_list;
+      template<typename, typename>
+	friend struct _Fwd_list_base;
+      friend struct _Fwd_list_const_iterator<_Tp>;
 
       _Self
       _M_next() const noexcept
@@ -282,6 +311,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       { return __x._M_node != __y._M_node; }
 #endif
 
+    private:
+      template<typename, typename>
+	friend class forward_list;
+      template<typename, typename>
+	friend struct _Fwd_list_base;
+
       _Self
       _M_next() const noexcept
       {
@@ -291,8 +326,272 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	  return _Fwd_list_const_iterator(nullptr);
       }
 
+      _Fwd_list_iterator<_Tp>
+      _M_const_cast() const noexcept
+      {
+	return _Fwd_list_iterator<_Tp>(
+		 const_cast<_Fwd_list_node_base*>(_M_node));
+      }
+
       const _Fwd_list_node_base* _M_node;
     };
+
+  template<typename _Tp, typename _Allocator> class forward_list;
+  template<typename _Tp, typename _Allocator> struct _Fwd_list_base;
+
+namespace __fwdlist
+{
+#if _GLIBCXX_USE_ALLOC_PTR_FOR_FWD_LIST
+  /// The node-base type for allocators that use fancy pointers.
+  template<typename _VoidPtr>
+    struct _Node_base
+    {
+      using _Base_ptr = __ptr_rebind<_VoidPtr, _Node_base>;
+
+      _Node_base() = default;
+
+      _Node_base(_Node_base&& __x) noexcept
+      : _M_next(__x._M_next)
+      { __x._M_next = nullptr; }
+
+      _Node_base(const _Node_base&) = delete;
+      _Node_base& operator=(const _Node_base&) = delete;
+
+      _Node_base&
+      operator=(_Node_base&& __x) noexcept
+      {
+	_M_next = __x._M_next;
+	__x._M_next = nullptr;
+	return *this;
+      }
+
+      _Base_ptr _M_next = nullptr;
+
+      // Splice (begin,end) before _M_next.
+      _Base_ptr
+      _M_transfer_after(_Base_ptr __begin, _Base_ptr __end) noexcept
+      {
+	_Base_ptr __keep = __begin->_M_next;
+	if (__end)
+	  {
+	    __begin->_M_next = __end->_M_next;
+	    __end->_M_next = _M_next;
+	  }
+	else
+	  __begin->_M_next = nullptr;
+	_M_next = __keep;
+	return __end;
+      }
+
+      void
+      _M_reverse_after() noexcept
+      {
+	_Base_ptr __tail = _M_next;
+	if (!__tail)
+	  return;
+	while (_Base_ptr __temp = __tail->_M_next)
+	  {
+	    _Base_ptr __keep = _M_next;
+	    _M_next = __temp;
+	    __tail->_M_next = __temp->_M_next;
+	    _M_next->_M_next = __keep;
+	  }
+      }
+
+      // This is not const-correct, but it's only used in a const access path
+      // by std::forward_list::empty(), where it doesn't escape, and by
+      // std::forward_list::before_begin() const, where the pointer is used
+      // to initialize a const_iterator and so constness is restored.
+      _Base_ptr
+      _M_base_ptr() const
+      {
+	return pointer_traits<_Base_ptr>::
+		 pointer_to(const_cast<_Node_base&>(*this));
+      }
+    };
+
+  /**
+   *  @brief  A helper node class for %forward_list.
+   */
+  template<typename _ValPtr>
+    struct _Node
+    : public _Node_base<__ptr_rebind<_ValPtr, void>>
+    {
+      using value_type = typename pointer_traits<_ValPtr>::element_type;
+      using _Node_ptr = __ptr_rebind<_ValPtr, _Node>;
+
+      _Node() noexcept { }
+      ~_Node() { }
+      _Node(_Node&&) = delete;
+
+      union _Uninit_storage
+      {
+	_Uninit_storage() noexcept { }
+	~_Uninit_storage() { }
+
+#if ! _GLIBCXX_INLINE_VERSION
+	// For ABI compatibility we need to overalign this member.
+	alignas(__alignof__(value_type)) // XXX GLIBCXX_ABI Deprecated
+#endif
+	value_type _M_data;
+      };
+      _Uninit_storage _M_u;
+
+      value_type*
+      _M_valptr() noexcept
+      { return std::__addressof(_M_u._M_data); }
+
+      const value_type*
+      _M_valptr() const noexcept
+      { return std::__addressof(_M_u._M_data); }
+
+      _Node_ptr
+      _M_node_ptr()
+      { return pointer_traits<_Node_ptr>::pointer_to(*this); }
+    };
+
+  /// A forward_list iterator when the allocator uses fancy pointers.
+  template<bool _Const, typename _Ptr>
+    class _Iterator
+    {
+      using _Node = __fwdlist::_Node<_Ptr>;
+      using _Base_ptr
+	= typename __fwdlist::_Node_base<__ptr_rebind<_Ptr, void>>::_Base_ptr;
+
+      template<typename _Tp>
+	using __maybe_const = __conditional_t<_Const, const _Tp, _Tp>;
+
+    public:
+      using value_type        = typename pointer_traits<_Ptr>::element_type;
+      using difference_type   = ptrdiff_t;
+      using iterator_category = forward_iterator_tag;
+      using pointer           = __maybe_const<value_type>*;
+      using reference         = __maybe_const<value_type>&;
+
+      constexpr _Iterator() noexcept : _M_node() { }
+
+      _Iterator(const _Iterator&) = default;
+      _Iterator& operator=(const _Iterator&) = default;
+
+#ifdef __glibcxx_concepts
+      constexpr
+      _Iterator(const _Iterator<false, _Ptr>& __i) requires _Const
+#else
+      template<bool _OtherConst,
+	       typename = __enable_if_t<_Const && !_OtherConst>>
+	constexpr
+	_Iterator(const _Iterator<_OtherConst, _Ptr>& __i)
+#endif
+	: _M_node(__i._M_node) { }
+
+      constexpr explicit
+      _Iterator(_Base_ptr __x) noexcept
+      : _M_node(__x) { }
+
+      [[__nodiscard__]]
+      constexpr reference
+      operator*() const noexcept
+      { return static_cast<_Node&>(*this->_M_node)._M_u._M_data; }
+
+      [[__nodiscard__]]
+      constexpr pointer
+      operator->() const noexcept
+      { return static_cast<_Node&>(*this->_M_node)._M_valptr(); }
+
+      _GLIBCXX14_CONSTEXPR _Iterator&
+      operator++() noexcept
+      {
+	_M_node = _M_node->_M_next;
+	return *this;
+      }
+
+      _GLIBCXX14_CONSTEXPR _Iterator
+      operator++(int) noexcept
+      {
+	_Iterator __tmp(*this);
+	_M_node = _M_node->_M_next;
+	return __tmp;
+      }
+
+      /**
+       *  @brief  Forward list iterator equality comparison.
+       */
+      [[__nodiscard__]]
+      friend constexpr bool
+      operator==(const _Iterator& __x, const _Iterator& __y) noexcept
+      { return __x._M_node == __y._M_node; }
+
+#if __cpp_impl_three_way_comparison < 201907L
+      /**
+       *  @brief  Forward list iterator inequality comparison.
+       */
+      [[__nodiscard__]]
+      friend constexpr bool
+      operator!=(const _Iterator& __x, const _Iterator& __y) noexcept
+      { return __x._M_node != __y._M_node; }
+#endif
+
+    private:
+      template<typename _Tp, typename _Allocator>
+	friend class _GLIBCXX_STD_C::forward_list;
+      template<typename _Tp, typename _Allocator>
+	friend struct _GLIBCXX_STD_C::_Fwd_list_base;
+
+      constexpr _Iterator<false, _Ptr>
+      _M_const_cast() const noexcept
+      { return _Iterator<false, _Ptr>(_M_node); }
+
+      friend _Iterator<!_Const, _Ptr>;
+
+      constexpr _Iterator
+      _M_next() const noexcept
+      { return _Iterator(_M_node ? _M_node->_M_next : nullptr); }
+
+      _Base_ptr _M_node;
+    };
+#endif // USE_ALLOC_PTR_FOR_FWD_LIST
+
+  // Determine the node and iterator types used by std::forward_list.
+  template<typename _Tp, typename _Ptr>
+    struct _Node_traits;
+
+#if _GLIBCXX_USE_ALLOC_PTR_FOR_LIST <= 9000
+  // Specialization for the simple case where the allocator's pointer type
+  // is the same type as value_type*.
+  // For ABI compatibility we can't change the types used for this case.
+  template<typename _Tp>
+    struct _Node_traits<_Tp, _Tp*>
+    {
+      using _Node_base	    = _Fwd_list_node_base;
+      using _Node	    = _Fwd_list_node<_Tp>;
+      using _Iterator	    = _Fwd_list_iterator<_Tp>;
+      using _Const_iterator = _Fwd_list_const_iterator<_Tp>;
+    };
+#endif
+
+#if ! _GLIBCXX_USE_ALLOC_PTR_FOR_FWD_LIST
+  // Always use the T* specialization.
+  template<typename _Tp, typename _Ptr>
+    struct _Node_traits
+    : _Node_traits<_Tp, _Tp*>
+    { };
+#else
+  // Primary template used when the allocator uses fancy pointers.
+  template<typename _Tp, typename _Ptr>
+    struct _Node_traits
+    {
+    private:
+      using _VoidPtr = __ptr_rebind<_Ptr, void>;
+      using _ValPtr = __ptr_rebind<_Ptr, _Tp>;
+
+    public:
+      using _Node_base      = __fwdlist::_Node_base<_VoidPtr>;
+      using _Node           = __fwdlist::_Node<_ValPtr>;
+      using _Iterator       = __fwdlist::_Iterator<false, _ValPtr>;
+      using _Const_iterator = __fwdlist::_Iterator<true, _ValPtr>;
+    };
+#endif // USE_ALLOC_PTR_FOR_FWD_LIST
+} // namespace __fwdlist
 
   /**
    *  @brief  Base class for %forward_list.
@@ -300,14 +599,27 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   template<typename _Tp, typename _Alloc>
     struct _Fwd_list_base
     {
+#if __cplusplus > 201703L || defined __STRICT_ANSI__
+      // The static_assert in forward_list ensures _Alloc::value_type is _Tp.
+      using pointer = typename allocator_traits<_Alloc>::pointer;
+#else
+      using _Tp_alloc_traits
+	= typename allocator_traits<_Alloc>::template rebind_traits<_Tp>;
+      using pointer = typename _Tp_alloc_traits::pointer;
+#endif
+
     protected:
-      typedef __alloc_rebind<_Alloc, _Fwd_list_node<_Tp>> _Node_alloc_type;
-      typedef __gnu_cxx::__alloc_traits<_Node_alloc_type> _Node_alloc_traits;
+      using _Node_traits = __fwdlist::_Node_traits<_Tp, pointer>;
+      using _Node = typename _Node_traits::_Node;
+      using _Node_alloc_type = __alloc_rebind<_Alloc, _Node>;
+      using _Node_alloc_traits = __gnu_cxx::__alloc_traits<_Node_alloc_type>;
+      using _Node_ptr = typename _Node_alloc_traits::pointer;
+      using _Base_ptr = typename _Node_traits::_Node_base::_Base_ptr;
 
       struct _Fwd_list_impl
       : public _Node_alloc_type
       {
-	_Fwd_list_node_base _M_head;
+	typename _Node_traits::_Node_base _M_head;
 
 	_Fwd_list_impl()
 	  noexcept(is_nothrow_default_constructible<_Node_alloc_type>::value)
@@ -328,9 +640,8 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       _Fwd_list_impl _M_impl;
 
     public:
-      typedef _Fwd_list_iterator<_Tp>		iterator;
-      typedef _Fwd_list_const_iterator<_Tp>	const_iterator;
-      typedef _Fwd_list_node<_Tp>		_Node;
+      using iterator = typename _Node_traits::_Iterator;
+      using const_iterator = typename _Node_traits::_Const_iterator;
 
       _Node_alloc_type&
       _M_get_Node_allocator() noexcept
@@ -357,54 +668,71 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       _Fwd_list_base(_Fwd_list_base&&) = default;
 
       ~_Fwd_list_base()
-      { _M_erase_after(&_M_impl._M_head, nullptr); }
+      { _M_erase_after(_M_impl._M_head._M_base_ptr(), nullptr); }
 
     protected:
+#if ! _GLIBCXX_INLINE_VERSION
+      // XXX GLIBCXX_ABI Deprecated
       _Node*
       _M_get_node()
       {
 	auto __ptr = _Node_alloc_traits::allocate(_M_get_Node_allocator(), 1);
 	return std::__to_address(__ptr);
       }
-
-      template<typename... _Args>
-	_Node*
-	_M_create_node(_Args&&... __args)
-	{
-	  _Node* __node = this->_M_get_node();
-	  __try
-	    {
-	      ::new ((void*)__node) _Node;
-	      _Node_alloc_traits::construct(_M_get_Node_allocator(),
-					    __node->_M_valptr(),
-					    std::forward<_Args>(__args)...);
-	    }
-	  __catch(...)
-	    {
-	      this->_M_put_node(__node);
-	      __throw_exception_again;
-	    }
-	  return __node;
-	}
-
-      template<typename... _Args>
-	_Fwd_list_node_base*
-	_M_insert_after(const_iterator __pos, _Args&&... __args);
+#endif
 
       void
-      _M_put_node(_Node* __p)
+      _M_put_node(_Node_ptr __p)
       {
+#if _GLIBCXX_USE_ALLOC_PTR_FOR_FWD_LIST
+	_Node_alloc_traits::deallocate(_M_get_Node_allocator(), __p, 1);
+#else
 	typedef typename _Node_alloc_traits::pointer _Ptr;
 	auto __ptr = std::pointer_traits<_Ptr>::pointer_to(*__p);
 	_Node_alloc_traits::deallocate(_M_get_Node_allocator(), __ptr, 1);
+#endif
       }
 
-      _Fwd_list_node_base*
-      _M_erase_after(_Fwd_list_node_base* __pos);
+      template<typename... _Args>
+	_Node_ptr
+	_M_create_node(_Args&&... __args)
+	{
+	  auto& __alloc = _M_get_Node_allocator();
+	  auto __guard = std::__allocate_guarded_obj(__alloc);
+	  _Node_alloc_traits::construct(__alloc, __guard->_M_valptr(),
+					std::forward<_Args>(__args)...);
+	  auto __p = __guard.release();
+#if _GLIBCXX_USE_ALLOC_PTR_FOR_FWD_LIST
+	  return __p;
+#else
+	  return std::__to_address(__p);
+#endif
+	}
 
-      _Fwd_list_node_base*
-      _M_erase_after(_Fwd_list_node_base* __pos,
-		     _Fwd_list_node_base* __last);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc++17-extensions" // if constexpr
+      void
+      _M_destroy_node(_Node_ptr __p)
+      {
+	auto& __alloc = _M_get_Node_allocator();
+	// Destroy the element
+	_Node_alloc_traits::destroy(__alloc, __p->_M_valptr());
+	// Only destroy the node if the pointers require it.
+	if constexpr (!is_trivially_destructible<_Base_ptr>::value)
+	  __p->~_Node();
+	_M_put_node(__p);
+      }
+#pragma GCC diagnostic pop
+
+      template<typename... _Args>
+	_Base_ptr
+	_M_insert_after(const_iterator __pos, _Args&&... __args);
+
+      _Base_ptr
+      _M_erase_after(_Base_ptr __pos);
+
+      _Base_ptr
+      _M_erase_after(_Base_ptr __pos, _Base_ptr __last);
     };
 
   /**
@@ -581,12 +909,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	forward_list(from_range_t, _Rg&& __rg, const _Alloc& __a = _Alloc())
 	: _Base(_Node_alloc_type(__a))
 	{
-	  _Node_base* __to = &this->_M_impl._M_head;
+	  auto __to = this->_M_impl._M_head._M_base_ptr();
 	  auto __first = ranges::begin(__rg);
 	  const auto __last = ranges::end(__rg);
 	  for (; __first != __last; ++__first)
 	    {
-	      __to->_M_next = this->_M_create_node(*__first);
+	      __to->_M_next = this->_M_create_node(*__first)->_M_base_ptr();
 	      __to = __to->_M_next;
 	    }
 	}
@@ -644,6 +972,8 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       forward_list&
       operator=(const forward_list& __list);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc++17-extensions" // if constexpr
       /**
        *  @brief  The %forward_list move assignment operator.
        *  @param  __list  A %forward_list of identical element and allocator
@@ -663,7 +993,24 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	constexpr bool __move_storage =
 	  _Node_alloc_traits::_S_propagate_on_move_assign()
 	  || _Node_alloc_traits::_S_always_equal();
-	_M_move_assign(std::move(__list), __bool_constant<__move_storage>());
+	if constexpr (!__move_storage)
+	  {
+	    if (__list._M_get_Node_allocator() != this->_M_get_Node_allocator())
+	      {
+		// The rvalue's allocator cannot be moved, or is not equal,
+		// so we need to individually move each element.
+		this->assign(std::make_move_iterator(__list.begin()),
+			     std::make_move_iterator(__list.end()));
+		return *this;
+	      }
+	  }
+
+	clear();
+	this->_M_impl._M_head._M_next = __list._M_impl._M_head._M_next;
+	__list._M_impl._M_head._M_next = nullptr;
+	if constexpr (_Node_alloc_traits::_S_propagate_on_move_assign())
+	  this->_M_get_Node_allocator()
+	      = std::move(__list._M_get_Node_allocator());
 	return *this;
       }
 
@@ -699,9 +1046,30 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	void
 	assign(_InputIterator __first, _InputIterator __last)
 	{
-	  typedef is_assignable<_Tp, decltype(*__first)> __assignable;
-	  _M_assign(__first, __last, __assignable());
+	  if constexpr (is_assignable<_Tp, decltype(*__first)>::value)
+	    {
+	      auto __prev = before_begin();
+	      auto __curr = begin();
+	      auto __end = end();
+	      while (__curr != __end && __first != __last)
+		{
+		  *__curr = *__first;
+		  ++__prev;
+		  ++__curr;
+		  ++__first;
+		}
+	      if (__first != __last)
+		insert_after(__prev, __first, __last);
+	      else if (__curr != __end)
+		erase_after(__prev, __end);
+	    }
+	  else
+	    {
+	      clear();
+	      insert_after(cbefore_begin(), __first, __last);
+	    }
 	}
+#pragma GCC diagnostic pop
 
 #if __glibcxx_ranges_to_container // C++ >= 23
       /**
@@ -736,6 +1104,8 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	}
 #endif // ranges_to_container
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc++17-extensions" // if constexpr
       /**
        *  @brief  Assigns a given value to a %forward_list.
        *  @param  __n  Number of elements to be assigned.
@@ -748,7 +1118,31 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        */
       void
       assign(size_type __n, const _Tp& __val)
-      { _M_assign_n(__n, __val, is_copy_assignable<_Tp>()); }
+      {
+	if constexpr (is_copy_assignable<_Tp>::value)
+	  {
+	    auto __prev = before_begin();
+	    auto __curr = begin();
+	    auto __end = end();
+	    while (__curr != __end && __n > 0)
+	      {
+		*__curr = __val;
+		++__prev;
+		++__curr;
+		--__n;
+	      }
+	    if (__n > 0)
+	      insert_after(__prev, __n, __val);
+	    else if (__curr != __end)
+	      erase_after(__prev, __end);
+	  }
+	else
+	  {
+	    clear();
+	    insert_after(cbefore_begin(), __n, __val);
+	  }
+      }
+#pragma GCC diagnostic pop
 
       /**
        *  @brief  Assigns an initializer_list to a %forward_list.
@@ -776,7 +1170,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       [[__nodiscard__]]
       iterator
       before_begin() noexcept
-      { return iterator(&this->_M_impl._M_head); }
+      { return iterator(this->_M_impl._M_head._M_base_ptr()); }
 
       /**
        *  Returns a read-only (constant) iterator that points before the
@@ -786,7 +1180,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       [[__nodiscard__]]
       const_iterator
       before_begin() const noexcept
-      { return const_iterator(&this->_M_impl._M_head); }
+      { return const_iterator(this->_M_impl._M_head._M_base_ptr()); }
 
       /**
        *  Returns a read/write iterator that points to the first element
@@ -845,7 +1239,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       [[__nodiscard__]]
       const_iterator
       cbefore_begin() const noexcept
-      { return const_iterator(&this->_M_impl._M_head); }
+      { return const_iterator(this->_M_impl._M_head._M_base_ptr()); }
 
       /**
        *  Returns a read-only (constant) iterator that points one past
@@ -884,8 +1278,9 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       reference
       front()
       {
-	_Node* __front = static_cast<_Node*>(this->_M_impl._M_head._M_next);
-	return *__front->_M_valptr();
+	__glibcxx_requires_nonempty();
+	_Node& __front = static_cast<_Node&>(*this->_M_impl._M_head._M_next);
+	return *__front._M_valptr();
       }
 
       /**
@@ -896,8 +1291,9 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       const_reference
       front() const
       {
-	_Node* __front = static_cast<_Node*>(this->_M_impl._M_head._M_next);
-	return *__front->_M_valptr();
+	__glibcxx_requires_nonempty();
+	_Node& __front = static_cast<_Node&>(*this->_M_impl._M_head._M_next);
+	return *__front._M_valptr();
       }
 
       // 23.3.4.5 modifiers:
@@ -990,7 +1386,10 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        */
       void
       pop_front()
-      { this->_M_erase_after(&this->_M_impl._M_head); }
+      {
+	__glibcxx_requires_nonempty();
+	this->_M_erase_after(this->_M_impl._M_head._M_base_ptr());
+      }
 
       /**
        *  @brief  Constructs object in %forward_list after the specified
@@ -1137,8 +1536,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        */
       iterator
       erase_after(const_iterator __pos)
-      { return iterator(this->_M_erase_after(const_cast<_Node_base*>
-					     (__pos._M_node))); }
+      { return iterator(this->_M_erase_after(__pos._M_const_cast()._M_node)); }
 
       /**
        *  @brief  Remove a range of elements.
@@ -1161,10 +1559,10 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        */
       iterator
       erase_after(const_iterator __pos, const_iterator __last)
-      { return iterator(this->_M_erase_after(const_cast<_Node_base*>
-					     (__pos._M_node),
-					     const_cast<_Node_base*>
-					     (__last._M_node))); }
+      {
+	return iterator(this->_M_erase_after(__pos._M_const_cast()._M_node,
+					     __last._M_const_cast()._M_node));
+      }
 
       /**
        *  @brief  Swaps data with another %forward_list.
@@ -1226,7 +1624,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        */
       void
       clear() noexcept
-      { this->_M_erase_after(&this->_M_impl._M_head, nullptr); }
+      { this->_M_erase_after(this->_M_impl._M_head._M_base_ptr(), nullptr); }
 
       // 23.3.4.6 forward_list operations:
 
@@ -1460,89 +1858,90 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       void
       _M_default_insert_after(const_iterator __pos, size_type __n);
 
-      // Called by operator=(forward_list&&)
+#if ! _GLIBCXX_INLINE_VERSION
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc++17-extensions" // if constexpr
+      // XXX GLIBCXX_ABI Deprecated
+      // These members are unused by std::forward_list now, but we keep them
+      // here so that an explicit instantiation will define them.
+      // This ensures that explicit instantiations still define these symbols,
+      // so that explicit instantiation declarations of std::forward_list that
+      // were compiled with old versions of GCC can still find these symbols.
+
+      // Use 'if constexpr' so that the functions don't do anything for
+      // specializations using _Node_traits<T, fancy-pointer>, because any
+      // old code referencing these symbols wasn't using the fancy-pointer
+      // specializations.
+
       void
       _M_move_assign(forward_list&& __list, true_type) noexcept
       {
-	clear();
-	this->_M_impl._M_head._M_next = __list._M_impl._M_head._M_next;
-	__list._M_impl._M_head._M_next = nullptr;
-	std::__alloc_on_move(this->_M_get_Node_allocator(),
-			     __list._M_get_Node_allocator());
+#if _GLIBCXX_USE_ALLOC_PTR_FOR_FWD_LIST
+       if constexpr (is_same<typename _Alloc_traits::pointer, _Tp*>::value)
+#endif
+	 {
+	   clear();
+	   this->_M_impl._M_head._M_next = __list._M_impl._M_head._M_next;
+	   __list._M_impl._M_head._M_next = nullptr;
+	   std::__alloc_on_move(this->_M_get_Node_allocator(),
+				__list._M_get_Node_allocator());
+	 }
       }
 
-      // Called by operator=(forward_list&&)
       void
       _M_move_assign(forward_list&& __list, false_type)
       {
-	if (__list._M_get_Node_allocator() == this->_M_get_Node_allocator())
-	  _M_move_assign(std::move(__list), true_type());
-	else
-	  // The rvalue's allocator cannot be moved, or is not equal,
-	  // so we need to individually move each element.
-	  this->assign(std::make_move_iterator(__list.begin()),
-		       std::make_move_iterator(__list.end()));
+#if _GLIBCXX_USE_ALLOC_PTR_FOR_FWD_LIST
+	if constexpr (is_same<typename _Alloc_traits::pointer, _Tp*>::value)
+#endif
+	  {
+	    if (__list._M_get_Node_allocator() == this->_M_get_Node_allocator())
+	      _M_move_assign(std::move(__list), true_type());
+	    else
+	      // The rvalue's allocator cannot be moved, or is not equal,
+	      // so we need to individually move each element.
+	      this->assign(std::make_move_iterator(__list.begin()),
+			   std::make_move_iterator(__list.end()));
+	  }
       }
 
-      // Called by assign(_InputIterator, _InputIterator) if _Tp is
-      // CopyAssignable.
-      template<typename _InputIterator>
-	void
-	_M_assign(_InputIterator __first, _InputIterator __last, true_type)
-	{
-	  auto __prev = before_begin();
-	  auto __curr = begin();
-	  auto __end = end();
-	  while (__curr != __end && __first != __last)
-	    {
-	      *__curr = *__first;
-	      ++__prev;
-	      ++__curr;
-	      ++__first;
-	    }
-	  if (__first != __last)
-	    insert_after(__prev, __first, __last);
-	  else if (__curr != __end)
-	    erase_after(__prev, __end);
-	}
-
-      // Called by assign(_InputIterator, _InputIterator) if _Tp is not
-      // CopyAssignable.
-      template<typename _InputIterator>
-	void
-	_M_assign(_InputIterator __first, _InputIterator __last, false_type)
-	{
-	  clear();
-	  insert_after(cbefore_begin(), __first, __last);
-	}
-
-      // Called by assign(size_type, const _Tp&) if Tp is CopyAssignable
       void
       _M_assign_n(size_type __n, const _Tp& __val, true_type)
       {
-	auto __prev = before_begin();
-	auto __curr = begin();
-	auto __end = end();
-	while (__curr != __end && __n > 0)
+#if _GLIBCXX_USE_ALLOC_PTR_FOR_FWD_LIST
+	if constexpr (is_same<typename _Alloc_traits::pointer, _Tp*>::value)
+#endif
 	  {
-	    *__curr = __val;
-	    ++__prev;
-	    ++__curr;
-	    --__n;
+	    auto __prev = before_begin();
+	    auto __curr = begin();
+	    auto __end = end();
+	    while (__curr != __end && __n > 0)
+	      {
+		*__curr = __val;
+		++__prev;
+		++__curr;
+		--__n;
+	      }
+	    if (__n > 0)
+	      insert_after(__prev, __n, __val);
+	    else if (__curr != __end)
+	      erase_after(__prev, __end);
 	  }
-	if (__n > 0)
-	  insert_after(__prev, __n, __val);
-	else if (__curr != __end)
-	  erase_after(__prev, __end);
       }
 
-      // Called by assign(size_type, const _Tp&) if Tp is non-CopyAssignable
       void
       _M_assign_n(size_type __n, const _Tp& __val, false_type)
       {
-	clear();
-	insert_after(cbefore_begin(), __n, __val);
+#if _GLIBCXX_USE_ALLOC_PTR_FOR_FWD_LIST
+	if constexpr (is_same<typename _Alloc_traits::pointer, _Tp*>::value)
+#endif
+	  {
+	    clear();
+	    insert_after(cbefore_begin(), __n, __val);
+	  }
       }
+#pragma GCC diagnostic pop
+#endif // ! _GLIBCXX_INLINE_VERSION
     };
 
 #if __cpp_deduction_guides >= 201606

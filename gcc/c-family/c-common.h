@@ -105,7 +105,7 @@ enum rid
 
   /* C extensions */
   RID_ASM,       RID_TYPEOF,   RID_TYPEOF_UNQUAL, RID_ALIGNOF,  RID_ATTRIBUTE,
-  RID_VA_ARG,
+  RID_C23_VA_START, RID_VA_ARG,
   RID_EXTENSION, RID_IMAGPART, RID_REALPART, RID_LABEL,    RID_CHOOSE_EXPR,
   RID_TYPES_COMPATIBLE_P,      RID_BUILTIN_COMPLEX,	   RID_BUILTIN_SHUFFLE,
   RID_BUILTIN_SHUFFLEVECTOR,   RID_BUILTIN_CONVERTVECTOR,  RID_BUILTIN_TGMATH,
@@ -859,8 +859,8 @@ extern void check_function_arguments_recurse (void (*)
 					      void *, tree,
 					      unsigned HOST_WIDE_INT,
 					      opt_code);
-extern bool check_builtin_function_arguments (location_t, vec<location_t>,
-					      tree, tree, int, tree *);
+extern bool check_builtin_function_arguments (location_t, vec<location_t>, tree,
+					      tree, int, tree *, bool = true);
 extern void check_function_format (const_tree, tree, int, tree *,
 				   vec<location_t> *,
 				   bool (*comp_types) (tree, tree));
@@ -1105,7 +1105,8 @@ extern tree build_function_call_vec (location_t, vec<location_t>, tree,
 				     vec<tree, va_gc> *, vec<tree, va_gc> *,
 				     tree = NULL_TREE);
 
-extern tree resolve_overloaded_builtin (location_t, tree, vec<tree, va_gc> *);
+extern tree resolve_overloaded_builtin (location_t, tree, vec<tree, va_gc> *,
+					bool = true);
 
 extern tree finish_label_address_expr (tree, location_t);
 
@@ -1260,6 +1261,7 @@ extern void c_stddef_cpp_builtins (void);
 extern void fe_file_change (const line_map_ordinary *);
 extern void c_parse_error (const char *, enum cpp_ttype, tree, unsigned char,
 			   rich_location *richloc);
+extern diagnostic_option_id get_option_for_builtin_define (const char *macro_name);
 
 /* In c-ppoutput.cc  */
 extern void init_pp_output (FILE *);
@@ -1697,6 +1699,10 @@ extern void maybe_add_include_fixit (rich_location *, const char *, bool);
 extern void maybe_suggest_missing_token_insertion (rich_location *richloc,
 						   enum cpp_ttype token_type,
 						   location_t prev_token_loc);
+extern void maybe_emit_indirection_note (location_t loc,
+					 tree expr, tree expected_type);
+extern bool compatible_types_for_indirection_note_p (tree type1, tree type2);
+
 extern tree braced_lists_to_strings (tree, tree);
 
 #if CHECKING_P

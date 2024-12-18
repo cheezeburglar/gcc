@@ -56,6 +56,7 @@
 #include "attr-fnspec.h"
 #include "pointer-query.h"
 #include "pretty-print-markup.h"
+#include "gcc-urlifier.h"
 
 /* Return true if tree node X has an associated location.  */
 
@@ -1934,52 +1935,49 @@ matching_alloc_calls_p (tree alloc_decl, tree dealloc_decl)
      headers.
      With AMATS set to the Allocator's Malloc ATtributes,
      and  RMATS set to Reallocator's Malloc ATtributes...  */
-  for (tree amats = DECL_ATTRIBUTES (alloc_decl),
-	 rmats = DECL_ATTRIBUTES (dealloc_decl);
-       (amats = lookup_attribute ("malloc", amats))
-	 || (rmats = lookup_attribute ("malloc", rmats));
-       amats = amats ? TREE_CHAIN (amats) : NULL_TREE,
-	 rmats = rmats ? TREE_CHAIN (rmats) : NULL_TREE)
-    {
-      if (tree args = amats ? TREE_VALUE (amats) : NULL_TREE)
-	if (tree adealloc = TREE_VALUE (args))
-	  {
-	    if (DECL_P (adealloc)
-		&& fndecl_built_in_p (adealloc, BUILT_IN_NORMAL))
-	      {
-		built_in_function fncode = DECL_FUNCTION_CODE (adealloc);
-		if (fncode == BUILT_IN_FREE || fncode == BUILT_IN_REALLOC)
-		  {
-		    if (realloc_kind == alloc_kind_t::builtin)
-		      return true;
-		    alloc_dealloc_kind = alloc_kind_t::builtin;
-		  }
-		continue;
-	      }
+  for (tree amats = DECL_ATTRIBUTES (alloc_decl);
+       (amats = lookup_attribute ("malloc", amats));
+       amats = amats ? TREE_CHAIN (amats) : NULL_TREE)
+    if (tree args = amats ? TREE_VALUE (amats) : NULL_TREE)
+      if (tree adealloc = TREE_VALUE (args))
+	{
+	  if (DECL_P (adealloc)
+	      && fndecl_built_in_p (adealloc, BUILT_IN_NORMAL))
+	    {
+	      built_in_function fncode = DECL_FUNCTION_CODE (adealloc);
+	      if (fncode == BUILT_IN_FREE || fncode == BUILT_IN_REALLOC)
+		{
+		  if (realloc_kind == alloc_kind_t::builtin)
+		    return true;
+		  alloc_dealloc_kind = alloc_kind_t::builtin;
+		}
+	      continue;
+	    }
 
-	    common_deallocs.add (adealloc);
-	  }
+	  common_deallocs.add (adealloc);
+	}
+  for (tree rmats = DECL_ATTRIBUTES (dealloc_decl);
+       (rmats = lookup_attribute ("malloc", rmats));
+       rmats = rmats ? TREE_CHAIN (rmats) : NULL_TREE)
+    if (tree args = rmats ? TREE_VALUE (rmats) : NULL_TREE)
+      if (tree ddealloc = TREE_VALUE (args))
+	{
+	  if (DECL_P (ddealloc)
+	      && fndecl_built_in_p (ddealloc, BUILT_IN_NORMAL))
+	    {
+	      built_in_function fncode = DECL_FUNCTION_CODE (ddealloc);
+	      if (fncode == BUILT_IN_FREE || fncode == BUILT_IN_REALLOC)
+		{
+		  if (alloc_dealloc_kind == alloc_kind_t::builtin)
+		    return true;
+		  realloc_dealloc_kind = alloc_kind_t::builtin;
+		}
+	      continue;
+	    }
 
-      if (tree args = rmats ? TREE_VALUE (rmats) : NULL_TREE)
-	if (tree ddealloc = TREE_VALUE (args))
-	  {
-	    if (DECL_P (ddealloc)
-		&& fndecl_built_in_p (ddealloc, BUILT_IN_NORMAL))
-	      {
-		built_in_function fncode = DECL_FUNCTION_CODE (ddealloc);
-		if (fncode == BUILT_IN_FREE || fncode == BUILT_IN_REALLOC)
-		  {
-		    if (alloc_dealloc_kind == alloc_kind_t::builtin)
-		      return true;
-		    realloc_dealloc_kind = alloc_kind_t::builtin;
-		  }
-		continue;
-	      }
-
-	    if (common_deallocs.add (ddealloc))
-	      return true;
-	  }
-    }
+	  if (common_deallocs.contains (ddealloc))
+	    return true;
+	}
 
   /* Succeed only if ALLOC_DECL and the reallocator DEALLOC_DECL share
      a built-in deallocator.  */
@@ -4748,6 +4746,8 @@ pass_waccess::check_call_dangling (gcall *call)
 unsigned
 pass_waccess::execute (function *fun)
 {
+  auto_urlify_attributes sentinel;
+
   calculate_dominance_info (CDI_DOMINATORS);
   calculate_dominance_info (CDI_POST_DOMINATORS);
 

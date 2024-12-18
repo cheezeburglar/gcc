@@ -3229,8 +3229,8 @@ static bool check_pure_function (gfc_expr *e)
   const char *name = NULL;
   code_stack *stack;
   bool saw_block = false;
-  
-  /* A BLOCK construct within a DO CONCURRENT construct leads to 
+
+  /* A BLOCK construct within a DO CONCURRENT construct leads to
      gfc_do_concurrent_flag = 0 when the check for an impure function
      occurs.  Check the stack to see if the source code has a nested
      BLOCK construct.  */
@@ -3603,8 +3603,26 @@ resolve_function (gfc_expr *expr)
 static bool
 pure_subroutine (gfc_symbol *sym, const char *name, locus *loc)
 {
+  code_stack *stack;
+  bool saw_block = false;
+
   if (gfc_pure (sym))
     return true;
+
+  /* A BLOCK construct within a DO CONCURRENT construct leads to
+     gfc_do_concurrent_flag = 0 when the check for an impure subroutine
+     occurs.  Check the stack to see if the source code has a nested
+     BLOCK construct.  */
+  for (stack = cs_base; stack; stack = stack->prev)
+    {
+      if (stack->current->op == EXEC_BLOCK) saw_block = true;
+      if (saw_block && stack->current->op == EXEC_DO_CONCURRENT)
+	{
+	  gfc_error ("Subroutine call at %L in a DO CONCURRENT block "
+		     "is not PURE", loc);
+	  return false;
+	}
+    }
 
   if (forall_flag)
     {
@@ -4278,7 +4296,7 @@ resolve_operator (gfc_expr *e)
 	}
 
       CHECK_INTERFACES
-      gfc_error ("Operand of unary numeric operator %<%s%> at %L is %s",
+      gfc_error ("Operand of unary numeric operator %qs at %L is %s",
 		 gfc_op2string (e->value.op.op), &e->where, gfc_typename (e));
       return false;
 
@@ -4306,7 +4324,7 @@ resolve_operator (gfc_expr *e)
       if (flag_unsigned &&  gfc_invalid_unsigned_ops (op1, op2))
 	{
 	  CHECK_INTERFACES
-	  gfc_error ("Operands of binary numeric operator %<%s%> at %L are "
+	  gfc_error ("Operands of binary numeric operator %qs at %L are "
 		     "%s/%s", gfc_op2string (e->value.op.op), &e->where,
 		     gfc_typename (op1), gfc_typename (op2));
 	  return false;
@@ -4333,14 +4351,14 @@ resolve_operator (gfc_expr *e)
 	{
 	  CHECK_INTERFACES
 	  gfc_error ("Unexpected derived-type entities in binary intrinsic "
-		     "numeric operator %<%s%> at %L",
+		     "numeric operator %qs at %L",
 		     gfc_op2string (e->value.op.op), &e->where);
 	  return false;
 	}
       else
 	{
 	  CHECK_INTERFACES
-	  gfc_error ("Operands of binary numeric operator %<%s%> at %L are %s/%s",
+	  gfc_error ("Operands of binary numeric operator %qs at %L are %s/%s",
 		     gfc_op2string (e->value.op.op), &e->where, gfc_typename (op1),
 		     gfc_typename (op2));
 	  return false;
@@ -4399,7 +4417,7 @@ resolve_operator (gfc_expr *e)
 	}
 
       CHECK_INTERFACES
-      gfc_error ("Operands of logical operator %<%s%> at %L are %s/%s",
+      gfc_error ("Operands of logical operator %qs at %L are %s/%s",
 		 gfc_op2string (e->value.op.op), &e->where, gfc_typename (op1),
 		 gfc_typename (op2));
       return false;
@@ -4564,7 +4582,7 @@ resolve_operator (gfc_expr *e)
       else
 	{
 	  CHECK_INTERFACES
-	  gfc_error ("Operands of comparison operator %<%s%> at %L are %s/%s",
+	  gfc_error ("Operands of comparison operator %qs at %L are %s/%s",
 		     gfc_op2string (e->value.op.op), &e->where, gfc_typename (op1),
 		     gfc_typename (op2));
 	}
@@ -4579,22 +4597,22 @@ resolve_operator (gfc_expr *e)
 	  guessed = lookup_uop_fuzzy (name, e->value.op.uop->ns->uop_root);
 	  CHECK_INTERFACES
 	  if (guessed)
-	    gfc_error ("Unknown operator %<%s%> at %L; did you mean "
-			"%<%s%>?", name, &e->where, guessed);
+	    gfc_error ("Unknown operator %qs at %L; did you mean "
+			"%qs?", name, &e->where, guessed);
 	  else
-	    gfc_error ("Unknown operator %<%s%> at %L", name, &e->where);
+	    gfc_error ("Unknown operator %qs at %L", name, &e->where);
 	}
       else if (op2 == NULL)
 	{
 	  CHECK_INTERFACES
-	  gfc_error ("Operand of user operator %<%s%> at %L is %s",
+	  gfc_error ("Operand of user operator %qs at %L is %s",
 		  e->value.op.uop->name, &e->where, gfc_typename (op1));
 	}
       else
 	{
 	  e->value.op.uop->op->sym->attr.referenced = 1;
 	  CHECK_INTERFACES
-	  gfc_error ("Operands of user operator %<%s%> at %L are %s/%s",
+	  gfc_error ("Operands of user operator %qs at %L are %s/%s",
 		    e->value.op.uop->name, &e->where, gfc_typename (op1),
 		    gfc_typename (op2));
 	}
@@ -16305,10 +16323,6 @@ resolve_fl_derived (gfc_symbol *sym)
       && sym->ns->proc_name
       && sym->ns->proc_name->attr.flavor == FL_MODULE
       && sym->attr.access != ACCESS_PRIVATE
-      && !(sym->attr.extension
-	   && sym->attr.zero_comp
-	   && !sym->f2k_derived->tb_sym_root
-	   && !sym->f2k_derived->tb_uop_root)
       && !(sym->attr.vtype || sym->attr.pdt_template))
     {
       gfc_symbol *vtab = gfc_find_derived_vtab (sym);

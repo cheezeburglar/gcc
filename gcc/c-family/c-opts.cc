@@ -178,6 +178,7 @@ c_diagnostic_text_finalizer (diagnostic_text_output_format &text_output,
   pp_set_prefix (pp, text_output.build_indent_prefix (false));
   pp_newline (pp);
   diagnostic_show_locus (&text_output.get_context (),
+			 text_output.get_source_printing_options (),
 			 diagnostic->richloc, diagnostic->kind, pp);
   /* By default print macro expansion contexts in the diagnostic
      finalizer -- for tokens resulting from macro expansion.  */
@@ -374,7 +375,7 @@ c_common_handle_option (size_t scode, const char *arg, HOST_WIDE_INT value,
       if (!strcmp (arg, "p1689r5"))
 	cpp_opts->deps.fdeps_format = FDEPS_FMT_P1689R5;
       else
-	error ("%<-fdeps-format=%> unknown format %<%s%>", arg);
+	error ("%<-fdeps-format=%> unknown format %qs", arg);
       break;
 
     case OPT_fdeps_file_:
@@ -1005,6 +1006,11 @@ c_common_post_options (const char **pfilename)
       = ((pedantic && !flag_isoc23 && warn_c11_c23_compat != 0)
 	 || warn_c11_c23_compat > 0);
 
+  /* Likewise for -Wfree-labels.  */
+  if (warn_free_labels == -1)
+    warn_free_labels = ((pedantic && !flag_isoc23 && warn_c11_c23_compat != 0)
+			|| warn_c11_c23_compat > 0);
+
   if (warn_deprecated_non_prototype == -1)
     warn_deprecated_non_prototype = warn_c11_c23_compat > 0;
 
@@ -1050,6 +1056,16 @@ c_common_post_options (const char **pfilename)
   SET_OPTION_IF_UNSET (&global_options, &global_options_set,
 		       warn_deprecated_literal_operator,
 		       deprecated_in (cxx23));
+
+  /* -Warray-compare is enabled by default in C++20.  */
+  SET_OPTION_IF_UNSET (&global_options, &global_options_set,
+		       warn_array_compare,
+		       warn_array_compare || deprecated_in (cxx20));
+
+  /* -Wdeprecated-variadic-comma-omission is enabled by default in C++26.  */
+  SET_OPTION_IF_UNSET (&global_options, &global_options_set,
+		       warn_deprecated_variadic_comma_omission,
+		       deprecated_in (cxx26));
 
   /* -Wtemplate-id-cdtor is enabled by default in C++20.  */
   SET_OPTION_IF_UNSET (&global_options, &global_options_set,

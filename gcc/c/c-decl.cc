@@ -61,6 +61,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "omp-general.h"
 #include "omp-offload.h"  /* For offload_vars.  */
 #include "c-parser.h"
+#include "gcc-urlifier.h"
 
 #include "tree-pretty-print.h"
 
@@ -4547,6 +4548,17 @@ lookup_name_fuzzy (tree name, enum lookup_name_fuzzy_kind kind, location_t loc)
 						  IDENTIFIER_POINTER (name),
 						  header_hint));
 
+  /* Next, look for exact matches for builtin defines that would have been
+     defined if the user had passed a command-line option (e.g. -fopenmp
+     for "_OPENMP").  */
+  diagnostic_option_id option_id
+    = get_option_for_builtin_define (IDENTIFIER_POINTER (name));
+  if (option_id.m_idx > 0)
+    return name_hint (nullptr,
+		      new suggest_missing_option (loc,
+						  IDENTIFIER_POINTER (name),
+						  option_id));
+
   /* Only suggest names reserved for the implementation if NAME begins
      with an underscore.  */
   bool consider_implementation_names = (IDENTIFIER_POINTER (name)[0] == '_');
@@ -5732,8 +5744,11 @@ start_decl (struct c_declarator *declarator, struct c_declspecs *declspecs,
       && DECL_DECLARED_INLINE_P (decl)
       && DECL_UNINLINABLE (decl)
       && lookup_attribute ("noinline", DECL_ATTRIBUTES (decl)))
-    warning (OPT_Wattributes, "inline function %q+D given attribute %qs",
-	     decl, "noinline");
+    {
+      auto_urlify_attributes sentinel;
+      warning (OPT_Wattributes, "inline function %q+D given attribute %qs",
+	       decl, "noinline");
+    }
 
   /* C99 6.7.4p3: An inline definition of a function with external
      linkage shall not contain a definition of a modifiable object
@@ -10643,9 +10658,12 @@ start_function (struct c_declspecs *declspecs, struct c_declarator *declarator,
   if (DECL_DECLARED_INLINE_P (decl1)
       && DECL_UNINLINABLE (decl1)
       && lookup_attribute ("noinline", DECL_ATTRIBUTES (decl1)))
-    warning_at (loc, OPT_Wattributes,
-		"inline function %qD given attribute %qs",
-		decl1, "noinline");
+    {
+      auto_urlify_attributes sentinel;
+      warning_at (loc, OPT_Wattributes,
+		  "inline function %qD given attribute %qs",
+		  decl1, "noinline");
+    }
 
   /* Handle gnu_inline attribute.  */
   if (declspecs->inline_p

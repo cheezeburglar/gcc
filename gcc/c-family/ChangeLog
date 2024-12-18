@@ -1,3 +1,152 @@
+2024-12-17  Sandra Loosemore  <sloosemore@baylibre.com>
+
+	PR c/26154
+	* c.opt.urls: Regenerated.
+
+2024-12-16  David Malcolm  <dmalcolm@redhat.com>
+
+	PR sarif-replay/117943
+	* c-format.cc (selftest::test_type_mismatch_range_labels): Use
+	dc.m_source_printing.
+	* c-opts.cc (c_diagnostic_text_finalizer): Use source-printing
+	options from text_output.
+
+2024-12-12  Sandra Loosemore  <sloosemore@baylibre.com>
+	    Peter Eisentraut  <peter@eisentraut.org>
+
+	PR c/115532
+	* c.opt.urls: Regenerated.
+
+2024-12-12  Alexandre Oliva  <oliva@adacore.com>
+
+	* c.opt (Wtautological-compare): Move to ../common.opt.
+
+2024-12-10  Arsen Arsenović  <arsen@aarsen.me>
+	    Iain Sandoe  <iain@sandoe.co.uk>
+
+	* c-pretty-print.cc (c_pretty_printer::storage_class_specifier):
+	Check that we're looking at a PARM_DECL or VAR_DECL before
+	looking at DECL_REGISTER.
+
+2024-12-10  Marek Polacek  <polacek@redhat.com>
+
+	PR c++/117788
+	* c-warn.cc (do_warn_array_compare): Emit a permerror in C++26.
+
+2024-12-09  Matthew Malcomson  <mmalcomson@nvidia.com>
+
+	* c-common.cc (builtin_function_validate_nargs,
+	check_builtin_function_arguments,
+	speculation_safe_value_resolve_call,
+	speculation_safe_value_resolve_params, sync_resolve_size,
+	sync_resolve_params, get_atomic_generic_size,
+	resolve_overloaded_atomic_exchange,
+	resolve_overloaded_atomic_compare_exchange,
+	resolve_overloaded_atomic_load, resolve_overloaded_atomic_store,
+	resolve_overloaded_builtin):  Add `complain` boolean parameter
+	and determine whether to emit errors based on its value.
+	* c-common.h (check_builtin_function_arguments,
+	resolve_overloaded_builtin):  Mention `complain` boolean
+	parameter in declarations.  Give it a default of `true`.
+
+2024-12-06  David Malcolm  <dmalcolm@redhat.com>
+
+	* c-attribs.cc: Include "gcc-urlifier.h".
+	(positional_argument): Use auto_urlify_attributes.
+	* c-common.cc: Include "gcc-urlifier.h".
+	(parse_optimize_options): Use auto_urlify_attributes with
+	OPT_Wattributes.
+	(attribute_fallthrough_p): Use auto_urlify_attributes.
+	* c-warn.cc: Include "gcc-urlifier.h".
+	(diagnose_mismatched_attributes): Use auto_urlify_attributes.
+
+2024-12-05  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/107980
+	* c-common.h (enum rid): Add RID_C23_VA_START.
+	* c-common.cc (c_common_reswords): Add __builtin_c23_va_start.
+
+2024-11-30  Jakub Jelinek  <jakub@redhat.com>
+
+	* c.opt (Wdeprecated-variadic-comma-omission): New option.
+	* c.opt.urls: Regenerate.
+	* c-opts.cc (c_common_post_options): Default to
+	-Wdeprecated-variadic-comma-omission for C++26 or -Wpedantic.
+
+2024-11-29  Tejas Belagod  <tejas.belagod@arm.com>
+
+	* c-common.cc (convert_vector_to_array_for_subscript): Add
+	range-check for target vector types.
+
+2024-11-28  Marek Polacek  <polacek@redhat.com>
+
+	PR c++/113798
+	* c-cppbuiltin.cc (c_cpp_builtins): Predefine
+	__cpp_pack_indexing=202311L for C++26.
+
+2024-11-28  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/117023
+	* c-attribs.cc (handle_nonnull_if_nonzero_attribute): New
+	function.
+	(c_common_gnu_attributes): Add nonnull_if_nonzero attribute.
+	(handle_nonnull_attribute): Fix comment typo.
+	* c-common.cc (struct nonnull_arg_ctx): Add other member.
+	(check_function_nonnull): Also check nonnull_if_nonzero attributes.
+	(check_nonnull_arg): Use different warning wording if pctx->other
+	is non-zero.
+	(check_function_arguments): Initialize ctx.other.
+
+2024-11-28  Joseph Myers  <josmyers@redhat.com>
+
+	PR c/117757
+	* c-gimplify.cc (c_gimplify_expr): Check for error_operand_p
+	before calling TYPE_MAIN_VARIANT for shifts.
+
+2024-11-28  David Malcolm  <dmalcolm@redhat.com>
+
+	PR c/82892
+	* c-common.h (get_option_for_builtin_define): New decl.
+	* c-cppbuiltin.cc (get_option_for_builtin_define): New.
+	* known-headers.cc: Include "opts.h".
+	(suggest_missing_option::suggest_missing_option): New.
+	(suggest_missing_option::~suggest_missing_option): New.
+	* known-headers.h (class suggest_missing_option): New.
+
+2024-11-28  David Malcolm  <dmalcolm@redhat.com>
+
+	PR c++/87850
+	* c-common.cc: Include "gcc-rich-location.h".
+	(maybe_emit_indirection_note): New function.
+	* c-common.h (maybe_emit_indirection_note): New decl.
+	(compatible_types_for_indirection_note_p): New decl.
+
+2024-11-28  David Malcolm  <dmalcolm@redhat.com>
+
+	PR c/104896
+	* c-lex.cc (c_common_lex_availability_macro): Replace "%<%s%>"
+	with "%qs" in message wording.
+	* c-opts.cc (c_common_handle_option): Likewise.
+	* c-warn.cc (warn_parm_array_mismatch): Likewise.
+
+2024-11-27  Florian Weimer  <fweimer@redhat.com>
+
+	* c-opts.cc (c_common_post_options): Initialize
+	warn_free_labels.
+	* c.opt (Wfree-labels): New option.
+	* c.opt.urls: Regenerate.
+
+2024-11-27  Jason Merrill  <jason@redhat.com>
+
+	* c-opts.cc (c_common_post_options): Enable -Warray-compare
+	in C++20.
+
+2024-11-26  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/43374
+	* c-cppbuiltin.cc (builtin_define_decimal_float_constants): Use
+	get_max_float.
+
 2024-11-23  Jakub Jelinek  <jakub@redhat.com>
 
 	* c.opt.urls: Regenerate.

@@ -1172,6 +1172,10 @@ extern void omp_clause_range_check_failed (const_tree, const char *, int,
   (RAW_DATA_CST_CHECK (NODE)->raw_data_cst.str)
 #define RAW_DATA_OWNER(NODE) \
   (RAW_DATA_CST_CHECK (NODE)->raw_data_cst.owner)
+#define RAW_DATA_UCHAR_ELT(NODE, I) \
+  (((const unsigned char *) RAW_DATA_POINTER (NODE))[I])
+#define RAW_DATA_SCHAR_ELT(NODE, I) \
+  (((const signed char *) RAW_DATA_POINTER (NODE))[I])
 
 /* In a COMPLEX_CST node.  */
 #define TREE_REALPART(NODE) (COMPLEX_CST_CHECK (NODE)->complex.real)
@@ -1233,6 +1237,9 @@ extern void omp_clause_range_check_failed (const_tree, const char *, int,
   (vec_safe_length (CONSTRUCTOR_ELTS (NODE)))
 #define CONSTRUCTOR_NO_CLEARING(NODE) \
   (CONSTRUCTOR_CHECK (NODE)->base.public_flag)
+/* True if even padding bits should be zeroed during initialization.  */
+#define CONSTRUCTOR_ZERO_PADDING_BITS(NODE) \
+  (CONSTRUCTOR_CHECK (NODE)->base.default_def_flag)
 
 /* Iterate through the vector V of CONSTRUCTOR_ELT elements, yielding the
    value of each element (stored within VAL). IX must be a scratch variable
@@ -1365,10 +1372,6 @@ class auto_suppress_location_wrappers
   auto_suppress_location_wrappers () { ++suppress_location_wrappers; }
   ~auto_suppress_location_wrappers () { --suppress_location_wrappers; }
 };
-
-/* COND_EXPR identificer/discriminator accessors.  */
-#define SET_EXPR_UID(t, v) EXPR_CHECK ((t))->exp.condition_uid = (v)
-#define EXPR_COND_UID(t) EXPR_CHECK ((t))->exp.condition_uid
 
 /* In a TARGET_EXPR node.  */
 #define TARGET_EXPR_SLOT(NODE) TREE_OPERAND_CHECK_CODE (NODE, TARGET_EXPR, 0)

@@ -350,14 +350,14 @@ const enum reg_class riscv_regno_to_class[FIRST_PSEUDO_REGISTER] = {
   JALR_REGS,	JALR_REGS,	JALR_REGS,	JALR_REGS,
   JALR_REGS,	JALR_REGS,	JALR_REGS,	JALR_REGS,
   SIBCALL_REGS,	SIBCALL_REGS,	SIBCALL_REGS,	SIBCALL_REGS,
-  FP_REGS,	FP_REGS,	FP_REGS,	FP_REGS,
-  FP_REGS,	FP_REGS,	FP_REGS,	FP_REGS,
-  FP_REGS,	FP_REGS,	FP_REGS,	FP_REGS,
-  FP_REGS,	FP_REGS,	FP_REGS,	FP_REGS,
-  FP_REGS,	FP_REGS,	FP_REGS,	FP_REGS,
-  FP_REGS,	FP_REGS,	FP_REGS,	FP_REGS,
-  FP_REGS,	FP_REGS,	FP_REGS,	FP_REGS,
-  FP_REGS,	FP_REGS,	FP_REGS,	FP_REGS,
+  RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,
+  RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,
+  RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,
+  RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,
+  RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,
+  RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,
+  RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,
+  RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,	RVC_FP_REGS,
   FRAME_REGS,	FRAME_REGS,	NO_REGS,	NO_REGS,
   NO_REGS,	NO_REGS,	NO_REGS,	NO_REGS,
   NO_REGS,	NO_REGS,	NO_REGS,	NO_REGS,
@@ -590,6 +590,28 @@ static const struct riscv_tune_param generic_ooo_tune_info = {
   false,					/* slow_unaligned_access */
   true,						/* vector_unaligned_access */
   false,					/* use_divmod_expansion */
+  true,						/* overlap_op_by_pieces */
+  RISCV_FUSE_NOTHING,                           /* fusible_ops */
+  &generic_vector_cost,				/* vector cost */
+  NULL,						/* function_align */
+  NULL,						/* jump_align */
+  NULL,						/* loop_align */
+};
+
+/* Costs to use when optimizing for Tenstorrent Ascalon 8 wide.  */
+static const struct riscv_tune_param tt_ascalon_d8_tune_info = {
+  {COSTS_N_INSNS (2), COSTS_N_INSNS (2)},	/* fp_add */
+  {COSTS_N_INSNS (3), COSTS_N_INSNS (3)},	/* fp_mul */
+  {COSTS_N_INSNS (9), COSTS_N_INSNS (16)},	/* fp_div */
+  {COSTS_N_INSNS (3), COSTS_N_INSNS (3)},	/* int_mul */
+  {COSTS_N_INSNS (13), COSTS_N_INSNS (13)},	/* int_div */
+  8,						/* issue_rate */
+  3,						/* branch_cost */
+  4,						/* memory_cost */
+  4,						/* fmv_cost */
+  false,					/* slow_unaligned_access */
+  true,						/* vector_unaligned_access */
+  true,						/* use_divmod_expansion */
   true,						/* overlap_op_by_pieces */
   RISCV_FUSE_NOTHING,                           /* fusible_ops */
   &generic_vector_cost,				/* vector cost */
@@ -1637,35 +1659,49 @@ static int riscv_symbol_insns (enum riscv_symbol_type type)
    Manual draft. For details, please see:
    https://github.com/riscv/riscv-isa-manual/releases/tag/isa-449cd0c  */
 
-static unsigned HOST_WIDE_INT fli_value_hf[32] =
+static const unsigned HOST_WIDE_INT fli_value_hf[32] =
 {
-  0xbcp8, 0x4p8, 0x1p8, 0x2p8, 0x1cp8, 0x20p8, 0x2cp8, 0x30p8,
-  0x34p8, 0x35p8, 0x36p8, 0x37p8, 0x38p8, 0x39p8, 0x3ap8, 0x3bp8,
-  0x3cp8, 0x3dp8, 0x3ep8, 0x3fp8, 0x40p8, 0x41p8, 0x42p8, 0x44p8,
-  0x48p8, 0x4cp8, 0x58p8, 0x5cp8, 0x78p8,
+#define P8(v) ((unsigned HOST_WIDE_INT) (v) << 8)
+  P8(0xbc), P8(0x4), P8(0x1), P8(0x2),
+  P8(0x1c), P8(0x20), P8(0x2c), P8(0x30),
+  P8(0x34), P8(0x35), P8(0x36), P8(0x37),
+  P8(0x38), P8(0x39), P8(0x3a), P8(0x3b),
+  P8(0x3c), P8(0x3d), P8(0x3e), P8(0x3f),
+  P8(0x40), P8(0x41), P8(0x42), P8(0x44),
+  P8(0x48), P8(0x4c), P8(0x58), P8(0x5c),
+  P8(0x78),
   /* Only used for filling, ensuring that 29 and 30 of HF are the same.  */
-  0x78p8,
-  0x7cp8, 0x7ep8
+  P8(0x78),
+  P8(0x7c), P8(0x7e)
+#undef P8
 };
 
-static unsigned HOST_WIDE_INT fli_value_sf[32] =
+static const unsigned HOST_WIDE_INT fli_value_sf[32] =
 {
-  0xbf8p20, 0x008p20, 0x378p20, 0x380p20, 0x3b8p20, 0x3c0p20, 0x3d8p20, 0x3e0p20,
-  0x3e8p20, 0x3eap20, 0x3ecp20, 0x3eep20, 0x3f0p20, 0x3f2p20, 0x3f4p20, 0x3f6p20,
-  0x3f8p20, 0x3fap20, 0x3fcp20, 0x3fep20, 0x400p20, 0x402p20, 0x404p20, 0x408p20,
-  0x410p20, 0x418p20, 0x430p20, 0x438p20, 0x470p20, 0x478p20, 0x7f8p20, 0x7fcp20
+#define P20(v) ((unsigned HOST_WIDE_INT) (v) << 20)
+  P20(0xbf8), P20(0x008), P20(0x378), P20(0x380),
+  P20(0x3b8), P20(0x3c0), P20(0x3d8), P20(0x3e0),
+  P20(0x3e8), P20(0x3ea), P20(0x3ec), P20(0x3ee),
+  P20(0x3f0), P20(0x3f2), P20(0x3f4), P20(0x3f6),
+  P20(0x3f8), P20(0x3fa), P20(0x3fc), P20(0x3fe),
+  P20(0x400), P20(0x402), P20(0x404), P20(0x408),
+  P20(0x410), P20(0x418), P20(0x430), P20(0x438),
+  P20(0x470), P20(0x478), P20(0x7f8), P20(0x7fc)
+#undef P20
 };
 
-static unsigned HOST_WIDE_INT fli_value_df[32] =
+static const unsigned HOST_WIDE_INT fli_value_df[32] =
 {
-  0xbff0p48, 0x10p48, 0x3ef0p48, 0x3f00p48,
-  0x3f70p48, 0x3f80p48, 0x3fb0p48, 0x3fc0p48,
-  0x3fd0p48, 0x3fd4p48, 0x3fd8p48, 0x3fdcp48,
-  0x3fe0p48, 0x3fe4p48, 0x3fe8p48, 0x3fecp48,
-  0x3ff0p48, 0x3ff4p48, 0x3ff8p48, 0x3ffcp48,
-  0x4000p48, 0x4004p48, 0x4008p48, 0x4010p48,
-  0x4020p48, 0x4030p48, 0x4060p48, 0x4070p48,
-  0x40e0p48, 0x40f0p48, 0x7ff0p48, 0x7ff8p48
+#define P48(v) ((unsigned HOST_WIDE_INT) (v) << 48)
+  P48(0xbff0), P48(0x10), P48(0x3ef0), P48(0x3f00),
+  P48(0x3f70), P48(0x3f80), P48(0x3fb0), P48(0x3fc0),
+  P48(0x3fd0), P48(0x3fd4), P48(0x3fd8), P48(0x3fdc),
+  P48(0x3fe0), P48(0x3fe4), P48(0x3fe8), P48(0x3fec),
+  P48(0x3ff0), P48(0x3ff4), P48(0x3ff8), P48(0x3ffc),
+  P48(0x4000), P48(0x4004), P48(0x4008), P48(0x4010),
+  P48(0x4020), P48(0x4030), P48(0x4060), P48(0x4070),
+  P48(0x40e0), P48(0x40f0), P48(0x7ff0), P48(0x7ff8)
+#undef P48
 };
 
 /* Display floating-point values at the assembly level, which is consistent
@@ -1686,7 +1722,7 @@ const char *fli_value_print[32] =
 int
 riscv_float_const_rtx_index_for_fli (rtx x)
 {
-  unsigned HOST_WIDE_INT *fli_value_array;
+  const unsigned HOST_WIDE_INT *fli_value_array;
 
   machine_mode mode = GET_MODE (x);
 
@@ -6809,7 +6845,7 @@ riscv_asm_output_opcode (FILE *asm_out_file, const char *p)
 	  any outermost HIGH.
    'R'	Print the low-part relocation associated with OP.
    'C'	Print the integer branch condition for comparison OP.
-   'N'	Print the inverse of the integer branch condition for comparison OP.
+   'n'	Print the inverse of the integer branch condition for comparison OP.
    'A'	Print the atomic operation suffix for memory model OP.
    'I'	Print the LR suffix for memory model OP.
    'J'	Print the SC suffix for memory model OP.
@@ -6819,6 +6855,7 @@ riscv_asm_output_opcode (FILE *asm_out_file, const char *p)
    'S'	Print shift-index of single-bit mask OP.
    'T'	Print shift-index of inverted single-bit mask OP.
    '~'	Print w if TARGET_64BIT is true; otherwise not print anything.
+   'N'  Print register encoding as integer (0-31).
 
    Note please keep this list and the list in riscv.md in sync.  */
 
@@ -6967,7 +7004,7 @@ riscv_print_operand (FILE *file, rtx op, int letter)
       fputs (GET_RTX_NAME (code), file);
       break;
 
-    case 'N':
+    case 'n':
       /* The RTL names match the instruction names. */
       fputs (GET_RTX_NAME (reverse_condition (code)), file);
       break;
@@ -7063,6 +7100,28 @@ riscv_print_operand (FILE *file, rtx op, int letter)
 	gcc_assert (imm <= 63);
 	rtx newop = GEN_INT (imm);
 	output_addr_const (file, newop);
+	break;
+      }
+    case 'N':
+      {
+	if (!REG_P(op))
+	  {
+	    output_operand_lossage ("modifier 'N' require register operand");
+	    break;
+	  }
+
+	unsigned regno = REGNO (op);
+	unsigned offset = 0;
+	if (IN_RANGE (regno, GP_REG_FIRST, GP_REG_LAST))
+	  offset = GP_REG_FIRST;
+	else if (IN_RANGE (regno, FP_REG_FIRST, FP_REG_LAST))
+	  offset = FP_REG_FIRST;
+	else if (IN_RANGE (regno, V_REG_FIRST, V_REG_LAST))
+	  offset = V_REG_FIRST;
+	else
+	  output_operand_lossage ("invalid register number for 'N' modifie");
+
+	asm_fprintf (file, "%u", (regno - offset));
 	break;
       }
     default:
@@ -9486,22 +9545,44 @@ static bool
 riscv_secondary_memory_needed (machine_mode mode, reg_class_t class1,
 			       reg_class_t class2)
 {
+  bool class1_is_fpr = class1 == FP_REGS || class1 == RVC_FP_REGS;
+  bool class2_is_fpr = class2 == FP_REGS || class2 == RVC_FP_REGS;
   return (!riscv_v_ext_mode_p (mode)
 	  && GET_MODE_SIZE (mode).to_constant () > UNITS_PER_WORD
-	  && (class1 == FP_REGS) != (class2 == FP_REGS)
+	  && (class1_is_fpr != class2_is_fpr)
 	  && !TARGET_XTHEADFMV
 	  && !TARGET_ZFA);
 }
 
 /* Implement TARGET_REGISTER_MOVE_COST.  */
 
-static int
+int
 riscv_register_move_cost (machine_mode mode,
 			  reg_class_t from, reg_class_t to)
 {
-  if ((from == FP_REGS && to == GR_REGS) ||
-      (from == GR_REGS && to == FP_REGS))
+  bool from_is_fpr = from == FP_REGS || from == RVC_FP_REGS;
+  bool from_is_gpr = from == GR_REGS || from == RVC_GR_REGS;
+  bool to_is_fpr = to == FP_REGS || to == RVC_FP_REGS;
+  bool to_is_gpr = to == GR_REGS || to == RVC_GR_REGS;
+  if ((from_is_fpr && to == to_is_gpr) ||
+      (from_is_gpr && to_is_fpr))
     return tune_param->fmv_cost;
+
+  if (from == V_REGS)
+    {
+      if (to == GR_REGS)
+	return get_vector_costs ()->regmove->VR2GR;
+      else if (to == FP_REGS)
+	return get_vector_costs ()->regmove->VR2FR;
+    }
+
+  if (to == V_REGS)
+    {
+      if (from == GR_REGS)
+	return get_vector_costs ()->regmove->GR2VR;
+      else if (from == FP_REGS)
+	return get_vector_costs ()->regmove->FR2VR;
+    }
 
   return riscv_secondary_memory_needed (mode, from, to) ? 8 : 2;
 }
@@ -10601,6 +10682,10 @@ riscv_option_override (void)
   SET_OPTION_IF_UNSET (&global_options, &global_options_set,
 		       param_sched_pressure_algorithm,
 		       SCHED_PRESSURE_MODEL);
+
+  SET_OPTION_IF_UNSET (&global_options, &global_options_set,
+		       param_cycle_accurate_model,
+		       0);
 
   /* Function to allocate machine-dependent function status.  */
   init_machine_status = &riscv_init_machine_status;
@@ -12229,7 +12314,13 @@ riscv_builtin_vectorization_cost (enum vect_cost_for_stmt type_of_cost,
       return fp ? common_costs->fp_stmt_cost : common_costs->int_stmt_cost;
 
     case vec_construct:
-      return estimated_poly_value (TYPE_VECTOR_SUBPARTS (vectype));
+	{
+	  /* TODO: This is too pessimistic in case we can splat.  */
+	  int regmove_cost = fp ? costs->regmove->FR2VR
+	    : costs->regmove->GR2VR;
+	  return (regmove_cost + common_costs->scalar_to_vec_cost)
+	    * estimated_poly_value (TYPE_VECTOR_SUBPARTS (vectype));
+	}
 
     default:
       gcc_unreachable ();
@@ -13502,6 +13593,163 @@ riscv_use_by_pieces_infrastructure_p (unsigned HOST_WIDE_INT size,
   return default_use_by_pieces_infrastructure_p (size, alignment, op, speed_p);
 }
 
+/* Generate instruction sequence
+   which reflects the value of the OP using bswap and brev8 instructions.
+   OP's mode may be less than word_mode, to get the correct number,
+   after reflecting we shift right the value by SHIFT_VAL.
+   E.g. we have 1111 0001, after reflection (target 32-bit) we will get
+   1000 1111 0000 0000, if we shift-out 16 bits,
+   we will get the desired one: 1000 1111.  */
+
+void
+generate_reflecting_code_using_brev (rtx *op)
+{
+  machine_mode op_mode = GET_MODE (*op);
+  HOST_WIDE_INT shift_val = (BITS_PER_WORD
+			     - GET_MODE_BITSIZE (op_mode).to_constant ());
+  riscv_expand_op (BSWAP, word_mode, *op, *op, *op);
+  riscv_expand_op (LSHIFTRT, word_mode, *op, *op,
+		   gen_int_mode (shift_val, word_mode));
+  if (TARGET_64BIT)
+    emit_insn (gen_riscv_brev8_di (*op, *op));
+  else
+    emit_insn (gen_riscv_brev8_si (*op, *op));
+}
+
+
+/* Generate assembly to calculate CRC using clmul instruction.
+   The following code will be generated when the CRC and data sizes are equal:
+     li      a4,quotient
+     li      a5,polynomial
+     xor     a0,a1,a0
+     clmul   a0,a0,a4
+     srli    a0,a0,crc_size
+     clmul   a0,a0,a5
+     slli    a0,a0,word_mode_size - crc_size
+     srli    a0,a0,word_mode_size - crc_size
+     ret
+   crc_size may be 8, 16, 32.
+   Some instructions will be added for the cases when CRC's size is larger than
+   data's size.
+   OPERANDS[1] is input CRC,
+   OPERANDS[2] is data (message),
+   OPERANDS[3] is the polynomial without the leading 1.  */
+
+void
+expand_crc_using_clmul (scalar_mode crc_mode, scalar_mode data_mode,
+			rtx *operands)
+{
+  /* Check and keep arguments.  */
+  gcc_assert (!CONST_INT_P (operands[0]));
+  gcc_assert (CONST_INT_P (operands[3]));
+  unsigned short crc_size = GET_MODE_BITSIZE (crc_mode);
+  gcc_assert (crc_size <= 32);
+  unsigned short data_size = GET_MODE_BITSIZE (data_mode);
+
+  /* Calculate the quotient.  */
+  unsigned HOST_WIDE_INT
+      q = gf2n_poly_long_div_quotient (UINTVAL (operands[3]), crc_size);
+
+  rtx crc_extended = gen_rtx_ZERO_EXTEND (word_mode, operands[1]);
+  rtx crc = gen_reg_rtx (word_mode);
+  if (crc_size > data_size)
+    riscv_expand_op (LSHIFTRT, word_mode, crc, crc_extended,
+		     gen_int_mode (crc_size - data_size, word_mode));
+  else
+    crc = gen_rtx_ZERO_EXTEND (word_mode, operands[1]);
+  rtx t0 = gen_reg_rtx (word_mode);
+  riscv_emit_move (t0, gen_int_mode (q, word_mode));
+  rtx t1 = gen_reg_rtx (word_mode);
+  riscv_emit_move (t1, operands[3]);
+
+  rtx a0 = gen_reg_rtx (word_mode);
+  rtx data = gen_rtx_ZERO_EXTEND (word_mode, operands[2]);
+  riscv_expand_op (XOR, word_mode, a0, crc, data);
+
+  if (TARGET_64BIT)
+    emit_insn (gen_riscv_clmul_di (a0, a0, t0));
+  else
+    emit_insn (gen_riscv_clmul_si (a0, a0, t0));
+
+  riscv_expand_op (LSHIFTRT, word_mode, a0, a0,
+		   gen_int_mode (crc_size, word_mode));
+  if (TARGET_64BIT)
+    emit_insn (gen_riscv_clmul_di (a0, a0, t1));
+  else
+    emit_insn (gen_riscv_clmul_si (a0, a0, t1));
+
+  if (crc_size > data_size)
+    {
+      rtx crc_part = gen_reg_rtx (word_mode);
+      riscv_expand_op (ASHIFT, word_mode, crc_part, operands[1],
+		       gen_int_mode (data_size, word_mode));
+      riscv_expand_op (XOR, word_mode, a0, a0, crc_part);
+    }
+  riscv_emit_move (operands[0], gen_lowpart (crc_mode, a0));
+}
+
+/* Generate assembly to calculate reversed CRC using clmul instruction.
+   OPERANDS[1] is input CRC,
+   OPERANDS[2] is data (message),
+   OPERANDS[3] is the polynomial without the leading 1.  */
+
+void
+expand_reversed_crc_using_clmul (scalar_mode crc_mode, scalar_mode data_mode,
+				 rtx *operands)
+{
+  /* Check and keep arguments.  */
+  gcc_assert (!CONST_INT_P (operands[0]));
+  gcc_assert (CONST_INT_P (operands[3]));
+  unsigned short crc_size = GET_MODE_BITSIZE (crc_mode);
+  gcc_assert (crc_size <= 32);
+  unsigned short data_size = GET_MODE_BITSIZE (data_mode);
+  rtx polynomial = operands[3];
+
+  /* Calculate the quotient.  */
+  unsigned HOST_WIDE_INT
+  q = gf2n_poly_long_div_quotient (UINTVAL (polynomial), crc_size);
+  /* Reflect the calculated quotient.  */
+  q = reflect_hwi (q, crc_size + 1);
+  rtx t0 = gen_reg_rtx (word_mode);
+  riscv_emit_move (t0, gen_int_mode (q, word_mode));
+
+  /* Reflect the polynomial.  */
+  unsigned HOST_WIDE_INT
+  ref_polynomial = reflect_hwi (UINTVAL (polynomial),
+				crc_size);
+  rtx t1 = gen_reg_rtx (word_mode);
+  riscv_emit_move (t1, gen_int_mode (ref_polynomial << 1, word_mode));
+
+  rtx crc = gen_rtx_ZERO_EXTEND (word_mode, operands[1]);
+  rtx data = gen_rtx_ZERO_EXTEND (word_mode, operands[2]);
+  rtx a0 = gen_reg_rtx (word_mode);
+  riscv_expand_op (XOR, word_mode, a0, crc, data);
+
+  if (TARGET_64BIT)
+    emit_insn (gen_riscv_clmul_di (a0, a0, t0));
+  else
+    emit_insn (gen_riscv_clmul_si (a0, a0, t0));
+
+  rtx num_shift = gen_int_mode (GET_MODE_BITSIZE (word_mode) - data_size,
+				word_mode);
+  riscv_expand_op (ASHIFT, word_mode, a0, a0, num_shift);
+
+  if (TARGET_64BIT)
+    emit_insn (gen_riscv_clmulh_di (a0, a0, t1));
+  else
+    emit_insn (gen_riscv_clmulh_si (a0, a0, t1));
+
+  if (crc_size > data_size)
+    {
+      rtx data_size_shift = gen_int_mode (data_size, word_mode);
+      rtx crc_part = gen_reg_rtx (word_mode);
+      riscv_expand_op (LSHIFTRT, word_mode, crc_part, crc, data_size_shift);
+      riscv_expand_op (XOR, word_mode, a0, a0, crc_part);
+    }
+
+  riscv_emit_move (operands[0], gen_lowpart (crc_mode, a0));
+}
+
 /* Initialize the GCC target structure.  */
 #undef TARGET_ASM_ALIGNED_HI_OP
 #define TARGET_ASM_ALIGNED_HI_OP "\t.half\t"
@@ -13893,6 +14141,9 @@ riscv_use_by_pieces_infrastructure_p (unsigned HOST_WIDE_INT size,
 #undef TARGET_GET_FUNCTION_VERSIONS_DISPATCHER
 #define TARGET_GET_FUNCTION_VERSIONS_DISPATCHER \
   riscv_get_function_versions_dispatcher
+
+#undef TARGET_DOCUMENTATION_NAME
+#define TARGET_DOCUMENTATION_NAME "RISC-V"
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 

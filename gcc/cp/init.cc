@@ -248,6 +248,7 @@ build_zero_init_1 (tree type, tree nelts, bool static_storage_p,
 
       /* Build a constructor to contain the initializations.  */
       init = build_constructor (type, v);
+      CONSTRUCTOR_ZERO_PADDING_BITS (init) = 1;
     }
   else if (TREE_CODE (type) == ARRAY_TYPE)
     {
@@ -466,7 +467,9 @@ build_value_init_noctor (tree type, tsubst_flags_t complain)
 	    }
 
 	  /* Build a constructor to contain the zero- initializations.  */
-	  return build_constructor (type, v);
+	  tree ret = build_constructor (type, v);
+	  CONSTRUCTOR_ZERO_PADDING_BITS (ret) = 1;
+	  return ret;
 	}
     }
   else if (TREE_CODE (type) == ARRAY_TYPE)
@@ -5106,6 +5109,15 @@ build_vec_init (tree base, tree maxindex, tree init,
     {
       if (!saw_non_const)
 	{
+	  /* If we're not generating the loop, we don't need to reset the
+	     iterator.  */
+	  if (cleanup_flags
+	      && !vec_safe_is_empty (*cleanup_flags))
+	    {
+	      auto l = (*cleanup_flags)->last ();
+	      gcc_assert (TREE_PURPOSE (l) == iterator);
+	      (*cleanup_flags)->pop ();
+	    }
 	  tree const_init = build_constructor (atype, const_vec);
 	  return build2 (INIT_EXPR, atype, obase, const_init);
 	}

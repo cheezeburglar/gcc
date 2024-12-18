@@ -18,6 +18,7 @@ along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
 #include "config.h"
+#define INCLUDE_MEMORY
 #include "system.h"
 #include "coretypes.h"
 #include "backend.h"
@@ -55,6 +56,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "fold-const-call.h"
 #include "tree-ssa-live.h"
 #include "tree-outof-ssa.h"
+#include "gcc-urlifier.h"
 
 /* For lang_hooks.types.type_for_mode.  */
 #include "langhooks.h"
@@ -191,6 +193,7 @@ init_internal_fns ()
 #define mask_fold_left_direct { 1, 1, false }
 #define mask_len_fold_left_direct { 1, 1, false }
 #define check_ptrs_direct { 0, 0, false }
+#define crc_direct { 1, -1, true }
 
 const direct_internal_fn_info direct_internal_fn_array[IFN_LAST + 1] = {
 #define DEF_INTERNAL_FN(CODE, FLAGS, FNSPEC) not_direct,
@@ -887,6 +890,7 @@ expand_TSAN_FUNC_EXIT (internal_fn, gcall *)
 static void
 expand_FALLTHROUGH (internal_fn, gcall *call)
 {
+  auto_urlify_attributes sentinel;
   error_at (gimple_location (call),
 	    "invalid use of attribute %<fallthrough%>");
 }
@@ -3134,58 +3138,6 @@ expand_partial_store_optab_fn (internal_fn ifn, gcall *stmt, convert_optab optab
 #define expand_len_store_optab_fn expand_partial_store_optab_fn
 #define expand_mask_len_store_optab_fn expand_partial_store_optab_fn
 
-/* Expand VCOND, VCONDU and VCONDEQ optab internal functions.
-   The expansion of STMT happens based on OPTAB table associated.  */
-
-static void
-expand_vec_cond_optab_fn (internal_fn, gcall *stmt, convert_optab optab)
-{
-  class expand_operand ops[6];
-  insn_code icode;
-  tree lhs = gimple_call_lhs (stmt);
-  tree op0a = gimple_call_arg (stmt, 0);
-  tree op0b = gimple_call_arg (stmt, 1);
-  tree op1 = gimple_call_arg (stmt, 2);
-  tree op2 = gimple_call_arg (stmt, 3);
-  enum tree_code tcode = (tree_code) int_cst_value (gimple_call_arg (stmt, 4));
-
-  tree vec_cond_type = TREE_TYPE (lhs);
-  tree op_mode = TREE_TYPE (op0a);
-  bool unsignedp = TYPE_UNSIGNED (op_mode);
-
-  machine_mode mode = TYPE_MODE (vec_cond_type);
-  machine_mode cmp_op_mode = TYPE_MODE (op_mode);
-
-  icode = convert_optab_handler (optab, mode, cmp_op_mode);
-  rtx comparison
-    = vector_compare_rtx (VOIDmode, tcode, op0a, op0b, unsignedp, icode, 4);
-  /* vector_compare_rtx legitimizes operands, preserve equality when
-     expanding op1/op2.  */
-  rtx rtx_op1, rtx_op2;
-  if (operand_equal_p (op1, op0a))
-    rtx_op1 = XEXP (comparison, 0);
-  else if (operand_equal_p (op1, op0b))
-    rtx_op1 = XEXP (comparison, 1);
-  else
-    rtx_op1 = expand_normal (op1);
-  if (operand_equal_p (op2, op0a))
-    rtx_op2 = XEXP (comparison, 0);
-  else if (operand_equal_p (op2, op0b))
-    rtx_op2 = XEXP (comparison, 1);
-  else
-    rtx_op2 = expand_normal (op2);
-
-  rtx target = expand_expr (lhs, NULL_RTX, VOIDmode, EXPAND_WRITE);
-  create_call_lhs_operand (&ops[0], target, mode);
-  create_input_operand (&ops[1], rtx_op1, mode);
-  create_input_operand (&ops[2], rtx_op2, mode);
-  create_fixed_operand (&ops[3], comparison);
-  create_fixed_operand (&ops[4], XEXP (comparison, 0));
-  create_fixed_operand (&ops[5], XEXP (comparison, 1));
-  expand_insn (icode, 6, ops);
-  assign_call_lhs (lhs, target, &ops[0]);
-}
-
 /* Expand VCOND_MASK optab internal function.
    The expansion of STMT happens based on OPTAB table associated.  */
 
@@ -4054,6 +4006,79 @@ expand_convert_optab_fn (internal_fn fn, gcall *stmt, convert_optab optab,
   expand_fn_using_insn (stmt, icode, 1, nargs);
 }
 
+/* Expand CRC call STMT.  */
+
+static void
+expand_crc_optab_fn (internal_fn fn, gcall *stmt, convert_optab optab)
+{
+  tree lhs = gimple_call_lhs (stmt);
+  tree rhs1 = gimple_call_arg (stmt, 0); // crc
+  tree rhs2 = gimple_call_arg (stmt, 1); // data
+  tree rhs3 = gimple_call_arg (stmt, 2); // polynomial
+
+  tree result_type = TREE_TYPE (lhs);
+  tree data_type = TREE_TYPE (rhs2);
+
+  gcc_assert (TYPE_MODE (result_type) >= TYPE_MODE (data_type));
+
+  rtx dest = expand_expr (lhs, NULL_RTX, VOIDmode, EXPAND_WRITE);
+  rtx crc = expand_normal (rhs1);
+  rtx data = expand_normal (rhs2);
+  gcc_assert (TREE_CODE (rhs3) == INTEGER_CST);
+  rtx polynomial = gen_rtx_CONST_INT (TYPE_MODE (result_type),
+  TREE_INT_CST_LOW (rhs3));
+
+  /* Use target specific expansion if it exists.
+     Otherwise, generate table-based CRC.  */
+  if (direct_internal_fn_supported_p (fn, tree_pair (data_type, result_type),
+				      OPTIMIZE_FOR_SPEED))
+    {
+      class expand_operand ops[4];
+      create_call_lhs_operand (&ops[0], dest, TYPE_MODE (result_type));
+      create_input_operand (&ops[1], crc, TYPE_MODE (result_type));
+      create_input_operand (&ops[2], data, TYPE_MODE (data_type));
+      create_input_operand (&ops[3], polynomial, TYPE_MODE (result_type));
+      insn_code icode = convert_optab_handler (optab, TYPE_MODE (data_type),
+					       TYPE_MODE (result_type));
+      expand_insn (icode, 4, ops);
+      assign_call_lhs (lhs, dest, &ops[0]);
+    }
+  else
+    {
+      /* We're bypassing all the operand conversions that are done in the
+	 case when we get an icode, operands and pass that off to expand_insn.
+
+	 That path has special case handling for promoted return values which
+	 we must emulate here (is the same kind of special treatment ever
+	 needed for input arguments here?).
+
+	 In particular we do not want to store directly into a promoted
+	 SUBREG destination, instead store into a suitably sized pseudo.  */
+      rtx orig_dest = dest;
+      if (SUBREG_P (dest) && SUBREG_PROMOTED_VAR_P (dest))
+	dest = gen_reg_rtx (GET_MODE (dest));
+
+      /* If it's IFN_CRC generate bit-forward CRC.  */
+      if (fn == IFN_CRC)
+	expand_crc_table_based (dest, crc, data, polynomial,
+				TYPE_MODE (data_type));
+      else
+	/* If it's IFN_CRC_REV generate bit-reversed CRC.  */
+	expand_reversed_crc_table_based (dest, crc, data, polynomial,
+					 TYPE_MODE (data_type),
+					 generate_reflecting_code_standard);
+
+      /* Now get the return value where it needs to be, taking care to
+	 ensure it's promoted appropriately if the ABI demands it.
+
+	 Re-use assign_call_lhs to handle the details.  */
+      class expand_operand ops[4];
+      create_call_lhs_operand (&ops[0], dest, TYPE_MODE (result_type));
+      ops[0].value = dest;
+      assign_call_lhs (lhs, orig_dest, &ops[0]);
+    }
+}
+
 /* Expanders for optabs that can use expand_direct_optab_fn.  */
 
 #define expand_unary_optab_fn(FN, STMT, OPTAB) \
@@ -4190,6 +4215,7 @@ multi_vector_optab_supported_p (convert_optab optab, tree_pair types,
 #define direct_cond_len_unary_optab_supported_p direct_optab_supported_p
 #define direct_cond_len_binary_optab_supported_p direct_optab_supported_p
 #define direct_cond_len_ternary_optab_supported_p direct_optab_supported_p
+#define direct_crc_optab_supported_p convert_optab_supported_p
 #define direct_mask_load_optab_supported_p convert_optab_supported_p
 #define direct_load_lanes_optab_supported_p multi_vector_optab_supported_p
 #define direct_mask_load_lanes_optab_supported_p multi_vector_optab_supported_p

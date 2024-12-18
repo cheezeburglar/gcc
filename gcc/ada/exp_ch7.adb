@@ -27,7 +27,6 @@
 --    - controlled types
 --    - transient scopes
 
-with Aspects;        use Aspects;
 with Atree;          use Atree;
 with Debug;          use Debug;
 with Einfo;          use Einfo;
@@ -707,8 +706,8 @@ package body Exp_Ch7 is
                    else Empty);
 
       function Build_BIP_Cleanup_Stmts
-         (Func_Id  : Entity_Id;
-          Obj_Addr : Node_Id) return Node_Id;
+        (Func_Id  : Entity_Id;
+         Obj_Addr : Node_Id) return Node_Id;
       --  Func_Id denotes a build-in-place function. Generate the following
       --  cleanup code:
       --
@@ -3929,7 +3928,8 @@ package body Exp_Ch7 is
                   Set_Scope (Id, Block_Elab_Proc);
 
                when N_Object_Declaration
-                 | N_Object_Renaming_Declaration =>
+                  | N_Object_Renaming_Declaration
+               =>
                   Id := Defining_Entity (Stat);
                   if No (Block_Elab_Proc) then
                      Append_Elmt (Id, Maybe_Reset_Scopes_For_Decl);
@@ -5470,31 +5470,14 @@ package body Exp_Ch7 is
             Related_Node => Target);
       end if;
 
-      --  If the target is the declaration of an object with an address clause
-      --  or aspect, move all the statements that have been inserted after it
-      --  into its Initialization_Statements list, so they can be inserted into
-      --  its freeze actions later.
+      --  If the target is the declaration of an object, park the generated
+      --  statements if need be.
 
       if Nkind (Target) = N_Object_Declaration
-        and then (Present (Following_Address_Clause (Target))
-                   or else
-                  Has_Aspect (Defining_Identifier (Target), Aspect_Address))
         and then Next (Target) /= Marker
+        and then Needs_Initialization_Statements (Target)
       then
-         declare
-            Obj_Id : constant Entity_Id := Defining_Identifier (Target);
-            Stmts  : constant List_Id   := New_List;
-
-         begin
-            while Next (Target) /= Marker loop
-               Append_To (Stmts, Remove_Next (Target));
-            end loop;
-
-            pragma Assert (No (Initialization_Statements (Obj_Id)));
-
-            Set_Initialization_Statements
-              (Obj_Id, Make_Compound_Statement (Loc, Actions => Stmts));
-         end;
+         Move_To_Initialization_Statements (Target, Marker);
       end if;
 
       --  Reset the action lists
@@ -5532,6 +5515,8 @@ package body Exp_Ch7 is
       Obj_Ref : Node_Id;
       Obj_Typ : Entity_Id) return Node_Id
    is
+      Utyp : constant Entity_Id := Underlying_Type (Obj_Typ);
+
       Obj_Addr : Node_Id;
 
    begin
@@ -5547,13 +5532,13 @@ package body Exp_Ch7 is
       --  but the address of the object is still that of its elements,
       --  so we need to shift it.
 
-      if Is_Array_Type (Obj_Typ)
-        and then not Is_Constrained (First_Subtype (Obj_Typ))
+      if Is_Array_Type (Utyp)
+        and then not Is_Constrained (First_Subtype (Utyp))
       then
          --  Shift the address from the start of the elements to the
          --  start of the dope vector:
 
-         --    V - (Obj_Typ'Descriptor_Size / Storage_Unit)
+         --    V - (Utyp'Descriptor_Size / Storage_Unit)
 
          Obj_Addr :=
            Make_Function_Call (Loc,
@@ -5570,7 +5555,7 @@ package body Exp_Ch7 is
                Make_Op_Divide (Loc,
                  Left_Opnd  =>
                    Make_Attribute_Reference (Loc,
-                     Prefix         => New_Occurrence_Of (Obj_Typ, Loc),
+                     Prefix         => New_Occurrence_Of (Utyp, Loc),
                      Attribute_Name => Name_Descriptor_Size),
                  Right_Opnd =>
                    Make_Integer_Literal (Loc, System_Storage_Unit))));
