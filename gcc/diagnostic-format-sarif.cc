@@ -3580,8 +3580,9 @@ public:
   sarif_socket_output_format (diagnostic_context &context,
 			      const line_maps *line_maps,
 			      const char *main_input_filename_,
+			      const sarif_version sarif_version,
 			      int fd)
-  : sarif_output_format (context, line_maps, main_input_filename_, false),
+  : sarif_output_format (context, line_maps, main_input_filename_, false, sarif_version),
     m_fd (fd)
   {
   }
@@ -3900,10 +3901,18 @@ make_sarif_sink (diagnostic_context &context,
 void
 diagnostic_output_format_init_sarif_socket (diagnostic_context &context,
 					    const line_maps *line_maps,
-					    const char *main_input_filename_)
+					    const char *main_input_filename_,
+					    enum sarif_version version,
+					    int fd)
 {
-  diagnostic_output_format_init_sarif (context);
-  const char * const env_var_name = "SARIF_SOCKET";
+  diagnostic_output_format_init_sarif
+     (context,
+      ::make_unique<sarif_socket_output_format> (context,
+						 line_maps,
+						 main_input_filename_,
+						 version,
+						 fd));
+  const char * const env_var_name = "GCC_SOCKET";
   const char * const socket_name = getenv (env_var_name);
   const char * const optname = "-fdiagnostics-format=sarif-socket";
   if (!socket_name)
@@ -3928,9 +3937,10 @@ diagnostic_output_format_init_sarif_socket (diagnostic_context &context,
 		 optname, socket_name);
 
   context.set_output_format
-    (new sarif_socket_output_format (context,
+    (::make_unique<sarif_socket_output_format> (context,
 				     line_maps,
 				     main_input_filename_,
+				     version,
 				     sfd));
 }
 

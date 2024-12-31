@@ -1819,11 +1819,13 @@ diagnostic_output_format_init (diagnostic_context &context,
 						base_file_name);
       break;
 
-    case DIAGNOSTICS_OUTPUT_FORMAT_SARIF_SOCKET:
-      diagnostic_output_format_init_sarif_socket (context,
-						  line_table,
-						  main_input_filename_);
-      break;
+//    case DIAGNOSTICS_OUTPUT_FORMAT_SARIF_SOCKET:
+//      diagnostic_output_format_init_sarif_socket (context,
+//						  line_table,
+//						  main_input_filename_,
+//						  sarif_version::v2_1_0
+//						  );
+//      break;
     }
 }
 

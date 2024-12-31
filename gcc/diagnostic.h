@@ -1272,9 +1272,11 @@ extern void diagnostic_output_format_init_sarif_stream (diagnostic_context &cont
 							const char *main_input_filename_,
 							bool formatted,
 							FILE *stream);
-extern void diagnostic_output_format_init_sarif_socket (diagnostic_context &context,
-							const line_maps *line_maps,
-							const char *main_input_filename_);
+//extern void diagnostic_output_format_init_sarif_socket (diagnostic_context &context,
+//							const line_maps *line_maps,
+//							const char *main_input_filename_,
+//							enum sarif_version version,
+//							int fd);
 
 /* Compute the number of digits in the decimal representation of an integer.  */
 extern int num_digits (int);

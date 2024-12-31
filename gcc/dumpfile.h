@@ -331,6 +331,9 @@ struct dump_file_info
   /* When a given dump file is being initialized, this flag is set to true
      if the corresponding TDF_graph dump file has also been initialized.  */
   bool graph_dump_initialized;
+
+  // TODO: THORP Write to socket here? Maybe only for passes that support it
+  bool socket = false;
 };
 
 /* A class for describing where in the user's source that a dump message

@@ -19,12 +19,12 @@ along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
 
+#define INCLUDE_SYS_SOCKETS
+#define INCLUDE_SYS_UN
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
 #include "diagnostic.h"
-#include <sys/un.h> // FIXME
-#include <sys/socket.h> // FIXME
 
 /* FIXME.  */
 
@@ -40,7 +40,7 @@ main (int argc, char **argv)
   progname = p;
   diagnostic_initialize (global_dc, 0);
 
-  const char * const env_var_name = "SARIF_SOCKET";
+  const char * const env_var_name = "GCC_SOCKET";
   const char * const socket_path = getenv (env_var_name);
   if (!socket_path)
     fatal_error (UNKNOWN_LOCATION,
