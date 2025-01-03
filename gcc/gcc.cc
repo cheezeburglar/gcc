@@ -4362,7 +4362,7 @@ driver_handle_option (struct gcc_options *opts,
 	  const char *basename = (opts->x_dump_base_name ? opts->x_dump_base_name
 				  : opts->x_main_input_basename);
 	  gcc_assert (dc);
-	  // TODO : Need to hook the socket here? THOR
+	  // TODO : Need to hook the socket here? THORP update: I don't think so. New option maybe
 	  diagnostic_output_format_init (*dc,
 					 opts->x_main_input_filename, basename,
 					 (enum diagnostics_output_format)value,
