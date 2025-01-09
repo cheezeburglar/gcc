@@ -4,100 +4,154 @@
 #include "json.h"
 
 
-static void
-operand_0_to_json ()
+inline static void
+operand_0_to_json (const_rtx rtx, int idx)
 {
   
 }
 
-static void
-operand_i_to_json ()
+inline static void
+operand_i_to_json (const_rtx rtx, int idx)
 {
-
+  int value = XINT (rtx, idx);
+  return json::integer_number(value);
 }
 
-static void
-operand_n_to_json ()
-{
+// This should maybe only exist IFF we not in generator file?
+// Manually needs to be kept in track with rtl.def
 
+inline static void
+operand_L_to_json (const_rtx rtx, int idx)
+{
+  if (idx == 4 && INSN_P (rtx))
+    {
+      if (INSN_HAS_LOCATION (in_insn))
+	{
+	  // TODO :
+	  expanded_location xloc = insn_location ();
+	}
+      else
+	{
+
+	}
+    }
+  else if (idx == 1 && GET_CODE (rtx) == ASM_INPUT)
+    {
+      
+    }
+  else if (idx == 6 && GET_CODE (rtx) == ASM_OPERANDS)
+    {
+      
+    }
+  else
+    gcc_unreachable ();
 }
 
-static void
-operand_w_to_json ()
+inline static void
+operand_n_to_json (const_rtx rtx, int idx)
 {
-
+  GET_NOTE_INSN_NAME (XINT (rtx, idx));
+  XINT (rtx, idx);
 }
 
-static void
-operand_s_to_json ()
+inline static void
+operand_w_to_json (const_rtx rtx, int idx)
 {
-
+  XWINT (rtx, idx);
 }
 
-static void
-operand_S_to_json ()
+inline static void
+operand_s_to_json (const_rtx rtx, int idx)
 {
-
+  XSTR (rtx, idx);
 }
 
-static void
-operand_T_to_json ()
+inline static void
+operand_S_to_json (const_rtx rtx, int idx)
 {
-
+  XSTR (rtx, idx);
 }
 
-static void
+inline static void
+operand_T_to_json (const_rtx rtx, int idx)
+{
+  XTMPL (in_rtx, idx);
+}
+
+inline static
+json::object *
 operand_e_to_json (const_rtx rtx, int idx)
 {
-  rtx_to_json (XEXP (rtx, idx));
+  return rtx_to_json (XEXP (rtx, idx));
 }
 
-static void
-operand_E_to_json ()
+inline static void
+operand_E_to_json (const_rtx rtx, int idx)
+{
+  XVEC (rtx, idx);
+
+  for (int i = 0; i < VECLEN(rtx, idx); i++)
+    {
+      XVECEXP(rtx, idx, i)
+    }
+
+}
+
+inline static void
+operand_V_to_json (const_rtx rtx, int idx)
 {
 
 }
 
-static void
-operand_V_to_json ()
+inline static void
+operand_u_to_json (const_rtx rtx, int idx)
+{
+  rtx sub = XEXP (rtx, idx);
+  sub_uid = INSN_UID (sub);
+}
+
+//FIXME:
+//It *looks* like this operand type is unused. qualms?
+
+inline static void
+operand_b_to_json (const_rtx rtx, int idx)
 {
 
 }
 
-static void
-operand_u_to_json ()
+inline static void
+operand_B_to_json (const_rtx rtx, int idx)
 {
-
+  XBBDEF (rtx, idx);
 }
 
-static void
-operand_b_to_json ()
+// FIXME: 
+// Code switching here ??
+// DEBUG_IMPLICT_PTR, DEBUG_PARAMETER_REF, VAR_LOCATION ?
+inline static void
+operand_t_to_json (const_rtx rtx, int idx)
 {
-
+  XTREE(rtx, idx);
 }
 
-static void
-operand_B_to_json ()
+inline static void
+operand_r_to_json (const_rtx rtx, int idx)
 {
-
+  int is_insn = INSN_P (rtx);
+  unsigned int regno = REGNO (rtx);
+  if (flags & TDF_RAW)
+    {
+    }
+  else
+    {
+      
+    }
 }
 
-static void
-operand_t_to_json ()
+inline static void
+operand_p_to_json (const_rtx rtx, int idx)
 {
-
-}
-
-static void
-operand_r_to_json ()
-{
-
-}
-
-static void
-operand_p_to_json ()
-{
-
+  SUBREG_BYTE (rtx);
 }
 
 // TODO : 
@@ -150,21 +204,52 @@ add_rtx_to_json (const_rtx rtx, dump_flags_t flags, json::object json_obj)
         case "*":
 	  break;
 	case "0":
+	  json_array->append(operand_0_to_json (rtx, idx));
+	  break;
 	case "i":
+	  json_array->append(operand_i_to_json (rtx, idx));
 	case "n":
+	  json_array->append(operand_n_to_json (rtx, idx));
+	  break;
 	case "w":
+	  json_array->append(operand_w_to_json (rtx, idx));
+	  break;
 	case "s":
+	  json_array->append(operand_s_to_json (rtx, idx));
+	  break;
 	case "S":
+	  json_array->append(operand_S_to_json (rtx, idx));
+	  break;
 	case "T":
+	  json_array->append(operand_T_to_json (rtx, idx));
+	  break;
 	case "e":
+	  json_array->append(operand_e_to_json (rtx, idx));
+	  break;
 	case "E":
+	  json_array->append(operand_E_to_json (rtx, idx));
+	  break;
 	case "V":
+	  json_array->append(operand_V_to_json (rtx, idx));
+	  break;
 	case "u":
+	  json_array->append(operand_u_to_json (rtx, idx));
+	  break;
 	case "b":
+	  json_array->append(operand_b_to_json (rtx, idx));
+	  break;
 	case "B":
+	  json_array->append(operand_B_to_json (rtx, idx));
+	  break;
 	case "t":
+	  json_array->append(operand_t_to_json (rtx, idx));
+	  break;
 	case "r":
+	  json_array->append(operand_r_to_json (rtx, idx));
+	  break;
 	case "p":
+	  json_array->append(operand_p_to_json (rtx, idx));
+	  break;
 	default:
 	  gcc_unreachable ();
 	}
