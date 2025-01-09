@@ -46,7 +46,7 @@ typedef struct dump_queue
 /* A dump_info gives information about how we should perform the dump
    and about the current state of the dump.  */
 
-class dump_info
+struct dump_info
 {
   /* The stream on which to dump the information.  */
   FILE *stream;
@@ -64,27 +64,26 @@ class dump_info
      keys are the addresses of the nodes; the values are the integer
      indices we assigned them.  */
   splay_tree nodes;
-  /* JSON tree holder. Carries everything, each node is a sub-array */
+  /* json tree holder. carries everything, each node is a sub-array */
   std::unique_ptr<json::array> json_dump;
 };
 
-template<typename T>
-class Visitor
-{
-public:
-  FILE *stream;
-  const t node;
-  dump_flags_t flags;
-  dump_queue_p queue;
-  dump_queue_p queue_end;
-  dump_queue_p free_list;
-  splay_tree nodes;
-
-  dequeue_and_add() {}
-  queue() {}
-
-private:
-} * Visitor_p
+//template<typename t>
+//class visitor
+//{
+//public:
+//  file *stream;
+//  const t node;
+//  dump_flags_t flags;
+//  dump_queue_p dump_queue;
+//  dump_queue_p queue_end;
+//  dump_queue_p free_list;
+//  splay_tree nodes;
+//
+//  void dequeue_and_add(t);
+//  void queue(t);
+//
+//}; * visitor_p
 
 class tree_json_writer
 {

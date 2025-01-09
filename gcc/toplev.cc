@@ -488,8 +488,8 @@ compile_file (void)
     lang_hooks.decls.post_compilation_parsing_cleanups ();
 
   dump_context::get ().finish_any_json_writer ();
-  // DO THIS LATER TODO :
-  dump_context::get ().finish_tree_json_writer ();
+  // DO THIS LATER TODO :THOR
+//  dump_context::get ().finish_tree_json_writer ();
   if (seen_error ())
     return;
 
@@ -2144,8 +2144,9 @@ do_compile ()
 
       if (flag_save_tree_record)
         {
-	  dump_context::get ().set_tree_json_writer (new tree_json_writer ());
-	  printf("YAY!");
+      // FIXME: THOR
+//	  dump_context::get ().set_tree_json_writer (new tree_json_writer ());
+//	  printf("YAY!");
         }
 
       /* This must be run always, because it is needed to compute the FP

@@ -541,12 +541,13 @@ dump_context::set_json_writer (optrecord_json_writer *writer)
   m_json_writer = writer;
 }
 
-void
-dump_context::set_tree_json_writer (tree_json_writer *writer)
-{
-  delete m_tree_writer;
-  m_tree_writer = writer;
-}
+// FIXME:
+//void
+//dump_context::set_tree_json_writer (tree_json_writer *writer)
+//{
+//  delete m_tree_writer;
+//  m_tree_writer = writer;
+//}
 
 void
 dump_context::set_json_stream(FILE * file)
@@ -571,16 +572,18 @@ dump_context::finish_any_json_writer ()
   m_json_writer = NULL;
 }
 
-void
-dump_context::finish_tree_json_writer ()
-{
-  if (!m_tree_writer)
-    return;
-  m_tree_writer->write(m_json_stream);
-  printf("dump context finish HIT");
-  delete m_tree_writer;
-  m_tree_writer = NULL;
-}
+//FIXME:
+
+//void
+//dump_context::finish_tree_json_writer ()
+//{
+//  if (!m_tree_writer)
+//    return;
+//  m_tree_writer->write(m_json_stream);
+//  printf("dump context finish HIT");
+//  delete m_tree_writer;
+//  m_tree_writer = NULL;
+//}
 
 void
 dump_context::hook_test ()
@@ -1302,12 +1305,13 @@ dump_context::emit_item (const optinfo_item &item, dump_flags_t dump_kind)
     pp_string (m_test_pp, item.get_text ());
 }
 
-void
-dump_context::add_fndecl_tree (tree fndecl, dump_flags_t flags)
-{
-  if (m_tree_writer)
-    m_tree_writer->add_fndecl_tree (fndecl, flags);
-}
+//FIXME: THOR
+//void
+//dump_context::add_fndecl_tree (tree fndecl, dump_flags_t flags)
+//{
+//  if (m_tree_writer)
+//    m_tree_writer->add_fndecl_tree (fndecl, flags);
+//}
 
 /* The current singleton dump_context, and its default.  */
 

@@ -693,8 +693,8 @@ c_genericize (tree fndecl)
     {
       if (local_dump_flags & TDF_JSON)
         {
-	  dump_context:: get().set_json_stream(dump_orig);
-	  dump_context:: get().add_fndecl_tree(fndecl, local_dump_flags);
+//	  dump_context:: get().set_json_stream(dump_orig);
+//	  dump_context:: get().add_fndecl_tree(fndecl, local_dump_flags);
   	  dump_node_json (DECL_SAVED_TREE (fndecl),
   	     TDF_SLIM | local_dump_flags, dump_orig);
         }
