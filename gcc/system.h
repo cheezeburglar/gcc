@@ -238,6 +238,18 @@ extern int fprintf_unlocked (FILE *, const char *, ...);
    replacement instead.  */
 #include "safe-ctype.h"
 
+// TODO: put include sockets and stuff here ??? THORP
+//#ifdef SYS_WITH_SOCKETS etc...
+// Or should we include it unconditionally?
+
+#ifdef INCLUDE_SYS_SOCKETS
+#include <sys/socket.h>
+#endif
+
+#ifdef INCLUDE_SYS_UN
+#include <sys/un.h>
+#endif
+
 #include <sys/types.h>
 
 #include <errno.h>

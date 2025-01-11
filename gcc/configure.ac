@@ -1366,7 +1366,7 @@ AC_HEADER_TIOCGWINSZ
 AC_CHECK_HEADERS(limits.h stddef.h string.h strings.h stdlib.h time.h iconv.h \
 		 fcntl.h ftw.h unistd.h sys/auxv.h sys/file.h sys/time.h sys/mman.h \
 		 sys/resource.h sys/param.h sys/times.h sys/stat.h sys/locking.h \
-		 direct.h malloc.h langinfo.h ldfcn.h locale.h wchar.h)
+		 sys/un.h sys/socket.h direct.h malloc.h langinfo.h ldfcn.h locale.h wchar.h)
 
 # Check for thread headers.
 AC_CHECK_HEADER(thread.h, [have_thread_h=yes], [have_thread_h=])

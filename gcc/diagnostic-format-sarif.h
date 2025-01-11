@@ -60,6 +60,13 @@ diagnostic_output_format_init_sarif_stream (diagnostic_context &context,
 					    bool formatted,
 					    enum sarif_version version,
 					    FILE *stream);
+extern void
+diagnostic_output_format_init_sarif_socket (diagnostic_context &context,
+					    const line_maps *line_maps,
+					    const char *main_input_filename_,
+					    enum sarif_version version,
+					    int fd);
+
 extern std::unique_ptr<diagnostic_output_format>
 make_sarif_sink (diagnostic_context &context,
 		 const line_maps &line_maps,
