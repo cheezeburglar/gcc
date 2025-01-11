@@ -6,9 +6,25 @@
  *
  *  For different objects.*/
 
+#include "system.h"
 #include "tree-emit-json.h"
 #include "gimple-emit-json.h"
 #include "rtl-emit-json.h"
+#include "pretty-print.h"
+
+// TODO: 
+//        - Turn opt_passes to JSON (gimple_opt pass, rtl_opt pass ?)
+//        - Hook into pass manager for these serialization routines
+//        - Front-end dependent for individual ASTs that are passed off to gcc's middle ends - which to support?
+//        - Streaming routine for json objects that are fed into pretty printer;
+
+void
+serialize ()
+{};
+
+void
+serialize_and_flush ()
+{};
 
 template<typename T>
 static void

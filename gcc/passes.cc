@@ -1836,7 +1836,18 @@ execute_function_dump (function *fn, void *data)
   // to stream out JSON objects so the stack doesn't blow up.
   if (flag_save_json)
     {
-
+      
+      serialize_and_flush(pass)
+      push_cfun (fn);
+      if (fn->curr_properties & PROP_gimple)
+	{
+	  serialize_and_flush (fn->decl )
+	}
+      else 
+	{
+	  serialize_and_flush (get_insns ())
+	}
+      // TODO: What do when PROP_cfg is satisfied?
     }
 }
 
