@@ -18,6 +18,8 @@ along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
 #include "config.h"
+#define INCLUDE_SYS_SOCKETS
+#define INCLUDE_SYS_UN
 #include "system.h"
 #include "coretypes.h"
 #include "options.h"
@@ -67,6 +69,17 @@ const char *dump_file_name;
 dump_flags_t dump_flags;
 bool dumps_are_enabled = false;
 
+/* TODO : THORP temporary global sockets. check ok later */
+FILE *
+create_socket_as_fd ()
+{
+  const char * env_var_name = "GCC_SOCKET";
+  const char * socket_path = getenv (env_var_name);
+  int socket = socket (AF_UNIX, SOCK_STREAM, 0);
+  return fdopen(socket, w+);
+}
+
+FILE * json_stream = create_socket_as_fd ();
 
 /* Set global "dump_file" to NEW_DUMP_FILE, refreshing the "dumps_are_enabled"
    global.  */

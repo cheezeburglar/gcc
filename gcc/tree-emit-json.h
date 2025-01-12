@@ -68,38 +68,6 @@ struct dump_info
   std::unique_ptr<json::array> json_dump;
 };
 
-//template<typename t>
-//class visitor
-//{
-//public:
-//  file *stream;
-//  const t node;
-//  dump_flags_t flags;
-//  dump_queue_p dump_queue;
-//  dump_queue_p queue_end;
-//  dump_queue_p free_list;
-//  splay_tree nodes;
-//
-//  void dequeue_and_add(t);
-//  void queue(t);
-//
-//}; * visitor_p
-
-class tree_json_writer
-{
-public:
-  tree_json_writer ();
-  ~tree_json_writer ();
-  void write (FILE * file);
-  void add_node (tree t);
-  void add_fndecl_tree (const_tree fndecl, dump_flags_t flags);
-  void set_stream (tree_dump_index tdi);
-
-private:
-  std::unique_ptr<json::array> m_json_root_tuple;
-  dump_file_info m_dfi;
-  FILE *m_stream;
-};
 
 extern std::unique_ptr<json::object> node_emit_json(tree t, dump_info_p di);
 extern json::array * generic_to_json (const_tree t, dump_flags_t flag);

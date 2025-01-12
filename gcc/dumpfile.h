@@ -528,6 +528,7 @@ parse_dump_option (const char *, const char **);
 extern FILE *dump_file;
 extern dump_flags_t dump_flags;
 extern const char *dump_file_name;
+extern FILE *json_stream;
 
 extern bool dumps_are_enabled;
 

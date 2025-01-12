@@ -3,7 +3,6 @@
 #define INCLUDE_MEMORY
 #include "json.h"
 
-
 inline static void
 operand_0_to_json (const_rtx rtx, int idx)
 {
@@ -168,16 +167,31 @@ helper (rtvec rtvec, dump_flags_t flags)
 
 }
 
-json::object *
-rtx_to_json (const_rtx rtx, dump_flags_t flags)
+static json::object *
+rtx_to_json_brief (const_rtx rtx, dump_flags_t flags)
 {
-  json_obj = new json::object ();
-  add_rtx_to_json (rtx, flags, json_obj);
+  auto json_obj = new json::object ();
+  if (rtx)
+    {
+      char address_buffer [20] = {"\0"};
+      address = sprintf(address, HOST_PTR_PRINTF, (void *) gs);
+      rtx_code code = GET_CODE (rtx);
+
+      json_obj->set_string("code", GET_RTX_NAME(code));
+      json_obj->set_string("addr", address);
+    }
   return json_obj;
 }
 
-static void
-add_rtx_to_json (const_rtx rtx, dump_flags_t flags, json::object json_obj)
+static json::object *
+rtx_to_json_brief (const_rtx rtx, dump_flags_t flags, dump_info_p di)
+{
+  queue (rtx, &di);
+  return rtx_to_json_brief (rtx, flags);
+}
+
+static json::object *
+rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_p di)
 {
   rtx_code code = GET_CODE (rtx);
   int limit = GET_RTX_LENGTH (GET_CODE (rtx));
@@ -193,13 +207,12 @@ add_rtx_to_json (const_rtx rtx, dump_flags_t flags, json::object json_obj)
   if (RTX_FLAG (rtx, call))
   if (RTX_FLAG (rtx, return_val))
 
-  // TODO: Iterate over this to get operands instead?
   auto json_array = new json_array ();
   char *format_ptr = GET_RTX_FORMAT (GET_CODE (rtx));
   int idx = 0;
-  while (*format_ptr)
+  for (; idx < limit; idx++)
     {
-      switch(*format_ptr)
+      switch(format_ptr[idx])
 	{
         case "*":
 	  break;
@@ -208,6 +221,7 @@ add_rtx_to_json (const_rtx rtx, dump_flags_t flags, json::object json_obj)
 	  break;
 	case "i":
 	  json_array->append(operand_i_to_json (rtx, idx));
+	  break;
 	case "n":
 	  json_array->append(operand_n_to_json (rtx, idx));
 	  break;
@@ -224,13 +238,13 @@ add_rtx_to_json (const_rtx rtx, dump_flags_t flags, json::object json_obj)
 	  json_array->append(operand_T_to_json (rtx, idx));
 	  break;
 	case "e":
-	  json_array->append(operand_e_to_json (rtx, idx));
+	  json_array->append(operand_e_to_json (rtx, idx, di));
 	  break;
 	case "E":
-	  json_array->append(operand_E_to_json (rtx, idx));
+	  json_array->append(operand_E_to_json (rtx, idx, di));
 	  break;
 	case "V":
-	  json_array->append(operand_V_to_json (rtx, idx));
+	  json_array->append(operand_V_to_json (rtx, idx, di));
 	  break;
 	case "u":
 	  json_array->append(operand_u_to_json (rtx, idx));
@@ -253,8 +267,11 @@ add_rtx_to_json (const_rtx rtx, dump_flags_t flags, json::object json_obj)
 	default:
 	  gcc_unreachable ();
 	}
-      format_ptr++;
+      idx++;
     }
+
+  json_obj.set("operands", json_array);
+
   RTX_CODE_SIZE(code)
 
   GET_RTX_CLASS(code);
@@ -290,222 +307,118 @@ add_rtx_to_json (const_rtx rtx, dump_flags_t flags, json::object json_obj)
   XTMPL(RTX, N)	(RTL_CHECK1 (RTX, N, 'T').rt_str)
   XCFI(RTX, N)	(RTL_CHECK1 (RTX, N, 'C').rt_cfi)
   
-  // TODO: We probably don't need this,
-  // and should instead iterate over the
-  // operand codes of our given
-  // RTX.
-  switch (GET_CODE (rtx_first))
-    {
-      case ABS:
-      case ABSENCE_SET:
-      case ADDR_DIFF_VEC:
-      case ADDRESS:
-      case ADDR_VEC:
-      case AND:
-      case ASHIFT:
-      case ASHIFTRT:
-      case ASM_INPUT:
-      case ASM_OPERANDS:
-      case ATTR:
-      case ATTR_FLAG:
-      case AUTOMATA_OPTION:
-      case BARRIER:
-      case BITREVERSE:
-      case BSWAP:
-      case CALL:
-      case CALL_INSN:
-      case CLOBBER:
-      case CLRSB:
-      case CLZ:
-      case CODE_LABEL:
-      case COMPARE:
-      case CONCAT:
-      case CONCATN:
-      case COND:
-      case COND_EXEC:
-      case CONST:
-      case CONST_DOUBLE:
-      case CONST_FIXED:
-      case CONST_INT:
-      case CONST_POLY_INT:
-      case CONST_STRING:
-      case CONST_VECTOR:
-      case CONST_WIDE_INT:
-      case COPYSIGN:
-      case CTZ:
-      case DEBUG_EXPR:
-      case DEBUG_IMPLICIT_PTR:
-      case DEBUG_INSN:
-      case DEBUG_MARKER:
-      case DEBUG_PARAMETER_REF:
-      case DEFINE_ADDRESS_CONSTRAINT:
-      case DEFINE_ASM_ATTRIBUTES:
-      case DEFINE_ATTR:
-      case DEFINE_AUTOMATON:
-      case DEFINE_BYPASS:
-      case DEFINE_COND_EXEC:
-      case DEFINE_CONSTRAINT:
-      case DEFINE_CPU_UNIT:
-      case DEFINE_DELAY:
-      case DEFINE_ENUM_ATTR:
-      case DEFINE_EXPAND:
-      case DEFINE_INSN_AND_REWRITE:
-      case DEFINE_INSN_AND_SPLIT:
-      case DEFINE_INSN:
-      case DEFINE_INSN_RESERVATION:
-      case DEFINE_MEMORY_CONSTRAINT:
-      case DEFINE_PEEPHOLE2:
-      case DEFINE_PEEPHOLE:
-      case DEFINE_PREDICATE:
-      case DEFINE_QUERY_CPU_UNIT:
-      case DEFINE_REGISTER_CONSTRAINT:
-      case DEFINE_RELAXED_MEMORY_CONSTRAINT:
-      case DEFINE_RESERVATION:
-      case DEFINE_SPECIAL_MEMORY_CONSTRAINT:
-      case DEFINE_SPECIAL_PREDICATE:
-      case DEFINE_SPLIT:
-      case DEFINE_SUBST_ATTR:
-      case DEFINE_SUBST:
-      case DIV:
-      case EH_RETURN:
-      case ENTRY_VALUE:
-      case EQ_ATTR_ALT:
-      case EQ_ATTR:
-      case EQ:
-      case EXCLUSION_SET:
-      case EXPR_LIST:
-      case FFS:
-      case FINAL_ABSENCE_SET:
-      case FINAL_PRESENCE_SET:
-      case FIX:
-      case FLOAT_EXTEND:
-      case FLOAT:
-      case FLOAT_TRUNCATE:
-      case FMA:
-      case FRACT_CONVERT:
-      case GE:
-      case GEU:
-      case GT:
-      case GTU:
-      case HIGH:
-      case IF_THEN_ELSE:
-      case INSN:
-      case INSN_LIST:
-      case INT_LIST:
-      case IOR:
-      case JUMP_INSN:
-      case JUMP_TABLE_DATA:
-      case LABEL_REF:
-      case LE:
-      case LEU:
-      case LO_SUM:
-      case LSHIFTRT:
-      case LTGT:
-      case LT:
-      case LTU:
-      case MATCH_CODE:
-      case MATCH_DUP:
-      case MATCH_OP_DUP:
-      case MATCH_OPERAND:
-      case MATCH_OPERATOR:
-      case MATCH_PARALLEL:
-      case MATCH_PAR_DUP:
-      case MATCH_SCRATCH:
-      case MATCH_TEST:
-      case MEM:
-      case MINUS:
-      case MOD:
-      case MULT:
-      case NEG:
-      case NE:
-      case NOTE:
-      case NOT:
-      case ORDERED:
-      case PARALLEL:
-      case PARITY:
-      case PC:
-      case PLUS:
-      case POPCOUNT:
-      case POST_DEC:
-      case POST_INC:
-      case POST_MODIFY:
-      case PRE_DEC:
-      case PREFETCH:
-      case PRE_INC:
-      case PRE_MODIFY:
-      case PRESENCE_SET:
-      case REG:
-      case RETURN:
-      case ROTATE:
-      case ROTATERT:
-      case SAT_FRACT:
-      case SCRATCH:
-      case SEQUENCE:
-      case SET_ATTR_ALTERNATIVE:
-      case SET_ATTR:
-      case SET:
-      case SIGN_EXTEND:
-      case SIGN_EXTRACT:
-      case SIMPLE_RETURN:
-      case SMAX:
-      case SMIN:
-      case SMUL_HIGHPART:
-      case SQRT:
-      case SS_ABS:
-      case SS_ASHIFT:
-      case SS_DIV:
-      case SS_MINUS:
-      case SS_MULT:
-      case SS_NEG:
-      case SS_PLUS:
-      case SS_TRUNCATE:
-      case STRICT_LOW_PART:
-      case SUBREG:
-      case SYMBOL_REF:
-      case TRAP_IF:
-      case TRUNCATE:
-      case UDIV:
-      case UMAX:
-      case UMIN:
-      case UMOD:
-      case UMUL_HIGHPART:
-      case UNEQ:
-      case UNGE:
-      case UNGT:
-      case UNKNOWN:
-      case UNLE:
-      case UNLT:
-      case UNORDERED:
-      case UNSIGNED_FIX:
-      case UNSIGNED_FLOAT:
-      case UNSIGNED_FRACT_CONVERT:
-      case UNSIGNED_SAT_FRACT:
-      case UNSPEC:
-      case UNSPEC_VOLATILE:
-      case US_ASHIFT:
-      case US_DIV:
-      case USE:
-      case US_MINUS:
-      case US_MULT:
-      case US_NEG:
-      case US_PLUS:
-      case US_TRUNCATE:
-      case VALUE:
-      case VAR_LOCATION:
-      case VEC_CONCAT:
-      case VEC_DUPLICATE:
-      case VEC_MERGE:
-      case VEC_SELECT:
-      case VEC_SERIES:
-      case XOR:
-      case ZERO_EXTEND:
-      case ZERO_EXTRACT:
-      default:
-	gcc_unreachable();
-	break;
-    }
-  //EXPR LIST ONLY
   REG_NOTE_KIND (rtx);
 }
 
+static void
+queue (dump_info_p di, rtx rtx)
+{
+  dump_queue_p dq;
+  dump_node_info_p dni;
 
+  /* Obtain a new queue node.  */
+  if (di->free_list)
+    {
+      dq = di->free_list;
+      di->free_list = dq->next;
+    }
+  else
+    dq = XNEW (struct dump_queue);
+
+  /* Create a new entry in the splay-tree and insert into queue iff new.
+   * Else, end.*/
+  dni = XNEW (struct dump_node_info);
+  if (!splay_tree_lookup (di->nodes, (splay_tree_key) t))
+  {
+    dq->node = splay_tree_insert (di->nodes, (splay_tree_key) t,
+          			(splay_tree_value) dni);
+    dq->next = 0;
+    if (!di->queue_end)
+      di->queue = dq;
+    else
+      di->queue_end->next = dq;
+    di->queue_end = dq;
+  }
+}
+
+static void
+dequeue_and_add (dump_info_p di)
+{
+  dump_queue_p dq;
+  splay_tree_node stn;
+  rtx rtx;
+
+  /* Get the next node from the queue.  */
+  dq = di->queue;
+  stn = dq->node;
+  rtx = (rtx) stn->key;
+
+  /* Remove the node from the queue, and put it on the free list.  */
+  di->queue = dq->next;
+  if (!di->queue)
+    di->queue_end = 0;
+  dq->next = di->free_list;
+  di->free_list = dq;
+
+  /* Convert the node to JSON and store it to be dumped later. */
+  auto dummy = rtx_to_json(rtx, di.flags, di).release();
+  di->json_dump->append(dummy);
+}
+
+std::unique_ptr<json::array>
+serialize_rtx_to_json (const_rtx rtx, dump_flags_t flags)
+{
+  struct dump_info di;
+  dump_queue_p dq;
+  dump_queue_p next_dq;
+
+  di.queue = 0;
+  di.queue_end = 0;
+  di.free_list = 0;
+  di.flags = flags;
+  di.node = rtx;
+  di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
+			     splay_tree_delete_pointers);
+  di.json_dump = make_unique<json::array> ();
+
+  /* queue up the first node.  */
+  queue (&di, rtx);
+
+  /* until the queue is empty, keep dumping nodes.  */
+  while (di.queue)
+    dequeue_and_add (&di);
+
+  /* now, clean up.  */
+  for (dq = di.free_list; dq; dq = next_dq)
+    {
+      next_dq = dq->next;
+      free (dq);
+    }
+  splay_tree_delete (di.nodes);
+  return di.json_dump;
+}
+
+DEBUG_FUNCTION void
+debug_dump_rtl_json (const_rtx rtx, FILE *stream)
+{
+  dump_info di;
+
+  di.stream = stream;
+  di.queue = 0;
+  di.queue_end = 0;
+  di.free_list = 0;
+  di.flags = TDF_LINENO;
+  di.node = rtx;
+  di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
+			     splay_tree_delete_pointers);
+  di.json_dump = make_unique<json::array> ();
+  
+  queue (&di, rtx);
+
+  while (di.queue)
+    dequeue_and_add (&di);
+
+  di.json_dump->dump(stream, true);
+  
+  splay_tree_delete (di.nodes);
+}

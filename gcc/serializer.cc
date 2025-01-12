@@ -10,6 +10,7 @@
 #include "tree-emit-json.h"
 #include "gimple-emit-json.h"
 #include "rtl-emit-json.h"
+#include "dumpfile.h"
 #include "pretty-print.h"
 
 // TODO: 
@@ -20,24 +21,28 @@
 
 void
 serialize ()
-{};
+{
+
+};
 
 void
 serialize_and_flush ()
-{};
+{
+
+};
 
 template<typename T>
 static void
-dequeue_and_add (visitor *di)
+visitor::dequeue_and_add (visitor *di)
 {
   dump_queue_p dq;
   splay_tree_node stn;
-  T t;
+  T node;
 
   /* Get the next node from the queue.  */
   dq = di->queue;
   stn = dq->node;
-  t = (tree) stn->key;
+  node = (T) stn->key;
 
   /* Remove the node from the queue, and put it on the free list.  */
   di->queue = dq->next;
@@ -46,14 +51,15 @@ dequeue_and_add (visitor *di)
   dq->next = di->free_list;
   di->free_list = dq;
 
-  /* Convert the node to JSON and store it to be dumped later. */
+  /* Convert the node to JSON and store it to be dumped later.
+   * Also look at children and queue them up to be serialized later */
   auto dummy = node_emit_json(t, di).release();
   di->json_dump->append(dummy);
 }
 
 template<typename T>
 static void
-queue (visitor *di, T node)
+visitor::queue (visitor *di, T node)
 {
   visitor_queue *dq;
 

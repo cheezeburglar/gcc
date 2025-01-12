@@ -1734,6 +1734,8 @@ OBJS = \
 	tree-diagnostic-client-data-hooks.o \
 	tree-dump.o \
 	tree-emit-json.o \
+	gimple-emit-json.o \
+	rtl-emit-json.o \
 	tree-eh.o \
 	tree-emutls.o \
 	tree-if-conv.o \

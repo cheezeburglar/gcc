@@ -33,7 +33,7 @@ add_gimple_predict_to_json ()
 
 static void
 add_gimple_eh_else_to_json (const geh_else *gs, dump_flags_t flags,
-			 json::object &json_obj)
+			    json::object &json_obj)
 {
   json_obj.set("n_body", gimple_seq_to_json (gimple_eh_else_n_body (gs)));
   json_obj.set("e_body", gimple_seq_to_json (gimple_eh_else_e_body (gs)));
@@ -41,7 +41,7 @@ add_gimple_eh_else_to_json (const geh_else *gs, dump_flags_t flags,
 
 static void
 add_gimple_omp_critical_to_json (const gomp_critical *gs, dump_flags_t flags,
-			     json::object &json_obj)
+				 json::object &json_obj)
 {
   json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
   json_obj.set("clauses", generic_to_json (gimple_omp_critical_clauses (gs)));
@@ -57,14 +57,14 @@ add_gimple_omp_scan_to_json (const gomp_scan *gs, dump_flags_t flags,
 
 static void
 add_gimple_omp_structured_block_to_json (const gimple *gs, dump_flags_t flags,
-				 json::object &json_obj)
+					 json::object &json_obj)
 {
   json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
 }
 
 static void
 add_gimple_omp_section_to_json (const gomp_sections *gs, dump_flags_t flags,
-			       json::object &json_obj)
+			        json::object &json_obj)
 {
   if (gimple_omp_section_last_p (gs))
     json_obj.set_bool("last", true);
@@ -99,7 +99,7 @@ add_gimple_omp_scope_to_json (const gimple*gs, dump_flags_t flags,
 
 static void
 add_gimple_omp_masked_to_json (const gimple *gs, dump_flags_t flags,
-				  json::object &json_obj)
+			       json::object &json_obj)
 {
   json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
   json_obj.set("clauses", generic_to_json (gimple_omp_masked_clauses (gs)));
@@ -701,13 +701,53 @@ add_gimple_assign_to_json (gassign * gs, dump_flags_t falgs, json::object &json_
     }
 }
 
-/* Turn gimple into JSON object */
+/* Serialize to json briefly. */
+static 
 json::object *
-gimple_to_json (gimple * gs, dump_flags_t flags)
+gimple_to_json_brief (gimple * gs)
 {
+  // TODO : Instantiate visitor, queue up nodes to be dumped.
+
   char * code, address;
   // TODO : DO ALL THINGS FOR GIMPLE BASE CLASS
   auto json_obj = new json::object ();
+
+  if (!gs)
+    return json_obj;
+
+  code = gimple_code_name[gimple_code (gs)];
+  address = sprintf(address, HOST_PTR_PRINTF, (void *) gs);
+  json_obj->set_string("address", address);
+  json_obj->set_string("gimple_code", code);
+
+  return json_obj;
+}
+
+/* Queue gimple and serialize to json briefly. */
+
+static 
+json::object *
+gimple_to_json_brief (gimple * gs, dump_info_p di)
+{
+  gimple_to_json_brief (gs);
+  queue (gs);
+}
+
+
+/* Turn gimple nodes into JSON object */
+static
+json::object *
+gimple_to_json (gimple * gs, dump_flags_t flags)
+{
+  // TODO : Instantiate visitor, queue up nodes to be dumped.
+
+  char * code, address;
+  // TODO : DO ALL THINGS FOR GIMPLE BASE CLASS
+  auto json_obj = new json::object ();
+
+  if (!gs)
+    return json_obj;
+
   code = gimple_code_name[gimple_code (gs)];
   address = sprintf(address, HOST_PTR_PRINTF, (void *) gs);
   json_obj->set_string("address", address);
@@ -869,3 +909,115 @@ gimple_to_json (gimple * gs, dump_flags_t flags)
   return json_obj;
 }
 
+static void
+queue (dump_info_p di, const gimple * gs)
+{
+  dump_queue_p dq;
+  dump_node_info_p dni;
+
+  /* Obtain a new queue node.  */
+  if (di->free_list)
+    {
+      dq = di->free_list;
+      di->free_list = dq->next;
+    }
+  else
+    dq = XNEW (struct dump_queue);
+
+  /* Create a new entry in the splay-tree and insert into queue iff new.
+   * Else, end.*/
+  dni = XNEW (struct dump_node_info);
+  if (!splay_tree_lookup (di->nodes, (splay_tree_key) t))
+  {
+    dq->node = splay_tree_insert (di->nodes, (splay_tree_key) t,
+          			(splay_tree_value) dni);
+    dq->next = 0;
+    if (!di->queue_end)
+      di->queue = dq;
+    else
+      di->queue_end->next = dq;
+    di->queue_end = dq;
+  }
+}
+
+static void
+dequeue_and_add (dump_info_p di)
+{
+  dump_queue_p dq;
+  splay_tree_node stn;
+  gimple t;
+
+  /* Get the next node from the queue.  */
+  dq = di->queue;
+  stn = dq->node;
+  t = (tree) stn->key;
+
+  /* Remove the node from the queue, and put it on the free list.  */
+  di->queue = dq->next;
+  if (!di->queue)
+    di->queue_end = 0;
+  dq->next = di->free_list;
+  di->free_list = dq;
+
+  /* Convert the node to JSON and store it to be dumped later. */
+  auto dummy = node_emit_json(t, di).release();
+  di->json_dump->append(dummy);
+}
+
+std::unique_ptr<json::obj>
+serialize_gimple_to_json (gimple *gs, dump_flags_t flags)
+{
+  struct dump_info di;
+  dump_queue_p dq;
+  dump_queue_p next_dq;
+
+  di.queue = 0;
+  di.queue_end = 0;
+  di.free_list = 0;
+  di.flags = flags;
+  di.node = t;
+  di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
+			     splay_tree_delete_pointers);
+  di.json_dump = make_unique<json::array> ();
+
+  /* queue up the first node.  */
+  queue (&di, t);
+
+  /* until the queue is empty, keep dumping nodes.  */
+  while (di.queue)
+    dequeue_and_add (&di);
+
+  /* now, clean up.  */
+  for (dq = di.free_list; dq; dq = next_dq)
+    {
+      next_dq = dq->next;
+      free (dq);
+    }
+  splay_tree_delete (di.nodes);
+  return di.json_dump;
+}
+
+DEBUG_FUNCTION void
+debug_dump_gimple_json (gimple *gs, FILE *stream)
+{
+  dump_info di;
+
+  di.stream = stream;
+  di.queue = 0;
+  di.queue_end = 0;
+  di.free_list = 0;
+  di.flags = TDF_LINENO;
+  di.node = t;
+  di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
+			     splay_tree_delete_pointers);
+  di.json_dump = make_unique<json::array> ();
+  
+  queue (&di, gs);
+
+  while (di.queue)
+    dequeue_and_add (&di);
+
+  di.json_dump->dump(stream, true);
+  
+  splay_tree_delete (di.nodes);
+}

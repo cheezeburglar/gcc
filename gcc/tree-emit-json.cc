@@ -3220,13 +3220,14 @@ dequeue_and_add (dump_info_p di)
   di->json_dump->append(dummy);
 }
 
-json::array *
+std::unique_ptr<json::arra>
 generic_to_json (const_tree t, dump_flags_t flags)
 {
   struct dump_info di;
   dump_queue_p dq;
   dump_queue_p next_dq;
-  pretty_printer pp;
+  // I don't think we need this.
+//  pretty_printer pp;
 
   /* initialize the dump-information structure.  */
   di.queue = 0;
@@ -3252,7 +3253,7 @@ generic_to_json (const_tree t, dump_flags_t flags)
       free (dq);
     }
   splay_tree_delete (di.nodes);
-  return di.json_dump.release();
+  return di.json_dump;
 }
 
 /* Dump T and all it's children as a JSON array. */

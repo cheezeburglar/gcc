@@ -1834,18 +1834,18 @@ execute_function_dump (function *fn, void *data)
   // TODO: THORP
   // We also have the current opt_pass. Should be okay? need to be able
   // to stream out JSON objects so the stack doesn't blow up.
-  if (flag_save_json)
+  if (false)
     {
       
-      serialize_and_flush(pass)
+//      serialize_and_flush(pass)
       push_cfun (fn);
       if (fn->curr_properties & PROP_gimple)
 	{
-	  serialize_and_flush (fn->decl )
+//	  serialize_and_flush (fn->decl )
 	}
       else 
 	{
-	  serialize_and_flush (get_insns ())
+//	  serialize_and_flush (get_insns ())
 	}
       // TODO: What do when PROP_cfg is satisfied?
     }
