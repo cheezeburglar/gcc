@@ -3289,7 +3289,7 @@ debug_dump_node_json (tree t, FILE *stream)
   di.node = t;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
-  di.json_dump = make_unique<json::array> ();
+  di.json_dump = new json::array ();
   
   queue (&di, t);
 

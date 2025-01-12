@@ -1006,7 +1006,7 @@ serialize_gimple_to_json (gimple *gs, dump_flags_t flags)
   di.node = t;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
-  di.json_dump = make_unique<json::array> ();
+  di.json_dump = new json::array ();
 
   /* queue up the first node.  */
   queue (&di, t);
@@ -1038,7 +1038,7 @@ debug_dump_gimple_json (gimple *gs, FILE *stream)
   di.node = t;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
-  di.json_dump = make_unique<json::array> ();
+  di.json_dump = new json::array ();
   
   queue (&di, gs);
 
