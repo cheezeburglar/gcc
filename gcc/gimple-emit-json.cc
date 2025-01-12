@@ -1,3 +1,32 @@
+//TODO: figure out dependencies cleanly. brute forcing it rn
+
+
+#define INCLUDE_STRING
+#define INCLUDE_MEMORY
+#include "config.h"
+#include "system.h"
+#include "coretypes.h"
+#include "tree.h"
+#include "tree-pretty-print.h"
+#include "tree-emit-json.h"
+#include "langhooks.h"
+#include "tree-iterator.h"
+#include "dumpfile.h"
+#include "json.h"
+#include "tm.h"
+#include "wide-int-print.h"
+#include "real.h" //for real printing
+#include "poly-int.h"
+#include "gomp-constants.h"
+#include "internal-fn.h"
+#include "cgraph.h"
+#include "predict.h"
+#include "fold-const.h"
+#include "vec.h"
+#include "make-unique.h"
+#include "context.h" // To access dump streams for tree_json_writer
+#include <zlib.h>
+
 #include "tree-emit-json.h"
 #include "gimple.h"
 #define INCLUDE_MEMORY
