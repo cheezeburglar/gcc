@@ -771,17 +771,17 @@ gimple_to_json (gimple * gs, dump_flags_t flags)
 {
   // TODO : Instantiate visitor, queue up nodes to be dumped.
 
-  char * code, address;
   // TODO : DO ALL THINGS FOR GIMPLE BASE CLASS
   auto json_obj = new json::object ();
 
   if (!gs)
     return json_obj;
 
-  code = gimple_code_name[gimple_code (gs)];
+  const char *code = gimple_code_name[gimple_code (gs)];
+  char * address;
   address = sprintf(address, HOST_PTR_PRINTF, (void *) gs);
   json_obj->set_string("address", address);
-  json_obj->set_string("gimple_code", code);
+  json_obj->set_string("gimple_code", (char *)code);
 
   // TODO: hit things that are in all base classes
   json_obj->set_integer("no_warning", gs->no_warning);
