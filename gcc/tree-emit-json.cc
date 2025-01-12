@@ -3220,7 +3220,7 @@ dequeue_and_add (dump_info_p di)
   di->json_dump->append(dummy);
 }
 
-std::unique_ptr<json::array>
+json::array*
 generic_to_json (const_tree t, dump_flags_t flags)
 {
   struct dump_info di;
@@ -3237,7 +3237,7 @@ generic_to_json (const_tree t, dump_flags_t flags)
   di.node = t;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
-  di.json_dump = make_unique<json::array> ();
+  di.json_dump = new json::array ();
 
   /* queue up the first node.  */
   queue (&di, t);
@@ -3262,6 +3262,7 @@ dump_node_json (const_tree t, dump_flags_t flags, FILE *stream)
 {
   auto json_tree = generic_to_json(t, flags);
   json_tree->dump(stream, 1);
+  delete json_tree;
 }
 
 //json::object*
