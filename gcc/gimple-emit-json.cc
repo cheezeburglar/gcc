@@ -7,7 +7,7 @@
 #include "system.h"
 #include "coretypes.h"
 #include "tree.h"
-#include "tree-pretty-print.h"
+#include "gimple-pretty-print.h"
 #include "tree-emit-json.h"
 #include "langhooks.h"
 #include "tree-iterator.h"
@@ -28,7 +28,7 @@
 #include <zlib.h>
 
 #include "tree-emit-json.h"
-//#include "gimple.h"
+#include "gimple.h"
 #define INCLUDE_MEMORY
 #include "json.h"
 
