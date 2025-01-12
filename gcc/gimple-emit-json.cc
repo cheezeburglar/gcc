@@ -28,7 +28,7 @@
 #include <zlib.h>
 
 #include "tree-emit-json.h"
-#include "gimple.h"
+//#include "gimple.h"
 #define INCLUDE_MEMORY
 #include "json.h"
 
@@ -603,7 +603,7 @@ add_gimple_call_to_json (gcall * gs, dump_flags_t flags, json::object &json_obj)
           case IFN_GOACC_LOOP:
 #define DEF(X) #X
             static const char *const loop_args[] = {IFN_GOACC_LOOP_CODES};
-#undef 
+#undef DEF
             enums = loop_args;
             limit = ARRAY_SIZE (loop_args);
             break;
