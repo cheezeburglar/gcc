@@ -75,8 +75,8 @@ create_socket_as_fd ()
 {
   const char * env_var_name = "GCC_SOCKET";
   const char * socket_path = getenv (env_var_name);
-  int socket = socket (AF_UNIX, SOCK_STREAM, 0);
-  return fdopen(socket, w+);
+  int sock = socket (AF_UNIX, SOCK_STREAM, 0);
+  return fdopen(socket, "w+");
 }
 
 FILE * json_stream = create_socket_as_fd ();
