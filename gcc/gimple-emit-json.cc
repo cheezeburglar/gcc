@@ -38,7 +38,6 @@ json::array *
 gimple_seq_to_json (gimple_seq seq, dump_flags_t flags)
 {
   gimple_stmt_iterator iter;
-  json::array *json_seq;
 
   auto json_seq = new json::array ();
 

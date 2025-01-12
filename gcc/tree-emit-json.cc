@@ -3220,7 +3220,7 @@ dequeue_and_add (dump_info_p di)
   di->json_dump->append(dummy);
 }
 
-std::unique_ptr<json::arra>
+std::unique_ptr<json::array>
 generic_to_json (const_tree t, dump_flags_t flags)
 {
   struct dump_info di;
