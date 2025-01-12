@@ -6,12 +6,13 @@
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
+#include "dumpfile.h"
 #include "tree.h"
+#include "gimple.h"
 #include "gimple-pretty-print.h"
 #include "tree-emit-json.h"
 #include "langhooks.h"
 #include "tree-iterator.h"
-#include "dumpfile.h"
 #include "json.h"
 #include "tm.h"
 #include "wide-int-print.h"
@@ -28,7 +29,6 @@
 #include <zlib.h>
 
 #include "tree-emit-json.h"
-#include "gimple.h"
 #define INCLUDE_MEMORY
 #include "json.h"
 
