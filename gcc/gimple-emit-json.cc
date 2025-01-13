@@ -71,14 +71,6 @@ add_gimple_predict_to_json ()
 }
 
 static void
-add_gimple_eh_else_to_json (const geh_else *gs, dump_flags_t flags,
-			    json::object &json_obj)
-{
-  json_obj.set("n_body", gimple_seq_to_json (gimple_eh_else_n_body (gs), flags));
-  json_obj.set("e_body", gimple_seq_to_json (gimple_eh_else_e_body (gs), flags));
-}
-
-static void
 add_gimple_omp_critical_to_json (const gomp_critical *gs, dump_flags_t flags,
 				 json::object &json_obj)
 {
@@ -488,7 +480,7 @@ add_gimple_phi_to_json (const gphi *gs, dump_flags_t flags, json::object &json_o
 	{
 	  expanded_location phi_xloc; 
 	  phi_loc = expand_location (gimple_phi_arg_location (gs, i));
-	  set_xloc_as (json_arg, flags, phi_loc);
+	  set_xloc_as (json_arg, flags, phi_xloc);
 	}
       json_obj.set(buffer, json_arg);
     }
@@ -570,7 +562,7 @@ add_gimple_call_to_json (const gcall * gs, dump_flags_t flags, json::object &jso
     json_obj.set_bool("volatile", true);
 
   // Flag handling
-  if (gimple_call_from_thunk_p (gs))
+  if (gimple_call_from_thunk_p ((gcall *)gs))
     json_obj.set_bool("from_thunk", true);
   if (gimple_call_return_slot_opt_p (gs))
     json_obj.set_bool("return_slot_opt", true);
