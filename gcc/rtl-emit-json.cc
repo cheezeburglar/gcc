@@ -49,27 +49,27 @@ operand_i_to_json (const_rtx rtx, int idx)
 inline static void
 operand_L_to_json (const_rtx rtx, int idx)
 {
-  if (idx == 4 && INSN_P (rtx))
-    {
-      if (INSN_HAS_LOCATION (rtx))
-	{
-	  //expanded_location xloc = insn_location ();
-	}
-      else
-	{
-
-	}
-    }
-  else if (idx == 1 && GET_CODE (rtx) == ASM_INPUT)
-    {
-      
-    }
-  else if (idx == 6 && GET_CODE (rtx) == ASM_OPERANDS)
-    {
-      
-    }
-  else
-    gcc_unreachable ();
+////  if (idx == 4 && INSN_P (rtx))
+//    {
+//      if (INSN_HAS_LOCATION (rtx))
+//	{
+//	  //expanded_location xloc = insn_location ();
+//	}
+//      else
+//	{
+//
+//	}
+//    }
+//  else if (idx == 1 && GET_CODE (rtx) == ASM_INPUT)
+//    {
+//      
+//    }
+//  else if (idx == 6 && GET_CODE (rtx) == ASM_OPERANDS)
+//    {
+//      
+//    }
+//  else
+//    gcc_unreachable ();
 }
 
 inline static void
