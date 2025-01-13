@@ -133,7 +133,7 @@ operand_V_to_json (const_rtx rtx, int idx)
 inline static void
 operand_u_to_json (const_rtx rtx, int idx)
 {
-  rtx sub = XEXP (rtx, idx);
+  XEXP(rtx, idx);
 //  sub_uid = INSN_UID (sub);
 }
 
@@ -211,7 +211,7 @@ rtx_to_json_brief (const_rtx rtx, dump_flags_t flags)
 }
 
 static json::object *
-rtx_to_json_brief (const_rtx rtx, dump_flags_t flags, dump_info_p di)
+rtx_to_json_brief (const_rtx rtx, dump_flags_t flags, dump_info_rtx_p di)
 {
   queue (&di, rtx);
   return rtx_to_json_brief (rtx, flags);
