@@ -18,7 +18,7 @@ typedef struct dump_queue
 /* A dump_info gives information about how we should perform the dump
    and about the current state of the dump.  */
 
-struct dump_info
+typedef struct dump_info_rtl
 {
   /* The stream on which to dump the information.  */
   FILE *stream;
@@ -38,6 +38,5 @@ struct dump_info
   splay_tree nodes;
   /* json tree holder. carries everything, each node is a sub-array */
   std::unique_ptr<json::array> json_dump;
-};
+} *dump_info_rtl_p;
 
-void rtx_to_json ()

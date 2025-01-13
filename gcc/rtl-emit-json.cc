@@ -236,66 +236,64 @@ rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_p di)
   if (RTX_FLAG (rtx, return_val))
 
   auto json_array = new json_array ();
-  char *format_ptr = GET_RTX_FORMAT (GET_CODE (rtx));
-  int idx = 0;
-  for (; idx < limit; idx++)
+  const char *format_ptr = GET_RTX_FORMAT (GET_CODE (rtx));
+  for (int idx = 0; idx < limit; idx++)
     {
       switch(format_ptr[idx])
 	{
-        case "*":
+        case '*':
 	  break;
-	case "0":
+	case '0':
 	  json_array->append(operand_0_to_json (rtx, idx));
 	  break;
-	case "i":
+	case 'i':
 	  json_array->append(operand_i_to_json (rtx, idx));
 	  break;
-	case "n":
+	case 'n':
 	  json_array->append(operand_n_to_json (rtx, idx));
 	  break;
-	case "w":
+	case 'w':
 	  json_array->append(operand_w_to_json (rtx, idx));
 	  break;
-	case "s":
+	case 's':
 	  json_array->append(operand_s_to_json (rtx, idx));
 	  break;
-	case "S":
+	case 'S':
 	  json_array->append(operand_S_to_json (rtx, idx));
 	  break;
-	case "T":
+	case 'T':
 	  json_array->append(operand_T_to_json (rtx, idx));
 	  break;
-	case "e":
+	case 'e':
 	  json_array->append(operand_e_to_json (rtx, idx, di));
 	  break;
-	case "E":
+	case 'E':
 	  json_array->append(operand_E_to_json (rtx, idx, di));
 	  break;
-	case "V":
+	case 'V':
 	  json_array->append(operand_V_to_json (rtx, idx, di));
 	  break;
-	case "u":
+	case 'u':
 	  json_array->append(operand_u_to_json (rtx, idx));
 	  break;
-	case "b":
+	case 'b':
 	  json_array->append(operand_b_to_json (rtx, idx));
 	  break;
-	case "B":
+	case 'B':
 	  json_array->append(operand_B_to_json (rtx, idx));
 	  break;
-	case "t":
+	case 't':
 	  json_array->append(operand_t_to_json (rtx, idx));
 	  break;
-	case "r":
+	case 'r':
 	  json_array->append(operand_r_to_json (rtx, idx));
 	  break;
-	case "p":
+	case 'p':
 	  json_array->append(operand_p_to_json (rtx, idx));
 	  break;
 	default:
 	  gcc_unreachable ();
 	}
-      idx++;
     }
 
   json_obj.set("operands", json_array);
@@ -370,16 +368,16 @@ queue (dump_info_p di, rtx rtx)
 }
 
 static void
-dequeue_and_add (dump_info_p di)
+dequeue_and_add (dump_info_rtxp di)
 {
   dump_queue_p dq;
   splay_tree_node stn;
-  rtx rtx;
+  rtx * rtx;
 
   /* Get the next node from the queue.  */
   dq = di->queue;
   stn = dq->node;
-  rtx = (rtx) stn->key;
+  rtx = (rtx *) stn->key;
 
   /* Remove the node from the queue, and put it on the free list.  */
   di->queue = dq->next;
@@ -389,7 +387,7 @@ dequeue_and_add (dump_info_p di)
   di->free_list = dq;
 
   /* Convert the node to JSON and store it to be dumped later. */
-  auto dummy = rtx_to_json(rtx, di.flags, di).release();
+  auto dummy = rtx_to_json(*rtx, di.flags, di);
   di->json_dump->append(dummy);
 }
 
@@ -439,7 +437,7 @@ debug_dump_rtl_json (const_rtx rtx, FILE *stream)
   di.node = rtx;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
-  di.json_dump = make_unique<json::array> ();
+  di.json_dump = new json::array ();
   
   queue (&di, rtx);
 

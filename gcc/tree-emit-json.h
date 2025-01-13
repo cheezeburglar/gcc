@@ -90,6 +90,28 @@ typedef struct dump_info_gimple
   json::array *json_dump;
 } *dump_info_gimple_p;
 
+typedef struct dump_info_rtx
+{
+  /* The stream on which to dump the information.  */
+  FILE *stream;
+  /* The original node.  */
+  rtx *node;
+  /* User flags.  */
+  dump_flags_t flags;
+  /* The next unused node index.  */
+  dump_queue_p queue;
+  /* The last node in the queue.  */
+  dump_queue_p queue_end;
+  /* Free queue nodes.  */
+  dump_queue_p free_list;
+  /* The tree nodes which we have already written out.  The
+     keys are the addresses of the nodes; the values are the integer
+     indices we assigned them.  */
+  splay_tree nodes;
+  /* json tree holder. carries everything, each node is a sub-array */
+  json::array *json_dump;
+} *dump_info_rtx_p;
+
 extern std::unique_ptr<json::object> node_emit_json(tree t, dump_info_p di);
 extern json::array * generic_to_json (const_tree t, dump_flags_t flag);
 extern void dump_node_json (const_tree t, dump_flags_t flags, FILE *stream);
