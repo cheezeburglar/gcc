@@ -1025,7 +1025,7 @@ dequeue_and_add (dump_info_gimple_p di)
 json::array *
 serialize_gimple_to_json (gimple *gs, dump_flags_t flags)
 {
-  dump_info_gimple_p di;
+  dump_info_gimple di;
   dump_queue_p dq;
   dump_queue_p next_dq;
 
@@ -1058,7 +1058,7 @@ serialize_gimple_to_json (gimple *gs, dump_flags_t flags)
 DEBUG_FUNCTION void
 debug_dump_gimple_json (gimple *gs, FILE *stream)
 {
-  dump_info_gimple_p di;
+  dump_info_gimple di;
 
   di.stream = stream;
   di.queue = 0;
