@@ -73,7 +73,7 @@ struct dump_info_gimple
   /* The stream on which to dump the information.  */
   FILE *stream;
   /* The original node.  */
-  const gimple node;
+  gimple *node;
   /* User flags.  */
   dump_flags_t flags;
   /* The next unused node index.  */
