@@ -31,6 +31,9 @@
 #define INCLUDE_MEMORY
 #include "json.h"
 
+static void queue (dump_info_rtx_p di, rtx rtx);
+static void dequeue_and_add (dump_info_rtx_p di);
+
 inline static void
 operand_0_to_json (const_rtx rtx, int idx)
 {
@@ -100,7 +103,7 @@ operand_S_to_json (const_rtx rtx, int idx)
 inline static void
 operand_T_to_json (const_rtx rtx, int idx)
 {
-  XTMPL (in_rtx, idx);
+  XTMPL (rtx, idx);
 }
 
 inline static
@@ -131,7 +134,7 @@ inline static void
 operand_u_to_json (const_rtx rtx, int idx)
 {
   rtx sub = XEXP (rtx, idx);
-  sub_uid = INSN_UID (sub);
+//  sub_uid = INSN_UID (sub);
 }
 
 //FIXME:
@@ -199,7 +202,7 @@ rtx_to_json_brief (const_rtx rtx, dump_flags_t flags)
   if (rtx)
     {
       char address_buffer [20] = {"\0"};
-      address = sprintf(address, HOST_PTR_PRINTF, (void *) gs);
+      sprintf(address_buffer, HOST_PTR_PRINTF, (void *) gs);
       rtx_code code = GET_CODE (rtx);
 
       json_obj->set_string("code", GET_RTX_NAME(code));
