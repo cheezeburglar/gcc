@@ -480,7 +480,7 @@ add_gimple_phi_to_json (const gphi *gs, dump_flags_t flags, json::object &json_o
 	{
 	  expanded_location phi_xloc; 
 	  phi_xloc = expand_location (gimple_phi_arg_location (gs, i));
-	  set_xloc_as (json_arg, flags, phi_xloc);
+	  set_xloc_as (*json_arg, flags, phi_xloc);
 	}
       json_obj.set(buffer, json_arg);
     }
@@ -763,7 +763,7 @@ gimple_to_json (gimple * gs, dump_flags_t flags)
 
   const char *code = gimple_code_name[gimple_code (gs)];
   char * address;
-  address = sprintf(address, HOST_PTR_PRINTF, (void *) gs);
+  sprintf(address, HOST_PTR_PRINTF, (void *) gs);
   json_obj->set_string("address", address);
   json_obj->set_string("gimple_code", (char *)code);
 
@@ -978,7 +978,7 @@ dequeue_and_add (dump_info_p di)
   di->json_dump->append(dummy);
 }
 
-std::unique_ptr<json::obj>
+json::array *
 serialize_gimple_to_json (gimple *gs, dump_flags_t flags)
 {
   struct dump_info di;
@@ -1021,7 +1021,7 @@ debug_dump_gimple_json (gimple *gs, FILE *stream)
   di.queue_end = 0;
   di.free_list = 0;
   di.flags = TDF_LINENO;
-  di.node = t;
+  di.node = gs;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
   di.json_dump = new json::array ();
