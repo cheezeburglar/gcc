@@ -479,7 +479,7 @@ add_gimple_phi_to_json (const gphi *gs, dump_flags_t flags, json::object &json_o
 	  && gimple_phi_arg_has_location (gs, i))
 	{
 	  expanded_location phi_xloc; 
-	  phi_loc = expand_location (gimple_phi_arg_location (gs, i));
+	  phi_xloc = expand_location (gimple_phi_arg_location (gs, i));
 	  set_xloc_as (json_arg, flags, phi_xloc);
 	}
       json_obj.set(buffer, json_arg);
@@ -584,7 +584,7 @@ add_gimple_call_to_json (const gcall * gs, dump_flags_t flags, json::object &jso
     json_obj.set_bool("by_descriptor", true);
   if (gimple_call_nocf_check_p (gs))
     json_obj.set_bool("nocf_check", true);
-  if (gimple_call_from_new_or_delete_p ((gcall *) gs))
+  if (gimple_call_from_new_or_delete ((gcall *) gs))
     json_obj.set_bool("from_new_or_delete", true);
   if (gimple_call_expected_throw_p ((gcall *) gs))
     json_obj.set_bool("expected_throw", true);
