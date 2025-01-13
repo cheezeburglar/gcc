@@ -999,7 +999,7 @@ queue (dump_info_p di, const gimple * gs)
 }
 
 static void
-dequeue_and_add (dump_info_p di)
+dequeue_and_add (dump_info_gimpe di)
 {
   dump_queue_p dq;
   splay_tree_node stn;
@@ -1008,7 +1008,7 @@ dequeue_and_add (dump_info_p di)
   /* Get the next node from the queue.  */
   dq = di->queue;
   stn = dq->node;
-  gimp = stn->key;
+  gimp = stn;
 
   /* Remove the node from the queue, and put it on the free list.  */
   di->queue = dq->next;
@@ -1018,7 +1018,7 @@ dequeue_and_add (dump_info_p di)
   di->free_list = dq;
 
   /* Convert the node to JSON and store it to be dumped later. */
-  auto dummy = gimple_to_json(gs, di);
+  auto dummy = gimple_to_json(gimp, di);
   di->json_dump->append(dummy);
 }
 
@@ -1039,7 +1039,7 @@ serialize_gimple_to_json (gimple *gs, dump_flags_t flags)
   di.json_dump = new json::array ();
 
   /* queue up the first node.  */
-  queue (&di, t);
+  queue (&di, gs);
 
   /* until the queue is empty, keep dumping nodes.  */
   while (di.queue)
