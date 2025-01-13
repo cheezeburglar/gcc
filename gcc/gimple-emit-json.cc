@@ -829,7 +829,7 @@ gimple_to_json (gimple * gs, dump_flags_t flags)
       add_gimple_assign_to_json (as_a <const gassign *> (gs), flags, *json_obj);
       break;
     case GIMPLE_ASSUME:
-      add_gimple_assume_to_json (as_a <const gasm *> (gs), flags, *json_obj);
+      add_gimple_assume_to_json (as_a <const gcatch *> (gs), flags, *json_obj);
       break;
     case GIMPLE_BIND:
       add_gimple_bind_to_json (as_a <const gbind *> (gs), flags, *json_obj);
@@ -1018,7 +1018,7 @@ dequeue_and_add (dump_info_p di)
   di->free_list = dq;
 
   /* Convert the node to JSON and store it to be dumped later. */
-  auto dummy = gimple_emit_json(gs, di).release();
+  auto dummy = gimple_to_json(gs, di);
   di->json_dump->append(dummy);
 }
 
@@ -1033,7 +1033,7 @@ serialize_gimple_to_json (gimple *gs, dump_flags_t flags)
   di.queue_end = 0;
   di.free_list = 0;
   di.flags = flags;
-  di.node = t;
+  di.node = gs;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
   di.json_dump = new json::array ();
@@ -1058,7 +1058,7 @@ serialize_gimple_to_json (gimple *gs, dump_flags_t flags)
 DEBUG_FUNCTION void
 debug_dump_gimple_json (gimple *gs, FILE *stream)
 {
-  dump_info di;
+  dump_info_gimple di;
 
   di.stream = stream;
   di.queue = 0;
