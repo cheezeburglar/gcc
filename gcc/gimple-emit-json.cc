@@ -1018,7 +1018,7 @@ dequeue_and_add (dump_info_gimple_p di)
   di->free_list = dq;
 
   /* Convert the node to JSON and store it to be dumped later. */
-  auto dummy = gimple_to_json(gimp, di);
+  auto dummy = gimple_to_json(gimp, *di);
   di->json_dump->append(dummy);
 }
 
