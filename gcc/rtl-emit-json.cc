@@ -201,7 +201,7 @@ rtx_to_json_brief (const_rtx rtx, dump_flags_t flags)
   if (rtx)
     {
       char address_buffer [20] = {"\0"};
-      sprintf(address_buffer, HOST_PTR_PRINTF, (void *) gs);
+      sprintf(address_buffer, HOST_PTR_PRINTF, (void *) rtx);
       rtx_code code = GET_CODE (rtx);
 
       json_obj->set_string("code", GET_RTX_NAME(code));
@@ -213,7 +213,7 @@ rtx_to_json_brief (const_rtx rtx, dump_flags_t flags)
 static json::object *
 rtx_to_json_brief (const_rtx rtx, dump_flags_t flags, dump_info_rtx_p di)
 {
-  queue (&di, rtx);
+  queue (di, rtx);
   return rtx_to_json_brief (rtx, flags);
 }
 
@@ -233,7 +233,7 @@ rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_p di)
   if (RTX_FLAG (rtx, jump))
   if (RTX_FLAG (rtx, call))
   if (RTX_FLAG (rtx, return_val))
-
+    {}
   auto json_array = new json_array ();
   const char *format_ptr = GET_RTX_FORMAT (GET_CODE (rtx));
   for (int idx = 0; idx < limit; idx++)
