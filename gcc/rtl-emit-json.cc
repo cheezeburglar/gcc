@@ -394,7 +394,7 @@ dequeue_and_add (dump_info_rtx_p di)
 std::unique_ptr<json::array>
 serialize_rtx_to_json (const_rtx rtx, dump_flags_t flags)
 {
-  struct dump_info di;
+  struct dump_info_rtx di;
   dump_queue_p dq;
   dump_queue_p next_dq;
 
