@@ -118,7 +118,7 @@ operand_E_to_json (const_rtx rtx, int idx)
 {
   XVEC (rtx, idx);
 
-  for (int i = 0; i < VECLEN(rtx, idx); i++)
+  for (int i = 0; i < XVECLEN(rtx, idx); i++)
     {
       XVECEXP(rtx, idx, i)
     }
@@ -162,7 +162,7 @@ operand_t_to_json (const_rtx rtx, int idx)
 }
 
 inline static void
-operand_r_to_json (const_rtx rtx, int idx)
+operand_r_to_json (const_rtx rtx, int idx, dump_flags_t flags)
 {
   int is_insn = INSN_P (rtx);
   unsigned int regno = REGNO (rtx);
@@ -171,7 +171,6 @@ operand_r_to_json (const_rtx rtx, int idx)
     }
   else
     {
-      
     }
 }
 
@@ -337,7 +336,7 @@ rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_p di)
 }
 
 static void
-queue (dump_info_rtx_p di, rtx rtx)
+queue (dump_info_rtx_p di, const_rtx rtx)
 {
   dump_queue_p dq;
   dump_node_info_p dni;
