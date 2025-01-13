@@ -406,6 +406,8 @@ serialize_rtx_to_json (const_rtx rtx, dump_flags_t flags)
 			     splay_tree_delete_pointers);
   di.json_dump = new json::array ();
 
+// AHH
+
   /* queue up the first node.  */
   queue (&di, rtx);
 
