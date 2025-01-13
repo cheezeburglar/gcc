@@ -31,7 +31,7 @@
 #define INCLUDE_MEMORY
 #include "json.h"
 
-static void queue (dump_info_rtx_p di, rtx rtx);
+static void queue (dump_info_rtx_p di, const_rtx rtx);
 static void dequeue_and_add (dump_info_rtx_p di);
 
 inline static void
@@ -234,7 +234,7 @@ rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_p di)
   if (RTX_FLAG (rtx, call))
   if (RTX_FLAG (rtx, return_val))
     {}
-  auto json_array = new json_array ();
+  auto json_array = new json::array ();
   const char *format_ptr = GET_RTX_FORMAT (GET_CODE (rtx));
   for (int idx = 0; idx < limit; idx++)
     {
