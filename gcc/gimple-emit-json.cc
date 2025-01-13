@@ -1003,12 +1003,12 @@ dequeue_and_add (dump_info_gimple_p di)
 {
   dump_queue_p dq;
   splay_tree_node stn;
-  gimple gimp;
+  gimple *gimp;
 
   /* Get the next node from the queue.  */
   dq = di->queue;
   stn = dq->node;
-  gimp = stn;
+  gimp = (gimple *) stn;
 
   /* Remove the node from the queue, and put it on the free list.  */
   di->queue = dq->next;
