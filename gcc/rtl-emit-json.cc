@@ -51,10 +51,9 @@ operand_L_to_json (const_rtx rtx, int idx)
 {
   if (idx == 4 && INSN_P (rtx))
     {
-      if (INSN_HAS_LOCATION (in_insn))
+      if (INSN_HAS_LOCATION (rtx))
 	{
-	  // TODO :
-	  expanded_location xloc = insn_location ();
+	  //expanded_location xloc = insn_location ();
 	}
       else
 	{
@@ -105,10 +104,10 @@ operand_T_to_json (const_rtx rtx, int idx)
 }
 
 inline static
-json::object *
+void
 operand_e_to_json (const_rtx rtx, int idx)
 {
-  return rtx_to_json (XEXP (rtx, idx));
+//  return rtx_to_json (XEXP (rtx, idx));
 }
 
 inline static void
@@ -120,7 +119,6 @@ operand_E_to_json (const_rtx rtx, int idx)
     {
       XVECEXP(rtx, idx, i)
     }
-
 }
 
 inline static void
