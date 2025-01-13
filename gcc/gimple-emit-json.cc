@@ -40,7 +40,7 @@
 
 static void queue (dump_info_gimple_p di, const gimple * gs)
 
-json::array *
+static json::array *
 gimple_seq_to_json (gimple_seq seq, dump_flags_t flags)
 {
   gimple_stmt_iterator iter;
