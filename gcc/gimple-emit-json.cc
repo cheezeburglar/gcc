@@ -968,7 +968,7 @@ gimple_to_json (gimple * gs, dump_flags_t flags)
 }
 
 static void
-queue (dump_info_p di, const gimple * gs)
+queue (dump_info_gimple_p di, const gimple * gs)
 {
   dump_queue_p dq;
   dump_node_info_p dni;
@@ -999,7 +999,7 @@ queue (dump_info_p di, const gimple * gs)
 }
 
 static void
-dequeue_and_add (dump_info_gimpe di)
+dequeue_and_add (dump_info_gimple_p di)
 {
   dump_queue_p dq;
   splay_tree_node stn;
