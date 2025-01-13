@@ -570,7 +570,7 @@ add_gimple_call_to_json (const gcall * gs, dump_flags_t flags, json::object &jso
     json_obj.set_bool("tailcall", true);
   if (gimple_call_va_arg_pack_p (gs))
     json_obj.set_bool("va_arg_pack", true);
-  if (gimple_call_nothrow_p (gs))
+  if (gimple_call_nothrow_p ((gcall *)gs))
     json_obj.set_bool("nothrow", true);
   if (gimple_call_alloca_for_var_p ((gcall *) gs))
     json_obj.set_bool("alloca_for_var", true);
@@ -591,7 +591,7 @@ add_gimple_call_to_json (const gcall * gs, dump_flags_t flags, json::object &jso
 
   if (gimple_call_internal_p (gs))
     {
-      char *enums = NULL;
+      const char *const *enums = NULL;
       unsigned limit = 0;
       switch (gimple_call_internal_fn (gs))
         {
@@ -639,7 +639,7 @@ add_gimple_call_to_json (const gcall * gs, dump_flags_t flags, json::object &jso
 	      && tree_fits_shwi_p (arg0)
 	      && (v = tree_to_shwi (arg0) >= 0 && v < limit))
 	    {
-	      json_obj.set_string("arg0_enums", (const) enums[v]); // TODO : make sure makes sense
+	      json_obj.set_string("arg0_enums", enums[v]); // TODO : make sure makes sense
 	      i++;
 	    }
 	}
