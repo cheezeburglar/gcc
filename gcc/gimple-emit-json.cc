@@ -34,6 +34,7 @@
 #define INCLUDE_MEMORY
 #include "json.h"
 #include "attribs.h"
+#include "stringpool.h"
 #include "asan.h"
 
 // TODO : 
