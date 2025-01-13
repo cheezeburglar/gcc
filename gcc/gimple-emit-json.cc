@@ -33,6 +33,7 @@
 #include "tree-emit-json.h"
 #define INCLUDE_MEMORY
 #include "json.h"
+#include "attribs.h"
 #include "asan.h"
 
 // TODO : 
@@ -56,7 +57,7 @@ gimple_seq_to_json (gimple_seq seq, dump_flags_t flags)
 // TODO : this ones kinda weird.
 
 static void
-add_gimple_error_mark_to_json
+add_gimple_error_mark_to_json ()
 {
 
 }
@@ -254,7 +255,7 @@ static void
 add_gimple_omp_single_to_json (const gomp_single *gs, dump_flags_t flags,
 			       json::object &json_obj)
 {
-  json_obj.set("body", gimple_sequence_to_json (gimple_omp_body (gs), flags));
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs), flags));
   json_obj.set("clauses", generic_to_json (gimple_omp_single_clauses (gs), flags));
 }
 
@@ -290,7 +291,7 @@ add_gimple_omp_for (const gomp_for * gs, dump_flags_t flags,
     }
   json_obj.set_integer("collapse", gimple_omp_for_collapse (gs));
   json_obj.set("clauses", generic_to_json (gimple_omp_for_clauses (gs), flags));
-  json_obj.set("body", gimple_sequence_to_json (gimple_omp_body (gs), flags)); // TODO : this is statement_omp class
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs), flags)); // TODO : this is statement_omp class
   for (size_t i = 0; i < gimple_omp_for_collapse (gs); i++)
     {
       auto json_gomp_for_iter = new json::object ();
@@ -302,7 +303,7 @@ add_gimple_omp_for (const gomp_for * gs, dump_flags_t flags,
       json_iter->append(json_gomp_for_iter);
     }
   json_obj.set("iter", json_iter);
-  json_obj.set("pre_body", gimple_sequence_to_json (gimple_omp_for_pre_body (gs), flags));
+  json_obj.set("pre_body", gimple_seq_to_json (gimple_omp_for_pre_body (gs), flags));
 }
 
 static void
@@ -311,9 +312,9 @@ add_gimple_omp_atomic_store (const gomp_atomic_store * gs, dump_flags_t flags,
 {
   // Flags
   if (gimple_omp_atomic_need_value_p (gs))
-    json_obj.set("need_value", true);
+    json_obj.set_bool("need_value", true);
   if (gimple_omp_atomic_weak_p (gs))
-    json_obj.set("weak", true);
+    json_obj.set_bool("weak", true);
   json_obj.set("val", generic_to_json (gimple_omp_atomic_store_val (gs), flags));
   json_obj.set("memory_order", 
 	       omp_atomic_memory_order_emit_json (
