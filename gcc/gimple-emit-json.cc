@@ -33,8 +33,8 @@
 #include "tree-emit-json.h"
 #define INCLUDE_MEMORY
 #include "json.h"
-#include "attribs.h"
 #include "stringpool.h"
+#include "attribs.h"
 #include "asan.h"
 
 // TODO : 
