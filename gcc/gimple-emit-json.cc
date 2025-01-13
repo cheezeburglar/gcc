@@ -1008,7 +1008,7 @@ dequeue_and_add (dump_info_p di)
   /* Get the next node from the queue.  */
   dq = di->queue;
   stn = dq->node;
-  gimp = (gimple) stn->key;
+  gimp = stn->key;
 
   /* Remove the node from the queue, and put it on the free list.  */
   di->queue = dq->next;
