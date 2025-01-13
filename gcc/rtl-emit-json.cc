@@ -41,7 +41,6 @@ inline static void
 operand_i_to_json (const_rtx rtx, int idx)
 {
   int value = XINT (rtx, idx);
-  return json::integer_number(value);
 }
 
 // This should maybe only exist IFF we not in generator file?
