@@ -200,8 +200,8 @@ rtx_to_json_brief (const_rtx rtx, dump_flags_t flags)
   auto json_obj = new json::object ();
   if (rtx)
     {
-      char address_buffer [20] = {"\0"};
-      sprintf(address_buffer, HOST_PTR_PRINTF, (void *) rtx);
+      char address [20] = {"\0"};
+      sprintf(address, HOST_PTR_PRINTF, (void *) rtx);
       rtx_code code = GET_CODE (rtx);
 
       json_obj->set_string("code", GET_RTX_NAME(code));
@@ -404,7 +404,7 @@ serialize_rtx_to_json (const_rtx rtx, dump_flags_t flags)
   di.node = rtx;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
-  di.json_dump = make_unique<json::array> ();
+  di.json_dump = new json::array ();
 
   /* queue up the first node.  */
   queue (&di, rtx);
