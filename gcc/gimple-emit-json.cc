@@ -39,7 +39,7 @@
 
 // TODO : 
 
-static void queue (dump_info_gimple_p di, const gimple * gs)
+static void queue (dump_info_gimple_p di, const gimple * gs);
 
 static json::array *
 gimple_seq_to_json (gimple_seq seq, dump_flags_t flags)
