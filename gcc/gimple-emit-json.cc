@@ -319,9 +319,9 @@ add_gimple_omp_atomic_load (const gomp_atomic_load * gs, dump_flags_t flags,
 {
   // Flags
   if (gimple_omp_atomic_need_value_p (gs))
-    json_obj.set_bool("need_value", true)
+    json_obj.set_bool("need_value", true);
   if (gimple_omp_atomic_weak_p (gs))
-    json_obj.set_bool("weak", true)
+    json_obj.set_bool("weak", true);
 
   json_obj.set("lhs", generic_to_json (gimple_omp_atomic_load_lhs (gs), flags));
   json_obj.set("rhs", generic_to_json (gimple_omp_atomic_load_rhs (gs), flags));
@@ -456,7 +456,7 @@ add_gimple_transaction_to_json (const gtransaction *gs, dump_flags_t flags, json
     json_obj.set_bool ("gtma_has_no_instrumentation", true);
 
   json_obj.set("label_norm", generic_to_json (gimple_transaction_label_norm (gs), flags));
-  json_obj.set("uninst", generic_to_json (gimple_transaction_uninst (gs), flags));
+  json_obj.set("label_uninst", generic_to_json (gimple_transaction_label_uninst (gs), flags));
   json_obj.set("label_over", generic_to_json (gimple_transaction_label_over (gs), flags));
   json_obj.set("body", gimple_seq_to_json (gimple_transaction_body (gs), flags));
 }
@@ -553,7 +553,7 @@ add_gimple_call_to_json (const gcall * gs, dump_flags_t flags, json::object &jso
 {
   size_t i = 0;
 
-  json_obj.set("lhs", generic_to_json (gimple_call_lhs (gs)));
+  json_obj.set("lhs", generic_to_json (gimple_call_lhs (gs), flags));
 
   // Also a flag, but weird. TODO :
   if (gimple_call_noreturn_p (gs))
@@ -572,7 +572,7 @@ add_gimple_call_to_json (const gcall * gs, dump_flags_t flags, json::object &jso
     json_obj.set_bool("va_arg_pack", true);
   if (gimple_call_nothrow_p (gs))
     json_obj.set_bool("nothrow", true);
-  if (gimple_call_alloca_for_var_p (gs))
+  if (gimple_call_alloca_for_var_p ((gcall *) gs))
     json_obj.set_bool("alloca_for_var", true);
   if (gimple_call_internal_p (gs))
     json_obj.set_bool("internal_call", true);
@@ -580,18 +580,18 @@ add_gimple_call_to_json (const gcall * gs, dump_flags_t flags, json::object &jso
     json_obj.set_bool("must_tailcall", true);
   if (gimple_call_ctrl_altering_p (gs))
     json_obj.set_bool("ctrl_altering", true);
-  if (gimple_call_by_descriptor_p (gs))
+  if (gimple_call_by_descriptor_p ((gcall *) gs))
     json_obj.set_bool("by_descriptor", true);
   if (gimple_call_nocf_check_p (gs))
     json_obj.set_bool("nocf_check", true);
-  if (gimple_call_from_new_or_delete_p (gs))
+  if (gimple_call_from_new_or_delete_p ((gcall *) gs))
     json_obj.set_bool("from_new_or_delete", true);
-  if (gimple_call_expected_throw_p (gs))
+  if (gimple_call_expected_throw_p ((gcall *) gs))
     json_obj.set_bool("expected_throw", true);
 
   if (gimple_call_internal_p (gs))
     {
-      const char *enums = NULL;
+      char *enums = NULL;
       unsigned limit = 0;
       switch (gimple_call_internal_fn (gs))
         {
@@ -639,7 +639,7 @@ add_gimple_call_to_json (const gcall * gs, dump_flags_t flags, json::object &jso
 	      && tree_fits_shwi_p (arg0)
 	      && (v = tree_to_shwi (arg0) >= 0 && v < limit))
 	    {
-	      json_obj.set_string("arg0_enums", enums[v]); // TODO : make sure makes sense
+	      json_obj.set_string("arg0_enums", (const) enums[v]); // TODO : make sure makes sense
 	      i++;
 	    }
 	}
@@ -657,7 +657,7 @@ add_gimple_bind_to_json (const gbind * gs, dump_flags_t flags, json::object &jso
 {
   json_obj.set("vars", generic_to_json (gimple_bind_vars (gs), flags)); // TODO :
   json_obj.set("block", generic_to_json (gimple_bind_block (gs), flags));
-  json_obj.set("bind_body", gimple_seq_to_json (gimple_bind_block (gs), flags));
+  json_obj.set("bind_body", generic_to_json (gimple_bind_block (gs), flags));
 }
 
 /* */
