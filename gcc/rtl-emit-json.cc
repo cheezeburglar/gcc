@@ -120,7 +120,7 @@ operand_E_to_json (const_rtx rtx, int idx)
 
   for (int i = 0; i < XVECLEN(rtx, idx); i++)
     {
-      XVECEXP(rtx, idx, i)
+      XVECEXP(rtx, idx, i);
     }
 }
 
@@ -213,7 +213,7 @@ rtx_to_json_brief (const_rtx rtx, dump_flags_t flags)
 static json::object *
 rtx_to_json_brief (const_rtx rtx, dump_flags_t flags, dump_info_p di)
 {
-  queue (rtx, &di);
+  queue (&di, rtx);
   return rtx_to_json_brief (rtx, flags);
 }
 
