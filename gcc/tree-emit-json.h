@@ -68,7 +68,7 @@ struct dump_info
   json::array *json_dump;
 };
 
-struct dump_info_gimple
+typedef struct dump_info_gimple
 {
   /* The stream on which to dump the information.  */
   FILE *stream;
@@ -88,7 +88,7 @@ struct dump_info_gimple
   splay_tree nodes;
   /* json tree holder. carries everything, each node is a sub-array */
   json::array *json_dump;
-};
+} *dump_info_gimple_p;
 
 extern std::unique_ptr<json::object> node_emit_json(tree t, dump_info_p di);
 extern json::array * generic_to_json (const_tree t, dump_flags_t flag);
