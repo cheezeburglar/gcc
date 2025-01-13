@@ -48,7 +48,7 @@ gimple_seq_to_json (gimple_seq seq, dump_flags_t flags)
   for (iter = gsi_start (seq); ~gsi_end_p (iter); gsi_next (&iter))
     {
       gimple *gs = gsi_stmt (iter);
-      auto json_obj = gimple_emit_json (gs, flags); //This probably has to be serialization
+      auto json_obj = gimple_to_json (gs, flags); //This probably has to be serialization
       json_seq->append(json_obj);
     }
   return json_seq;
@@ -787,10 +787,10 @@ gimple_to_json_brief (gimple * gs)
 
 static 
 json::object *
-gimple_to_json_brief (gimple * gs, dump_info_p di)
+gimple_to_json_brief (gimple * gs, dump_info_gimple_p di)
 {
   gimple_to_json_brief (gs);
-  queue (gs);
+  queue (di, gs);
 }
 
 
