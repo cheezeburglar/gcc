@@ -461,6 +461,8 @@ add_gimple_transaction_to_json (const gtransaction *gs, dump_flags_t flags, json
   json_obj.set("body", gimple_seq_to_json (gimple_transaction_body (gs), flags));
 }
 
+// TODO: This might need to be edited later for consistence - THORP
+
 static void
 add_gimple_phi_to_json (const gphi *gs, dump_flags_t flags, json::object &json_obj)
 {
@@ -470,8 +472,8 @@ add_gimple_phi_to_json (const gphi *gs, dump_flags_t flags, json::object &json_o
     {
       // TODO: Verify this is alright later. 
       auto json_arg = new json::object ();
-      char * buffer;
-      sprintf (buffer, "arg%u", i);
+      char buffer [20];
+      snprintf (buffer, "phiarg%u", i);
 
       json_arg->set("arg_def", generic_to_json (gimple_phi_arg_def (gs, i), flags));
 
@@ -480,7 +482,7 @@ add_gimple_phi_to_json (const gphi *gs, dump_flags_t flags, json::object &json_o
 	{
 	  expanded_location phi_xloc; 
 	  phi_xloc = expand_location (gimple_phi_arg_location (gs, i));
-	  set_xloc_as (*json_arg, flags, phi_xloc);
+	  set_xloc_as (*json_arg, phi_xloc, "phi_loc");
 	}
       json_obj.set(buffer, json_arg);
     }
