@@ -364,39 +364,39 @@ add_gimple_omp_parallel_to_json (const gomp_parallel *gs, dump_flags_t flags,
 }
 
 static void
-add_gimple_eh_filter_to_json (geh_filter *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_eh_filter_to_json (const geh_filter *gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set("types", generic_to_json (gimple_eh_filter_types (gs), flags));
   json_obj.set("failure", gimple_seq_to_json (gimple_eh_filter_failure (gs), flags));
 }
 
 static void
-add_gimple_eh_must_not_throw_to_json (geh_mnt *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_eh_must_not_throw_to_json (const geh_mnt *gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set("fndecl", generic_to_json (gimple_eh_must_not_throw_fndecl (gs), flags));
 }
 
 static void
-add_gimple_eh_else_to_json (geh_else *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_eh_else_to_json (const geh_else *gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set("n_body", gimple_seq_to_json(gimple_eh_else_n_body (gs), flags));
   json_obj.set("e_body", gimple_seq_to_json(gimple_eh_else_e_body (gs), flags));
 }
 
 static void
-add_gimple_eh_dispatch_to_json (geh_dispatch *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_eh_dispatch_to_json (const geh_dispatch *gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set_integer ("dispatch_region", gimple_eh_dispatch_region (gs));
 }
 
 static void
-add_gimple_resx_to_json (gresx *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_resx_to_json (const gresx *gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set_integer("resx_region", gimple_resx_region (gs));
 }
 
 static void
-add_gimple_debug_to_json (gdebug *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_debug_to_json (const gdebug *gs, dump_flags_t flags, json::object &json_obj)
 {
   switch (gs->subcode)
     {
@@ -434,14 +434,14 @@ add_gimple_debug_to_json (gdebug *gs, dump_flags_t flags, json::object &json_obj
 }
 
 static void
-add_gimple_assume_to_json (gcatch *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_assume_to_json (const gcatch *gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set("guard", generic_to_json (gimple_assume_guard(gs), flags));
   json_obj.set("body", gimple_seq_to_json (gimple_assume_body (gs), flags));
 }
 
 static void
-add_gimple_transaction_to_json (gtransaction *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_transaction_to_json (const gtransaction *gs, dump_flags_t flags, json::object &json_obj)
 {
   unsigned subcode = gimple_transaction_subcode (gs);
 
@@ -470,7 +470,7 @@ add_gimple_transaction_to_json (gtransaction *gs, dump_flags_t flags, json::obje
 }
 
 static void
-add_gimple_phi_to_json (gphi *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_phi_to_json (const gphi *gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set("result", generic_to_json (gimple_phi_result (gs), flags));
 
@@ -495,14 +495,14 @@ add_gimple_phi_to_json (gphi *gs, dump_flags_t flags, json::object &json_obj)
 }
 
 static void
-add_gimple_catch_to_json (gcatch *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_catch_to_json (const gcatch *gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set("types", generic_to_json (gimple_catch_types (gs), flags));
   json_obj.set("handler", gimple_seq_to_json (gimple_catch_handler (gs), flags));
 }
 
 static void
-add_gimple_try_to_json (gtry *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_try_to_json (const gtry *gs, dump_flags_t flags, json::object &json_obj)
 {
   // Flag handling
   if (gimple_try_kind (gs) == GIMPLE_TRY_CATCH)
@@ -517,7 +517,7 @@ add_gimple_try_to_json (gtry *gs, dump_flags_t flags, json::object &json_obj)
 }
 
 static void
-add_gimple_switch_to_json (gswitch * gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_switch_to_json (const gswitch * gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set("index", generic_to_json (gimple_switch_index(gs), flags));
   for (unsigned i = 0; i < gimple_switch_num_labels (gs); i++)
@@ -529,25 +529,25 @@ add_gimple_switch_to_json (gswitch * gs, dump_flags_t flags, json::object &json_
 }
 
 static void
-add_gimple_return_to_json (greturn * gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_return_to_json (const greturn * gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set("retval", generic_to_json (gimple_return_retval(gs), flags));
 }
 
 static void
-add_gimple_goto_to_json (ggoto *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_goto_to_json (const ggoto *gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set("target", generic_to_json (gimple_goto_dest (gs), flags));
 }
 
 static void
-add_gimple_label_to_json (glabel *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_label_to_json (const glabel *gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set("label", generic_to_json(gimple_label_label(gs), flags));
 }
 
 static void
-add_gimple_cond_to_json (gcond *gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_cond_to_json (const gcond *gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set_string("cond_code", get_tree_code_name(gimple_cond_code(gs)));
   json_obj.set("lhs", generic_to_json (gimple_cond_lhs(gs), flags));
@@ -557,7 +557,7 @@ add_gimple_cond_to_json (gcond *gs, dump_flags_t flags, json::object &json_obj)
 }
 
 static void
-add_gimple_call_to_json (gcall * gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_call_to_json (const gcall * gs, dump_flags_t flags, json::object &json_obj)
 {
   size_t i = 0;
 
@@ -599,11 +599,10 @@ add_gimple_call_to_json (gcall * gs, dump_flags_t flags, json::object &json_obj)
 
   if (gimple_call_internal_p (gs))
     {
+      const char *enums = NULL;
+      unsigned limit = 0;
       switch (gimple_call_internal_fn (gs))
         {
-	  const char *enums = NULL;
-	  unsigned limit = 0;
-
 	  case IFN_UNIQUE:
 #define DEF(X) #X
             static const char *const unique_args[] = {IFN_UNIQUE_CODES};
@@ -662,7 +661,7 @@ add_gimple_call_to_json (gcall * gs, dump_flags_t flags, json::object &json_obj)
 }
 
 static void
-add_gimple_bind_to_json (gbind * gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_bind_to_json (const gbind * gs, dump_flags_t flags, json::object &json_obj)
 {
   json_obj.set("vars", generic_to_json (gimple_bind_vars (gs), flags)); // TODO :
   json_obj.set("block", generic_to_json (gimple_bind_block (gs), flags));
@@ -671,7 +670,7 @@ add_gimple_bind_to_json (gbind * gs, dump_flags_t flags, json::object &json_obj)
 
 /* */
 static void
-add_gimple_asm_to_json (gasm * gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_asm_to_json (const gasm * gs, dump_flags_t flags, json::object &json_obj)
 {
   int n;
 
@@ -707,9 +706,9 @@ add_gimple_asm_to_json (gasm * gs, dump_flags_t flags, json::object &json_obj)
 }
 
 static void
-add_gimple_assign_to_json (gassign * gs, dump_flags_t flags, json::object &json_obj)
+add_gimple_assign_to_json (const gassign * gs, dump_flags_t flags, json::object &json_obj)
 {
-  json_obj.set("lhs", gimple_assign_lhs (gs));
+  json_obj.set("lhs", generic_to_json (gimple_assign_lhs (gs), flags));
   switch (gimple_num_ops (gs))
     {
       case 4:
@@ -730,7 +729,8 @@ gimple_to_json_brief (gimple * gs)
 {
   // TODO : Instantiate visitor, queue up nodes to be dumped.
 
-  char *code, *address;
+  const char *code;
+  char *address;
   // TODO : DO ALL THINGS FOR GIMPLE BASE CLASS
   auto json_obj = new json::object ();
 
