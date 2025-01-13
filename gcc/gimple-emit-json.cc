@@ -763,7 +763,7 @@ gimple_to_json (gimple * gs, dump_flags_t flags)
   if (!gs)
     return json_obj;
 
-  const char *code = gimple_code_name[gimple_code (gs)];
+  char *code = gimple_code_name[gimple_code (gs)];
   char * address;
   sprintf(address, HOST_PTR_PRINTF, (void *) gs);
   json_obj->set_string("address", address);
@@ -778,7 +778,7 @@ gimple_to_json (gimple * gs, dump_flags_t flags)
   json_obj->set_integer("has_volatile_ops", gs->has_volatile_ops);
   json_obj->set_integer("uid", gs->uid);
 
-  switch (code)
+  switch (gimple_code (gs))
     {
     case GIMPLE_ASM:
       add_gimple_asm_to_json (as_a <const gasm *> (gs), flags, *json_obj);
