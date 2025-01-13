@@ -337,7 +337,7 @@ rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_p di)
 }
 
 static void
-queue (dump_info_p di, rtx rtx)
+queue (dump_info_rtx_p di, rtx rtx)
 {
   dump_queue_p dq;
   dump_node_info_p dni;
@@ -368,7 +368,7 @@ queue (dump_info_p di, rtx rtx)
 }
 
 static void
-dequeue_and_add (dump_info_rtxp di)
+dequeue_and_add (dump_info_rtx_p di)
 {
   dump_queue_p dq;
   splay_tree_node stn;
@@ -427,7 +427,7 @@ serialize_rtx_to_json (const_rtx rtx, dump_flags_t flags)
 DEBUG_FUNCTION void
 debug_dump_rtl_json (const_rtx rtx, FILE *stream)
 {
-  dump_info di;
+  dump_info_rtx di;
 
   di.stream = stream;
   di.queue = 0;
