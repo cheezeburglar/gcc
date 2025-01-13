@@ -57,7 +57,50 @@ gimple_seq_to_json (gimple_seq seq, dump_flags_t flags)
 // TODO : this ones kinda weird.
 
 static void
-add_gimple_error_mark_to_json ()
+add_gimple_with_cleanup_expr_to_json (const gimple *gs, dump_flags_t flags,
+			       json::object &json_obj)
+{
+
+}
+
+static void
+add_gimple_omp_ordered_to_json (const gimple *gs, dump_flags_t flags,
+			       json::object &json_obj)
+{
+
+}
+
+static void
+add_gimple_omp_for_to_json (const gimple *gs, dump_flags_t flags,
+			       json::object &json_obj)
+{
+
+}
+
+static void
+add_gimple_omp_atomic_store_to_json (const gimple *gs, dump_flags_t flags,
+			       json::object &json_obj)
+{
+
+}
+
+static void
+add_gimple_omp_atomic_load_to_json (const gimple *gs, dump_flags_t flags,
+			       json::object &json_obj)
+{
+
+}
+
+static void
+add_gimple_nop_to_json (const gimple *gs, dump_flags_t flags,
+			       json::object &json_obj)
+{
+
+}
+
+static void
+add_gimple_error_mark_to_json (const gimple *gs, dump_flags_t flags,
+			       json::object &json_obj)
 {
 
 }
@@ -65,7 +108,8 @@ add_gimple_error_mark_to_json ()
 
 
 static void
-add_gimple_predict_to_json ()
+add_gimple_predict_to_json (const gimple *gs, dump_flags_t flags,
+			    json::object &json_obj)
 {
 
 }
@@ -677,7 +721,7 @@ add_gimple_asm_to_json (const gasm * gs, dump_flags_t flags, json::object &json_
   if (n)
     {
       auto json_array = new json::array ();
-      for (unsigned i = 0; i<n; i++)
+      for (int i = 0; i<n; i++)
 	  json_array->append (generic_to_json (gimple_asm_input_op(gs, i), flags));
       json_obj.set("asm_input_ops", json_array);
     }
@@ -685,7 +729,7 @@ add_gimple_asm_to_json (const gasm * gs, dump_flags_t flags, json::object &json_
   if (n)
     {
       auto json_array = new json::array ();
-      for (unsigned i = 0; i<n; i++)
+      for (int i = 0; i<n; i++)
 	  json_array->append (generic_to_json (gimple_asm_output_op(gs, i), flags));
       json_obj.set("asm_output_ops", json_array);
     }
@@ -693,7 +737,7 @@ add_gimple_asm_to_json (const gasm * gs, dump_flags_t flags, json::object &json_
   if (n)
     {
       auto json_array = new json::array ();
-      for (unsigned i = 0; i<n; i++)
+      for (int i = 0; i<n; i++)
 	  json_array->append (generic_to_json (gimple_asm_clobber_op(gs, i), flags));
       json_obj.set("asm_output_ops", json_array);
     }
@@ -751,8 +795,7 @@ gimple_to_json_brief (gimple * gs, dump_info_p di)
 
 
 /* Turn gimple nodes into JSON object */
-static
-json::object *
+static json::object *
 gimple_to_json (gimple * gs, dump_flags_t flags)
 {
   // TODO : Instantiate visitor, queue up nodes to be dumped.
@@ -763,11 +806,10 @@ gimple_to_json (gimple * gs, dump_flags_t flags)
   if (!gs)
     return json_obj;
 
-  char *code = gimple_code_name[gimple_code (gs)];
   char * address;
   sprintf(address, HOST_PTR_PRINTF, (void *) gs);
   json_obj->set_string("address", address);
-  json_obj->set_string("gimple_code", (char *)code);
+  json_obj->set_string("gimple_code", gimple_code_name[gimple_code (gs)]);
 
   // TODO: hit things that are in all base classes
   json_obj->set_integer("no_warning", gs->no_warning);
@@ -796,13 +838,13 @@ gimple_to_json (gimple * gs, dump_flags_t flags)
       add_gimple_call_to_json (as_a <const gcall *> (gs), flags, *json_obj);
       break;
     case GIMPLE_CATCH:
-      add_gimple_catch_to_json (as_a <const gasm *> (gs), flags, *json_obj);
+      add_gimple_catch_to_json (as_a <const gcatch *> (gs), flags, *json_obj);
       break;
     case GIMPLE_COND:
       add_gimple_cond_to_json (as_a <const gcond *> (gs), flags, *json_obj);
       break;
     case GIMPLE_DEBUG:
-      add_gimple_debug_to_json (as_a <const gasm *> (gs), flags, *json_obj);
+      add_gimple_debug_to_json (as_a <const gdebug *> (gs), flags, *json_obj);
       break;
     case GIMPLE_EH_DISPATCH:
       add_gimple_eh_dispatch_to_json (as_a <const geh_dispatch *> (gs), flags, *json_obj);
