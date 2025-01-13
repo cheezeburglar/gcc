@@ -473,7 +473,7 @@ add_gimple_phi_to_json (const gphi *gs, dump_flags_t flags, json::object &json_o
       // TODO: Verify this is alright later. 
       auto json_arg = new json::object ();
       char buffer [20];
-      snprintf (buffer, "phiarg%u", i);
+      snprintf (buffer, 20, "phiarg%u", i);
 
       json_arg->set("arg_def", generic_to_json (gimple_phi_arg_def (gs, i), flags));
 
