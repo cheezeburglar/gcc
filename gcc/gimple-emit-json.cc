@@ -97,7 +97,7 @@ add_gimple_omp_section_to_json (const gomp_sections *gs, dump_flags_t flags,
 {
   if (gimple_omp_section_last_p (gs))
     json_obj.set_bool("last", true);
-  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs)));
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs), flags));
   json_obj.set("clauses", generic_to_json (gimple_omp_sections_clauses (gs), flags));
   json_obj.set("control", generic_to_json (gimple_omp_sections_control (gs), flags));
 }
@@ -171,7 +171,6 @@ add_gimple_omp_teams_to_json (const gomp_teams *gs, dump_flags_t flags,
   if (gimple_omp_teams_host (gs))
     json_obj.set_bool("host", true);
   json_obj.set("clauses", generic_to_json (gimple_omp_teams_clauses (gs), flags));
-  json_obj.set("body", gimple_sequence_to_json (gimple_omp_teams_body (gs), flags));
   json_obj.set("child_fn", generic_to_json (gimple_omp_teams_child_fn (gs), flags));
   json_obj.set("data_arg", generic_to_json (gimple_omp_teams_data_arg(gs), flags));
   
@@ -238,7 +237,6 @@ add_gimple_omp_target_to_json (const gomp_target *gs, dump_flags_t flags,
       gcc_unreachable ();
     }
   json_obj.set("clauses", generic_to_json (gimple_omp_target_clauses (gs), flags));
-  json_obj.set("body", gimple_sequence_to_json (gimple_omp_target_body (gs), flags));
   json_obj.set("child_fn", generic_to_json (gimple_omp_target_child_fn (gs), flags));
   json_obj.set("data_arg", generic_to_json (gimple_omp_target_data_arg(gs), flags));
 }
@@ -255,8 +253,8 @@ static void
 add_gimple_omp_continue_to_json (const gomp_continue * gs, dump_flags_t flags,
 				 json::object &json_obj)
 {
-  json_obj.set("def", generic_to_json (gimple_omp_continue_control_def (gs), flags);
-  json_obj.set("use", generic_to_json (gimple_omp_continue_control_use (gs), flags);
+  json_obj.set("def", generic_to_json (gimple_omp_continue_control_def (gs), flags));
+  json_obj.set("use", generic_to_json (gimple_omp_continue_control_use (gs), flags));
 }
 
 
@@ -283,8 +281,8 @@ add_gimple_omp_for (const gomp_for * gs, dump_flags_t flags,
       gcc_unreachable();
     }
   json_obj.set_integer("collapse", gimple_omp_for_collapse (gs));
-  json_obj.set("clauses", generic_to_json (gimple_omp_for_clauses (gs)));
-  json_obj.set("body", gimple_sequence_to_json (gimple_omp_body (gs))); // TODO : this is statement_omp class
+  json_obj.set("clauses", generic_to_json (gimple_omp_for_clauses (gs), flags));
+  json_obj.set("body", gimple_sequence_to_json (gimple_omp_body (gs), flags)); // TODO : this is statement_omp class
   for (i = 0; i < gimple_omp_for_collapse (gs); i++)
     {
       auto json_gomp_for_iter = new json::object ();
@@ -296,7 +294,7 @@ add_gimple_omp_for (const gomp_for * gs, dump_flags_t flags,
       json_iter->append(json_gomp_for_iter);
     }
   json_obj.set("iter", json_iter);
-  json_obj.set("pre_body", gimple_sequence_to_json (gimple_omp_for_pre_body (gs)));
+  json_obj.set("pre_body", gimple_sequence_to_json (gimple_omp_for_pre_body (gs), flags));
 }
 
 static void
@@ -646,7 +644,7 @@ add_gimple_call_to_json (gcall * gs, dump_flags_t flags, json::object &json_obj)
     {
       char * buffer;
       sprintf (buffer, "arg%d", i);
-      json_obj.set(buffer, generic_to_json (gimple_call_arg (gs, i)));
+      json_obj.set(buffer, generic_to_json (gimple_call_arg (gs, i), flags));
     }
 }
 
@@ -674,9 +672,7 @@ add_gimple_asm_to_json (gasm * gs, dump_flags_t flags, json::object &json_obj)
     {
       auto json_array = new json::array ();
       for (i=0; i<n; i++)
-	{
 	  json_array->append (generic_to_json (gimple_asm_input_op(gs, i), flags));
-	}
       json_obj.set("asm_input_ops", json_array);
     }
   n = gimple_asm_noutputs (gs);
@@ -684,9 +680,7 @@ add_gimple_asm_to_json (gasm * gs, dump_flags_t flags, json::object &json_obj)
     {
       auto json_array = new json::array ();
       for (i=0; i<n; i++)
-        {
 	  json_array->append (generic_to_json (gimple_asm_output_op(gs, i), flags));
-	}
       json_obj.set("asm_output_ops", json_array);
     }
   n = gimple_asm_nclobbers(gs);
@@ -694,9 +688,7 @@ add_gimple_asm_to_json (gasm * gs, dump_flags_t flags, json::object &json_obj)
     {
       auto json_array = new json::array ();
       for (i=0; i<n; i++)
-	{
 	  json_array->append (generic_to_json (gimple_asm_clobber_op(gs, i), flags));
-	}
       json_obj.set("asm_output_ops", json_array);
     }
 }
@@ -944,9 +936,9 @@ queue (dump_info_p di, const gimple * gs)
   /* Create a new entry in the splay-tree and insert into queue iff new.
    * Else, end.*/
   dni = XNEW (struct dump_node_info);
-  if (!splay_tree_lookup (di->nodes, (splay_tree_key) t))
+  if (!splay_tree_lookup (di->nodes, (splay_tree_key) gs))
   {
-    dq->node = splay_tree_insert (di->nodes, (splay_tree_key) t,
+    dq->node = splay_tree_insert (di->nodes, (splay_tree_key) gs,
           			(splay_tree_value) dni);
     dq->next = 0;
     if (!di->queue_end)
@@ -962,12 +954,12 @@ dequeue_and_add (dump_info_p di)
 {
   dump_queue_p dq;
   splay_tree_node stn;
-  gimple t;
+  gimple gimp;
 
   /* Get the next node from the queue.  */
   dq = di->queue;
   stn = dq->node;
-  t = (tree) stn->key;
+  gimp = (gimple) stn->key;
 
   /* Remove the node from the queue, and put it on the free list.  */
   di->queue = dq->next;
@@ -977,7 +969,7 @@ dequeue_and_add (dump_info_p di)
   di->free_list = dq;
 
   /* Convert the node to JSON and store it to be dumped later. */
-  auto dummy = node_emit_json(t, di).release();
+  auto dummy = gimple_emit_json(gs, di).release();
   di->json_dump->append(dummy);
 }
 
@@ -1028,13 +1020,13 @@ debug_dump_gimple_json (gimple *gs, FILE *stream)
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
   di.json_dump = new json::array ();
-  
+
   queue (&di, gs);
 
   while (di.queue)
     dequeue_and_add (&di);
 
   di.json_dump->dump(stream, true);
-  
+
   splay_tree_delete (di.nodes);
 }
