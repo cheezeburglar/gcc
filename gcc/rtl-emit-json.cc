@@ -297,7 +297,7 @@ rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_p di)
 	}
     }
 
-  json_obj.set("operands", json_array);
+  json_obj->set("operands", json_array);
 
   RTX_CODE_SIZE(code)
 
@@ -323,16 +323,16 @@ rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_p di)
   INSN_P(rtx);
 
   // TODO: What are these accessing? Operand N?
-  XINT(RTX, N)	(RTL_CHECK2 (RTX, N, 'i', 'n').rt_int)
-  XUINT(RTX, N)   (RTL_CHECK2 (RTX, N, 'i', 'n').rt_uint)
-  XSTR(RTX, N)	(RTL_CHECK2 (RTX, N, 's', 'S').rt_str)
-  XEXP(RTX, N)	(RTL_CHECK2 (RTX, N, 'e', 'u').rt_rtx)
-  XVEC(RTX, N)	(RTL_CHECK2 (RTX, N, 'E', 'V').rt_rtvec)
-  XMODE(RTX, N)	(RTL_CHECK1 (RTX, N, 'M').rt_type)
-  XTREE(RTX, N)   (RTL_CHECK1 (RTX, N, 't').rt_tree)
-  XBBDEF(RTX, N)	(RTL_CHECK1 (RTX, N, 'B').rt_bb)
-  XTMPL(RTX, N)	(RTL_CHECK1 (RTX, N, 'T').rt_str)
-  XCFI(RTX, N)	(RTL_CHECK1 (RTX, N, 'C').rt_cfi)
+//  XINT(RTX, N)	(RTL_CHECK2 (RTX, N, 'i', 'n').rt_int)
+//  XUINT(RTX, N)   (RTL_CHECK2 (RTX, N, 'i', 'n').rt_uint)
+//  XSTR(RTX, N)	(RTL_CHECK2 (RTX, N, 's', 'S').rt_str)
+//  XEXP(RTX, N)	(RTL_CHECK2 (RTX, N, 'e', 'u').rt_rtx)
+//  XVEC(RTX, N)	(RTL_CHECK2 (RTX, N, 'E', 'V').rt_rtvec)
+//  XMODE(RTX, N)	(RTL_CHECK1 (RTX, N, 'M').rt_type)
+//  XTREE(RTX, N)   (RTL_CHECK1 (RTX, N, 't').rt_tree)
+//  XBBDEF(RTX, N)	(RTL_CHECK1 (RTX, N, 'B').rt_bb)
+//  XTMPL(RTX, N)	(RTL_CHECK1 (RTX, N, 'T').rt_str)
+//  XCFI(RTX, N)	(RTL_CHECK1 (RTX, N, 'C').rt_cfi)
   
   REG_NOTE_KIND (rtx);
 }
@@ -403,7 +403,7 @@ serialize_rtx_to_json (const_rtx rtx, dump_flags_t flags)
   di.queue_end = 0;
   di.free_list = 0;
   di.flags = flags;
-  di.node = rtx;
+  di.node = &rtx;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
   di.json_dump = new json::array ();
@@ -437,7 +437,7 @@ debug_dump_rtl_json (const_rtx rtx, FILE *stream)
   di.queue_end = 0;
   di.free_list = 0;
   di.flags = TDF_LINENO;
-  di.node = rtx;
+  di.node = &rtx;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
   di.json_dump = new json::array ();
