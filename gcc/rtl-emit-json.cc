@@ -220,9 +220,11 @@ rtx_to_json_brief (const_rtx rtx, dump_flags_t flags, dump_info_rtx_p di)
 static json::object *
 rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_p di)
 {
+  auto json_obj = new json::object ();
+
   rtx_code code = GET_CODE (rtx);
   int limit = GET_RTX_LENGTH (GET_CODE (rtx));
-  
+
   // TODO : DIfferent levels of verbosity for representing this?
   machine_mode mm = GET_MODE(rtx);
 
@@ -390,7 +392,7 @@ dequeue_and_add (dump_info_rtx_p di)
   di->json_dump->append(dummy);
 }
 
-std::unique_ptr<json::array>
+json::array *
 serialize_rtx_to_json (const_rtx rtx, dump_flags_t flags)
 {
   struct dump_info_rtx di;
