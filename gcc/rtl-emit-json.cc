@@ -378,7 +378,7 @@ dequeue_and_add (dump_info_rtx_p di)
   /* Get the next node from the queue.  */
   dq = di->queue;
   stn = dq->node;
-  rtx = (rtx *) stn->key;
+  rtx = (rtx ) stn->key;
 
   /* Remove the node from the queue, and put it on the free list.  */
   di->queue = dq->next;
@@ -403,7 +403,7 @@ serialize_rtx_to_json (const_rtx rtx, dump_flags_t flags)
   di.queue_end = 0;
   di.free_list = 0;
   di.flags = flags;
-  di.node = &rtx;
+  di.node = rtx;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
   di.json_dump = new json::array ();
@@ -437,7 +437,7 @@ debug_dump_rtl_json (const_rtx rtx, FILE *stream)
   di.queue_end = 0;
   di.free_list = 0;
   di.flags = TDF_LINENO;
-  di.node = &rtx;
+  di.node = rtx;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
   di.json_dump = new json::array ();
