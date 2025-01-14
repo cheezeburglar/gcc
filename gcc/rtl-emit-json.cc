@@ -40,7 +40,7 @@ operand_0_to_json (const_rtx rtx, int idx)
   
 }
 
-inline static void
+inline static json::object *
 operand_i_to_json (const_rtx rtx, int idx)
 {
   int value = XINT (rtx, idx);
@@ -49,7 +49,7 @@ operand_i_to_json (const_rtx rtx, int idx)
 // This should maybe only exist IFF we not in generator file?
 // Manually needs to be kept in track with rtl.def
 
-inline static void
+inline static json::object *
 operand_L_to_json (const_rtx rtx, int idx)
 {
 ////  if (idx == 4 && INSN_P (rtx))
@@ -218,7 +218,7 @@ rtx_to_json_brief (const_rtx rtx, dump_flags_t flags, dump_info_rtx_p di)
 }
 
 static json::object *
-rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_p di)
+rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_rtx_p di)
 {
   auto json_obj = new json::object ();
 
@@ -242,85 +242,86 @@ rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_p di)
     {
       switch(format_ptr[idx])
 	{
-        case '*':
-	  break;
-	case '0':
-	  json_array->append(operand_0_to_json (rtx, idx));
-	  break;
-	case 'i':
-	  json_array->append(operand_i_to_json (rtx, idx));
-	  break;
-	case 'n':
-	  json_array->append(operand_n_to_json (rtx, idx));
-	  break;
-	case 'w':
-	  json_array->append(operand_w_to_json (rtx, idx));
-	  break;
-	case 's':
-	  json_array->append(operand_s_to_json (rtx, idx));
-	  break;
-	case 'S':
-	  json_array->append(operand_S_to_json (rtx, idx));
-	  break;
-	case 'T':
-	  json_array->append(operand_T_to_json (rtx, idx));
-	  break;
-	case 'e':
-	  json_array->append(operand_e_to_json (rtx, idx, di));
-	  break;
-	case 'E':
-	  json_array->append(operand_E_to_json (rtx, idx, di));
-	  break;
-	case 'V':
-	  json_array->append(operand_V_to_json (rtx, idx, di));
-	  break;
-	case 'u':
-	  json_array->append(operand_u_to_json (rtx, idx));
-	  break;
-	case 'b':
-	  json_array->append(operand_b_to_json (rtx, idx));
-	  break;
-	case 'B':
-	  json_array->append(operand_B_to_json (rtx, idx));
-	  break;
-	case 't':
-	  json_array->append(operand_t_to_json (rtx, idx));
-	  break;
-	case 'r':
-	  json_array->append(operand_r_to_json (rtx, idx));
-	  break;
-	case 'p':
-	  json_array->append(operand_p_to_json (rtx, idx));
-	  break;
-	default:
-	  gcc_unreachable ();
+//        case '*':
+//	  break;
+//	case '0':
+//	  json_array->append(operand_0_to_json (rtx, idx));
+//	  break;
+//	case 'i':
+//	  json_array->append(operand_i_to_json (rtx, idx));
+//	  break;
+//	case 'n':
+//	  json_array->append(operand_n_to_json (rtx, idx));
+//	  break;
+//	case 'w':
+//	  json_array->append(operand_w_to_json (rtx, idx));
+//	  break;
+//	case 's':
+//	  json_array->append(operand_s_to_json (rtx, idx));
+//	  break;
+//	case 'S':
+//	  json_array->append(operand_S_to_json (rtx, idx));
+//	  break;
+//	case 'T':
+//	  json_array->append(operand_T_to_json (rtx, idx));
+//	  break;
+//	case 'e':
+//	  json_array->append(operand_e_to_json (rtx, idx, di));
+//	  break;
+//	case 'E':
+//	  json_array->append(operand_E_to_json (rtx, idx, di));
+//	  break;
+//	case 'V':
+//	  json_array->append(operand_V_to_json (rtx, idx, di));
+//	  break;
+//	case 'u':
+//	  json_array->append(operand_u_to_json (rtx, idx));
+//	  break;
+//	case 'b':
+//	  json_array->append(operand_b_to_json (rtx, idx));
+//	  break;
+//	case 'B':
+//	  json_array->append(operand_B_to_json (rtx, idx));
+//	  break;
+//	case 't':
+//	  json_array->append(operand_t_to_json (rtx, idx));
+//	  break;
+//	case 'r':
+//	  json_array->append(operand_r_to_json (rtx, idx));
+//	  break;
+//	case 'p':
+//	  json_array->append(operand_p_to_json (rtx, idx));
+//	  break;
+//	default:
+//	  gcc_unreachable ();
 	}
     }
 
   json_obj->set("operands", json_array);
 
-  RTX_CODE_SIZE(code)
+  RTX_CODE_SIZE(code);
+  return json_obj;
 
-  GET_RTX_CLASS(code);
-  GET_RTX_LENGTH (code);
-  GET_RTX_FORMAT (code);
-  GET_RTX_NAME (rtx);
+//  GET_RTX_CLASS(code);
+//  GET_RTX_LENGTH (code);
+//  GET_RTX_FORMAT (code);
+//  GET_RTX_NAME (rtx);
 
-  // TODO: Do we want to traverse the entire linked list?
-  if (RTX_NEXT(rtx))
-
-  // TODO: What/where are the flags?
-  if (RTX_FLAG (rtx, in_struct))
-  if (RTX_FLAG (rtx, volatil))
-  if (RTX_FLAG (rtx, unchanging))
-  if (RTX_FLAG (rtx, frame_related))
-  if (RTX_FLAG (rtx, jump))
-  if (RTX_FLAG (rtx, call))
-  if (RTX_FLAG (rtx, return_val))
-
-  //TODO: Handle These
-  CALL_P(rtx);
-  INSN_P(rtx);
+//  // TODO: Do we want to traverse the entire linked list?
+//  if (RTX_NEXT(rtx))
+//
+//  // TODO: What/where are the flags?
+//  if (RTX_FLAG (rtx, in_struct))
+//  if (RTX_FLAG (rtx, volatil))
+//  if (RTX_FLAG (rtx, unchanging))
+//  if (RTX_FLAG (rtx, frame_related))
+//  if (RTX_FLAG (rtx, jump))
+//  if (RTX_FLAG (rtx, call))
+//  if (RTX_FLAG (rtx, return_val))
+//
+//  //TODO: Handle These
+//  CALL_P(rtx);
+//  INSN_P(rtx);
 
   // TODO: What are these accessing? Operand N?
 //  XINT(RTX, N)	(RTL_CHECK2 (RTX, N, 'i', 'n').rt_int)
@@ -334,7 +335,7 @@ rtx_to_json (const_rtx rtx, dump_flags_t flags, dump_info_p di)
 //  XTMPL(RTX, N)	(RTL_CHECK1 (RTX, N, 'T').rt_str)
 //  XCFI(RTX, N)	(RTL_CHECK1 (RTX, N, 'C').rt_cfi)
   
-  REG_NOTE_KIND (rtx);
+//  REG_NOTE_KIND (rtx);
 }
 
 static void
@@ -373,12 +374,12 @@ dequeue_and_add (dump_info_rtx_p di)
 {
   dump_queue_p dq;
   splay_tree_node stn;
-  rtx * rtx;
+  rtx * rt;
 
   /* Get the next node from the queue.  */
   dq = di->queue;
   stn = dq->node;
-  rtx = (rtx *) stn->key;
+  rt = (rtx *) stn->key;
 
   /* Remove the node from the queue, and put it on the free list.  */
   di->queue = dq->next;
@@ -388,7 +389,7 @@ dequeue_and_add (dump_info_rtx_p di)
   di->free_list = dq;
 
   /* Convert the node to JSON and store it to be dumped later. */
-  auto dummy = rtx_to_json(*rtx, di.flags, di);
+  auto dummy = rtx_to_json(*rt, di->flags, di);
   di->json_dump->append(dummy);
 }
 
@@ -399,13 +400,11 @@ serialize_rtx_to_json (const_rtx rtx, dump_flags_t flags)
   dump_queue_p dq;
   dump_queue_p next_dq;
 
-  const_rtx * rtx_p = &rtx;
-
   di.queue = 0;
   di.queue_end = 0;
   di.free_list = 0;
   di.flags = flags;
-  di.node = rtx_p;
+  di.node = rtx;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
   di.json_dump = new json::array ();
