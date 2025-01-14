@@ -399,11 +399,13 @@ serialize_rtx_to_json (const_rtx rtx, dump_flags_t flags)
   dump_queue_p dq;
   dump_queue_p next_dq;
 
+  const_rtx * rtx_p = &rtx;
+
   di.queue = 0;
   di.queue_end = 0;
   di.free_list = 0;
   di.flags = flags;
-  di.node = rtx;
+  di.node = rtx_p;
   di.nodes = splay_tree_new (splay_tree_compare_pointers, 0,
 			     splay_tree_delete_pointers);
   di.json_dump = new json::array ();
