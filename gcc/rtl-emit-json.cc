@@ -355,9 +355,9 @@ queue (dump_info_rtx_p di, const_rtx rtx)
   /* Create a new entry in the splay-tree and insert into queue iff new.
    * Else, end.*/
   dni = XNEW (struct dump_node_info);
-  if (!splay_tree_lookup (di->nodes, (splay_tree_key) t))
+  if (!splay_tree_lookup (di->nodes, (splay_tree_key) rtx))
   {
-    dq->node = splay_tree_insert (di->nodes, (splay_tree_key) t,
+    dq->node = splay_tree_insert (di->nodes, (splay_tree_key) rtx,
           			(splay_tree_value) dni);
     dq->next = 0;
     if (!di->queue_end)
@@ -378,7 +378,7 @@ dequeue_and_add (dump_info_rtx_p di)
   /* Get the next node from the queue.  */
   dq = di->queue;
   stn = dq->node;
-  rtx = (rtx ) stn->key;
+  rtx = (rtx *) stn->key;
 
   /* Remove the node from the queue, and put it on the free list.  */
   di->queue = dq->next;
