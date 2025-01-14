@@ -95,7 +95,7 @@ typedef struct dump_info_rtx
   /* The stream on which to dump the information.  */
   FILE *stream;
   /* The original node.  */
-  rtx *node;
+  const_rtx node;
   /* User flags.  */
   dump_flags_t flags;
   /* The next unused node index.  */
