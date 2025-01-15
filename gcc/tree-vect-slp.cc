@@ -1,5 +1,5 @@
 /* SLP - Basic Block Vectorization
-   Copyright (C) 2007-2024 Free Software Foundation, Inc.
+   Copyright (C) 2007-2025 Free Software Foundation, Inc.
    Contributed by Dorit Naishlos <dorit@il.ibm.com>
    and Ira Rosen <irar@il.ibm.com>
 
@@ -2678,6 +2678,8 @@ out:
 	  nops = 1;
 	  has_two_operators_perm = true;
 	}
+      else
+	vect_free_oprnd_info (new_oprnds_info);
     }
 
   auto_vec<slp_tree, 4> children;
@@ -4951,8 +4953,8 @@ vect_analyze_slp (vec_info *vinfo, unsigned max_tree_size,
 					   max_tree_size, &limit,
 					   bst_map, NULL, force_single_lane);
 		}
-	      saved_stmts.release ();
 	    }
+	  saved_stmts.release ();
 	}
 
       /* Make sure to vectorize only-live stmts, usually inductions.  */
@@ -5013,10 +5015,11 @@ vect_analyze_slp (vec_info *vinfo, unsigned max_tree_size,
 	  stmts.create (1);
 	  stmts.quick_push (vect_stmt_to_vectorize (varg));
 
-	  vect_build_slp_instance (vinfo, slp_inst_kind_gcond,
-				   stmts, roots, remain,
-				   max_tree_size, &limit,
-				   bst_map, NULL, force_single_lane);
+	  if (! vect_build_slp_instance (vinfo, slp_inst_kind_gcond,
+					 stmts, roots, remain,
+					 max_tree_size, &limit,
+					 bst_map, NULL, force_single_lane))
+	    roots.release ();
 	}
 
 	/* Find and create slp instances for inductions that have been forced
@@ -8673,6 +8676,7 @@ vect_bb_slp_scalar_cost (vec_info *vinfo,
 			 slp_tree node, vec<bool, va_heap> *life,
 			 stmt_vector_for_cost *cost_vec,
 			 hash_set<stmt_vec_info> &vectorized_scalar_stmts,
+			 hash_set<stmt_vec_info> &scalar_stmts_in_externs,
 			 hash_set<slp_tree> &visited)
 {
   unsigned i;
@@ -8687,7 +8691,12 @@ vect_bb_slp_scalar_cost (vec_info *vinfo,
       ssa_op_iter op_iter;
       def_operand_p def_p;
 
-      if (!stmt_info || (*life)[i])
+      if (!stmt_info
+	  || (*life)[i]
+	  /* Defs also used in external nodes are not in the
+	     vectorized_scalar_stmts set as they need to be preserved.
+	     Honor that.  */
+	  || scalar_stmts_in_externs.contains (stmt_info))
 	continue;
 
       stmt_vec_info orig_stmt_info = vect_orig_stmt (stmt_info);
@@ -8806,7 +8815,8 @@ next_lane:
 	      subtree_life.safe_splice (*life);
 	    }
 	  vect_bb_slp_scalar_cost (vinfo, child, &subtree_life, cost_vec,
-				   vectorized_scalar_stmts, visited);
+				   vectorized_scalar_stmts,
+				   scalar_stmts_in_externs, visited);
 	  subtree_life.truncate (0);
 	}
     }
@@ -8888,7 +8898,7 @@ vect_bb_vectorization_profitable_p (bb_vec_info bb_vinfo,
       vect_bb_slp_scalar_cost (bb_vinfo,
 			       SLP_INSTANCE_TREE (instance),
 			       &life, &scalar_costs, vectorized_scalar_stmts,
-			       visited);
+			       scalar_stmts_in_externs, visited);
       vector_costs.safe_splice (instance->cost_vec);
       instance->cost_vec.release ();
     }
