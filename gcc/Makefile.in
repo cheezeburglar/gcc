@@ -1058,6 +1058,7 @@ SYMTAB_H = $(srcdir)/../libcpp/include/symtab.h $(OBSTACK_H)
 CPP_INTERNAL_H = $(srcdir)/../libcpp/internal.h
 TREE_DUMP_H = tree-dump.h $(SPLAY_TREE_H) $(DUMPFILE_H)
 TREE_EMIT_JSON_H = tree-emit-json.h $(SPLAY_TREE_H) $(DUMPFILE_H) json.h
+GIMPLE_EMIT_JSON_H = gimple-emit-json.h $(TREE_EMIT_JSON_H)
 TREE_PASS_H = tree-pass.h $(TIMEVAR_H) $(DUMPFILE_H)
 TREE_SSA_H = tree-ssa.h tree-ssa-operands.h \
 		$(BITMAP_H) sbitmap.h $(BASIC_BLOCK_H) $(GIMPLE_H) \

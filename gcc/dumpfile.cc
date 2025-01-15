@@ -41,6 +41,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-pass.h" /* for "current_pass".  */
 #include "optinfo-emit-json.h"
 #include "tree-emit-json.h"
+#include "gimple-emit-json.h"
 #include "stringpool.h" /* for get_identifier.  */
 #include "spellcheck.h"
 #include "make-unique.h"

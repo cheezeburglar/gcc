@@ -12,7 +12,6 @@
 #include "gimple.h"
 #include "gimple-pretty-print.h"
 #include "gimple-iterator.h"
-#include "tree-emit-json.h"
 #include "langhooks.h"
 #include "tree-iterator.h"
 #include "json.h"
@@ -65,43 +64,100 @@ static void
 add_gimple_with_cleanup_expr_to_json (const gimple *gs, dump_flags_t flags,
 			       json::object &json_obj)
 {
-
+  json_obj.set("wce", gimple_seq_to_json (gimple_wce_cleanup(gs)));
 }
 
 static void
 add_gimple_omp_ordered_to_json (const gimple *gs, dump_flags_t flags,
 			       json::object &json_obj)
 {
-
+  if (gimple_omp_ordered_standalone_p (gs))
+    json_obj.set_bool("standalone", true)
+  json_obj.set("clauses", generic_to_json (gimple_omp_ordered_clauses(gs)));
 }
 
 static void
 add_gimple_omp_for_to_json (const gimple *gs, dump_flags_t flags,
 			       json::object &json_obj)
 {
+  switch (gimple_omp_for_kind (gs))
+    {
+    case GF_OMP_FOR_KIND_FOR:
+      json_obj.set_bool("kind_for", true)
+      break;
+    case GF_OMP_FOR_KIND_DISTRIBUTE:
+      json_obj.set_bool("kind_distribute", true)
+      break;
+    case GF_OMP_FOR_KIND_TASKLOOP:
+      json_obj.set_bool("kind_taskloop", true)
+      break;
+    case GF_OMP_FOR_KIND_OACC_LOOP:
+      json_obj.set_bool("kind_loop", true)
+      break;
+    case GF_OMP_FOR_KIND_SIMD:
+      json_obj.set_bool("kind_simd", true)
+      break;
+    default:
+      gcc_unreachable ();
+    }
 
+  json_obj.set("body", generic_to_json (gimple_omp_for_clauses(gs)));
+  json_obj.set("clauses", generic_to_json (gimple_omp_for_boy(gs)));
+
+  for (size_t i = 0; i < gimple_omp_for_collapse (gs); i++)
+    {
+       // TODO: see if this works for all unknown length thingies. THORP
+      auto json_iter = new json::object ();
+      char * buffer;
+      buffer = (char *) malloc ((i+5)*sizeof(char));
+      sprintf(buffer, "iter%d", i);
+
+      json_iter.set_string("cond", get_tree_code_name (gimple_omp_for_cond(gs, i)));
+      json_iter.set("index", generic_to_json (gimple_omp_for_index(gs, i)));
+      json_iter.set("initial", generic_to_json (gimple_omp_for_initial(gs, i)));
+      json_iter.set("final", generic_to_json (gimple_omp_for_final (gs, i)));
+      json_iter.set("incr", generic_to_json (gimple_omp_for_incr (gs, i)));
+
+      json_obj.set(buffer, json_iter);
+    }
+  json_obj.set("pre_body", gimple_seq_to_json (gimple_omp_for_pre_body(gs)));
 }
 
 static void
 add_gimple_omp_atomic_store_to_json (const gimple *gs, dump_flags_t flags,
 			       json::object &json_obj)
 {
-
+  if (gimple_omp_atomic_weak_p (gs))
+    json_obj.set("weak", true);
+  if (gimple_omp_atomic_needed_p (gs))
+    json_obj.set("needed", true);
+  json_obj.set("val", generic_to_json (gimple_omp_atomic_store_val (gs)));
+  json_obj.set("memory_order", omp_atomic_memory_order_emit_json (gimple_omp_atomic_memory_order(gs)));
 }
 
 static void
 add_gimple_omp_atomic_load_to_json (const gimple *gs, dump_flags_t flags,
 			       json::object &json_obj)
 {
-
+  if (gimple_omp_atomic_weak_p (gs))
+    json_obj.set("weak", true);
+  if (gimple_omp_atomic_needed_p (gs))
+    json_obj.set("needed", true);
+  json_obj.set("val", generic_to_json (gimple_omp_atomic_store_val (gs)));
+  json_obj.set("lhs", generic_to_json (gimple_omp_atomic_load_lhs (gs)));
+  json_obj.set("rhs", generic_to_json (gimple_omp_atomic_load_rhs (gs)));
 }
+
+// TODO: make sure this consistent later THORP
 
 static void
 add_gimple_nop_to_json (const gimple *gs, dump_flags_t flags,
-			       json::object &json_obj)
+			json::object &json_obj)
 {
 
 }
+
+// TODO: make sure this consistent later THORP
 
 static void
 add_gimple_error_mark_to_json (const gimple *gs, dump_flags_t flags,
@@ -111,12 +167,12 @@ add_gimple_error_mark_to_json (const gimple *gs, dump_flags_t flags,
 }
 
 
-
 static void
 add_gimple_predict_to_json (const gimple *gs, dump_flags_t flags,
 			    json::object &json_obj)
 {
-
+  json_obj.set_bool("outcome", gimple_predict_outcome(gs));
+  json_obj.set_string("predictor_name", predictor_name (gimple_predict_predictor(gs)));
 }
 
 static void
@@ -132,7 +188,8 @@ static void
 add_gimple_omp_scan_to_json (const gomp_scan *gs, dump_flags_t flags,
 			     json::object &json_obj)
 {
-  
+  json_obj.set("body", gimple_seq_to_json (gimple_omp_body (gs), flags));
+  json_obj.set("clauses", generic_to_json (gimple_omp_scan_clauses (gs), flags));
 }
 
 static void
