@@ -3092,7 +3092,7 @@ node_emit_json(tree t, dump_info_p di)
       json_obj->set_integer ("block #", BLOCK_NUMBER (t));
       if (BLOCK_SUPERCONTEXT (t))
         json_obj->set("block_supercontext",
-                   node_emit_json(BLOCK_SUPERCONTEXT (t), di));
+                   node_to_json_brief(BLOCK_SUPERCONTEXT (t)));
       if (BLOCK_SUBBLOCKS(t))
         {
           subblock = new json::array ();

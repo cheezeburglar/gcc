@@ -66,6 +66,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "profile.h"
 #include "sreal.h"
 #include "gcc-urlifier.h"
+#include "gimple-emit-json.h"
 
 /* This file contains functions for building the Control Flow Graph (CFG)
    for a function tree.  */
@@ -8493,6 +8494,10 @@ dump_function_to_file (tree fndecl, FILE *file, dump_flags_t flags)
 	 built yet.  Emit the single sequence of GIMPLE statements
 	 that make up its body.  */
       gimple_seq body = gimple_body (fndecl);
+
+      auto json_array = gimple_seq_to_json (body, flags);
+      json_array->dump(stderr, true);
+      delete json_array;
 
       if (gimple_seq_first_stmt (body)
 	  && gimple_seq_first_stmt (body) == gimple_seq_last_stmt (body)

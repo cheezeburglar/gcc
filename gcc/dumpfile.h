@@ -662,6 +662,9 @@ extern void dump_node (const_tree, dump_flags_t, FILE *);
 /* In tree-emit-json.cc */
 extern void dump_node_json(const_tree, dump_flags_t, FILE *);
 
+/* In gimple-emit-json.cc */
+extern void serialize_gimple_to_json (gimple *, dump_flags_t, FILE *);
+
 /* In cfghooks.cc  */
 extern void dump_bb (FILE *, basic_block, int, dump_flags_t);
 

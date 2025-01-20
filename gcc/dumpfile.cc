@@ -586,19 +586,6 @@ dump_context::finish_any_json_writer ()
   m_json_writer = NULL;
 }
 
-//FIXME:
-
-//void
-//dump_context::finish_tree_json_writer ()
-//{
-//  if (!m_tree_writer)
-//    return;
-//  m_tree_writer->write(m_json_stream);
-//  printf("dump context finish HIT");
-//  delete m_tree_writer;
-//  m_tree_writer = NULL;
-//}
-
 void
 dump_context::hook_test ()
 {
@@ -1598,10 +1585,6 @@ gcc::dump_manager::
 dump_finish (int phase)
 {
   struct dump_file_info *dfi;
-
-  // TODO : JSON hook is here provisionally.
-
-//  dump_context:: get ().hook_test ();
 
   if (phase < 0)
     return;

@@ -27,6 +27,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "selftest.h"
 #include "optinfo.h"
 #include "tree-emit-json.h"
+#include "gimple-emit-json.h"
 
 class optrecord_json_writer;
 //class tree_json_writer;

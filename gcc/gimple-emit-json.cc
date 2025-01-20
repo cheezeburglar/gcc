@@ -9,9 +9,6 @@
 #include "backend.h"
 #include "dumpfile.h"
 #include "tree.h"
-#include "gimple.h"
-#include "gimple-pretty-print.h"
-#include "gimple-iterator.h"
 #include "langhooks.h"
 #include "tree-iterator.h"
 #include "json.h"
@@ -29,31 +26,38 @@
 #include "context.h" // To access dump streams for tree_json_writer
 #include <zlib.h>
 
+#include "gimple.h"
+#include "gimple-predict.h"
+#include "gimple-pretty-print.h"
+#include "gimple-iterator.h"
 #include "tree-emit-json.h"
 #define INCLUDE_MEMORY
 #include "json.h"
 #include "stringpool.h"
 #include "attribs.h"
 #include "asan.h"
-
 // TODO : 
 
 static void queue (dump_info_gimple_p di, const gimple * gs);
-static json::object * gimple_to_json (gimple *gs, dump_flags_t flags);
+json::object * gimple_to_json (gimple *gs, dump_flags_t flags);
 
 
-static json::array *
+json::array *
 gimple_seq_to_json (gimple_seq seq, dump_flags_t flags)
 {
   gimple_stmt_iterator iter;
 
   auto json_seq = new json::array ();
 
-  for (iter = gsi_start (seq); ~gsi_end_p (iter); gsi_next (&iter))
+  if (!seq)
+    return json_seq;
+
+  for (iter = gsi_start (seq); !gsi_end_p (iter); gsi_next (&iter))
     {
       gimple *gs = gsi_stmt (iter);
-      auto json_obj = gimple_to_json (gs, flags); //This probably has to be serialization
-      json_seq->append(json_obj);
+      json_seq->append(gimple_to_json(gs, flags));
+//      auto json_obj = gimple_to_json (gs, flags); //This probably has to be serialization
+//      json_seq->append(json_obj);
     }
   return json_seq;
 }
@@ -61,19 +65,19 @@ gimple_seq_to_json (gimple_seq seq, dump_flags_t flags)
 // TODO : this ones kinda weird.
 
 static void
-add_gimple_with_cleanup_expr_to_json (const gimple *gs, dump_flags_t flags,
+add_gimple_with_cleanup_expr_to_json (gimple *gs, dump_flags_t flags,
 			       json::object &json_obj)
 {
-  json_obj.set("wce", gimple_seq_to_json (gimple_wce_cleanup(gs)));
+  json_obj.set("wce", gimple_seq_to_json (gimple_wce_cleanup(gs), flags));
 }
 
 static void
-add_gimple_omp_ordered_to_json (const gimple *gs, dump_flags_t flags,
+add_gimple_omp_ordered_to_json (const gomp_ordered *gs, dump_flags_t flags,
 			       json::object &json_obj)
 {
   if (gimple_omp_ordered_standalone_p (gs))
-    json_obj.set_bool("standalone", true)
-  json_obj.set("clauses", generic_to_json (gimple_omp_ordered_clauses(gs)));
+    json_obj.set_bool("standalone", true);
+  json_obj.set("clauses", generic_to_json (gimple_omp_ordered_clauses(gs), flags));
 }
 
 static void
@@ -83,69 +87,66 @@ add_gimple_omp_for_to_json (const gimple *gs, dump_flags_t flags,
   switch (gimple_omp_for_kind (gs))
     {
     case GF_OMP_FOR_KIND_FOR:
-      json_obj.set_bool("kind_for", true)
+      json_obj.set_bool("kind_for", true);
       break;
     case GF_OMP_FOR_KIND_DISTRIBUTE:
-      json_obj.set_bool("kind_distribute", true)
+      json_obj.set_bool("kind_distribute", true);
       break;
     case GF_OMP_FOR_KIND_TASKLOOP:
-      json_obj.set_bool("kind_taskloop", true)
+      json_obj.set_bool("kind_taskloop", true);
       break;
     case GF_OMP_FOR_KIND_OACC_LOOP:
-      json_obj.set_bool("kind_loop", true)
+      json_obj.set_bool("kind_loop", true);
       break;
     case GF_OMP_FOR_KIND_SIMD:
-      json_obj.set_bool("kind_simd", true)
+      json_obj.set_bool("kind_simd", true);
       break;
     default:
       gcc_unreachable ();
     }
 
-  json_obj.set("body", generic_to_json (gimple_omp_for_clauses(gs)));
-  json_obj.set("clauses", generic_to_json (gimple_omp_for_boy(gs)));
+  json_obj.set("clauses", generic_to_json (gimple_omp_for_clauses(gs), flags));
 
   for (size_t i = 0; i < gimple_omp_for_collapse (gs); i++)
     {
        // TODO: see if this works for all unknown length thingies. THORP
       auto json_iter = new json::object ();
-      char * buffer;
-      buffer = (char *) malloc ((i+5)*sizeof(char));
+      char buffer [i+5];
       sprintf(buffer, "iter%d", i);
 
-      json_iter.set_string("cond", get_tree_code_name (gimple_omp_for_cond(gs, i)));
-      json_iter.set("index", generic_to_json (gimple_omp_for_index(gs, i)));
-      json_iter.set("initial", generic_to_json (gimple_omp_for_initial(gs, i)));
-      json_iter.set("final", generic_to_json (gimple_omp_for_final (gs, i)));
-      json_iter.set("incr", generic_to_json (gimple_omp_for_incr (gs, i)));
+      json_iter->set_string("cond", get_tree_code_name (gimple_omp_for_cond(gs, i)));
+      json_iter->set("index", generic_to_json (gimple_omp_for_index(gs, i), flags));
+      json_iter->set("initial", generic_to_json (gimple_omp_for_initial(gs, i), flags));
+      json_iter->set("final", generic_to_json (gimple_omp_for_final (gs, i), flags));
+      json_iter->set("incr", generic_to_json (gimple_omp_for_incr (gs, i), flags));
 
       json_obj.set(buffer, json_iter);
     }
-  json_obj.set("pre_body", gimple_seq_to_json (gimple_omp_for_pre_body(gs)));
+  json_obj.set("pre_body", gimple_seq_to_json (gimple_omp_for_pre_body(gs), flags));
 }
 
 static void
-add_gimple_omp_atomic_store_to_json (const gimple *gs, dump_flags_t flags,
+add_gimple_omp_atomic_store_to_json (const gomp_atomic_store *gs, dump_flags_t flags,
 			       json::object &json_obj)
 {
   if (gimple_omp_atomic_weak_p (gs))
-    json_obj.set("weak", true);
-  if (gimple_omp_atomic_needed_p (gs))
-    json_obj.set("needed", true);
-  json_obj.set("val", generic_to_json (gimple_omp_atomic_store_val (gs)));
+    json_obj.set_bool("weak", true);
+  if (gimple_omp_atomic_need_value_p (gs))
+    json_obj.set_bool("needed", true);
+  json_obj.set("val", generic_to_json (gimple_omp_atomic_store_val (gs), flags));
   json_obj.set("memory_order", omp_atomic_memory_order_emit_json (gimple_omp_atomic_memory_order(gs)));
 }
 
 static void
-add_gimple_omp_atomic_load_to_json (const gimple *gs, dump_flags_t flags,
+add_gimple_omp_atomic_load_to_json (const gomp_atomic_load *gs, dump_flags_t flags,
 			       json::object &json_obj)
 {
   if (gimple_omp_atomic_weak_p (gs))
-    json_obj.set("weak", true);
-  if (gimple_omp_atomic_needed_p (gs))
-    json_obj.set("needed", true);
-  json_obj.set("val", generic_to_json (gimple_omp_atomic_store_val (gs)));
-  json_obj.set("lhs", generic_to_json (gimple_omp_atomic_load_lhs (gs)));
-  json_obj.set("rhs", generic_to_json (gimple_omp_atomic_load_rhs (gs)));
+    json_obj.set_bool("weak", true);
+  if (gimple_omp_atomic_need_value_p (gs))
+    json_obj.set_bool("needed", true);
+  json_obj.set("lhs", generic_to_json (gimple_omp_atomic_load_lhs (gs), flags));
+  json_obj.set("rhs", generic_to_json (gimple_omp_atomic_load_rhs (gs), flags));
 }
 
 // TODO: make sure this consistent later THORP
@@ -376,14 +377,19 @@ add_gimple_omp_for (const gomp_for * gs, dump_flags_t flags,
     {
     case GF_OMP_FOR_KIND_FOR:
       json_obj.set_bool("kind_for", true);
+      break;
     case GF_OMP_FOR_KIND_DISTRIBUTE:
       json_obj.set_bool("kind_distribute", true);
+      break;
     case GF_OMP_FOR_KIND_TASKLOOP:
       json_obj.set_bool("kind_taskloop", true);
+      break;
     case GF_OMP_FOR_KIND_OACC_LOOP:
       json_obj.set_bool("kind_oacc_loop", true);
+      break;
     case GF_OMP_FOR_KIND_SIMD:
       json_obj.set_bool("kind_simd", true);
+      break;
     default:
       gcc_unreachable();
     }
@@ -622,7 +628,7 @@ add_gimple_switch_to_json (const gswitch * gs, dump_flags_t flags, json::object 
   json_obj.set("index", generic_to_json (gimple_switch_index(gs), flags));
   for (unsigned i = 0; i < gimple_switch_num_labels (gs); i++)
     {
-      char * buffer;
+      char buffer [5+i];
       sprintf (buffer, "label%u", i);
       json_obj.set(buffer, generic_to_json (gimple_switch_label(gs, i), flags));
     } // TODO : bb handling?
@@ -754,7 +760,7 @@ add_gimple_call_to_json (const gcall * gs, dump_flags_t flags, json::object &jso
     }
   for (; i < gimple_call_num_args (gs); i++)
     {
-      char * buffer;
+      char buffer [3+i];
       sprintf (buffer, "arg%d", i);
       json_obj.set(buffer, generic_to_json (gimple_call_arg (gs, i), flags));
     }
@@ -813,10 +819,13 @@ add_gimple_assign_to_json (const gassign * gs, dump_flags_t flags, json::object 
     {
       case 4:
 	json_obj.set("rhs3", generic_to_json (gimple_assign_rhs3 (gs), flags));
+	break;
       case 3:
 	json_obj.set("rhs2", generic_to_json (gimple_assign_rhs2 (gs), flags));
+	break;
       case 2:
 	json_obj.set("rhs1", generic_to_json (gimple_assign_rhs1 (gs), flags));
+	break;
       default:
 	gcc_unreachable ();
     }
@@ -830,7 +839,7 @@ gimple_to_json_brief (gimple * gs)
   // TODO : Instantiate visitor, queue up nodes to be dumped.
 
   const char *code;
-  char *address;
+  char address [20];
   // TODO : DO ALL THINGS FOR GIMPLE BASE CLASS
   auto json_obj = new json::object ();
 
@@ -847,7 +856,7 @@ gimple_to_json_brief (gimple * gs)
 
 /* Queue gimple and serialize to json briefly. */
 
-static 
+static
 json::object *
 gimple_to_json_brief (gimple * gs, dump_info_gimple_p di)
 {
@@ -857,7 +866,7 @@ gimple_to_json_brief (gimple * gs, dump_info_gimple_p di)
 
 
 /* Turn gimple nodes into JSON object */
-static json::object *
+json::object *
 gimple_to_json (gimple * gs, dump_flags_t flags)
 {
   // TODO : Instantiate visitor, queue up nodes to be dumped.
@@ -868,7 +877,7 @@ gimple_to_json (gimple * gs, dump_flags_t flags)
   if (!gs)
     return json_obj;
 
-  char * address;
+  char address [20];
   sprintf(address, HOST_PTR_PRINTF, (void *) gs);
   json_obj->set_string("address", address);
   json_obj->set_string("gimple_code", gimple_code_name[gimple_code (gs)]);
@@ -1020,7 +1029,6 @@ gimple_to_json (gimple * gs, dump_flags_t flags)
       add_gimple_try_to_json (as_a <const gtry *> (gs), flags, *json_obj);
       break;
     case GIMPLE_WITH_CLEANUP_EXPR:
-      add_gimple_with_cleanup_expr_to_json (as_a <const gimple_statement_wce *> (gs), flags, *json_obj);
       break;
     default:
       gcc_unreachable ();
