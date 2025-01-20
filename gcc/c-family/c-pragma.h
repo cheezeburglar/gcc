@@ -1,5 +1,5 @@
 /* Pragma related interfaces.
-   Copyright (C) 1995-2024 Free Software Foundation, Inc.
+   Copyright (C) 1995-2025 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -66,6 +66,7 @@ enum pragma_kind {
   PRAGMA_OMP_NOTHING,
   PRAGMA_OMP_MASKED,
   PRAGMA_OMP_MASTER,
+  PRAGMA_OMP_METADIRECTIVE,
   PRAGMA_OMP_ORDERED,
   PRAGMA_OMP_PARALLEL,
   PRAGMA_OMP_REQUIRES,

@@ -1,5 +1,5 @@
 /* Definitions for -*- C++ -*- parsing and type checking.
-   Copyright (C) 1987-2024 Free Software Foundation, Inc.
+   Copyright (C) 1987-2025 Free Software Foundation, Inc.
    Contributed by Michael Tiemann (tiemann@cygnus.com)
 
 This file is part of GCC.
@@ -1950,6 +1950,7 @@ struct GTY(()) saved_scope {
   int suppress_location_wrappers;
   BOOL_BITFIELD x_processing_explicit_instantiation : 1;
   BOOL_BITFIELD need_pop_function_context : 1;
+  BOOL_BITFIELD x_processing_omp_trait_property_expr : 1;
 
   /* Nonzero if we are parsing the discarded statement of a constexpr
      if-statement.  */
@@ -2021,6 +2022,7 @@ extern GTY(()) struct saved_scope *scope_chain;
 #define processing_template_decl scope_chain->x_processing_template_decl
 #define processing_specialization scope_chain->x_processing_specialization
 #define processing_explicit_instantiation scope_chain->x_processing_explicit_instantiation
+#define processing_omp_trait_property_expr scope_chain->x_processing_omp_trait_property_expr
 
 /* Nonzero if we are parsing the conditional expression of a contract
    condition. These expressions appear outside the paramter list (like a
@@ -6316,9 +6318,14 @@ enum auto_deduction_context
 
    STF_STRIP_DEPENDENT: allow the stripping of aliases with dependent
        template parameters, relying on code elsewhere to report any
-       appropriate diagnostics.  */
+       appropriate diagnostics.
+
+   STF_KEEP_INJ_CLASS_NAME: don't strip injected-class-name typedefs
+       because we're dealing with a non-coerced template argument.
+*/
 const unsigned int STF_USER_VISIBLE = 1U;
 const unsigned int STF_STRIP_DEPENDENT = 1U << 1;
+const unsigned int STF_KEEP_INJ_CLASS_NAME = 1U << 2;
 
 /* Returns the TEMPLATE_DECL associated to a TEMPLATE_TEMPLATE_PARM
    node.  */
@@ -6815,6 +6822,7 @@ extern tree type_decays_to			(tree);
 extern tree extract_call_expr			(tree);
 extern tree build_trivial_dtor_call		(tree, bool = false);
 extern tristate ref_conv_binds_to_temporary	(tree, tree, bool = false);
+extern unsigned HOST_WIDE_INT count_ctor_elements (tree);
 extern tree build_user_type_conversion		(tree, tree, int,
 						 tsubst_flags_t);
 extern tree build_new_function_call		(tree, vec<tree, va_gc> **,
@@ -7456,6 +7464,7 @@ extern tree get_copy_assign			(tree);
 extern tree get_default_ctor			(tree);
 extern tree get_dtor				(tree, tsubst_flags_t);
 extern tree build_stub_object			(tree);
+extern bool is_stub_object			(tree);
 extern tree build_invoke			(tree, const_tree,
 						 tsubst_flags_t);
 extern tree strip_inheriting_ctors		(tree);
@@ -7946,6 +7955,7 @@ enum {
 extern tree begin_compound_stmt			(unsigned int);
 
 extern void finish_compound_stmt		(tree);
+extern tree finish_asm_string_expression	(location_t, tree);
 extern tree finish_asm_stmt			(location_t, int, tree, tree,
 						 tree, tree, tree, bool, bool);
 extern tree finish_label_stmt			(tree);
@@ -7970,7 +7980,7 @@ extern tree lookup_and_finish_template_variable (tree, tree, tsubst_flags_t = tf
 extern tree finish_template_variable		(tree, tsubst_flags_t = tf_warning_or_error);
 extern cp_expr finish_increment_expr		(cp_expr, enum tree_code);
 extern tree finish_this_expr			(void);
-extern tree finish_pseudo_destructor_expr       (tree, tree, tree, location_t);
+extern tree finish_pseudo_destructor_expr       (tree, tree, tree, location_t, tsubst_flags_t);
 extern cp_expr finish_unary_op_expr		(location_t, enum tree_code, cp_expr,
 						 tsubst_flags_t);
 /* Whether this call to finish_compound_literal represents a C++11 functional
@@ -8177,7 +8187,7 @@ extern tree build_aggr_init_expr		(tree, tree);
 extern tree get_target_expr			(tree,
 						 tsubst_flags_t = tf_warning_or_error);
 extern tree build_cplus_array_type		(tree, tree, int is_dep = -1);
-extern tree build_array_of_n_type		(tree, int);
+extern tree build_array_of_n_type		(tree, unsigned HOST_WIDE_INT);
 extern bool array_of_runtime_bound_p		(tree);
 extern bool vla_type_p				(tree);
 extern tree build_array_copy			(tree);
@@ -8437,7 +8447,7 @@ extern tree build_x_shufflevector               (location_t,
 extern tree build_simple_component_ref		(tree, tree);
 extern tree build_ptrmemfunc_access_expr	(tree, tree);
 extern tree build_address			(tree);
-extern tree build_nop				(tree, tree);
+extern tree build_nop				(tree, tree CXX_MEM_STAT_INFO);
 extern tree non_reference			(tree);
 extern tree lookup_anon_field			(tree, tree);
 extern bool invalid_nonstatic_memfn_p		(location_t, tree,

@@ -1,7 +1,7 @@
 /* Generate pattern matching and transform code shared between
    GENERIC and GIMPLE folding code from match-and-simplify description.
 
-   Copyright (C) 2014-2024 Free Software Foundation, Inc.
+   Copyright (C) 2014-2025 Free Software Foundation, Inc.
    Contributed by Richard Biener <rguenther@suse.de>
    and Prathamesh Kulkarni  <bilbotheelffriend@gmail.com>
 
@@ -890,8 +890,8 @@ define_dump_logs (bool gimple, FILE *f)
 
   for (unsigned i = 0; i < dbg_line_numbers.length () - 1; i++)
     {
-      if (i % 20 == 0)
-	fprintf (f, "\n\t");
+      if (i % 10 == 0)
+	fprintf (f, "\n\t/* %d */ ", i);
 
       fprintf (f, "%d, ", dbg_line_numbers[i]);
     }

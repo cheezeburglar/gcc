@@ -2,7 +2,7 @@
    constexpr functions.  These routines are used both during actual parsing
    and during the instantiation of template functions.
 
-   Copyright (C) 1998-2024 Free Software Foundation, Inc.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
 
    This file is part of GCC.
 
@@ -122,7 +122,7 @@ ensure_literal_type_for_constexpr_object (tree decl)
 		  error_at (DECL_SOURCE_LOCATION (decl),
 			    "variable %qD of non-literal type %qT in "
 			    "%<constexpr%> function only available with "
-			    "%<-std=c++2b%> or %<-std=gnu++2b%>", decl, type);
+			    "%<-std=c++23%> or %<-std=gnu++23%>", decl, type);
 		  explain_non_literal_class (type);
 		  decl = error_mark_node;
 		}
@@ -3392,7 +3392,12 @@ cxx_eval_call_expression (const constexpr_ctx *ctx, tree t,
 		&& CLASS_TYPE_P (TREE_TYPE (res))
 		&& !is_empty_class (TREE_TYPE (res)))
 	      if (replace_decl (&result, res, ctx->object))
-		cacheable = false;
+		{
+		  cacheable = false;
+		  result = cxx_eval_constant_expression (ctx, result, lval,
+							 non_constant_p,
+							 overflow_p);
+		}
 
 	  /* Only cache a permitted result of a constant expression.  */
 	  if (cacheable && !reduced_constant_expression_p (result))
@@ -4150,12 +4155,17 @@ find_array_ctor_elt (tree ary, tree dindex, bool insert)
       else if (TREE_CODE (cindex) == INTEGER_CST
 	       && compare_tree_int (cindex, end - 1) == 0)
 	{
-	  if (i < end)
-	    return i;
 	  tree value = (*elts)[end - 1].value;
-	  if (TREE_CODE (value) == RAW_DATA_CST
-	      && wi::to_offset (dindex) < (wi::to_offset (cindex)
-					   + RAW_DATA_LENGTH (value)))
+	  if (i < end)
+	    {
+	      if (i == end - 1 && TREE_CODE (value) == RAW_DATA_CST)
+		begin = end - 1;
+	      else
+		return i;
+	    }
+	  else if (TREE_CODE (value) == RAW_DATA_CST
+		   && wi::to_offset (dindex) < (wi::to_offset (cindex)
+						+ RAW_DATA_LENGTH (value)))
 	    begin = end - 1;
 	  else
 	    begin = end;
@@ -8005,6 +8015,7 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
     case BIT_NOT_EXPR:
     case TRUTH_NOT_EXPR:
     case FIXED_CONVERT_EXPR:
+    case VEC_DUPLICATE_EXPR:
       r = cxx_eval_unary_expression (ctx, t, lval,
 				     non_constant_p, overflow_p);
       break;
@@ -8718,7 +8729,7 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
 	    error_at (EXPR_LOCATION (t),
 		      "statement is not a constant expression");
 	}
-      else
+      else if (flag_checking)
 	internal_error ("unexpected expression %qE of kind %s", t,
 			get_tree_code_name (TREE_CODE (t)));
       *non_constant_p = true;
@@ -10344,6 +10355,7 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
     case UNARY_PLUS_EXPR:
     case UNARY_LEFT_FOLD_EXPR:
     case UNARY_RIGHT_FOLD_EXPR:
+    case VEC_DUPLICATE_EXPR:
     unary:
       return RECUR (TREE_OPERAND (t, 0), rval);
 
@@ -10369,9 +10381,14 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
 	       && (dependent_type_p (TREE_TYPE (t))
 		   || !COMPLETE_TYPE_P (TREE_TYPE (t))
 		   || literal_type_p (TREE_TYPE (t)))
-	       && TREE_OPERAND (t, 0))
+	       && TREE_OPERAND (t, 0)
+	       && (TREE_CODE (t) != CAST_EXPR
+		   || !TREE_CHAIN (TREE_OPERAND (t, 0))))
 	{
-	  tree type = TREE_TYPE (TREE_OPERAND (t, 0));
+	  tree from = TREE_OPERAND (t, 0);
+	  if (TREE_CODE (t) == CAST_EXPR)
+	    from = TREE_VALUE (from);
+	  tree type = TREE_TYPE (from);
 	  /* If this is a dependent type, it could end up being a class
 	     with conversions.  */
 	  if (type == NULL_TREE || WILDCARD_TYPE_P (type))
@@ -10729,8 +10746,8 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
 	return true;
       else if (flags & tf_error)
 	constexpr_error (loc, fundef_p, "label definition in %<constexpr%> "
-			 "function only available with %<-std=c++2b%> or "
-			 "%<-std=gnu++2b%>");
+			 "function only available with %<-std=c++23%> or "
+			 "%<-std=gnu++23%>");
       return false;
 
     case ANNOTATE_EXPR:

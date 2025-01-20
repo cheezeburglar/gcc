@@ -1,5 +1,5 @@
 /* Implementation of subroutines for the GNU C++ pretty-printer.
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
    Contributed by Gabriel Dos Reis <gdr@integrable-solutions.net>
 
 This file is part of GCC.
@@ -234,8 +234,12 @@ pp_cxx_template_keyword_if_needed (cxx_pretty_printer *pp, tree scope, tree t)
 }
 
 /* nested-name-specifier:
-      class-or-namespace-name :: nested-name-specifier(opt)
-      class-or-namespace-name :: template nested-name-specifier   */
+      ::
+      type-name ::
+      namespace-name ::
+      computed-type-specifier ::
+      nested-name-specifier identifier ::
+      nested-name-specifier template(opt) simple-template-id ::  */
 
 static void
 pp_cxx_nested_name_specifier (cxx_pretty_printer *pp, tree t)
@@ -252,7 +256,11 @@ pp_cxx_nested_name_specifier (cxx_pretty_printer *pp, tree t)
       tree scope = get_containing_scope (t);
       pp_cxx_nested_name_specifier (pp, scope);
       pp_cxx_template_keyword_if_needed (pp, scope, t);
-      pp_cxx_unqualified_id (pp, t);
+      /* This is a computed-type-specifier.  */
+      if (TREE_CODE (t) == PACK_INDEX_TYPE || TREE_CODE (t) == DECLTYPE_TYPE)
+	pp->type_id (t);
+      else
+	pp_cxx_unqualified_id (pp, t);
       pp_cxx_colon_colon (pp);
     }
 }

@@ -1,5 +1,5 @@
 /* Handle parameterized types (templates) for GNU -*- C++ -*-.
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
    Written by Ken Raeburn (raeburn@cygnus.com) while at Watchmaker Computing.
    Rewritten by Jason Merrill (jason@cygnus.com).
 
@@ -1913,9 +1913,7 @@ iterative_hash_template_arg (tree arg, hashval_t val)
 	  // to hash differently from its TYPE_CANONICAL, to avoid hash
 	  // collisions that compare as different in template_args_equal.
 	  // These could be dependent specializations that strip_typedefs
-	  // left alone, or untouched specializations because
-	  // coerce_template_parms returns the unconverted template
-	  // arguments if it sees incomplete argument packs.
+	  // left alone for example.
 	  tree ti = TYPE_ALIAS_TEMPLATE_INFO (ats);
 	  return hash_tmpl_and_args (TI_TEMPLATE (ti), TI_ARGS (ti));
 	}
@@ -5637,8 +5635,7 @@ check_default_tmpl_args (tree decl, tree parms, bool is_primary,
        local scope.  */
     return true;
 
-  if ((TREE_CODE (decl) == TYPE_DECL
-       && TREE_TYPE (decl)
+  if ((DECL_IMPLICIT_TYPEDEF_P (decl)
        && LAMBDA_TYPE_P (TREE_TYPE (decl)))
       || (TREE_CODE (decl) == FUNCTION_DECL
 	  && LAMBDA_FUNCTION_P (decl)))
@@ -5924,7 +5921,7 @@ push_template_decl (tree decl, bool is_friend)
          template <typename T> friend void A<T>::f();
        is not primary.  */
     ;
-  else if (TREE_CODE (decl) == TYPE_DECL && LAMBDA_TYPE_P (TREE_TYPE (decl)))
+  else if (DECL_IMPLICIT_TYPEDEF_P (decl) && LAMBDA_TYPE_P (TREE_TYPE (decl)))
     /* Lambdas are not primary.  */
     ;
   else
@@ -6077,7 +6074,8 @@ push_template_decl (tree decl, bool is_friend)
   else if (!ctx
 	   || TREE_CODE (ctx) == FUNCTION_DECL
 	   || (CLASS_TYPE_P (ctx) && TYPE_BEING_DEFINED (ctx))
-	   || (TREE_CODE (decl) == TYPE_DECL && LAMBDA_TYPE_P (TREE_TYPE (decl)))
+	   || (DECL_IMPLICIT_TYPEDEF_P (decl)
+	       && LAMBDA_TYPE_P (TREE_TYPE (decl)))
 	   || (is_friend && !(DECL_LANG_SPECIFIC (decl)
 			      && DECL_TEMPLATE_INFO (decl))))
     {
@@ -9301,7 +9299,9 @@ coerce_template_parms (tree parms,
 	      /* We don't know how many args we have yet, just use the
 		 unconverted (and still packed) ones for now.  */
 	      ggc_free (new_inner_args);
-	      new_inner_args = orig_inner_args;
+	      new_inner_args = strip_typedefs (orig_inner_args,
+					       /*remove_attrs=*/nullptr,
+					       STF_KEEP_INJ_CLASS_NAME);
 	      arg_idx = nargs;
 	      break;
 	    }
@@ -9357,7 +9357,9 @@ coerce_template_parms (tree parms,
               /* We don't know how many args we have yet, just
 		 use the unconverted (but unpacked) ones for now.  */
 	      ggc_free (new_inner_args);
-              new_inner_args = inner_args;
+	      new_inner_args = strip_typedefs (inner_args,
+					       /*remove_attrs=*/nullptr,
+					       STF_KEEP_INJ_CLASS_NAME);
 	      arg_idx = nargs;
               break;
             }
@@ -14063,6 +14065,14 @@ tsubst_pack_index (tree t, tree args, tsubst_flags_t complain, tree in_decl)
   tree pack = PACK_INDEX_PACK (t);
   if (PACK_EXPANSION_P (pack))
     pack = tsubst_pack_expansion (pack, args, complain, in_decl);
+  else
+    {
+      /* PACK can be {*args#0} whose args#0's value-expr refers to
+	 a partially instantiated closure.  Let tsubst find the
+	 fully-instantiated one.  */
+      gcc_assert (TREE_CODE (pack) == TREE_VEC);
+      pack = tsubst (pack, args, complain, in_decl);
+    }
   if (TREE_CODE (pack) == TREE_VEC && TREE_VEC_LENGTH (pack) == 0)
     {
       if (complain & tf_error)
@@ -18144,6 +18154,86 @@ tsubst_omp_clauses (tree clauses, enum c_omp_region_type ort,
   return new_clauses;
 }
 
+/* Like tsubst_copy, but specifically for OpenMP context selectors.  */
+static tree
+tsubst_omp_context_selector (tree ctx, tree args, tsubst_flags_t complain,
+			     tree in_decl)
+{
+  tree new_ctx = NULL_TREE;
+  for (tree set = ctx; set; set = TREE_CHAIN (set))
+    {
+      tree selectors = NULL_TREE;
+      for (tree sel = OMP_TSS_TRAIT_SELECTORS (set); sel;
+	   sel = TREE_CHAIN (sel))
+	{
+	  enum omp_ts_code code = OMP_TS_CODE (sel);
+	  tree properties = NULL_TREE;
+	  tree score = OMP_TS_SCORE (sel);
+	  tree t;
+
+	  if (score)
+	    {
+	      score = tsubst_expr (score, args, complain, in_decl);
+	      score = fold_non_dependent_expr (score);
+	      if (!value_dependent_expression_p (score)
+		  && !type_dependent_expression_p (score))
+		{
+		  if (!INTEGRAL_TYPE_P (TREE_TYPE (score))
+		      || TREE_CODE (score) != INTEGER_CST)
+		    {
+		      error_at (cp_expr_loc_or_input_loc (score),
+				"%<score%> argument must "
+				"be constant integer expression");
+		      score = NULL_TREE;
+		    }
+		  else if (tree_int_cst_sgn (score) < 0)
+		    {
+		      error_at (cp_expr_loc_or_input_loc (score),
+				"%<score%> argument must be non-negative");
+		      score = NULL_TREE;
+		    }
+		}
+	    }
+
+	  switch (omp_ts_map[OMP_TS_CODE (sel)].tp_type)
+	      {
+	      case OMP_TRAIT_PROPERTY_DEV_NUM_EXPR:
+	      case OMP_TRAIT_PROPERTY_BOOL_EXPR:
+		t = tsubst_expr (OMP_TP_VALUE (OMP_TS_PROPERTIES (sel)),
+				 args, complain, in_decl);
+		t = fold_non_dependent_expr (t);
+		if (!value_dependent_expression_p (t)
+		    && !type_dependent_expression_p (t)
+		    && !INTEGRAL_TYPE_P (TREE_TYPE (t)))
+		  error_at (cp_expr_loc_or_input_loc (t),
+			    "property must be integer expression");
+		else
+		  properties = make_trait_property (NULL_TREE, t, NULL_TREE);
+		break;
+	      case OMP_TRAIT_PROPERTY_CLAUSE_LIST:
+		if (OMP_TS_CODE (sel) == OMP_TRAIT_CONSTRUCT_SIMD)
+		  properties = tsubst_omp_clauses (OMP_TS_PROPERTIES (sel),
+						   C_ORT_OMP_DECLARE_SIMD,
+						   args, complain, in_decl);
+		break;
+	      default:
+		/* Nothing to do here, just copy.  */
+		for (tree prop = OMP_TS_PROPERTIES (sel);
+		     prop; prop = TREE_CHAIN (prop))
+		  properties = make_trait_property (OMP_TP_NAME (prop),
+						    OMP_TP_VALUE (prop),
+						    properties);
+	      }
+	  selectors = make_trait_selector (code, score, properties, selectors);
+	}
+      new_ctx = make_trait_set_selector (OMP_TSS_CODE (set),
+					 nreverse (selectors),
+					 new_ctx);
+    }
+  return nreverse (new_ctx);
+}
+
+
 /* Like tsubst_expr, but unshare TREE_LIST nodes.  */
 
 static tree
@@ -19168,9 +19258,12 @@ tsubst_stmt (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 			       outputs, inputs, clobbers, labels,
 			       ASM_INLINE_P (t), false);
 	tree asm_expr = tmp;
-	if (TREE_CODE (asm_expr) == CLEANUP_POINT_EXPR)
-	  asm_expr = TREE_OPERAND (asm_expr, 0);
-	ASM_BASIC_P (asm_expr) = ASM_BASIC_P (t);
+	if (asm_expr != error_mark_node)
+	  {
+	    if (TREE_CODE (asm_expr) == CLEANUP_POINT_EXPR)
+	      asm_expr = TREE_OPERAND (asm_expr, 0);
+	    ASM_BASIC_P (asm_expr) = ASM_BASIC_P (t);
+	  }
       }
       break;
 
@@ -19754,6 +19847,52 @@ tsubst_stmt (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 			     OMP_ATOMIC_MEMORY_ORDER (t), OMP_ATOMIC_WEAK (t));
 	}
       break;
+
+    case OMP_METADIRECTIVE:
+      {
+	tree variants = NULL_TREE;
+	for (tree v = OMP_METADIRECTIVE_VARIANTS (t); v; v = TREE_CHAIN (v))
+	  {
+	    tree ctx = OMP_METADIRECTIVE_VARIANT_SELECTOR (v);
+	    tree directive = OMP_METADIRECTIVE_VARIANT_DIRECTIVE (v);
+	    tree body = OMP_METADIRECTIVE_VARIANT_BODY (v);
+	    tree s;
+
+	    /* CTX is null if this is the default variant.  */
+	    if (ctx)
+	      {
+		ctx = tsubst_omp_context_selector (ctx, args, complain,
+						   in_decl);
+		/* Remove the selector from further consideration if it can be
+		   evaluated as a non-match at this point.  */
+		if (omp_context_selector_matches (ctx, NULL_TREE, false) == 0)
+		  continue;
+	      }
+	    s = push_stmt_list ();
+	    RECUR (directive);
+	    directive = pop_stmt_list (s);
+	    if (body)
+	      {
+		s = push_stmt_list ();
+		RECUR (body);
+		body = pop_stmt_list (s);
+	      }
+	    variants
+	      = chainon (variants,
+			 make_omp_metadirective_variant (ctx, directive,
+							 body));
+	  }
+	t = copy_node (t);
+	OMP_METADIRECTIVE_VARIANTS (t) = variants;
+
+	/* Try to resolve the metadirective early.  */
+	vec<struct omp_variant> candidates
+	  = omp_early_resolve_metadirective (t);
+	if (!candidates.is_empty ())
+	  t = c_omp_expand_variant_construct (candidates);
+	add_stmt (t);
+	break;
+      }
 
     case TRANSACTION_EXPR:
       {
@@ -21532,7 +21671,7 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 	tree op1 = RECUR (TREE_OPERAND (t, 1));
 	tree op2 = tsubst (TREE_OPERAND (t, 2), args, complain, in_decl);
 	RETURN (finish_pseudo_destructor_expr (op0, op1, op2,
-					       input_location));
+					       input_location, complain));
       }
 
     case TREE_LIST:
@@ -21596,7 +21735,7 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 		    dtor = TREE_OPERAND (dtor, 0);
 		    if (TYPE_P (dtor))
 		      RETURN (finish_pseudo_destructor_expr
-			      (object, s, dtor, input_location));
+			      (object, s, dtor, input_location, complain));
 		  }
 	      }
 	  }
@@ -22437,7 +22576,10 @@ instantiate_template (tree tmpl, tree orig_args, tsubst_flags_t complain)
      substitution of a template variable, but the type of the variable
      template may be auto, in which case we will call do_auto_deduction
      in mark_used (which clears tf_partial) and the auto must be properly
-     reduced at that time for the deduction to work.  */
+     reduced at that time for the deduction to work.
+
+     Note that later below we set tf_partial iff there are dependent arguments;
+     the above is concerned specifically about the non-dependent case.  */
   complain &= tf_warning_or_error;
 
   gcc_assert (TREE_CODE (tmpl) == TEMPLATE_DECL);
@@ -22516,9 +22658,14 @@ instantiate_template (tree tmpl, tree orig_args, tsubst_flags_t complain)
      template, not the context of the overload resolution we're doing.  */
   push_to_top_level ();
   /* If there are dependent arguments, e.g. because we're doing partial
-     ordering, make sure processing_template_decl stays set.  */
+     ordering, make sure processing_template_decl stays set.  And set
+     tf_partial mainly for benefit of instantiation of alias templates
+     that contain extra-args trees.  */
   if (uses_template_parms (targ_ptr))
-    ++processing_template_decl;
+    {
+      ++processing_template_decl;
+      complain |= tf_partial;
+    }
   if (DECL_CLASS_SCOPE_P (gen_tmpl))
     {
       tree ctx;
@@ -25053,7 +25200,7 @@ unify (tree tparms, tree targs, tree parm, tree arg, int strict,
 	  && deducible_array_bound (TYPE_DOMAIN (parm)))
 	{
 	  /* Also deduce from the length of the initializer list.  */
-	  tree max = size_int (CONSTRUCTOR_NELTS (arg));
+	  tree max = size_int (count_ctor_elements (arg));
 	  tree idx = compute_array_index_type (NULL_TREE, max, tf_none);
 	  if (idx == error_mark_node)
 	    return unify_invalid (explain_p);
@@ -29034,9 +29181,15 @@ type_dependent_expression_p (tree expression)
 
       if (TREE_CODE (expression) == TEMPLATE_ID_EXPR)
 	{
-	  if (any_dependent_template_arguments_p
-	      (TREE_OPERAND (expression, 1)))
+	  tree args = TREE_OPERAND (expression, 1);
+	  if (any_dependent_template_arguments_p (args))
 	    return true;
+	  /* Arguments of a function template-id aren't necessarily coerced
+	     yet so we must conservatively assume that the address (and not
+	     just value) of the argument matters as per [temp.dep.temp]/3.  */
+	  for (tree arg : tree_vec_range (args))
+	    if (has_value_dependent_address (arg))
+	      return true;
 	  expression = TREE_OPERAND (expression, 0);
 	  if (identifier_p (expression))
 	    return true;

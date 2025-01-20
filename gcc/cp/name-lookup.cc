@@ -1,5 +1,5 @@
 /* Definitions for C++ name lookup routines.
-   Copyright (C) 2003-2024 Free Software Foundation, Inc.
+   Copyright (C) 2003-2025 Free Software Foundation, Inc.
    Contributed by Gabriel Dos Reis <gdr@integrable-solutions.net>
 
 This file is part of GCC.
@@ -4040,7 +4040,10 @@ pushdecl (tree decl, bool hiding)
       if (old && anticipated_builtin_p (old))
 	old = OVL_CHAIN (old);
 
-      check_template_shadow (decl);
+      if (hiding)
+	; /* Hidden bindings don't shadow anything.  */
+      else
+	check_template_shadow (decl);
 
       if (DECL_DECLARES_FUNCTION_P (decl))
 	{

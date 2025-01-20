@@ -1,5 +1,5 @@
 ;; Machine description for AArch64 AdvSIMD architecture.
-;; Copyright (C) 2011-2024 Free Software Foundation, Inc.
+;; Copyright (C) 2011-2025 Free Software Foundation, Inc.
 ;; Contributed by ARM Ltd.
 ;;
 ;; This file is part of GCC.
@@ -112,7 +112,7 @@
   }
 )
 
-(define_insn "aarch64_dup_lane<mode>"
+(define_insn "@aarch64_dup_lane<mode>"
   [(set (match_operand:VALL_F16 0 "register_operand" "=w")
 	(vec_duplicate:VALL_F16
 	  (vec_select:<VEL>
@@ -127,7 +127,7 @@
   [(set_attr "type" "neon_dup<q>")]
 )
 
-(define_insn "aarch64_dup_lane_<vswap_width_name><mode>"
+(define_insn "@aarch64_dup_lane_<vswap_width_name><mode>"
   [(set (match_operand:VALL_F16_NO_V2Q 0 "register_operand" "=w")
 	(vec_duplicate:VALL_F16_NO_V2Q
 	  (vec_select:<VEL>
@@ -1164,7 +1164,7 @@
   [(set_attr "type" "neon_logic<q>")]
 )
 
-(define_insn "aarch64_simd_vec_set<mode>"
+(define_insn "@aarch64_simd_vec_set<mode>"
   [(set (match_operand:VALL_F16 0 "register_operand" "=w,w,w")
 	(vec_merge:VALL_F16
 	    (vec_duplicate:VALL_F16
@@ -1225,7 +1225,7 @@
   [(set_attr "type" "neon_ins<q>")]
 )
 
-(define_insn "*aarch64_simd_vec_copy_lane_<vswap_width_name><mode>"
+(define_insn "@aarch64_simd_vec_copy_lane_<vswap_width_name><mode>"
   [(set (match_operand:VALL_F16_NO_V2Q 0 "register_operand" "=w")
 	(vec_merge:VALL_F16_NO_V2Q
 	    (vec_duplicate:VALL_F16_NO_V2Q
@@ -1870,6 +1870,22 @@
     return "uzp1\\t%0.<V2ntype>, %1.<V2ntype>, %2.<V2ntype>";
   else
     return "uzp1\\t%0.<V2ntype>, %2.<V2ntype>, %1.<V2ntype>";
+}
+  [(set_attr "type" "neon_permute<q>")]
+)
+
+(define_insn "*aarch64_trunc_concat<mode>"
+  [(set (match_operand:<VNARROWQ> 0 "register_operand" "=w")
+	(truncate:<VNARROWQ>
+	  (vec_concat:VQN
+	    (match_operand:<VHALF> 1 "register_operand" "w")
+	    (match_operand:<VHALF> 2 "register_operand" "w"))))]
+  "TARGET_SIMD"
+{
+  if (!BYTES_BIG_ENDIAN)
+    return "uzp1\\t%0.<Vntype>, %1.<Vntype>, %2.<Vntype>";
+  else
+    return "uzp1\\t%0.<Vntype>, %2.<Vntype>, %1.<Vntype>";
 }
   [(set_attr "type" "neon_permute<q>")]
 )
@@ -3837,7 +3853,7 @@
 }
 )
 
-(define_expand "aarch64_simd_bsl<mode>"
+(define_expand "@aarch64_simd_bsl<mode>"
   [(match_operand:VALLDIF 0 "register_operand")
    (match_operand:<V_INT_EQUIV> 1 "register_operand")
    (match_operand:VALLDIF 2 "register_operand")
@@ -4438,7 +4454,7 @@
 ;; Form a vector whose least significant half comes from operand 1 and whose
 ;; most significant half comes from operand 2.  This operand order follows
 ;; arm_neon.h vcombine* intrinsics.
-(define_expand "aarch64_combine<mode>"
+(define_expand "@aarch64_combine<mode>"
   [(match_operand:<VDBL> 0 "register_operand")
    (match_operand:VDC 1 "general_operand")
    (match_operand:VDC 2 "general_operand")]
@@ -5146,13 +5162,212 @@
 )
 ;; <su>q<addsub>
 
-(define_insn "aarch64_<su_optab>q<addsub><mode><vczle><vczbe>"
-  [(set (match_operand:VSDQ_I 0 "register_operand" "=w")
-	(BINQOPS:VSDQ_I (match_operand:VSDQ_I 1 "register_operand" "w")
-			(match_operand:VSDQ_I 2 "register_operand" "w")))]
+(define_insn "<su_optab>s<addsub><mode>3<vczle><vczbe>"
+  [(set (match_operand:VSDQ_I_QI_HI 0 "register_operand" "=w")
+	(BINQOPS:VSDQ_I_QI_HI
+	  (match_operand:VSDQ_I_QI_HI 1 "register_operand" "w")
+	  (match_operand:VSDQ_I_QI_HI 2 "register_operand" "w")))]
   "TARGET_SIMD"
   "<su_optab>q<addsub>\\t%<v>0<Vmtype>, %<v>1<Vmtype>, %<v>2<Vmtype>"
   [(set_attr "type" "neon_q<addsub><q>")]
+)
+
+(define_expand "<su_optab>s<addsub><mode>3"
+  [(parallel
+    [(set (match_operand:GPI 0 "register_operand")
+	  (SBINQOPS:GPI (match_operand:GPI 1 "register_operand")
+			(match_operand:GPI 2 "aarch64_plus_operand")))
+    (clobber (scratch:GPI))
+    (clobber (reg:CC CC_REGNUM))])]
+)
+
+;; Introducing a temporary GP reg allows signed saturating arithmetic with GPR
+;; operands to be calculated without the use of costly transfers to and from FP
+;; registers.  For example, saturating addition usually uses three FMOVs:
+;;
+;;   fmov	d0, x0
+;;   fmov	d1, x1
+;;   sqadd	d0, d0, d1
+;;   fmov	x0, d0
+;;
+;; Using a temporary register results in three cheaper instructions being used
+;; in place of the three FMOVs, which calculate the saturating limit accounting
+;; for the signedness of operand2:
+;;
+;;   asr	x2, x1, 63
+;;   adds	x0, x0, x1
+;;   eor	x2, x2, 0x8000000000000000
+;;   csinv	x0, x0, x2, vc
+;;
+;; If operand2 is a constant value, the temporary register can be used to store
+;; the saturating limit without the need for asr, xor to calculate said limit.
+
+(define_insn_and_split "aarch64_<su_optab>s<addsub><mode>3<vczle><vczbe>"
+  [(set (match_operand:GPI 0 "register_operand")
+	(SBINQOPS:GPI (match_operand:GPI 1 "register_operand")
+		      (match_operand:GPI 2 "aarch64_plus_operand")))
+    (clobber (match_scratch:GPI 3))
+    (clobber (reg:CC CC_REGNUM))]
+  ""
+  {@ [ cons: =0, 1 , 2   , =3 ; attrs: type       , arch , length ]
+     [ w       , w , w   , X  ; neon_q<addsub><q> , simd , 4      ] <su_optab>q<addsub>\\t%<v>0<Vmtype>, %<v>1<Vmtype>, %<v>2<Vmtype>
+     [ r       , r , JIr , &r ; *		  , *    , 8      ] #
+  }
+  "&& reload_completed && GP_REGNUM_P (REGNO (operands[0]))"
+  [(set (match_dup 0)
+	(if_then_else:GPI
+	  (match_dup 4)
+	  (match_dup 5)
+	  (match_dup 6)))]
+  {
+    if (REG_P (operands[2]))
+      {
+      rtx shift_constant = gen_int_mode (GET_MODE_BITSIZE (<MODE>mode) - 1,
+					 <MODE>mode);
+      auto limit = HOST_WIDE_INT_1U << (GET_MODE_BITSIZE (<MODE>mode) - 1);
+      rtx limit_constant = gen_int_mode (limit, <MODE>mode);
+      emit_insn (gen_ashr<mode>3 (operands[3], operands[2], shift_constant));
+      emit_insn (gen_xor<mode>3 (operands[3], operands[3], limit_constant));
+
+      switch (<CODE>)
+	{
+	case SS_MINUS:
+	  emit_insn (gen_sub<mode>3_compare1 (operands[0], operands[1],
+					      operands[2]));
+	break;
+	case SS_PLUS:
+	  emit_insn (gen_add<mode>3_compare0 (operands[0], operands[1],
+					      operands[2]));
+	  break;
+	default:
+	  gcc_unreachable ();
+	}
+
+      rtx ccin = gen_rtx_REG (E_CC_Vmode, CC_REGNUM);
+      switch (<CODE>)
+	{
+	case SS_PLUS:
+	  operands[4] = gen_rtx_NE (<MODE>mode, ccin, const0_rtx);
+	  operands[5] = gen_rtx_NOT (<MODE>mode, operands[3]);
+	  operands[6] = operands[0];
+	  break;
+	case SS_MINUS:
+	  operands[4] = gen_rtx_EQ (<MODE>mode, ccin, const0_rtx);
+	  operands[5] = operands[0];
+	  operands[6] = operands[3];
+	  break;
+	default:
+	  gcc_unreachable ();
+	}
+      }
+    else
+      {
+	auto imm = INTVAL (operands[2]);
+	rtx neg_imm = gen_int_mode (-imm, <MODE>mode);
+	wide_int limit;
+
+	switch (<CODE>)
+	  {
+	  case SS_MINUS:
+	    emit_insn (gen_sub<mode>3_compare1_imm (operands[0], operands[1],
+						    operands[2], neg_imm));
+	    limit = imm >= 0 ? wi::min_value (<MODE>mode, SIGNED)
+			     : wi::max_value (<MODE>mode, SIGNED);
+	    break;
+	  case SS_PLUS:
+	    emit_insn (gen_sub<mode>3_compare1_imm (operands[0], operands[1],
+						    neg_imm, operands[2]));
+	    limit = imm >= 0 ? wi::max_value (<MODE>mode, SIGNED)
+			     : wi::min_value (<MODE>mode, SIGNED);
+	    break;
+	  default:
+	    gcc_unreachable ();
+	  }
+
+      rtx sat_limit = immed_wide_int_const (limit, <MODE>mode);
+      emit_insn (gen_rtx_SET (operands[3], sat_limit));
+
+      rtx ccin = gen_rtx_REG (E_CC_Vmode, CC_REGNUM);
+      operands[4] = gen_rtx_EQ (<MODE>mode, ccin, const0_rtx);
+      operands[5] = operands[0];
+      operands[6] = operands[3];
+      }
+  }
+)
+
+;; Unsigned saturating arithmetic with GPR operands can be optimised similarly
+;; to the signed case, albeit without the need for a temporary register as the
+;; saturating limit can be inferred from the <addsub> code.  This applies only
+;; to SImode and DImode.
+
+(define_insn_and_split "<su_optab>s<addsub><mode>3<vczle><vczbe>"
+  [(set (match_operand:GPI 0 "register_operand")
+	(UBINQOPS:GPI (match_operand:GPI 1 "register_operand")
+		      (match_operand:GPI 2 "aarch64_plus_operand")))
+    (clobber (reg:CC CC_REGNUM))]
+  ""
+  {@ [ cons: =0, 1 , 2   ; attrs: type       , arch , length ]
+     [ w       , w , w   ; neon_q<addsub><q> , simd , 4      ] <su_optab>q<addsub>\\t%<v>0<Vmtype>, %<v>1<Vmtype>, %<v>2<Vmtype>
+     [ r       , r , JIr ; *		     , *    , 8      ] #
+  }
+  "&& reload_completed && GP_REGNUM_P (REGNO (operands[0]))"
+  [(set (match_dup 0)
+	(if_then_else:GPI
+	  (match_dup 3)
+	  (match_dup 0)
+	  (match_dup 4)))]
+  {
+
+    if (REG_P (operands[2]))
+      {
+	switch (<CODE>)
+	  {
+	  case US_MINUS:
+	    emit_insn (gen_sub<mode>3_compare1 (operands[0], operands[1],
+						operands[2]));
+	    break;
+	  case US_PLUS:
+	    emit_insn (gen_add<mode>3_compare0 (operands[0], operands[1],
+						operands[2]));
+	    break;
+	  default:
+	    gcc_unreachable ();
+	  }
+      }
+    else
+      {
+	auto imm = UINTVAL (operands[2]);
+	rtx neg_imm = gen_int_mode (-imm, <MODE>mode);
+	switch (<CODE>)
+	  {
+	  case US_MINUS:
+	    emit_insn (gen_sub<mode>3_compare1_imm (operands[0], operands[1],
+						    operands[2], neg_imm));
+	    break;
+	  case US_PLUS:
+	    emit_insn (gen_sub<mode>3_compare1_imm (operands[0], operands[1],
+						    neg_imm, operands[2]));
+	    break;
+	  default:
+	    gcc_unreachable ();
+	  }
+      }
+
+    rtx ccin = gen_rtx_REG (CCmode, CC_REGNUM);
+    switch (<CODE>)
+      {
+      case US_PLUS:
+	operands[3] = gen_rtx_LTU (<MODE>mode, ccin, const0_rtx);
+	operands[4] = gen_int_mode (-1, <MODE>mode);
+	break;
+      case US_MINUS:
+	operands[3] = gen_rtx_GEU (<MODE>mode, ccin, const0_rtx);
+	operands[4] = const0_rtx;
+	break;
+      default:
+	gcc_unreachable ();
+      }
+  }
 )
 
 ;; suqadd and usqadd
@@ -6971,7 +7186,7 @@
 ;; Note, we have constraints for Dz and Z as different expanders
 ;; have different ideas of what should be passed to this pattern.
 
-(define_insn "aarch64_cm<optab><mode><vczle><vczbe>"
+(define_insn "@aarch64_cm<optab><mode><vczle><vczbe>"
   [(set (match_operand:<V_INT_EQUIV> 0 "register_operand")
 	(neg:<V_INT_EQUIV>
 	  (COMPARISONS:<V_INT_EQUIV>
@@ -7036,7 +7251,7 @@
 
 ;; cm(hs|hi)
 
-(define_insn "aarch64_cm<optab><mode><vczle><vczbe>"
+(define_insn "@aarch64_cm<optab><mode><vczle><vczbe>"
   [(set (match_operand:<V_INT_EQUIV> 0 "register_operand" "=w")
 	(neg:<V_INT_EQUIV>
 	  (UCOMPARISONS:<V_INT_EQUIV>
@@ -7188,7 +7403,7 @@
 
 ;; fcm(eq|ge|gt|le|lt)
 
-(define_insn "aarch64_cm<optab><mode><vczle><vczbe>"
+(define_insn "@aarch64_cm<optab><mode><vczle><vczbe>"
   [(set (match_operand:<V_INT_EQUIV> 0 "register_operand")
 	(neg:<V_INT_EQUIV>
 	  (COMPARISONS:<V_INT_EQUIV>
@@ -7349,7 +7564,7 @@
   [(set_attr "type" "neon_load2_2reg<q>")]
 )
 
-(define_insn "aarch64_simd_ld2r<vstruct_elt>"
+(define_insn "@aarch64_simd_ld2r<vstruct_elt>"
   [(set (match_operand:VSTRUCT_2QD 0 "register_operand" "=w")
 	(unspec:VSTRUCT_2QD [
 	  (match_operand:BLK 1 "aarch64_simd_struct_operand" "Utv")]
@@ -7359,7 +7574,7 @@
   [(set_attr "type" "neon_load2_all_lanes<q>")]
 )
 
-(define_insn "aarch64_vec_load_lanes<mode>_lane<vstruct_elt>"
+(define_insn "@aarch64_vec_load_lanes<mode>_lane<vstruct_elt>"
   [(set (match_operand:VSTRUCT_2QD 0 "register_operand" "=w")
 	(unspec:VSTRUCT_2QD [
 		(match_operand:BLK 1 "aarch64_simd_struct_operand" "Utv")
@@ -7449,7 +7664,7 @@
   [(set_attr "type" "neon_load3_3reg<q>")]
 )
 
-(define_insn "aarch64_simd_ld3r<vstruct_elt>"
+(define_insn "@aarch64_simd_ld3r<vstruct_elt>"
   [(set (match_operand:VSTRUCT_3QD 0 "register_operand" "=w")
 	(unspec:VSTRUCT_3QD [
 	  (match_operand:BLK 1 "aarch64_simd_struct_operand" "Utv")]
@@ -7549,7 +7764,7 @@
   [(set_attr "type" "neon_load4_4reg<q>")]
 )
 
-(define_insn "aarch64_simd_ld4r<vstruct_elt>"
+(define_insn "@aarch64_simd_ld4r<vstruct_elt>"
   [(set (match_operand:VSTRUCT_4QD 0 "register_operand" "=w")
 	(unspec:VSTRUCT_4QD [
 	  (match_operand:BLK 1 "aarch64_simd_struct_operand" "Utv")]
@@ -7773,7 +7988,7 @@
     operands[1] = force_reg (V8DImode, operands[1]);
 })
 
-(define_expand "aarch64_ld1x3<vstruct_elt>"
+(define_expand "@aarch64_ld1x3<vstruct_elt>"
   [(match_operand:VSTRUCT_3QD 0 "register_operand")
    (match_operand:DI 1 "register_operand")]
   "TARGET_SIMD"
@@ -7793,7 +8008,7 @@
   [(set_attr "type" "neon_load1_3reg<q>")]
 )
 
-(define_expand "aarch64_ld1x4<vstruct_elt>"
+(define_expand "@aarch64_ld1x4<vstruct_elt>"
   [(match_operand:VSTRUCT_4QD 0 "register_operand" "=w")
    (match_operand:DI 1 "register_operand" "r")]
   "TARGET_SIMD"
@@ -7813,7 +8028,7 @@
   [(set_attr "type" "neon_load1_4reg<q>")]
 )
 
-(define_expand "aarch64_st1x2<vstruct_elt>"
+(define_expand "@aarch64_st1x2<vstruct_elt>"
   [(match_operand:DI 0 "register_operand")
    (match_operand:VSTRUCT_2QD 1 "register_operand")]
   "TARGET_SIMD"
@@ -7833,7 +8048,7 @@
   [(set_attr "type" "neon_store1_2reg<q>")]
 )
 
-(define_expand "aarch64_st1x3<vstruct_elt>"
+(define_expand "@aarch64_st1x3<vstruct_elt>"
   [(match_operand:DI 0 "register_operand")
    (match_operand:VSTRUCT_3QD 1 "register_operand")]
   "TARGET_SIMD"
@@ -7853,7 +8068,7 @@
   [(set_attr "type" "neon_store1_3reg<q>")]
 )
 
-(define_expand "aarch64_st1x4<vstruct_elt>"
+(define_expand "@aarch64_st1x4<vstruct_elt>"
   [(match_operand:DI 0 "register_operand" "")
    (match_operand:VSTRUCT_4QD 1 "register_operand" "")]
   "TARGET_SIMD"
@@ -8220,7 +8435,7 @@
   [(set_attr "type" "neon_load1_4reg<q>")]
 )
 
-(define_expand "aarch64_ld<nregs><vstruct_elt>"
+(define_expand "@aarch64_ld<nregs><vstruct_elt>"
  [(match_operand:VSTRUCT_D 0 "register_operand")
   (match_operand:DI 1 "register_operand")]
   "TARGET_SIMD"
@@ -8230,7 +8445,7 @@
   DONE;
 })
 
-(define_expand "aarch64_ld1<VALL_F16:mode>"
+(define_expand "@aarch64_ld1<VALL_F16:mode>"
  [(match_operand:VALL_F16 0 "register_operand")
   (match_operand:DI 1 "register_operand")]
   "TARGET_SIMD"
@@ -8245,7 +8460,7 @@
   DONE;
 })
 
-(define_expand "aarch64_ld<nregs><vstruct_elt>"
+(define_expand "@aarch64_ld<nregs><vstruct_elt>"
  [(match_operand:VSTRUCT_Q 0 "register_operand")
   (match_operand:DI 1 "register_operand")]
   "TARGET_SIMD"
@@ -8255,7 +8470,7 @@
   DONE;
 })
 
-(define_expand "aarch64_ld1x2<vstruct_elt>"
+(define_expand "@aarch64_ld1x2<vstruct_elt>"
  [(match_operand:VSTRUCT_2QD 0 "register_operand")
   (match_operand:DI 1 "register_operand")]
   "TARGET_SIMD"
@@ -8267,7 +8482,7 @@
   DONE;
 })
 
-(define_expand "aarch64_ld<nregs>_lane<vstruct_elt>"
+(define_expand "@aarch64_ld<nregs>_lane<vstruct_elt>"
   [(match_operand:VSTRUCT_QD 0 "register_operand")
 	(match_operand:DI 1 "register_operand")
 	(match_operand:VSTRUCT_QD 2 "register_operand")
@@ -8411,7 +8626,7 @@
 ;; This instruction's pattern is generated directly by
 ;; aarch64_expand_vec_perm_const, so any changes to the pattern would
 ;; need corresponding changes there.
-(define_insn "aarch64_<PERMUTE:perm_insn><mode><vczle><vczbe>"
+(define_insn "@aarch64_<PERMUTE:perm_insn><mode><vczle><vczbe>"
   [(set (match_operand:VALL_F16 0 "register_operand" "=w")
 	(unspec:VALL_F16 [(match_operand:VALL_F16 1 "register_operand" "w")
 			  (match_operand:VALL_F16 2 "register_operand" "w")]
@@ -8437,7 +8652,7 @@
 ;; aarch64_expand_vec_perm_const, so any changes to the pattern would
 ;; need corresponding changes there.  Note that the immediate (third)
 ;; operand is a lane index not a byte index.
-(define_insn "aarch64_ext<mode>"
+(define_insn "@aarch64_ext<mode>"
   [(set (match_operand:VALL_F16 0 "register_operand" "=w")
         (unspec:VALL_F16 [(match_operand:VALL_F16 1 "register_operand" "w")
 			  (match_operand:VALL_F16 2 "register_operand" "w")
@@ -8455,7 +8670,7 @@
 ;; This instruction's pattern is generated directly by
 ;; aarch64_expand_vec_perm_const, so any changes to the pattern would
 ;; need corresponding changes there.
-(define_insn "aarch64_rev<REVERSE:rev_op><mode><vczle><vczbe>"
+(define_insn "@aarch64_rev<REVERSE:rev_op><mode><vczle><vczbe>"
   [(set (match_operand:VALL_F16 0 "register_operand" "=w")
 	(unspec:VALL_F16 [(match_operand:VALL_F16 1 "register_operand" "w")]
                     REVERSE))]
@@ -8524,7 +8739,7 @@
   [(set_attr "type" "neon_store1_4reg")]
 )
 
-(define_expand "aarch64_st<nregs><vstruct_elt>"
+(define_expand "@aarch64_st<nregs><vstruct_elt>"
  [(match_operand:DI 0 "register_operand")
   (match_operand:VSTRUCT_D 1 "register_operand")]
   "TARGET_SIMD"
@@ -8534,7 +8749,7 @@
   DONE;
 })
 
-(define_expand "aarch64_st<nregs><vstruct_elt>"
+(define_expand "@aarch64_st<nregs><vstruct_elt>"
  [(match_operand:DI 0 "register_operand")
   (match_operand:VSTRUCT_Q 1 "register_operand")]
   "TARGET_SIMD"
@@ -8544,7 +8759,7 @@
   DONE;
 })
 
-(define_expand "aarch64_st<nregs>_lane<vstruct_elt>"
+(define_expand "@aarch64_st<nregs>_lane<vstruct_elt>"
  [(match_operand:DI 0 "register_operand")
   (match_operand:VSTRUCT_QD 1 "register_operand")
   (match_operand:SI 2 "immediate_operand")]
@@ -8560,7 +8775,7 @@
   DONE;
 })
 
-(define_expand "aarch64_st1<VALL_F16:mode>"
+(define_expand "@aarch64_st1<VALL_F16:mode>"
  [(match_operand:DI 0 "register_operand")
   (match_operand:VALL_F16 1 "register_operand")]
   "TARGET_SIMD"

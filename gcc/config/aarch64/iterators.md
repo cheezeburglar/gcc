@@ -1,5 +1,5 @@
 ;; Machine description for AArch64 architecture.
-;; Copyright (C) 2009-2024 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2025 Free Software Foundation, Inc.
 ;; Contributed by ARM Ltd.
 ;;
 ;; This file is part of GCC.
@@ -95,6 +95,10 @@
 ;; integer modes; 64-bit scalar integer mode.
 (define_mode_iterator VSDQ_I_DI [V8QI V16QI V4HI V8HI V2SI V4SI V2DI DI])
 
+;; Advanced SIMD and scalar, 64 & 128-bit container; 8 and 16-bit scalar
+;; integer modes.
+(define_mode_iterator VSDQ_I_QI_HI [VDQ_I HI QI])
+
 ;; Double vector modes.
 (define_mode_iterator VD [V8QI V4HI V4HF V2SI V2SF V4BF])
 
@@ -140,9 +144,12 @@
 ;; VQ without 2 element modes.
 (define_mode_iterator VQ_NO2E [V16QI V8HI V4SI V8HF V4SF V8BF])
 
+;; SVE modes without 2 and 4 element modes.
+(define_mode_iterator SVE_NO4E [VNx16QI VNx8QI VNx8HI VNx8HF VNx8BF])
+
 ;; SVE modes without 2 element modes.
-(define_mode_iterator SVE_NO2E [VNx16QI VNx8QI VNx4QI VNx8HI VNx4HI VNx8HF
-				VNx4HF VNx8BF VNx4BF VNx4SI VNx4SF])
+(define_mode_iterator SVE_NO2E [SVE_NO4E VNx4QI VNx4HI VNx4HF VNx4BF VNx4SI
+				VNx4SF])
 
 ;; 2 element quad vector modes.
 (define_mode_iterator VQ_2E [V2DI V2DF])
@@ -1095,6 +1102,7 @@
     UNSPEC_SUBHNB	; Used in aarch64-sve2.md.
     UNSPEC_SUBHNT	; Used in aarch64-sve2.md.
     UNSPEC_TBL2		; Used in aarch64-sve2.md.
+    UNSPEC_TRN		; Used in aarch64-builtins.cc
     UNSPEC_UABDLB	; Used in aarch64-sve2.md.
     UNSPEC_UABDLT	; Used in aarch64-sve2.md.
     UNSPEC_UADDLB	; Used in aarch64-sve2.md.
@@ -1762,6 +1770,11 @@
 			 (VNx8HF "vnx4hf")  (VNx4HF "vnx2hf")
 			 (VNx8BF "vnx4bf")  (VNx4BF "vnx2bf")
 			 (VNx4SI "vnx2si")  (VNx4SF "vnx2sf")])
+
+;; Quad modes of all vector modes, in lower-case.
+(define_mode_attr Vquad [(VNx16QI "vnx4qi") (VNx8QI "vnx2qi")
+			 (VNx8HI "vnx2hi")  (VNx8HF "vnx2hf")
+			 (VNx8BF "vnx2bf")])
 
 ;; Single-element half modes of quad vector modes.
 (define_mode_attr V1HALF [(V2DI "V1DI")  (V2DF  "V1DF")])

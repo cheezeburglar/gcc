@@ -1,5 +1,5 @@
 ;; GCC machine description for SSE instructions
-;; Copyright (C) 2005-2024 Free Software Foundation, Inc.
+;; Copyright (C) 2005-2025 Free Software Foundation, Inc.
 ;;
 ;; This file is part of GCC.
 ;;
@@ -540,7 +540,7 @@
   [(V16SF "TARGET_EVEX512") (V8SF "TARGET_AVX512VL") (V4SF "TARGET_AVX512VL")])
 
 (define_mode_iterator VF1_AVX512BW
-  [(V16SF "TARGET_EVEX512 && TARGET_EVEX512") (V8SF "TARGET_AVX2") V4SF])
+  [(V16SF "TARGET_AVX512BW && TARGET_EVEX512") (V8SF "TARGET_AVX2") V4SF])
 
 (define_mode_iterator VF1_AVX10_2
   [(V16SF "TARGET_AVX10_2_512") V8SF V4SF])

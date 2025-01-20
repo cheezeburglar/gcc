@@ -1,5 +1,5 @@
 /* Subroutines for insn-output.cc for AVR 8-bit microcontrollers
-   Copyright (C) 1998-2024 Free Software Foundation, Inc.
+   Copyright (C) 1998-2025 Free Software Foundation, Inc.
    Contributed by Denis Chertykov (chertykov@gmail.com)
 
    This file is part of GCC.
@@ -15291,7 +15291,7 @@ avr_out_insert_bits (rtx *op, int *plen)
 
 enum avr_builtin_id
   {
-#define DEF_BUILTIN(NAME, N_ARGS, TYPE, CODE, LIBNAME)  \
+#define DEF_BUILTIN(NAME, N_ARGS, TYPE, CODE, LIBNAME, ATTRS) \
     AVR_BUILTIN_ ## NAME,
 #include "builtins.def"
 #undef DEF_BUILTIN
@@ -15314,7 +15314,7 @@ struct GTY(()) avr_builtin_description
 static GTY(()) avr_builtin_description
 avr_bdesc[AVR_BUILTIN_COUNT] =
   {
-#define DEF_BUILTIN(NAME, N_ARGS, TYPE, ICODE, LIBNAME)         \
+#define DEF_BUILTIN(NAME, N_ARGS, TYPE, ICODE, LIBNAME, ATTRS) \
     { (enum insn_code) CODE_FOR_ ## ICODE, N_ARGS, NULL_TREE },
 #include "builtins.def"
 #undef DEF_BUILTIN
@@ -15336,11 +15336,13 @@ avr_builtin_decl (unsigned id, bool /*initialize_p*/)
 static void
 avr_init_builtin_int24 (void)
 {
-  tree int24_type  = make_signed_type (GET_MODE_BITSIZE (PSImode));
-  tree uint24_type = make_unsigned_type (GET_MODE_BITSIZE (PSImode));
-
-  lang_hooks.types.register_builtin_type (int24_type, "__int24");
-  lang_hooks.types.register_builtin_type (uint24_type, "__uint24");
+  for (int i = 0; i < NUM_INT_N_ENTS; ++i)
+    if (int_n_data[i].bitsize == 24)
+      {
+	tree uint24_type = int_n_trees[i].unsigned_type;
+	lang_hooks.types.register_builtin_type (uint24_type, "__uint24");
+	break;
+      }
 }
 
 
@@ -15512,17 +15514,18 @@ avr_init_builtins (void)
   FX_FTYPE_INTX (ul);
   FX_FTYPE_INTX (ull);
 
+  tree attr_const = tree_cons (get_identifier ("const"), NULL, NULL);
 
-#define DEF_BUILTIN(NAME, N_ARGS, TYPE, CODE, LIBNAME)                  \
-  {                                                                     \
-    int id = AVR_BUILTIN_ ## NAME;                                      \
-    const char *Name = "__builtin_avr_" #NAME;                          \
-    char *name = (char *) alloca (1 + strlen (Name));                   \
-                                                                        \
-    gcc_assert (id < AVR_BUILTIN_COUNT);                                \
-    avr_bdesc[id].fndecl                                                \
-      = add_builtin_function (avr_tolower (name, Name), TYPE, id,       \
-			      BUILT_IN_MD, LIBNAME, NULL_TREE);         \
+#define DEF_BUILTIN(NAME, N_ARGS, TYPE, CODE, LIBNAME, ATTRS)		\
+  {									\
+    int id = AVR_BUILTIN_ ## NAME;					\
+    const char *Name = "__builtin_avr_" #NAME;				\
+    char *name = (char *) alloca (1 + strlen (Name));			\
+									\
+    gcc_assert (id < AVR_BUILTIN_COUNT);				\
+    avr_bdesc[id].fndecl						\
+      = add_builtin_function (avr_tolower (name, Name), TYPE, id,	\
+			      BUILT_IN_MD, LIBNAME, ATTRS);		\
   }
 #include "builtins.def"
 #undef DEF_BUILTIN

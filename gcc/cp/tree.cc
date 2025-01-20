@@ -1,5 +1,5 @@
 /* Language-dependent node constructors for parse phase of GNU compiler.
-   Copyright (C) 1987-2024 Free Software Foundation, Inc.
+   Copyright (C) 1987-2025 Free Software Foundation, Inc.
    Hacked by Michael Tiemann (tiemann@cygnus.com)
 
 This file is part of GCC.
@@ -1207,7 +1207,7 @@ build_cplus_array_type (tree elt_type, tree index_type, int dependent)
 /* Return an ARRAY_TYPE with element type ELT and length N.  */
 
 tree
-build_array_of_n_type (tree elt, int n)
+build_array_of_n_type (tree elt, unsigned HOST_WIDE_INT n)
 {
   return build_cplus_array_type (elt, build_index_type (size_int (n - 1)));
 }
@@ -1566,7 +1566,7 @@ apply_identity_attributes (tree result, tree attribs, bool *remove_attributes)
 
 /* Builds a qualified variant of T that is either not a typedef variant
    (the default behavior) or not a typedef variant of a user-facing type
-   (if FLAGS contains STF_USER_FACING).  If T is not a type, then this
+   (if FLAGS contains STF_USER_VISIBLE).  If T is not a type, then this
    just dispatches to strip_typedefs_expr.
 
    E.g. consider the following declarations:
@@ -1611,6 +1611,11 @@ strip_typedefs (tree t, bool *remove_attributes /* = NULL */,
     {
       if ((flags & STF_USER_VISIBLE)
 	  && !user_facing_original_type_p (t))
+	return t;
+
+      if ((flags & STF_KEEP_INJ_CLASS_NAME)
+	  && CLASS_TYPE_P (t)
+	  && DECL_SELF_REFERENCE_P (TYPE_NAME (t)))
 	return t;
 
       if (dependent_opaque_alias_p (t))

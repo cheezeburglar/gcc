@@ -1,5 +1,5 @@
 /* Process declarations and variables for -*- C++ -*- compiler.
-   Copyright (C) 1988-2024 Free Software Foundation, Inc.
+   Copyright (C) 1988-2025 Free Software Foundation, Inc.
    Contributed by Michael Tiemann (tiemann@cygnus.com)
 
 This file is part of GCC.
@@ -1398,7 +1398,14 @@ check_redeclaration_exception_specification (tree new_decl,
       location_t new_loc = DECL_SOURCE_LOCATION (new_decl);
       auto_diagnostic_group d;
 
-      if (DECL_IN_SYSTEM_HEADER (old_decl) && DECL_EXTERN_C_P (old_decl))
+      /* Be permissive about C++98 vs C++11 operator new declarations.  */
+      bool global_new = (IDENTIFIER_NEW_OP_P (DECL_NAME (new_decl))
+			 && CP_DECL_CONTEXT (new_decl) == global_namespace
+			 && (nothrow_spec_p (new_exceptions)
+			     == nothrow_spec_p (old_exceptions)));
+
+      if (DECL_IN_SYSTEM_HEADER (old_decl)
+	  && (global_new || DECL_EXTERN_C_P (old_decl)))
 	/* Don't fuss about the C library; the C library functions are not
 	   specified to have exception specifications (just behave as if they
 	   have them), but some implementations include them.  */
@@ -1407,7 +1414,7 @@ check_redeclaration_exception_specification (tree new_decl,
 	/* We used to silently permit mismatched eh specs with
 	   -fno-exceptions, so only complain if -pedantic.  */
 	complained = pedwarn (new_loc, OPT_Wpedantic, msg, new_decl);
-      else if (!new_exceptions)
+      else if (!new_exceptions || global_new)
 	/* Reduce to pedwarn for omitted exception specification.  No warning
 	   flag for this; silence the warning by correcting the code.  */
 	complained = pedwarn (new_loc, 0, msg, new_decl);
@@ -6195,13 +6202,13 @@ start_decl (const cp_declarator *declarator,
       if (CP_DECL_THREAD_LOCAL_P (decl) && !DECL_REALLY_EXTERN (decl))
 	error_at (DECL_SOURCE_LOCATION (decl),
 		  "%qD defined %<thread_local%> in %qs function only "
-		  "available with %<-std=c++2b%> or %<-std=gnu++2b%>", decl,
+		  "available with %<-std=c++23%> or %<-std=gnu++23%>", decl,
 		  DECL_IMMEDIATE_FUNCTION_P (current_function_decl)
 		  ? "consteval" : "constexpr");
       else if (TREE_STATIC (decl))
 	error_at (DECL_SOURCE_LOCATION (decl),
 		  "%qD defined %<static%> in %qs function only available "
-		  "with %<-std=c++2b%> or %<-std=gnu++2b%>", decl,
+		  "with %<-std=c++23%> or %<-std=gnu++23%>", decl,
 		  DECL_IMMEDIATE_FUNCTION_P (current_function_decl)
 		  ? "consteval" : "constexpr");
       else
@@ -6816,11 +6823,13 @@ check_for_uninitialized_const_var (tree decl, bool constexpr_context_p,
 
 /* Structure holding the current initializer being processed by reshape_init.
    CUR is a pointer to the current element being processed, END is a pointer
-   after the last element present in the initializer.  */
+   after the last element present in the initializer and RAW_IDX is index into
+   RAW_DATA_CST if that is CUR elt.  */
 struct reshape_iter
 {
   constructor_elt *cur;
   constructor_elt *end;
+  unsigned raw_idx;
 };
 
 static tree reshape_init_r (tree, reshape_iter *, tree, tsubst_flags_t);
@@ -6888,18 +6897,20 @@ is_direct_enum_init (tree type, tree init)
 }
 
 /* Helper function for reshape_init*.  Split first element of
-   RAW_DATA_CST and save the rest to d->cur->value.  */
+   RAW_DATA_CST or return NULL for other elements.  Set *INC_CUR
+   to true if the whole d->cur has been consumed.  */
 
 static tree
-cp_maybe_split_raw_data (reshape_iter *d)
+cp_maybe_split_raw_data (reshape_iter *d, bool *inc_cur)
 {
+  *inc_cur = true;
   if (TREE_CODE (d->cur->value) != RAW_DATA_CST)
     return NULL_TREE;
-  tree ret = *raw_data_iterator (d->cur->value, 0);
-  ++RAW_DATA_POINTER (d->cur->value);
-  --RAW_DATA_LENGTH (d->cur->value);
-  if (RAW_DATA_LENGTH (d->cur->value) == 1)
-    d->cur->value = *raw_data_iterator (d->cur->value, 0);
+  tree ret = *raw_data_iterator (d->cur->value, d->raw_idx++);
+  if (d->raw_idx != (unsigned) RAW_DATA_LENGTH (d->cur->value))
+    *inc_cur = false;
+  else
+    d->raw_idx = 0;
   return ret;
 }
 
@@ -6911,9 +6922,11 @@ cp_maybe_split_raw_data (reshape_iter *d)
 static tree
 consume_init (tree init, reshape_iter *d)
 {
-  if (tree raw_init = cp_maybe_split_raw_data (d))
-    return raw_init;
-  d->cur++;
+  bool inc_cur;
+  if (tree raw_init = cp_maybe_split_raw_data (d, &inc_cur))
+    init = raw_init;
+  if (inc_cur)
+    d->cur++;
   return init;
 }
 
@@ -6972,10 +6985,8 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
     {
       tree elt_init;
       constructor_elt *old_cur = d->cur;
-      const char *old_raw_data_ptr = NULL;
-
-      if (TREE_CODE (d->cur->value) == RAW_DATA_CST)
-	old_raw_data_ptr = RAW_DATA_POINTER (d->cur->value);
+      unsigned int old_raw_idx = d->raw_idx;
+      bool old_raw_data_cst = TREE_CODE (d->cur->value) == RAW_DATA_CST;
 
       if (d->cur->index)
 	CONSTRUCTOR_IS_DESIGNATED_INIT (new_init) = true;
@@ -6988,25 +6999,23 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
 	  && !vector_p)
 	{
 	  elt_init = d->cur->value;
-	  if (!sized_array_p
-	      || ((unsigned) RAW_DATA_LENGTH (d->cur->value)
-		  <= max_index_cst - index + 1))
-	    d->cur++;
+	  unsigned int off = d->raw_idx;
+	  unsigned int len = RAW_DATA_LENGTH (elt_init) - off;
+	  if (!sized_array_p || len <= max_index_cst - index + 1)
+	    {
+	      d->cur++;
+	      d->raw_idx = 0;
+	    }
 	  else
 	    {
-	      unsigned int len = max_index_cst - index + 1;
-	      if ((unsigned) RAW_DATA_LENGTH (d->cur->value) == len + 1)
-		d->cur->value
-		  = build_int_cst (integer_type_node,
-				   *(const unsigned char *)
-				   RAW_DATA_POINTER (d->cur->value) + len);
-	      else
-		{
-		  d->cur->value = copy_node (elt_init);
-		  RAW_DATA_LENGTH (d->cur->value) -= len;
-		  RAW_DATA_POINTER (d->cur->value) += len;
-		}
+	      len = max_index_cst - index + 1;
+	      d->raw_idx += len;
+	    }
+	  if (!reuse || off || d->cur == old_cur)
+	    {
+	      elt_init = copy_node (elt_init);
 	      RAW_DATA_LENGTH (elt_init) = len;
+	      RAW_DATA_POINTER (elt_init) += off;
 	    }
 	  TREE_TYPE (elt_init) = elt_type;
 	}
@@ -7017,7 +7026,7 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
       if (elt_init == error_mark_node)
 	return error_mark_node;
       tree idx = size_int (index);
-      if (reuse && old_raw_data_ptr && d->cur == old_cur)
+      if (reuse && old_raw_data_cst && d->cur == old_cur)
 	{
 	  /* We need to stop reusing as some RAW_DATA_CST in the original
 	     ctor had to be split.  */
@@ -7058,9 +7067,7 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
       /* This can happen with an invalid initializer (c++/54501).  */
       if (d->cur == old_cur
 	  && !sized_array_p
-	  && (old_raw_data_ptr == NULL
-	      || (TREE_CODE (d->cur->value) == RAW_DATA_CST
-		  && RAW_DATA_POINTER (d->cur->value) == old_raw_data_ptr)))
+	  && d->raw_idx == old_raw_idx)
 	break;
 
       if (TREE_CODE (elt_init) == RAW_DATA_CST)
@@ -7129,7 +7136,7 @@ reshape_single_init (tree type, tree init, tsubst_flags_t complain)
   /* We could also implement this by wrapping init in a new CONSTRUCTOR and
      calling reshape_init, but this way can just live on the stack.  */
   constructor_elt elt = { /*index=*/NULL_TREE, init };
-  reshape_iter iter = { &elt, &elt + 1 };
+  reshape_iter iter = { &elt, &elt + 1, 0 };
   return reshape_init_r (type, &iter,
 			 /*first_initializer_p=*/NULL_TREE,
 			 complain);
@@ -7190,11 +7197,8 @@ reshape_init_class (tree type, reshape_iter *d, bool first_initializer_p,
     {
       tree field_init;
       constructor_elt *old_cur = d->cur;
-      const char *old_raw_data_ptr = NULL;
+      unsigned old_raw_idx = d->raw_idx;
       bool direct_desig = false;
-
-      if (TREE_CODE (d->cur->value) == RAW_DATA_CST)
-	old_raw_data_ptr = RAW_DATA_POINTER (d->cur->value);
 
       /* Handle C++20 designated initializers.  */
       if (d->cur->index)
@@ -7322,11 +7326,7 @@ reshape_init_class (tree type, reshape_iter *d, bool first_initializer_p,
       if (field_init == error_mark_node)
 	return error_mark_node;
 
-      if (d->cur == old_cur
-	  && d->cur->index
-	  && (old_raw_data_ptr == NULL
-	      || (TREE_CODE (d->cur->value) == RAW_DATA_CST
-		  && RAW_DATA_POINTER (d->cur->value) == old_raw_data_ptr)))
+      if (d->cur == old_cur && d->cur->index && d->raw_idx == old_raw_idx)
 	{
 	  /* This can happen with an invalid initializer for a flexible
 	     array member (c++/54441).  */
@@ -7362,7 +7362,8 @@ reshape_init_class (tree type, reshape_iter *d, bool first_initializer_p,
   if (last_was_pack_expansion)
     {
       tree init = d->cur->value;
-      if (tree raw_init = cp_maybe_split_raw_data (d))
+      bool inc_cur;
+      if (tree raw_init = cp_maybe_split_raw_data (d, &inc_cur))
 	init = raw_init;
       CONSTRUCTOR_APPEND_ELT (CONSTRUCTOR_ELTS (new_init),
 			      last_was_pack_expansion, init);
@@ -7430,15 +7431,13 @@ reshape_init_r (tree type, reshape_iter *d, tree first_initializer_p,
 	}
       else if (first_initializer_p && d->cur != d->end)
 	{
+	  if (error_operand_p (d->cur->value)
+	      || has_designator_problem (d, complain))
+	    return error_mark_node;
 	  vec<constructor_elt, va_gc> *v = 0;
 	  CONSTRUCTOR_APPEND_ELT (v, NULL_TREE, init);
-	  tree raw_init = cp_maybe_split_raw_data (d);
-	  CONSTRUCTOR_APPEND_ELT (v, NULL_TREE,
-				  raw_init ? raw_init : d->cur->value);
-	  if (has_designator_problem (d, complain))
-	    return error_mark_node;
-	  if (!raw_init)
-	    d->cur++;
+	  init = consume_init (d->cur->value, d);
+	  CONSTRUCTOR_APPEND_ELT (v, NULL_TREE, init);
 	  init = build_constructor (init_list_type_node, v);
 	}
       return init;
@@ -7705,6 +7704,7 @@ reshape_init (tree type, tree init, tsubst_flags_t complain)
   /* Recurse on this CONSTRUCTOR.  */
   d.cur = &(*v)[0];
   d.end = d.cur + v->length ();
+  d.raw_idx = 0;
 
   new_init = reshape_init_r (type, &d, init, complain);
   if (new_init == error_mark_node)
@@ -8466,12 +8466,7 @@ omp_declare_variant_finalize_one (tree decl, tree attr)
   if (TREE_CODE (TREE_TYPE (decl)) == METHOD_TYPE)
     parm = DECL_CHAIN (parm);
   for (; parm; parm = DECL_CHAIN (parm))
-    if (type_dependent_expression_p (parm))
-      vec_safe_push (args, build_constructor (TREE_TYPE (parm), NULL));
-    else if (MAYBE_CLASS_TYPE_P (TREE_TYPE (parm)))
-      vec_safe_push (args, build_local_temp (TREE_TYPE (parm)));
-    else
-      vec_safe_push (args, build_zero_cst (TREE_TYPE (parm)));
+    vec_safe_push (args, build_stub_object (TREE_TYPE (parm)));
 
   unsigned nappend_args = 0;
   tree append_args_list = TREE_CHAIN (TREE_CHAIN (chain));
@@ -8502,7 +8497,7 @@ omp_declare_variant_finalize_one (tree decl, tree attr)
 	      return true;
 	    }
 	  for (unsigned i = 0; i < nappend_args; i++)
-	    vec_safe_push (args, build_zero_cst (TREE_TYPE (type)));
+	    vec_safe_push (args, build_stub_object (TREE_TYPE (type)));
 	}
     }
 
@@ -8549,6 +8544,9 @@ omp_declare_variant_finalize_one (tree decl, tree attr)
 				koenig_p, tf_warning_or_error);
   if (variant == error_mark_node && !processing_template_decl)
     return true;
+
+  if (TREE_CODE (variant) == TARGET_EXPR)
+    variant = TARGET_EXPR_INITIAL (variant);
 
   variant = cp_get_callee_fndecl_nofold (STRIP_REFERENCE_REF (variant));
   input_location = save_loc;
@@ -8624,16 +8622,29 @@ omp_declare_variant_finalize_one (tree decl, tree attr)
 	  tree construct
 	    = omp_get_context_selector_list (ctx, OMP_TRAIT_SET_CONSTRUCT);
 	  omp_mark_declare_variant (match_loc, variant, construct);
-	  if (!omp_context_selector_matches (ctx))
+	  if (!omp_context_selector_matches (ctx, NULL_TREE, false))
 	    return true;
 	  TREE_PURPOSE (TREE_VALUE (attr)) = variant;
 
 	  // Prepend adjust_args list to variant attributes
 	  tree adjust_args_list = TREE_CHAIN (TREE_CHAIN (chain));
 	  if (adjust_args_list != NULL_TREE)
-	    DECL_ATTRIBUTES (variant) = tree_cons (
-	      get_identifier ("omp declare variant variant args"),
-	      TREE_VALUE (adjust_args_list), DECL_ATTRIBUTES (variant));
+	    {
+	      if (DECL_NONSTATIC_MEMBER_P (variant)
+		  && TREE_VALUE (adjust_args_list))
+		{
+		  /* Shift arg position for the added 'this' pointer.  */
+		  /* Handle need_device_ptr  */
+		  for (tree t = TREE_PURPOSE (TREE_VALUE (adjust_args_list));
+		       t; t = TREE_CHAIN (t))
+		    TREE_VALUE (t)
+		      = build_int_cst (TREE_TYPE (t),
+				       tree_to_uhwi (TREE_VALUE (t)) + 1);
+		}
+	      DECL_ATTRIBUTES (variant) = tree_cons (
+		get_identifier ("omp declare variant variant args"),
+		TREE_VALUE (adjust_args_list), DECL_ATTRIBUTES (variant));
+	    }
 	}
     }
   else if (!processing_template_decl)
@@ -11923,6 +11934,7 @@ fold_sizeof_expr (tree t)
 				    false, false);
   if (r == error_mark_node)
     r = size_one_node;
+  r = cp_fold_convert (size_type_node, r);
   return r;
 }
 

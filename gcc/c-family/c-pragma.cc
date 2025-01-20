@@ -1,5 +1,5 @@
 /* Handle #pragma, system V.4 style.  Supports #pragma weak and #pragma pack.
-   Copyright (C) 1992-2024 Free Software Foundation, Inc.
+   Copyright (C) 1992-2025 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -1529,6 +1529,7 @@ static const struct omp_pragma_def omp_pragmas[] = {
   { "end", PRAGMA_OMP_END },
   { "flush", PRAGMA_OMP_FLUSH },
   { "interop", PRAGMA_OMP_INTEROP },
+  { "metadirective", PRAGMA_OMP_METADIRECTIVE },
   { "nothing", PRAGMA_OMP_NOTHING },
   { "requires", PRAGMA_OMP_REQUIRES },
   { "scope", PRAGMA_OMP_SCOPE },

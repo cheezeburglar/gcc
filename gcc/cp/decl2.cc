@@ -1,5 +1,5 @@
 /* Process declarations and variables for C++ compiler.
-   Copyright (C) 1988-2024 Free Software Foundation, Inc.
+   Copyright (C) 1988-2025 Free Software Foundation, Inc.
    Hacked by Michael Tiemann (tiemann@cygnus.com)
 
 This file is part of GCC.
@@ -1786,13 +1786,8 @@ cplus_decl_attributes (tree *decl, tree attributes, int flags)
 	      = tree_cons (get_identifier ("omp declare target implicit"),
 			   NULL_TREE, attributes);
 	  else
-	    {
-	      attributes = tree_cons (get_identifier ("omp declare target"),
-				      NULL_TREE, attributes);
-	      attributes
-		= tree_cons (get_identifier ("omp declare target block"),
-			     NULL_TREE, attributes);
-	    }
+	    attributes = tree_cons (get_identifier ("omp declare target"),
+				    NULL_TREE, attributes);
 	  if (TREE_CODE (*decl) == FUNCTION_DECL)
 	    {
 	      cp_omp_declare_target_attr &last
@@ -3656,6 +3651,13 @@ copy_linkage (tree guard, tree decl)
 	comdat_linkage (guard);
       DECL_VISIBILITY (guard) = DECL_VISIBILITY (decl);
       DECL_VISIBILITY_SPECIFIED (guard) = DECL_VISIBILITY_SPECIFIED (decl);
+      if (!TREE_PUBLIC (decl))
+	{
+	  gcc_checking_assert (DECL_INTERFACE_KNOWN (decl));
+	  DECL_INTERFACE_KNOWN (guard) = 1;
+	  if (DECL_LANG_SPECIFIC (decl) && DECL_LANG_SPECIFIC (guard))
+	    DECL_NOT_REALLY_EXTERN (guard) = DECL_NOT_REALLY_EXTERN (decl);
+	}
     }
 }
 

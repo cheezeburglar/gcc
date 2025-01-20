@@ -1,5 +1,5 @@
 ;; Machine description for RISC-V 'V' Extension for GNU compiler.
-;; Copyright (C) 2022-2024 Free Software Foundation, Inc.
+;; Copyright (C) 2022-2025 Free Software Foundation, Inc.
 ;; Contributed by Juzhe Zhong (juzhe.zhong@rivai.ai), RiVAI Technologies Ltd.
 
 ;; This file is part of GCC.
@@ -56,7 +56,8 @@
 			  vssegtux,vssegtox,vlsegdff,vandn,vbrev,vbrev8,vrev8,vcpop,vclz,vctz,vrol,\
 			  vror,vwsll,vclmul,vclmulh,vghsh,vgmul,vaesef,vaesem,vaesdf,vaesdm,\
 			  vaeskf1,vaeskf2,vaesz,vsha2ms,vsha2ch,vsha2cl,vsm4k,vsm4r,vsm3me,vsm3c,\
-			  vfncvtbf16,vfwcvtbf16,vfwmaccbf16")
+			  vfncvtbf16,vfwcvtbf16,vfwmaccbf16,\
+			  sf_vqmacc,sf_vfnrclip")
 	 (const_string "true")]
 	(const_string "false")))
 
@@ -893,7 +894,7 @@
 			  vfredo,vfwredu,vfwredo,vslideup,vslidedown,vislide1up,\
 			  vislide1down,vfslide1up,vfslide1down,vgather,viwmuladd,vfwmuladd,\
 			  vlsegds,vlsegdux,vlsegdox,vandn,vrol,vror,vwsll,vclmul,vclmulh,\
-			  vfwmaccbf16")
+			  vfwmaccbf16,sf_vqmacc,sf_vfnrclip")
 	   (symbol_ref "riscv_vector::get_ta(operands[6])")
 
 	 (eq_attr "type" "vimuladd,vfmuladd")
@@ -924,7 +925,7 @@
 			  vfwalu,vfwmul,vfsgnj,vfcmp,vslideup,vslidedown,\
 			  vislide1up,vislide1down,vfslide1up,vfslide1down,vgather,\
 			  viwmuladd,vfwmuladd,vlsegds,vlsegdux,vlsegdox,vandn,vrol,\
-                          vror,vwsll,vclmul,vclmulh,vfwmaccbf16")
+			  vror,vwsll,vclmul,vclmulh,vfwmaccbf16,sf_vqmacc,sf_vfnrclip")
 	   (symbol_ref "riscv_vector::get_ma(operands[7])")
 
 	 (eq_attr "type" "vimuladd,vfmuladd")
@@ -7745,9 +7746,14 @@
 ;; - 14.3 Vector Single-Width Floating-Point Reduction Instructions
 ;; - 14.4 Vector Widening Floating-Point Reduction Instructions
 ;; -------------------------------------------------------------------------------
+;;
+;; NOTE for VL0 safe variantreduction:
+;;   The VL0 safe variantis used by the auto vectorizer to generate vectorized code
+;;   only, because the auto vectorizer expect reduction should propgat the start
+;;   value to dest even VL=0, the only way is force vd=vs1 by constraint.
 
 ;; Integer Reduction (vred(sum|maxu|max|minu|min|and|or|xor).vs)
-(define_insn "@pred_<reduc_op><mode>"
+(define_insn "@pred_<reduc_op_pat_name><mode>"
   [(set (match_operand:<V_LMUL1>          0 "register_operand"      "=vr,     vr")
 	(unspec:<V_LMUL1>
 	  [(unspec:<VM>
@@ -7767,8 +7773,30 @@
   [(set_attr "type" "vired")
    (set_attr "mode" "<MODE>")])
 
+;; Integer Reduction (vred(sum|maxu|max|minu|min|and|or|xor).vs)
+;; but for auto vectorizer (see "NOTE for VL0 safe variantreduction" for detail)
+(define_insn "@pred_<reduc_op_pat_name><mode>"
+  [(set (match_operand:<V_LMUL1>          0 "register_operand"      "=vr")
+	(unspec:<V_LMUL1>
+	  [(unspec:<VM>
+	    [(match_operand:<VM>          1 "vector_mask_operand"   "vmWc1")
+	     (match_operand               5 "vector_length_operand" "   rK")
+	     (match_operand               6 "const_int_operand"     "    i")
+	     (match_operand               7 "const_int_operand"     "    i")
+	     (reg:SI VL_REGNUM)
+	     (reg:SI VTYPE_REGNUM)] UNSPEC_VPREDICATE)
+	   (unspec:<V_LMUL1> [
+             (match_operand:V_VLSI        3 "register_operand"      "   vr")
+             (match_operand:<V_LMUL1>     4 "register_operand"      "    0")
+           ] ANY_REDUC_VL0_SAFE)
+	   (match_operand:<V_LMUL1>       2 "vector_merge_operand"  "   vu")] UNSPEC_REDUC))]
+  "TARGET_VECTOR"
+  "v<reduc_op>.vs\t%0,%3,%4%p1"
+  [(set_attr "type" "vired")
+   (set_attr "mode" "<MODE>")])
+
 ;; Integer Widen Reduction Sum (vwredsum[u].vs)
-(define_insn "@pred_<reduc_op><mode>"
+(define_insn "@pred_<reduc_op_pat_name><mode>"
   [(set (match_operand:<V_EXT_LMUL1>       0 "register_operand"        "=vr,   vr")
 	(unspec:<V_EXT_LMUL1>
 	  [(unspec:<VM>
@@ -7788,8 +7816,30 @@
   [(set_attr "type" "viwred")
    (set_attr "mode" "<MODE>")])
 
+;; Integer Widen Reduction Sum (vwredsum[u].vs)
+;; but for auto vectorizer (see "NOTE for VL0 safe variantreduction" for detail)
+(define_insn "@pred_<reduc_op_pat_name><mode>"
+  [(set (match_operand:<V_EXT_LMUL1>       0 "register_operand"        "=vr")
+	(unspec:<V_EXT_LMUL1>
+	  [(unspec:<VM>
+	    [(match_operand:<VM>           1 "vector_mask_operand"   "vmWc1")
+	     (match_operand                5 "vector_length_operand" "   rK")
+	     (match_operand                6 "const_int_operand"     "    i")
+	     (match_operand                7 "const_int_operand"     "    i")
+	     (reg:SI VL_REGNUM)
+	     (reg:SI VTYPE_REGNUM)] UNSPEC_VPREDICATE)
+           (unspec:<V_EXT_LMUL1> [
+	     (match_operand:VI_QHS         3 "register_operand"      "   vr")
+	     (match_operand:<V_EXT_LMUL1>  4 "register_operand"      "    0")
+           ] ANY_WREDUC_VL0_SAFE)
+	   (match_operand:<V_EXT_LMUL1>    2 "vector_merge_operand"  "   vu")] UNSPEC_REDUC))]
+  "TARGET_VECTOR"
+  "v<reduc_op>.vs\t%0,%3,%4%p1"
+  [(set_attr "type" "viwred")
+   (set_attr "mode" "<MODE>")])
+
 ;; Float Reduction (vfred(max|min).vs)
-(define_insn "@pred_<reduc_op><mode>"
+(define_insn "@pred_<reduc_op_pat_name><mode>"
   [(set (match_operand:<V_LMUL1>          0 "register_operand"      "=vr,     vr")
 	(unspec:<V_LMUL1>
 	  [(unspec:<VM>
@@ -7809,8 +7859,30 @@
   [(set_attr "type" "vfredu")
    (set_attr "mode" "<MODE>")])
 
+;; Float Reduction (vfred(max|min).vs)
+;; but for auto vectorizer (see "NOTE for VL0 safe variantreduction" for detail)
+(define_insn "@pred_<reduc_op_pat_name><mode>"
+  [(set (match_operand:<V_LMUL1>          0 "register_operand"      "=vr")
+	(unspec:<V_LMUL1>
+	  [(unspec:<VM>
+	    [(match_operand:<VM>          1 "vector_mask_operand"   "vmWc1")
+	     (match_operand               5 "vector_length_operand" "   rK")
+	     (match_operand               6 "const_int_operand"     "    i")
+	     (match_operand               7 "const_int_operand"     "    i")
+	     (reg:SI VL_REGNUM)
+	     (reg:SI VTYPE_REGNUM)] UNSPEC_VPREDICATE)
+           (unspec:<V_LMUL1> [
+             (match_operand:V_VLSF        3 "register_operand"      "   vr")
+             (match_operand:<V_LMUL1>     4 "register_operand"      "    0")
+           ] ANY_FREDUC_VL0_SAFE)
+	   (match_operand:<V_LMUL1>       2 "vector_merge_operand"  "   vu")] UNSPEC_REDUC))]
+  "TARGET_VECTOR"
+  "vf<reduc_op>.vs\t%0,%3,%4%p1"
+  [(set_attr "type" "vfredu")
+   (set_attr "mode" "<MODE>")])
+
 ;; Float Reduction Sum (vfred[ou]sum.vs)
-(define_insn "@pred_<reduc_op><mode>"
+(define_insn "@pred_<reduc_op_pat_name><mode>"
   [(set (match_operand:<V_LMUL1>           0 "register_operand"      "=vr,vr")
 	(unspec:<V_LMUL1>
 	  [(unspec:<VM>
@@ -7834,8 +7906,34 @@
    (set (attr "frm_mode")
 	(symbol_ref "riscv_vector::get_frm_mode (operands[8])"))])
 
+;; Float Reduction Sum (vfred[ou]sum.vs)
+;; but for auto vectorizer (see "NOTE for VL0 safe variantreduction" for detail)
+(define_insn "@pred_<reduc_op_pat_name><mode>"
+  [(set (match_operand:<V_LMUL1>           0 "register_operand"      "=vr")
+	(unspec:<V_LMUL1>
+	  [(unspec:<VM>
+	    [(match_operand:<VM>          1 "vector_mask_operand"   "vmWc1")
+	     (match_operand               5 "vector_length_operand" "   rK")
+	     (match_operand               6 "const_int_operand"     "    i")
+	     (match_operand               7 "const_int_operand"     "    i")
+	     (match_operand               8 "const_int_operand"     "    i")
+	     (reg:SI VL_REGNUM)
+	     (reg:SI VTYPE_REGNUM)
+	     (reg:SI FRM_REGNUM)] UNSPEC_VPREDICATE)
+           (unspec:<V_LMUL1> [
+             (match_operand:V_VLSF        3 "register_operand"      "   vr")
+             (match_operand:<V_LMUL1>     4 "register_operand"      "    0")
+           ] ANY_FREDUC_SUM_VL0_SAFE)
+	   (match_operand:<V_LMUL1>       2 "vector_merge_operand"  "   vu")] UNSPEC_REDUC))]
+  "TARGET_VECTOR"
+  "vf<reduc_op>.vs\t%0,%3,%4%p1"
+  [(set_attr "type" "vfred<order>")
+   (set_attr "mode" "<MODE>")
+   (set (attr "frm_mode")
+	(symbol_ref "riscv_vector::get_frm_mode (operands[8])"))])
+
 ;; Float Widen Reduction Sum (vfwred[ou]sum.vs)
-(define_insn "@pred_<reduc_op><mode>"
+(define_insn "@pred_<reduc_op_pat_name><mode>"
   [(set (match_operand:<V_EXT_LMUL1>         0 "register_operand"      "=vr,   vr")
 	(unspec:<V_EXT_LMUL1>
 	  [(unspec:<VM>
@@ -7852,6 +7950,32 @@
 	     (match_operand:<V_EXT_LMUL1>  4 "register_operand"      "   vr,   vr")
            ] ANY_FWREDUC_SUM)
 	   (match_operand:<V_EXT_LMUL1>    2 "vector_merge_operand"  "   vu,    0")] UNSPEC_REDUC))]
+  "TARGET_VECTOR"
+  "vf<reduc_op>.vs\t%0,%3,%4%p1"
+  [(set_attr "type" "vfwred<order>")
+   (set_attr "mode" "<MODE>")
+   (set (attr "frm_mode")
+	(symbol_ref "riscv_vector::get_frm_mode (operands[8])"))])
+
+;; Float Widen Reduction Sum (vfwred[ou]sum.vs)
+;; but for auto vectorizer (see "NOTE for VL0 safe variantreduction" for detail)
+(define_insn "@pred_<reduc_op_pat_name><mode>"
+  [(set (match_operand:<V_EXT_LMUL1>         0 "register_operand"      "=vr")
+	(unspec:<V_EXT_LMUL1>
+	  [(unspec:<VM>
+	    [(match_operand:<VM>           1 "vector_mask_operand"   "vmWc1")
+	     (match_operand                5 "vector_length_operand" "   rK")
+	     (match_operand                6 "const_int_operand"     "    i")
+	     (match_operand                7 "const_int_operand"     "    i")
+	     (match_operand                8 "const_int_operand"     "    i")
+	     (reg:SI VL_REGNUM)
+	     (reg:SI VTYPE_REGNUM)
+	     (reg:SI FRM_REGNUM)] UNSPEC_VPREDICATE)
+           (unspec:<V_EXT_LMUL1> [
+	     (match_operand:VF_HS          3 "register_operand"      "   vr")
+	     (match_operand:<V_EXT_LMUL1>  4 "register_operand"      "    0")
+           ] ANY_FWREDUC_SUM_VL0_SAFE)
+	   (match_operand:<V_EXT_LMUL1>    2 "vector_merge_operand"  "   vu")] UNSPEC_REDUC))]
   "TARGET_VECTOR"
   "vf<reduc_op>.vs\t%0,%3,%4%p1"
   [(set_attr "type" "vfwred<order>")

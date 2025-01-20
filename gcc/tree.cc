@@ -1,5 +1,5 @@
 /* Language-independent node constructors for parse phase of GNU compiler.
-   Copyright (C) 1987-2024 Free Software Foundation, Inc.
+   Copyright (C) 1987-2025 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -3922,6 +3922,7 @@ tree_invariant_p_1 (tree t)
   switch (TREE_CODE (t))
     {
     case SAVE_EXPR:
+    case TARGET_EXPR:
       return true;
 
     case ADDR_EXPR:

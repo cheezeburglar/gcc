@@ -1,6 +1,6 @@
 /* Subroutines used for code generation for RISC-V 'V' Extension for
    GNU compiler.
-   Copyright (C) 2022-2024 Free Software Foundation, Inc.
+   Copyright (C) 2022-2025 Free Software Foundation, Inc.
    Contributed by Juzhe Zhong (juzhe.zhong@rivai.ai), RiVAI Technologies Ltd.
 
    This file is part of GCC.
@@ -1478,13 +1478,20 @@ expand_const_vector (rtx target, rtx src)
 
 	     can be interpreted into:
 
-		  EEW = 32, { 2, 4, ... }  */
+		  EEW = 32, { 2, 4, ... }.
+
+	     This only works as long as the larger type does not overflow
+	     as we can't guarantee a zero value for each second element
+	     of the sequence with smaller EEW.
+	     ??? For now we assume that no overflow happens with positive
+	     steps and forbid negative steps altogether.  */
 	  unsigned int new_smode_bitsize = builder.inner_bits_size () * 2;
 	  scalar_int_mode new_smode;
 	  machine_mode new_mode;
 	  poly_uint64 new_nunits
 	    = exact_div (GET_MODE_NUNITS (builder.mode ()), 2);
-	  if (int_mode_for_size (new_smode_bitsize, 0).exists (&new_smode)
+	  if (known_ge (step1, 0) && known_ge (step2, 0)
+	      && int_mode_for_size (new_smode_bitsize, 0).exists (&new_smode)
 	      && get_vector_mode (new_smode, new_nunits).exists (&new_mode))
 	    {
 	      rtx tmp1 = gen_reg_rtx (new_mode);
@@ -1498,10 +1505,11 @@ expand_const_vector (rtx target, rtx src)
 		{
 		  /* { 1, 1, 2, 1, ... }.  */
 		  rtx scalar = expand_simple_binop (
-		    new_smode, ASHIFT,
-		    gen_int_mode (rtx_to_poly_int64 (base2), new_smode),
-		    gen_int_mode (builder.inner_bits_size (), new_smode),
+		    Xmode, ASHIFT,
+		    gen_int_mode (rtx_to_poly_int64 (base2), Xmode),
+		    gen_int_mode (builder.inner_bits_size (), Xmode),
 		    NULL_RTX, false, OPTAB_DIRECT);
+		  scalar = simplify_gen_subreg (new_smode, scalar, Xmode, 0);
 		  rtx tmp2 = gen_reg_rtx (new_mode);
 		  rtx ior_ops[] = {tmp2, tmp1, scalar};
 		  emit_vlmax_insn (code_for_pred_scalar (IOR, new_mode),
@@ -4504,30 +4512,47 @@ expand_cond_ternop (unsigned icode, rtx *ops)
      Case 2: ops = {scalar_dest, vector_src, mask, vl}
 */
 void
-expand_reduction (unsigned unspec, unsigned insn_flags, rtx *ops, rtx init)
+expand_reduction (unsigned unspec, unsigned unspec_for_vl0_safe,
+		  unsigned insn_flags, rtx *ops, rtx init)
 {
   rtx scalar_dest = ops[0];
   rtx vector_src = ops[1];
   machine_mode vmode = GET_MODE (vector_src);
   machine_mode vel_mode = GET_MODE (scalar_dest);
   machine_mode m1_mode = get_m1_mode (vel_mode).require ();
+  rtx vl_op = NULL_RTX;
+  bool need_vl0_safe = false;
+  if (need_mask_operand_p (insn_flags))
+    {
+      vl_op = ops[3];
+      need_vl0_safe = !CONST_INT_P (vl_op) && !CONST_POLY_INT_P (vl_op);
+    }
 
   rtx m1_tmp = gen_reg_rtx (m1_mode);
   rtx scalar_move_ops[] = {m1_tmp, init};
   insn_code icode = code_for_pred_broadcast (m1_mode);
   if (need_mask_operand_p (insn_flags))
-    emit_nonvlmax_insn (icode, SCALAR_MOVE_OP, scalar_move_ops, ops[3]);
+    {
+      if (need_vl0_safe)
+	emit_nonvlmax_insn (icode, SCALAR_MOVE_OP, scalar_move_ops, const1_rtx);
+      else
+	emit_nonvlmax_insn (icode, SCALAR_MOVE_OP, scalar_move_ops, vl_op);
+    }
   else
     emit_vlmax_insn (icode, SCALAR_MOVE_OP, scalar_move_ops);
 
   rtx m1_tmp2 = gen_reg_rtx (m1_mode);
   rtx reduc_ops[] = {m1_tmp2, vector_src, m1_tmp};
-  icode = code_for_pred (unspec, vmode);
+
+  if (need_vl0_safe)
+    icode = code_for_pred (unspec_for_vl0_safe, vmode);
+  else
+    icode = code_for_pred (unspec, vmode);
 
   if (need_mask_operand_p (insn_flags))
     {
       rtx mask_len_reduc_ops[] = {m1_tmp2, ops[2], vector_src, m1_tmp};
-      emit_nonvlmax_insn (icode, insn_flags, mask_len_reduc_ops, ops[3]);
+      emit_nonvlmax_insn (icode, insn_flags, mask_len_reduc_ops, vl_op);
     }
   else
     emit_vlmax_insn (icode, insn_flags, reduc_ops);

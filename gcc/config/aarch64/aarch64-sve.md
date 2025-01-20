@@ -1,5 +1,5 @@
 ;; Machine description for AArch64 SVE.
-;; Copyright (C) 2009-2024 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2025 Free Software Foundation, Inc.
 ;; Contributed by ARM Ltd.
 ;;
 ;; This file is part of GCC.
@@ -2839,8 +2839,31 @@
   }
 )
 
+;; Vector constructor combining two half vectors { a, b }
 (define_expand "vec_init<mode><Vhalf>"
   [(match_operand:SVE_NO2E 0 "register_operand")
+   (match_operand 1 "")]
+  "TARGET_SVE"
+  {
+    aarch64_sve_expand_vector_init_subvector (operands[0], operands[1]);
+    DONE;
+  }
+)
+
+;; Vector constructor combining four quad vectors { a, b, c, d }
+(define_expand "vec_init<mode><Vquad>"
+  [(match_operand:SVE_NO4E 0 "register_operand")
+   (match_operand 1 "")]
+  "TARGET_SVE"
+  {
+    aarch64_sve_expand_vector_init_subvector (operands[0], operands[1]);
+    DONE;
+  }
+)
+
+;; Vector constructor combining eight vectors { a, b, c, d, ... }
+(define_expand "vec_initvnx16qivnx2qi"
+  [(match_operand:VNx16QI 0 "register_operand")
    (match_operand 1 "")]
   "TARGET_SVE"
   {
@@ -4426,7 +4449,7 @@
 ;; -------------------------------------------------------------------------
 
 ;; Unpredicated saturating signed addition and subtraction.
-(define_insn "@aarch64_sve_<optab><mode>"
+(define_insn "<su_optab>s<addsub><mode>3"
   [(set (match_operand:SVE_FULL_I 0 "register_operand")
 	(SBINQOPS:SVE_FULL_I
 	  (match_operand:SVE_FULL_I 1 "register_operand")
@@ -4442,7 +4465,7 @@
 )
 
 ;; Unpredicated saturating unsigned addition and subtraction.
-(define_insn "@aarch64_sve_<optab><mode>"
+(define_insn "<su_optab>s<addsub><mode>3"
   [(set (match_operand:SVE_FULL_I 0 "register_operand")
 	(UBINQOPS:SVE_FULL_I
 	  (match_operand:SVE_FULL_I 1 "register_operand")

@@ -1,5 +1,5 @@
 /* Subroutines used for code generation on IBM S/390 and zSeries
-   Copyright (C) 1999-2024 Free Software Foundation, Inc.
+   Copyright (C) 1999-2025 Free Software Foundation, Inc.
    Contributed by Hartmut Penner (hpenner@de.ibm.com) and
                   Ulrich Weigand (uweigand@de.ibm.com) and
                   Andreas Krebbel (Andreas.Krebbel@de.ibm.com).
@@ -342,6 +342,7 @@ const struct s390_processor processor_table[] =
   { "z14",    "arch12", PROCESSOR_3906_Z14,    &zEC12_cost,  12 },
   { "z15",    "arch13", PROCESSOR_8561_Z15,    &zEC12_cost,  13 },
   { "z16",    "arch14", PROCESSOR_3931_Z16,    &zEC12_cost,  14 },
+  { "arch15", "",       PROCESSOR_ARCH15,      &zEC12_cost,  15 },
   { "native", "",       PROCESSOR_NATIVE,      NULL,         0  }
 };
 
@@ -912,6 +913,12 @@ s390_expand_builtin (tree exp, rtx target, rtx subtarget ATTRIBUTE_UNUSED,
 	  error ("Builtin %qF requires z15 or higher", fndecl);
 	  return const0_rtx;
 	}
+
+      if ((bflags & B_VXE3) && !TARGET_VXE3)
+	{
+	  error ("Builtin %qF requires arch15 or higher", fndecl);
+	  return const0_rtx;
+	}
     }
   if (fcode >= S390_OVERLOADED_BUILTIN_VAR_OFFSET
       && fcode < S390_ALL_BUILTIN_MAX)
@@ -1198,6 +1205,9 @@ s390_handle_vectorbool_attribute (tree *node, tree name ATTRIBUTE_UNUSED,
   mode = TYPE_MODE (type);
   switch (mode)
     {
+    case E_TImode: case E_V1TImode:
+      result = s390_builtin_types[BT_BV1TI];
+      break;
     case E_DImode: case E_V2DImode:
       result = s390_builtin_types[BT_BV2DI];
       break;
@@ -2029,9 +2039,9 @@ s390_canonicalize_comparison (int *code, rtx *op0, rtx *op1,
    the IF_THEN_ELSE of the conditional branch testing the result.  */
 
 rtx
-s390_emit_compare (enum rtx_code code, rtx op0, rtx op1)
+s390_emit_compare (machine_mode mode, enum rtx_code code, rtx op0, rtx op1)
 {
-  machine_mode mode = s390_select_ccmode (code, op0, op1);
+  machine_mode cc_mode = s390_select_ccmode (code, op0, op1);
   rtx cc;
 
   /* Force OP1 into register in order to satisfy VXE TFmode patterns.  */
@@ -2043,17 +2053,17 @@ s390_emit_compare (enum rtx_code code, rtx op0, rtx op1)
       /* Do not output a redundant compare instruction if a
 	 compare_and_swap pattern already computed the result and the
 	 machine modes are compatible.  */
-      gcc_assert (s390_cc_modes_compatible (GET_MODE (op0), mode)
+      gcc_assert (s390_cc_modes_compatible (GET_MODE (op0), cc_mode)
 		  == GET_MODE (op0));
       cc = op0;
     }
   else
     {
-      cc = gen_rtx_REG (mode, CC_REGNUM);
-      emit_insn (gen_rtx_SET (cc, gen_rtx_COMPARE (mode, op0, op1)));
+      cc = gen_rtx_REG (cc_mode, CC_REGNUM);
+      emit_insn (gen_rtx_SET (cc, gen_rtx_COMPARE (cc_mode, op0, op1)));
     }
 
-  return gen_rtx_fmt_ee (code, VOIDmode, cc, const0_rtx);
+  return gen_rtx_fmt_ee (code, mode, cc, const0_rtx);
 }
 
 /* If MEM is not a legitimate compare-and-swap memory operand, return a new
@@ -2103,7 +2113,7 @@ s390_emit_compare_and_swap (enum rtx_code code, rtx old, rtx mem,
     default:
       gcc_unreachable ();
     }
-  return s390_emit_compare (code, cc, const0_rtx);
+  return s390_emit_compare (VOIDmode, code, cc, const0_rtx);
 }
 
 /* Emit a jump instruction to TARGET and return it.  If COND is
@@ -2818,7 +2828,7 @@ s390_constant_via_vgbm_p (rtx op, unsigned *mask)
   unsigned tmp_mask = 0;
   int nunit, unit_size;
 
-  if (GET_CODE (op) == CONST_VECTOR)
+  if (GET_CODE (op) == CONST_VECTOR && GET_MODE_SIZE (GET_MODE (op)) <= 16)
     {
       if (GET_MODE_INNER (GET_MODE (op)) == TImode
 	  || GET_MODE_INNER (GET_MODE (op)) == TFmode)
@@ -6647,7 +6657,7 @@ s390_expand_vec_strlen (rtx target, rtx string, rtx alignment)
      Now we have to check whether the resulting index lies within the
      bytes actually part of the string.  */
 
-  cond = s390_emit_compare (GT, convert_to_mode (Pmode, len, 1),
+  cond = s390_emit_compare (VOIDmode, GT, convert_to_mode (Pmode, len, 1),
 			    highest_index_to_load_reg);
   s390_load_address (highest_index_to_load_reg,
 		     gen_rtx_PLUS (Pmode, highest_index_to_load_reg,
@@ -7286,7 +7296,8 @@ s390_expand_vec_compare_cc (rtx target, enum rtx_code code,
   rtx tmp_reg = gen_reg_rtx (SImode);
   bool swap_p = false;
 
-  if (GET_MODE_CLASS (GET_MODE (cmp1)) == MODE_VECTOR_INT)
+  if (GET_MODE_CLASS (GET_MODE (cmp1)) == MODE_VECTOR_INT
+      || GET_MODE (cmp1) == TImode)
     {
       switch (code)
 	{
@@ -7845,7 +7856,7 @@ s390_expand_cs_hqi (machine_mode mode, rtx btarget, rtx vtarget, rtx mem,
       tmp = copy_to_reg (val);
       force_expand_binop (SImode, and_optab, res, ac.modemaski, val,
 			  1, OPTAB_DIRECT);
-      cc = s390_emit_compare (NE, val, tmp);
+      cc = s390_emit_compare (VOIDmode, NE, val, tmp);
       s390_emit_jump (csloop, cc);
 
       /* Failed.  */
@@ -8688,8 +8699,12 @@ print_operand (FILE *file, rtx x, int code)
       {
 	machine_mode mode;
 	short imm;
-	bool b = s390_constant_via_vrepi_p (x, &mode, &imm);
-	gcc_checking_assert (b);
+	if (!s390_constant_via_vrepi_p (x, &mode, &imm))
+	  {
+	    output_operand_lossage ("invalid constant for output "
+				    "modifier '%c'", code);
+	    return;
+	  }
 	switch (mode)
 	  {
 	  case QImode:
@@ -8714,8 +8729,12 @@ print_operand (FILE *file, rtx x, int code)
       {
 	machine_mode mode;
 	int start, end;
-	bool b = s390_constant_via_vgm_p (x, &mode, &start, &end);
-	gcc_checking_assert (b);
+	if (!s390_constant_via_vgm_p (x, &mode, &start, &end))
+	  {
+	    output_operand_lossage ("invalid constant for output "
+				    "modifier '%c'", code);
+	    return;
+	  }
 	switch (mode)
 	  {
 	  case QImode:
@@ -8739,8 +8758,12 @@ print_operand (FILE *file, rtx x, int code)
     case 'r':
       {
 	unsigned mask;
-	bool b = s390_constant_via_vgbm_p (x, &mask);
-	gcc_checking_assert (b);
+	if (!s390_constant_via_vgbm_p (x, &mask))
+	  {
+	    output_operand_lossage ("invalid constant for output "
+				    "modifier '%c'", code);
+	    return;
+	  }
 	fprintf (file, "%u", mask);
       }
       return;
@@ -9151,6 +9174,7 @@ s390_issue_rate (void)
     case PROCESSOR_3906_Z14:
     case PROCESSOR_8561_Z15:
     case PROCESSOR_3931_Z16:
+    case PROCESSOR_ARCH15:
     default:
       return 1;
     }
@@ -12687,7 +12711,7 @@ s390_expand_split_stack_prologue (void)
 	}
 
       /* Compare the (maybe adjusted) guard with the stack pointer.  */
-      cc = s390_emit_compare (LT, stack_pointer_rtx, guard);
+      cc = s390_emit_compare (VOIDmode, LT, stack_pointer_rtx, guard);
     }
 
   call_done = gen_label_rtx ();
@@ -15578,6 +15602,7 @@ s390_get_sched_attrmask (rtx_insn *insn)
 	mask |= S390_SCHED_ATTR_MASK_GROUPOFTWO;
       break;
     case PROCESSOR_3931_Z16:
+    case PROCESSOR_ARCH15:
       if (get_attr_z16_cracked (insn))
 	mask |= S390_SCHED_ATTR_MASK_CRACKED;
       if (get_attr_z16_expanded (insn))
@@ -15636,6 +15661,7 @@ s390_get_unit_mask (rtx_insn *insn, int *units)
 	mask |= 1 << 3;
       break;
     case PROCESSOR_3931_Z16:
+    case PROCESSOR_ARCH15:
       *units = 4;
       if (get_attr_z16_unit_lsu (insn))
 	mask |= 1 << 0;
