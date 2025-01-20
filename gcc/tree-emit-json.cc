@@ -2027,9 +2027,8 @@ node_emit_json(tree t, dump_info_p di)
       else if ( TYPE_NAME (t) && DECL_NAME (TYPE_NAME (t)) )
         decl_node_add_json( TYPE_NAME(t), *json_obj.get());
       else //TDF_NOUID
-        {
-          char* buff;
-          buff = new char ();
+        {// TODO: 
+          char buff [20];
           print_hex(TYPE_UID(t), buff);
    	  json_obj->set_string("uid", buff);
         }

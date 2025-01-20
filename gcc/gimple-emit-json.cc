@@ -1089,7 +1089,11 @@ dequeue_and_add (dump_info_gimple_p di)
 
   /* Convert the node to JSON and store it to be dumped later. */
   auto dummy = gimple_to_json(gimp, di->flags);
-  di->json_dump->append(dummy);
+
+  // DEBUG: See if we still run out of memory here.
+  dummy->dump();
+
+//  di->json_dump->append(dummy);
 }
 
 json::array *

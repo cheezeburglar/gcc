@@ -8497,7 +8497,6 @@ dump_function_to_file (tree fndecl, FILE *file, dump_flags_t flags)
       gimple_seq body = gimple_body (fndecl);
 
       auto json_array = gimple_seq_to_json (body, flags);
-      json_array->dump(stderr, true);
       delete json_array;
 
       if (gimple_seq_first_stmt (body)
