@@ -1773,12 +1773,6 @@
 #endif
 
 
-/* Define 0/1 if your linker supports CIE v3 in .eh_frame. */
-#ifndef USED_FOR_TARGET
-#undef HAVE_LD_EH_FRAME_CIEV3
-#endif
-
-
 /* Define if your linker supports .eh_frame_hdr. */
 #undef HAVE_LD_EH_FRAME_HDR
 
@@ -1969,6 +1963,18 @@
 /* Define if read-only mmap of a plain file works. */
 #ifndef USED_FOR_TARGET
 #undef HAVE_MMAP_FILE
+#endif
+
+
+/* Define to 1 if you have the `msync' function. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_MSYNC
+#endif
+
+
+/* Define to 1 if you have the `munmap' function. */
+#ifndef USED_FOR_TARGET
+#undef HAVE_MUNMAP
 #endif
 
 

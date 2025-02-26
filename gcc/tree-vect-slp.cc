@@ -1522,7 +1522,8 @@ vect_build_slp_tree_1 (vec_info *vinfo, unsigned char *swap,
 	      && TREE_CODE_CLASS (tree_code (rhs_code)) != tcc_comparison
 	      && rhs_code != VIEW_CONVERT_EXPR
 	      && rhs_code != CALL_EXPR
-	      && rhs_code != BIT_FIELD_REF)
+	      && rhs_code != BIT_FIELD_REF
+	      && rhs_code != SSA_NAME)
 	    {
 	      if (dump_enabled_p ())
 		dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
@@ -5030,15 +5031,33 @@ vect_analyze_slp (vec_info *vinfo, unsigned max_tree_size,
 	    vec<stmt_vec_info> stmts;
 	    vec<stmt_vec_info> roots = vNULL;
 	    vec<tree> remain = vNULL;
-	    gphi *lc_phi = as_a<gphi *> (STMT_VINFO_STMT (stmt_info));
-	    tree def = gimple_phi_arg_def_from_edge (lc_phi, latch_e);
-	    stmt_vec_info lc_info = loop_vinfo->lookup_def (def);
+	    gphi *phi = as_a<gphi *> (STMT_VINFO_STMT (stmt_info));
 	    stmts.create (1);
+	    tree def = gimple_phi_arg_def_from_edge (phi, latch_e);
+	    stmt_vec_info lc_info = loop_vinfo->lookup_def (def);
 	    stmts.quick_push (vect_stmt_to_vectorize (lc_info));
 	    vect_build_slp_instance (vinfo, slp_inst_kind_reduc_group,
 				     stmts, roots, remain,
 				     max_tree_size, &limit,
 				     bst_map, NULL, force_single_lane);
+	    /* When the latch def is from a different cycle this can only
+	       be a induction.  Build a simple instance for this.
+	       ???  We should be able to start discovery from the PHI
+	       for all inductions, but then there will be stray
+	       non-SLP stmts we choke on as needing non-SLP handling.  */
+	    auto_vec<stmt_vec_info, 1> tem;
+	    tem.quick_push (stmt_info);
+	    if (!bst_map->get (tem))
+	      {
+		gcc_assert (STMT_VINFO_DEF_TYPE (stmt_info)
+			    == vect_induction_def);
+		stmts.create (1);
+		stmts.quick_push (stmt_info);
+		vect_build_slp_instance (vinfo, slp_inst_kind_reduc_group,
+					 stmts, roots, remain,
+					 max_tree_size, &limit,
+					 bst_map, NULL, force_single_lane);
+	      }
 	  }
     }
 
@@ -10198,6 +10217,25 @@ vect_create_constant_vectors (vec_info *vinfo, slp_tree op_node)
       SLP_TREE_VEC_DEFS (op_node).quick_push (vop);
 }
 
+/* Get the scalar definition of the Nth lane from SLP_NODE or NULL_TREE
+   if there is no definition for it in the scalar IL or it is not known.  */
+
+tree
+vect_get_slp_scalar_def (slp_tree slp_node, unsigned n)
+{
+  if (SLP_TREE_DEF_TYPE (slp_node) == vect_internal_def)
+    {
+      if (!SLP_TREE_SCALAR_STMTS (slp_node).exists ())
+	return NULL_TREE;
+      stmt_vec_info def = SLP_TREE_SCALAR_STMTS (slp_node)[n];
+      if (!def)
+	return NULL_TREE;
+      return gimple_get_lhs (STMT_VINFO_STMT (def));
+    }
+  else
+    return SLP_TREE_SCALAR_OPS (slp_node)[n];
+}
+
 /* Get the Ith vectorized definition from SLP_NODE.  */
 
 tree
@@ -10845,7 +10883,7 @@ vectorizable_slp_permutation_1 (vec_info *vinfo, gimple_stmt_iterator *gsi,
       for (unsigned i = 0; i < perm.length (); ++i)
 	dump_printf (MSG_NOTE, " op%u[%u]", perm[i].first, perm[i].second);
       if (repeating_p)
-	dump_printf (MSG_NOTE, " (repeat %d)\n", SLP_TREE_LANES (node));
+	dump_printf (MSG_NOTE, " (repeat %d)", SLP_TREE_LANES (node));
       dump_printf (MSG_NOTE, "\n");
       dump_printf_loc (MSG_NOTE, vect_location, "as");
       for (unsigned i = 0; i < vperm.length (); ++i)
@@ -10883,9 +10921,15 @@ vectorizable_slp_permutation_1 (vec_info *vinfo, gimple_stmt_iterator *gsi,
      vectors to check during analysis, but we need to generate NOUTPUTS
      vectors during transformation.  */
   unsigned total_nelts = olanes;
-  if (repeating_p && gsi)
-    total_nelts = (total_nelts / unpack_factor) * noutputs;
-  for (unsigned i = 0; i < total_nelts; ++i)
+  unsigned process_nelts = olanes;
+  if (repeating_p)
+    {
+      total_nelts = (total_nelts / unpack_factor) * noutputs;
+      if (gsi)
+	process_nelts = total_nelts;
+    }
+  unsigned last_ei = (total_nelts - 1) % process_nelts;
+  for (unsigned i = 0; i < process_nelts; ++i)
     {
       /* VI is the input vector index when generating code for REPEATING_P.  */
       unsigned vi = i / olanes * (pack_p ? 2 : 1);
@@ -10959,7 +11003,7 @@ vectorizable_slp_permutation_1 (vec_info *vinfo, gimple_stmt_iterator *gsi,
 	    }
 
 	  if (!identity_p)
-	    nperms++;
+	    nperms += CEIL (total_nelts, process_nelts) - (ei > last_ei);
 	  if (gsi)
 	    {
 	      if (second_vec.first == -1U)

@@ -457,9 +457,8 @@ maybe_push_temp_cleanup (tree sub, vec<tree,va_gc> **flags)
   if (tree cleanup
       = cxx_maybe_build_cleanup (sub, tf_warning_or_error))
     {
-      tree tx = get_target_expr (boolean_true_node);
+      tree tx = get_internal_target_expr (boolean_true_node);
       tree flag = TARGET_EXPR_SLOT (tx);
-      CLEANUP_EH_ONLY (tx) = true;
       TARGET_EXPR_CLEANUP (tx) = build3 (COND_EXPR, void_type_node,
 					 flag, cleanup, void_node);
       add_stmt (tx);
@@ -654,6 +653,11 @@ split_nonconstant_init_1 (tree dest, tree init, bool last,
 			  && TARGET_EXPR_LIST_INIT_P (value)
 			  && make_safe_copy_elision (sub, value))
 			goto build_init;
+
+		      if (TREE_CODE (value) == TARGET_EXPR)
+			/* We have to add this constructor, so we will not
+			   elide.  */
+			TARGET_EXPR_ELIDING_P (value) = false;
 
 		      tree name = (DECL_FIELD_IS_BASE (field_index)
 				   ? base_ctor_identifier

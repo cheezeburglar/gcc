@@ -1562,6 +1562,9 @@ vect_verify_loop_lens (loop_vec_info loop_vinfo)
   if (LOOP_VINFO_LENS (loop_vinfo).is_empty ())
     return false;
 
+  if (!VECTOR_MODE_P (loop_vinfo->vector_mode))
+    return false;
+
   machine_mode len_load_mode, len_store_mode;
   if (!get_len_load_store_mode (loop_vinfo->vector_mode, true)
 	 .exists (&len_load_mode))
@@ -2171,6 +2174,7 @@ vect_analyze_loop_operations (loop_vec_info loop_vinfo)
 		  if ((STMT_VINFO_DEF_TYPE (stmt_info) == vect_internal_def
 		       || (STMT_VINFO_DEF_TYPE (stmt_info)
 			   == vect_double_reduction_def))
+		      && ! PURE_SLP_STMT (stmt_info)
 		      && !vectorizable_lc_phi (loop_vinfo,
 					       stmt_info, NULL, NULL))
 		    return opt_result::failure_at (phi, "unsupported phi\n");
@@ -7085,6 +7089,11 @@ vect_expand_fold_left (gimple_stmt_iterator *gsi, tree scalar_dest,
       rhs = make_ssa_name (scalar_dest, stmt);
       gimple_assign_set_lhs (stmt, rhs);
       gsi_insert_before (gsi, stmt, GSI_SAME_STMT);
+      /* Fold the vector extract, combining it with a previous reversal
+	 like seen in PR90579.  */
+      auto gsi2 = gsi_for_stmt (stmt);
+      if (fold_stmt (&gsi2, follow_all_ssa_edges))
+	update_stmt (gsi_stmt  (gsi2));
 
       stmt = gimple_build_assign (scalar_dest, code, lhs, rhs);
       tree new_name = make_ssa_name (scalar_dest, stmt);
@@ -7770,9 +7779,10 @@ vectorizable_reduction (loop_vec_info loop_vinfo,
 	{
 	  /* For SLP we arrive here for both the inner loop LC PHI and
 	     the outer loop PHI.  The latter is what we want to analyze
-	     the reduction with.  */
+	     the reduction with.  The LC PHI is handled by
+	     vectorizable_lc_phi.  */
 	  gcc_assert (slp_node);
-	  return true;
+	  return gimple_phi_num_args (as_a <gphi *> (stmt_info->stmt)) == 2;
 	}
       use_operand_p use_p;
       gimple *use_stmt;
@@ -10578,6 +10588,10 @@ vectorizable_induction (loop_vec_info loop_vinfo,
        [i2 + 2*S2, i0 + 3*S0, i1 + 3*S1, i2 + 3*S2].  */
   if (slp_node)
     {
+      gimple_stmt_iterator incr_si;
+      bool insert_after;
+      standard_iv_increment_position (iv_loop, &incr_si, &insert_after);
+
       /* The initial values are vectorized, but any lanes > group_size
 	 need adjustment.  */
       slp_tree init_node
@@ -10808,7 +10822,7 @@ vectorizable_induction (loop_vec_info loop_vinfo,
 	  vec_def = gimple_build (&stmts,
 				  PLUS_EXPR, step_vectype, vec_def, up);
 	  vec_def = gimple_convert (&stmts, vectype, vec_def);
-	  gsi_insert_seq_before (&si, stmts, GSI_SAME_STMT);
+	  insert_iv_increment (&incr_si, insert_after, stmts);
 	  add_phi_arg (induction_phi, vec_def, loop_latch_edge (iv_loop),
 		       UNKNOWN_LOCATION);
 
@@ -11574,7 +11588,8 @@ vectorizable_live_operation (vec_info *vinfo, stmt_vec_info stmt_info,
 
       /* There a no further out-of-loop uses of lhs by LC-SSA construction.  */
       FOR_EACH_IMM_USE_STMT (use_stmt, imm_iter, lhs)
-	gcc_assert (flow_bb_inside_loop_p (loop, gimple_bb (use_stmt)));
+	gcc_assert (is_gimple_debug (use_stmt)
+		    || flow_bb_inside_loop_p (loop, gimple_bb (use_stmt)));
     }
   else
     {

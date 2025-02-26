@@ -1,3 +1,333 @@
+2025-02-25  Giuseppe D'Angelo  <giuseppe.dangelo@kdab.com>
+
+	* include/bits/algorithmfwd.h (stable_sort): Add constexpr.
+	* include/bits/ranges_algo.h (__stable_sort_fn): Add constexpr
+	to the function call operators.
+	* include/bits/stl_algo.h (__stable_sort): Add constexpr.
+	During constant evaluation, always use the non-allocating path.
+	(stable_sort): Add constexpr.
+	(__inplace_stable_sort): Likewise.
+	(__merge_without_buffer): Likewise.
+	* include/bits/version.def (constexpr_algorithms): Bump value
+	for C++26.
+	* include/bits/version.h: Regnerate.
+	* testsuite/25_algorithms/cpp_lib_constexpr.cc: Test the bumped
+	feature-testing macro.
+	* testsuite/25_algorithms/headers/algorithm/synopsis.cc: Adapt
+	the test to constexpr stable_sort.
+	* testsuite/25_algorithms/stable_sort/constexpr.cc: New test.
+
+2025-02-25  Giuseppe D'Angelo  <giuseppe.dangelo@kdab.com>
+
+	* include/bits/c++config (_GLIBCXX26_CONSTEXPR): New macro.
+
+2025-02-25  Jonathan Wakely  <jwakely@redhat.com>
+
+	PR libstdc++/93059
+	* include/bits/stl_algobase.h (__fill_a1): Fix typo in SFINAE
+	constraint.
+
+2025-02-25  François Dumont  <frs.dumont@gmail.com>
+
+	* include/bits/hashtable_policy.h
+	(_Hash_code_base::_M_copy_code, _Hash_code_base::_M_store_code): Remove.
+	* include/bits/hashtable.h (_M_hash_code_ext): New.
+	(_M_merge_multi(_Hashtable&)): Use latter.
+	(_M_copy_code): New.
+	(_M_assign): Use latter.
+	(_M_bucket_index_ex): New.
+	(_M_equals): Use latter.
+	(_M_store_code): New.
+	(_M_src_hash_code): Remove key_type parameter.
+	* testsuite/23_containers/unordered_map/modifiers/merge.cc (test10): New
+	test case.
+
+2025-02-25  Patrick Palka  <ppalka@redhat.com>
+
+	PR libstdc++/118083
+	* include/bits/ranges_base.h
+	(ranges::__access::__possibly_const_range): Adjust logic as per
+	LWG 4027.  Add missing input_range constraint.
+	* testsuite/std/ranges/access/cbegin.cc (test05): Verify LWG
+	4027 testcases.
+	* testsuite/std/ranges/access/cdata.cc: Adjust, simplify and
+	consolidate some tests after the above.
+	* testsuite/std/ranges/access/cend.cc: Likewise.
+	* testsuite/std/ranges/access/crbegin.cc: Likewise.
+	* testsuite/std/ranges/access/crend.cc: Likewise.
+	* testsuite/std/ranges/adaptors/join.cc: Likewise.
+	* testsuite/std/ranges/adaptors/take_while.cc: Likewise.
+	* testsuite/std/ranges/adaptors/transform.cc: Likewise.
+
+2025-02-22  Jonathan Wakely  <jwakely@redhat.com>
+
+	PR c++/118981
+	* src/c++20/tzdb.cc: Use init_priority(98) instead of
+	init_priority(99).
+
+2025-02-22  Thomas Schwinge  <tschwinge@baylibre.com>
+
+	* testsuite/lib/prune.exp (proc libstdc++-dg-prune): Turn
+	'sorry, unimplemented: dynamic stack allocation not supported' into
+	UNSUPPORTED.
+
+2025-02-22  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/bits/atomic_base.h (__atomic_base<_ITp>): Remove
+	misleading comment.
+
+2025-02-22  Jonathan Wakely  <jwakely@redhat.com>
+
+	* src/c++17/floating_from_chars.cc (__floating_from_chars_hex):
+	Remove redundant cast.
+
+2025-02-20  Jonathan Wakely  <jwakely@redhat.com>
+
+	PR libstdc++/118559
+	* include/std/type_traits (rank, rank_v): Do not use
+	__array_rank for Clang 19 and older.
+
+2025-02-20  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/bits/c++config (_GLIBCXX_HAS_BUILTIN): Add parentheses.
+
+2025-02-20  Jonathan Wakely  <jwakely@redhat.com>
+
+	PR libstdc++/118855
+	* include/std/bit (__count_lzero, __count_rzero, __popcount):
+	Use type-generic built-ins when available.
+
+2025-02-20  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/experimental/bits/simd.h (__find_next_valid_abi): Cast
+	__bit_ceil argument to unsigned.
+	* src/c++17/floating_from_chars.cc (__floating_from_chars_hex):
+	Cast __bit_ceil argument to unsigned.
+	* src/c++17/memory_resource.cc (big_block): Cast __bit_width
+	argument to unsigned.
+
+2025-02-20  Jonathan Wakely  <jwakely@redhat.com>
+
+	* src/c++17/memory_resource.cc (default_res): Define here
+	instead of including default_resource.h.
+	* src/c++98/globals_io.cc (__ioinit): Define here instead of
+	including ios_base_init.h.
+	* src/c++17/default_resource.h: Removed.
+	* src/c++98/ios_base_init.h: Removed.
+
+2025-02-20  Jonathan Wakely  <jwakely@redhat.com>
+
+	PR libstdc++/118811
+	* src/c++20/tzdb.cc (tzdb_list::_Node): Use init_priority
+	attribute on static data members.
+	* testsuite/std/time/tzdb_list/pr118811.cc: New test.
+
+2025-02-20  Patrick Palka  <ppalka@redhat.com>
+
+	* include/std/ranges (concat_view::iterator): Rename to ...
+	(concat_view::_Iterator): ... this throughout.
+
+2025-02-20  Patrick Palka  <ppalka@redhat.com>
+
+	PR libstdc++/115209
+	* include/bits/version.def (ranges_concat): Depend on
+	__cpp_pack_indexing.
+	* include/bits/version.h: Regenerate.
+	* include/std/ranges (__detail::__last_is_common): Remove.
+	(__detail::__all_but_first_sized): New.
+	(concat_view::end): Use C++26 pack indexing instead of
+	__last_is_common as per R8 of P2542.
+	(concat_view::iterator::operator-): Update constraints on
+	iter/sent overloads as per R8 of P2542.
+
+2025-02-15  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/bits/shared_ptr_base.h: Do not include <bit>.
+
+2025-02-15  Jonathan Wakely  <jwakely@redhat.com>
+
+	PR libstdc++/100612
+	* include/std/thread (__pmf_expects_stop_token): Constrain
+	variable template specialization with concept. Add comment.
+
+2025-02-15  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/bits/range_access.h (rbegin, rend, crbegin, crend):
+	Add conditional noexcept, as per P3623R0.
+	* testsuite/24_iterators/headers/iterator/range_access.cc: Add
+	noexcept-specifier to rbegin, rend, crbegin and crend
+	declarations.
+
+2025-02-15  Jonathan Wakely  <jwakely@redhat.com>
+
+	* testsuite/24_iterators/headers/iterator/range_access_c++11.cc:
+	Removed.
+	* testsuite/24_iterators/headers/iterator/range_access_c++14.cc:
+	Removed.
+	* testsuite/24_iterators/headers/iterator/range_access_c++17.cc:
+	Removed.
+	* testsuite/24_iterators/headers/iterator/range_access.cc:
+	New test.
+
+2025-02-14  Andrew Pinski  <quic_apinski@quicinc.com>
+
+	PR libstdc++/118865
+	* include/bits/stl_list.h (_M_initialize_dispatch): Add an
+	unreachable if the iterator was not empty that the list will
+	now be not empty.
+
+2025-02-14  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/parallel/algobase.h (__mismatch_switch): Qualify calls
+	to make_pair to avoid ADL.
+
+2025-02-14  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/bits/stl_tree.h (_Rb_tree::_M_equal_range): Replace
+	unqualified call to make_pair with explicit construction of
+	std::pair.
+	* testsuite/23_containers/set/operations/equal_range_adl.cc:
+	New test.
+
+2025-02-14  Matthew Malcomson  <mmalcomson@nvidia.com>
+	    Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/bits/atomic_base.h (__atomic_fetch_addable): Define
+	new concept.
+	(__atomic_impl::__fetch_add_flt): Use new concept to make use of
+	__atomic_fetch_add when available.
+	(__atomic_fetch_subtractable, __fetch_sub_flt): Likewise.
+	(__atomic_add_fetchable, __add_fetch_flt): Likewise.
+	(__atomic_sub_fetchable, __sub_fetch_flt): Likewise.
+
+2025-02-08  Thomas Schwinge  <tschwinge@baylibre.com>
+
+	* testsuite/lib/prune.exp (libstdc++-dg-prune): Turn
+	'sorry, unimplemented: exception handling not supported' into
+	UNSUPPORTED.
+
+2025-02-08  Thomas Schwinge  <tschwinge@baylibre.com>
+
+	* testsuite/lib/prune.exp (libstdc++-dg-prune): Clarify
+	effective-target 'exceptions_enabled'.
+
+2025-02-07  Giuseppe D'Angelo  <giuseppe.dangelo@kdab.com>
+
+	PR libstdc++/118160
+	PR libstdc++/100249
+	* include/bits/ranges_algo.h (__is_permutation_fn): Avoid a
+	dangling reference by storing the result of the iterator
+	dereference and the result of the projection in two distinct
+	variables, in order to lifetime-extend each one.
+	Forward the projected value to the predicate.
+	* testsuite/25_algorithms/is_permutation/constrained.cc: Add a
+	test with a range returning prvalues. Test it in a constexpr
+	context, in order to rely on the compiler to catch UB.
+
+2025-02-07  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/bits/ostream.h (basic_ostream::_Disable_exceptions):
+	RAII helper type.
+	(basic_ostream::sentry::~sentry): Use _Disable_exceptions. Add
+	try-catch block around call to pubsync.
+	* testsuite/27_io/basic_ostream/exceptions/char/lwg4188.cc: New
+	test.
+	* testsuite/27_io/basic_ostream/exceptions/wchar_t/lwg4188.cc:
+	New test.
+
+2025-02-07  Jonathan Wakely  <jwakely@redhat.com>
+
+	PR libstdc++/111050
+	* include/bits/hashtable_policy.h (_Hash_node_value_base): Add
+	comment about always_inline attributes.
+
+2025-02-05  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+	    Jonathan Wakely  <jwakely@redhat.com>
+
+	PR libstdc++/118701
+	* config/abi/pre/gnu.ver (CXXABI_1.3.16): Move __riscv guard
+	around version.
+	* scripts/extract_symvers.pl: Allow for weak versions.
+	* testsuite/util/testsuite_abi.cc (check_version): Wrap
+	CXXABI_1.3.16 in __riscv.
+
+2025-01-31  Patrick Palka  <ppalka@redhat.com>
+
+	PR libstdc++/118156
+	* include/std/flat_map (_Flat_map_impl::_M_insert): Generalized
+	version of insert taking heterogenous iterator/sentinel pair.
+	(_Flat_map_impl::insert): Dispatch to _M_insert.
+	(_Flat_map_impl::insert_range): Likewise.
+	(flat_map): Export _Flat_map_impl::insert_range.
+	(flat_multimap): Likewise.
+	* include/std/flat_set (_Flat_set_impl::insert_range):
+	Reimplement directly, not in terms of insert.
+	(flat_set): Export _Flat_set_impl::insert_range.
+	(flat_multiset): Likewise.
+	* testsuite/23_containers/flat_map/1.cc (test06): New test.
+	* testsuite/23_containers/flat_multimap/1.cc (test06): New test.
+	* testsuite/23_containers/flat_multiset/1.cc (test06): New test.
+	* testsuite/23_containers/flat_set/1.cc (test06): New test.
+
+2025-01-31  Patrick Palka  <ppalka@redhat.com>
+
+	* include/bits/stl_bvector.h (vector<bool>::insert_range):
+	Consistently return an iterator pointing to the first element
+	inserted.
+	* include/bits/vector.tcc (vector::insert_range): Likewise.
+	* testsuite/23_containers/vector/bool/modifiers/insert/insert_range.cc:
+	Verify insert_range return values.
+	* testsuite/23_containers/vector/modifiers/insert/insert_range.cc:
+	Likewise.
+
+2025-01-30  Jonathan Wakely  <jwakely@redhat.com>
+
+	PR libstdc++/98749
+	* include/std/latch (latch::max()): Ensure the return value is
+	representable as the return type.
+	(latch::latch(ptrdiff_t)): Add assertion.
+	(latch::count_down): Fix copy & pasted duplicate assertion. Use
+	std::cmp_equal to compare __platform_wait_t and ptrdiff_t
+	values.
+	(latch::_M_a): Use defined constant for alignment.
+	* testsuite/30_threads/latch/1.cc: Check max(). Check constant
+	initialization works for values in the valid range. Check
+	alignment.
+
+2025-01-29  Patrick Palka  <ppalka@redhat.com>
+
+	PR libstdc++/118413
+	* include/std/ranges (views::__adaptor::_Partial): Adjust
+	constraints on the "simple" partial specializations to require
+	is_trivially_copy_constructible_v instead of
+	is_trivially_copyable_v.
+	* testsuite/std/ranges/adaptors/adjacent_transform/1.cc (test04):
+	Extend P2494R2 test.
+	* testsuite/std/ranges/adaptors/transform.cc (test09): Likewise.
+
+2025-01-27  Andreas Schwab  <schwab@suse.de>
+
+	PR libstdc++/118563
+	* testsuite/util/testsuite_abi.cc (check_version): Add
+	CXXABI_1.3.16.
+	* config/abi/pre/gnu.ver (CXXABI_1.3.14) [__riscv]: Exclude
+	typeinfo for bfloat16_t.
+	(CXXABI_1.3.16) [__riscv]: Add it here.
+
+2025-01-23  Jan Hubicka  <jh@suse.cz>
+
+	PR target/80813
+	* include/bits/stl_bvector.h (vector<bool, _Alloc>::operator []): Do
+	not use iterators.
+
+2025-01-20  Giuseppe D'Angelo  <giuseppe.dangelo@kdab.com>
+
+	PR libstdc++/118185
+	PR libstdc++/100249
+	* include/bits/ranges_algo.h (__clamp_fn): Correctly forward the
+	projected value to the comparator.
+	* testsuite/25_algorithms/clamp/118185.cc: New test.
+
 2025-01-16  Jonathan Wakely  <jwakely@redhat.com>
 
 	PR libstdc++/99995

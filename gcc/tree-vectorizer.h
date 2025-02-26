@@ -2028,9 +2028,10 @@ known_alignment_for_access_p (dr_vec_info *dr_info, tree vectype)
    of DR_INFO is guaranteed to have.  */
 
 inline unsigned int
-vect_known_alignment_in_bytes (dr_vec_info *dr_info, tree vectype)
+vect_known_alignment_in_bytes (dr_vec_info *dr_info, tree vectype,
+			       poly_int64 offset = 0)
 {
-  int misalignment = dr_misalignment (dr_info, vectype);
+  int misalignment = dr_misalignment (dr_info, vectype, offset);
   if (misalignment == DR_MISALIGNMENT_UNKNOWN)
     return TYPE_ALIGN_UNIT (TREE_TYPE (DR_REF (dr_info->dr)));
   else if (misalignment == 0)
@@ -2344,7 +2345,8 @@ extern bool supportable_narrowing_operation (code_helper, tree, tree,
 extern bool supportable_indirect_convert_operation (code_helper,
 						    tree, tree,
 						    vec<std::pair<tree, tree_code> > &,
-						    tree = NULL_TREE);
+						    tree = NULL_TREE,
+						    slp_tree = NULL);
 extern int compare_step_with_zero (vec_info *, stmt_vec_info);
 
 extern unsigned record_stmt_cost (stmt_vector_for_cost *, int,
@@ -2597,6 +2599,7 @@ extern bool vect_make_slp_decision (loop_vec_info);
 extern void vect_detect_hybrid_slp (loop_vec_info);
 extern void vect_optimize_slp (vec_info *);
 extern void vect_gather_slp_loads (vec_info *);
+extern tree vect_get_slp_scalar_def (slp_tree, unsigned);
 extern void vect_get_slp_defs (slp_tree, vec<tree> *);
 extern void vect_get_slp_defs (vec_info *, slp_tree, vec<vec<tree> > *,
 			       unsigned n = -1U);

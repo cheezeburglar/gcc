@@ -1265,7 +1265,16 @@ expand_const_vector (rtx target, rtx src)
 	       element. Use element width = 64 and broadcast a vector with
 	       all element equal to 0x0706050403020100.  */
 	  rtx ele = builder.get_merged_repeating_sequence ();
-	  rtx dup = expand_vector_broadcast (builder.new_mode (), ele);
+	  rtx dup;
+	  if (lra_in_progress)
+	    {
+	      dup = gen_reg_rtx (builder.new_mode ());
+	      rtx ops[] = {dup, ele};
+	      emit_vlmax_insn (code_for_pred_broadcast
+			       (builder.new_mode ()), UNARY_OP, ops);
+	    }
+	  else
+	    dup = expand_vector_broadcast (builder.new_mode (), ele);
 	  emit_move_insn (result, gen_lowpart (mode, dup));
 	}
       else
@@ -1523,10 +1532,20 @@ expand_const_vector (rtx target, rtx src)
 		  base2 = gen_int_mode (rtx_to_poly_int64 (base2), new_smode);
 		  expand_vec_series (tmp2, base2,
 				     gen_int_mode (step2, new_smode));
-		  rtx shifted_tmp2 = expand_simple_binop (
-		    new_mode, ASHIFT, tmp2,
-		    gen_int_mode (builder.inner_bits_size (), Pmode), NULL_RTX,
-		    false, OPTAB_DIRECT);
+		  rtx shifted_tmp2;
+		  rtx shift = gen_int_mode (builder.inner_bits_size (), Xmode);
+		  if (lra_in_progress)
+		    {
+		      shifted_tmp2 = gen_reg_rtx (new_mode);
+		      rtx shift_ops[] = {shifted_tmp2, tmp2, shift};
+		      emit_vlmax_insn (code_for_pred_scalar
+				       (ASHIFT, new_mode), BINARY_OP,
+				       shift_ops);
+		    }
+		  else
+		    shifted_tmp2 = expand_simple_binop (new_mode, ASHIFT, tmp2,
+							shift, NULL_RTX, false,
+							OPTAB_DIRECT);
 		  rtx tmp3 = gen_reg_rtx (new_mode);
 		  rtx ior_ops[] = {tmp3, tmp1, shifted_tmp2};
 		  emit_vlmax_insn (code_for_pred (IOR, new_mode), BINARY_OP,
@@ -1539,9 +1558,20 @@ expand_const_vector (rtx target, rtx src)
 	      rtx vid = gen_reg_rtx (mode);
 	      expand_vec_series (vid, const0_rtx, const1_rtx);
 	      /* Transform into { 0, 0, 1, 1, 2, 2, ... }.  */
-	      rtx shifted_vid
-		= expand_simple_binop (mode, LSHIFTRT, vid, const1_rtx,
-				       NULL_RTX, false, OPTAB_DIRECT);
+	      rtx shifted_vid;
+	      if (lra_in_progress)
+		{
+		  shifted_vid = gen_reg_rtx (mode);
+		  rtx shift = gen_int_mode (1, Xmode);
+		  rtx shift_ops[] = {shifted_vid, vid, shift};
+		  emit_vlmax_insn (code_for_pred_scalar
+				   (ASHIFT, mode), BINARY_OP,
+				   shift_ops);
+		}
+	      else
+		shifted_vid = expand_simple_binop (mode, LSHIFTRT, vid,
+						   const1_rtx, NULL_RTX,
+						   false, OPTAB_DIRECT);
 	      rtx tmp1 = gen_reg_rtx (mode);
 	      rtx tmp2 = gen_reg_rtx (mode);
 	      expand_vec_series (tmp1, base1,
@@ -2103,7 +2133,7 @@ get_unknown_min_value (machine_mode mode)
 static rtx
 force_vector_length_operand (rtx vl)
 {
-  if (CONST_INT_P (vl) && !satisfies_constraint_K (vl))
+  if (CONST_INT_P (vl) && !satisfies_constraint_vl (vl))
     return force_reg (Pmode, vl);
   return vl;
 }
@@ -3947,11 +3977,22 @@ shuffle_generic_patterns (struct expand_vec_perm_d *d)
   if (!get_gather_index_mode (d).exists (&sel_mode))
     return false;
 
+  rtx sel = vec_perm_indices_to_rtx (sel_mode, d->perm);
+  poly_uint64 nunits = GET_MODE_NUNITS (sel_mode);
+  rtx elt;
+
+  bool is_simple = d->one_vector_p
+    || const_vec_duplicate_p (sel, &elt)
+    || (nunits.is_constant ()
+	&& const_vec_all_in_range_p (sel, 0, nunits - 1));
+
+  if (!is_simple && !riscv_two_source_permutes)
+    return false;
+
   /* Success! */
   if (d->testing_p)
     return true;
 
-  rtx sel = vec_perm_indices_to_rtx (sel_mode, d->perm);
   /* Some FIXED-VLMAX/VLS vector permutation situations call targethook
      instead of expand vec_perm<mode>, we handle it directly.  */
   expand_vec_perm (d->target, d->op0, d->op1, sel);
@@ -4119,7 +4160,7 @@ expand_load_store (rtx *ops, bool is_load)
     }
   else
     {
-      if (!satisfies_constraint_K (len))
+      if (!satisfies_constraint_vl (len))
 	len = force_reg (Pmode, len);
       if (is_load)
 	{
@@ -4154,7 +4195,7 @@ expand_strided_load (machine_mode mode, rtx *ops)
     emit_vlmax_insn (icode, BINARY_OP_TAMA, emit_ops);
   else
     {
-      len = satisfies_constraint_K (len) ? len : force_reg (Pmode, len);
+      len = satisfies_constraint_vl (len) ? len : force_reg (Pmode, len);
       emit_nonvlmax_insn (icode, BINARY_OP_TAMA, emit_ops, len);
     }
 }
@@ -4180,7 +4221,7 @@ expand_strided_store (machine_mode mode, rtx *ops)
     }
   else
     {
-      len = satisfies_constraint_K (len) ? len : force_reg (Pmode, len);
+      len = satisfies_constraint_vl (len) ? len : force_reg (Pmode, len);
       vl_type = get_avl_type_rtx (NONVLMAX);
     }
 
@@ -4631,7 +4672,7 @@ expand_lanes_load_store (rtx *ops, bool is_load)
     }
   else
     {
-      if (!satisfies_constraint_K (len))
+      if (!satisfies_constraint_vl (len))
 	len = force_reg (Pmode, len);
       if (is_load)
 	{

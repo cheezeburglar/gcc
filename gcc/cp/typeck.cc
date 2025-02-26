@@ -2980,7 +2980,7 @@ build_class_member_access_expr (cp_expr object, tree member,
 				    /*nonnull=*/1, complain);
 	  /* If we found the base successfully then we should be able
 	     to convert to it successfully.  */
-	  gcc_assert (object != error_mark_node);
+	  gcc_assert (object != error_mark_node || seen_error ());
 	}
 
       /* If MEMBER is from an anonymous aggregate, we have converted
@@ -4219,16 +4219,14 @@ get_member_function_from_ptrfunc (tree *instance_ptrptr, tree function,
 	      && !DECL_P (instance_ptr)
 	      && !TREE_CONSTANT (instance_ptr)))
 	instance_ptr = instance_save_expr
-	  = force_target_expr (TREE_TYPE (instance_ptr), instance_ptr,
-			       complain);
+	  = get_internal_target_expr (instance_ptr);
 
       /* See above comment.  */
       if (TREE_SIDE_EFFECTS (function)
 	  || (!nonvirtual
 	      && !DECL_P (function)
 	      && !TREE_CONSTANT (function)))
-	function
-	  = force_target_expr (TREE_TYPE (function), function, complain);
+	function = get_internal_target_expr (function);
 
       /* Start by extracting all the information from the PMF itself.  */
       e3 = pfn_from_ptrmemfunc (function);
@@ -4867,6 +4865,11 @@ tree
 build_omp_array_section (location_t loc, tree array_expr, tree index,
 			 tree length)
 {
+  if (TREE_CODE (array_expr) == TYPE_DECL
+      || type_dependent_expression_p (array_expr))
+    return build3_loc (loc, OMP_ARRAY_SECTION, NULL_TREE, array_expr, index,
+		       length);
+
   tree type = TREE_TYPE (array_expr);
   gcc_assert (type);
   type = non_reference (type);

@@ -1752,6 +1752,7 @@ calculate_saved_nregs (int hard_regno, machine_mode mode)
   ira_assert (hard_regno >= 0);
   for (i = hard_regno_nregs (hard_regno, mode) - 1; i >= 0; i--)
     if (!allocated_hardreg_p[hard_regno + i]
+	&& ira_hard_regno_nrefs[hard_regno + i] == 0
 	&& !crtl->abi->clobbers_full_reg_p (hard_regno + i)
 	&& !LOCAL_REGNO (hard_regno + i))
       nregs++;
@@ -2179,8 +2180,7 @@ assign_hard_reg (ira_allocno_t a, bool retry_p)
 		         + ira_memory_move_cost[mode][rclass][1])
 		        * saved_nregs / hard_regno_nregs (hard_regno,
 							  mode) - 1)
-		       * (optimize_size ? 1 :
-			  REG_FREQ_FROM_BB (ENTRY_BLOCK_PTR_FOR_FN (cfun)));
+		       * targetm.ira_callee_saved_register_cost_scale (hard_regno);
 	    cost += add_cost;
 	    full_cost += add_cost;
 	  }
