@@ -1467,12 +1467,6 @@ enum reg_class
 
 #define REGNO_REG_CLASS(REGNO) (regclass_map[(REGNO)])
 
-/* When this hook returns true for MODE, the compiler allows
-   registers explicitly used in the rtl to be used as spill registers
-   but prevents the compiler from extending the lifetime of these
-   registers.  */
-#define TARGET_SMALL_REGISTER_CLASSES_FOR_MODE_P hook_bool_mode_true
-
 #define QI_REG_P(X) (REG_P (X) && QI_REGNO_P (REGNO (X)))
 #define QI_REGNO_P(N) IN_RANGE ((N), FIRST_QI_REG, LAST_QI_REG)
 
@@ -2235,7 +2229,7 @@ extern unsigned int const svr4_debugger_register_map[FIRST_PSEUDO_REGISTER];
 #define ASM_OUTPUT_SYMBOL_REF(FILE, SYM) \
   do {							\
     const char *name					\
-      = assemble_name_resolve (XSTR (x, 0));		\
+      = assemble_name_resolve (XSTR (SYM, 0));		\
     /* In -masm=att wrap identifiers that start with $	\
        into parens.  */					\
     if (ASSEMBLER_DIALECT == ASM_ATT			\

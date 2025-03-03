@@ -1906,8 +1906,12 @@ ifeq (@enable_libgdiagnostics@,yes)
 ALL_HOST_OBJS += $(libgdiagnostics_OBJS) $(SARIF_REPLAY_OBJS)
 endif
 
-BACKEND = libbackend.a main.o libcommon-target.a libcommon.a \
-	$(CPPLIB) $(LIBDECNUMBER)
+# libbackend.a objs that might not be in some cases linked into the compiler,
+# yet they are supposed to be part of the plugin ABI.  See PR116143.
+EXTRA_BACKEND_OBJS = simple-diagnostic-path.o lazy-diagnostic-path.o
+
+BACKEND = $(EXTRA_BACKEND_OBJS) libbackend.a main.o libcommon-target.a \
+	libcommon.a $(CPPLIB) $(LIBDECNUMBER)
 
 # This is defined to "yes" if Tree checking is enabled, which roughly means
 # front-end checking.
@@ -3699,7 +3703,7 @@ TEXI_GCC_FILES = gcc.texi gcc-common.texi gcc-vers.texi frontends.texi	\
 # the *.texi files have changed.
 TEXI_GCCINT_FILES = gccint.texi gcc-common.texi gcc-vers.texi		\
 	 contribute.texi makefile.texi configterms.texi options.texi	\
-	 portability.texi interface.texi passes.texi rtl.texi md.texi	\
+	 portability.texi passes.texi rtl.texi md.texi	\
 	 $(srcdir)/doc/tm.texi hostconfig.texi fragments.texi	\
 	 configfiles.texi collect2.texi headerdirs.texi funding.texi	\
 	 gnu.texi gpl_v3.texi fdl.texi contrib.texi languages.texi	\
@@ -4217,9 +4221,10 @@ libgdiagnostics.install-common: installdirs libgdiagnostics.install-headers
 endif
 endif
 
+SARIF_REPLAY_INSTALL_NAME := $(shell echo sarif-replay|sed '$(program_transform_name)')
 install-libgdiagnostics: libgdiagnostics.install-common sarif-replay
-	-rm -f $(DESTDIR)$(bindir)/sarif-replay
-	-$(INSTALL_PROGRAM) sarif-replay $(DESTDIR)$(bindir)/sarif-replay
+	-rm -f $(DESTDIR)$(bindir)/$(SARIF_REPLAY_INSTALL_NAME)$(exeext)
+	-$(INSTALL_PROGRAM) sarif-replay $(DESTDIR)$(bindir)/$(SARIF_REPLAY_INSTALL_NAME)$(exeext)
 
 # Install the info files.
 # $(INSTALL_DATA) might be a relative pathname, so we can't cd into srcdir

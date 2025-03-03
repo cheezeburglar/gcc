@@ -1,3 +1,24 @@
+2025-02-04  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/118731
+	* sem_aggr.adb (Resolve_Iterated_Association): Add missing guard.
+
+2025-02-01  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/118712
+	* sem_warn.adb (Check_References): Deal with small adjustments of
+	references.
+
+2025-01-31  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/utils.cc (gnat_pushdecl): Clear TREE_PUBLIC on
+	functions really nested in another function.
+
+2025-01-22  Arsen Arsenović  <arsen@aarsen.me>
+
+	* gcc-interface/lang-specs.h: Replace %{nostdinc*} %{nostdlib*}
+	with %{nostdinc} %{nostdlib}.
+
 2025-01-14  Eric Botcazou  <ebotcazou@adacore.com>
 
 	PR ada/118459

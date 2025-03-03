@@ -241,11 +241,11 @@ Classes used:
 #define MAPPED_READING 0
 #define MAPPED_WRITING 0
 #else
-#if HAVE_MMAP_FILE && _POSIX_MAPPED_FILES > 0
-/* mmap, munmap.  */
+#if HAVE_MMAP_FILE && HAVE_MUNMAP && HAVE_MSYNC
+/* mmap, munmap, msync.  */
 #define MAPPED_READING 1
 #if HAVE_SYSCONF && defined (_SC_PAGE_SIZE)
-/* msync, sysconf (_SC_PAGE_SIZE), ftruncate  */
+/* sysconf (_SC_PAGE_SIZE), ftruncate  */
 /* posix_fallocate used if available.  */
 #define MAPPED_WRITING 1
 #else
@@ -2791,7 +2791,7 @@ static keyed_map_t *keyed_table;
 
 /* Instantiations of temploid friends imported from another module
    need to be attached to the same module as the temploid.  This maps
-   these decls to the temploid they are instantiated them, as there is
+   these decls to the temploid they are instantiated from, as there is
    no other easy way to get this information.  */
 static GTY((cache)) decl_tree_cache_map *imported_temploid_friends;
 
@@ -7961,7 +7961,6 @@ trees_out::decl_value (tree decl, depset *dep)
     }
 
   merge_kind mk = get_merge_kind (decl, dep);
-  bool is_imported_temploid_friend = imported_temploid_friends->get (decl);
 
   if (CHECKING_P)
     {
@@ -7998,10 +7997,6 @@ trees_out::decl_value (tree decl, depset *dep)
 		is_attached = true;
 
 	      bits.b (is_attached);
-
-	      /* Also tell the importer whether this is an imported temploid
-		 friend, which has implications for merging.  */
-	      bits.b (is_imported_temploid_friend);
 	    }
 	  bits.b (dep && dep->has_defn ());
 	}
@@ -8086,6 +8081,16 @@ trees_out::decl_value (tree decl, depset *dep)
      we start emitting keys for this decl.  */
   tree container = decl_container (decl);
   unsigned tpl_levels = 0;
+
+  /* Also tell the importer whether this is a temploid friend attached
+     to a different module (which has implications for merging), so that
+     importers can reconstruct this information on stream-in.  */
+  if (TREE_CODE (inner) == FUNCTION_DECL || TREE_CODE (inner) == TYPE_DECL)
+    {
+      tree* temploid_friend_slot = imported_temploid_friends->get (decl);
+      gcc_checking_assert (!temploid_friend_slot || *temploid_friend_slot);
+      tree_node (temploid_friend_slot ? *temploid_friend_slot : NULL_TREE);
+    }
 
   {
     auto wmk = make_temp_override (dep_hash->writing_merge_key, true);
@@ -8182,14 +8187,6 @@ trees_out::decl_value (tree decl, depset *dep)
 	}
     }
 
-  if (is_imported_temploid_friend)
-    {
-      /* Write imported temploid friends so that importers can reconstruct
-	 this information on stream-in.  */
-      tree* slot = imported_temploid_friends->get (decl);
-      tree_node (*slot);
-    }
-
   bool is_typedef = false;
   if (!type && TREE_CODE (inner) == TYPE_DECL)
     {
@@ -8266,7 +8263,6 @@ trees_in::decl_value ()
 {
   int tag = 0;
   bool is_attached = false;
-  bool is_imported_temploid_friend = false;
   bool has_defn = false;
   unsigned mk_u = u ();
   if (mk_u >= MK_hwm || !merge_kind_name[mk_u])
@@ -8287,10 +8283,7 @@ trees_in::decl_value ()
 	{
 	  bits_in bits = stream_bits ();
 	  if (!(mk & MK_template_mask) && !state->is_header ())
-	    {
-	      is_attached = bits.b ();
-	      is_imported_temploid_friend = bits.b ();
-	    }
+	    is_attached = bits.b ();
 
 	  has_defn = bits.b ();
 	}
@@ -8385,6 +8378,12 @@ trees_in::decl_value ()
   tree container = decl_container ();
   unsigned tpl_levels = 0;
 
+  /* If this is an imported temploid friend, get the owning decl its
+     attachment is determined by (or NULL_TREE otherwise).  */
+  tree temploid_friend = NULL_TREE;
+  if (TREE_CODE (inner) == FUNCTION_DECL || TREE_CODE (inner) == TYPE_DECL)
+    temploid_friend = tree_node ();
+
   /* Figure out if this decl is already known about.  */
   int parm_tag = 0;
 
@@ -8395,7 +8394,7 @@ trees_in::decl_value ()
     parm_tag = fn_parms_init (inner);
 
   tree existing = key_mergeable (tag, mk, decl, inner, type, container,
-				 is_attached, is_imported_temploid_friend);
+				 is_attached, temploid_friend);
   tree existing_inner = existing;
   if (existing)
     {
@@ -8500,11 +8499,6 @@ trees_in::decl_value ()
 	}
     }
 
-  if (is_imported_temploid_friend)
-    if (tree owner = tree_node ())
-      if (is_new)
-	imported_temploid_friends->put (decl, owner);
-
   /* Regular typedefs will have a NULL TREE_TYPE at this point.  */
   unsigned tdef_flags = 0;
   bool is_typedef = false;
@@ -8529,6 +8523,9 @@ trees_in::decl_value ()
 	  retrofit_lang_decl (inner);
 	  DECL_MODULE_IMPORT_P (inner) = true;
 	}
+
+      if (temploid_friend)
+	imported_temploid_friends->put (decl, temploid_friend);
 
       if (spec.spec)
 	set_constraints (decl, spec.spec);
@@ -8650,9 +8647,18 @@ trees_in::decl_value ()
 	  if (stub_decl)
 	    TREE_TYPE (stub_decl) = type;
 
+	  tree etype = TREE_TYPE (existing);
+
 	  /* Handle separate declarations with different attributes.  */
-	  tree &eattr = TYPE_ATTRIBUTES (TREE_TYPE (existing));
+	  tree &eattr = TYPE_ATTRIBUTES (etype);
 	  eattr = merge_attributes (eattr, TYPE_ATTRIBUTES (type));
+
+	  /* When merging a partial specialisation, the existing decl may have
+	     had its TYPE_CANONICAL adjusted.  If so we should use structural
+	     equality to ensure is_matching_decl doesn't get confused.  */
+	  if ((spec_flags & 2)
+	      && TYPE_CANONICAL (type) != TYPE_CANONICAL (etype))
+	    SET_TYPE_STRUCTURAL_EQUALITY (type);
 	}
 
       if (inner_tag)
@@ -11008,18 +11014,23 @@ trees_out::get_merge_kind (tree decl, depset *dep)
 	       g++.dg/modules/lambda-6_a.C.  */
 	    if (DECL_IMPLICIT_TYPEDEF_P (STRIP_TEMPLATE (decl))
 		&& LAMBDA_TYPE_P (TREE_TYPE (decl)))
-	      if (tree scope = LAMBDA_TYPE_EXTRA_SCOPE (TREE_TYPE (decl)))
-		{
-		  /* Lambdas attached to fields are keyed to its class.  */
-		  if (TREE_CODE (scope) == FIELD_DECL)
-		    scope = TYPE_NAME (DECL_CONTEXT (scope));
-		  if (DECL_LANG_SPECIFIC (scope)
-		      && DECL_MODULE_KEYED_DECLS_P (scope))
-		    {
-		      mk = MK_keyed;
-		      break;
-		    }
-		}
+	      {
+		if (tree scope = LAMBDA_TYPE_EXTRA_SCOPE (TREE_TYPE (decl)))
+		  {
+		    /* Lambdas attached to fields are keyed to its class.  */
+		    if (TREE_CODE (scope) == FIELD_DECL)
+		      scope = TYPE_NAME (DECL_CONTEXT (scope));
+		    if (DECL_LANG_SPECIFIC (scope)
+			&& DECL_MODULE_KEYED_DECLS_P (scope))
+		      {
+			mk = MK_keyed;
+			break;
+		      }
+		  }
+		/* Lambdas not attached to any mangling scope are TU-local.  */
+		mk = MK_unique;
+		break;
+	      }
 
 	    if (TREE_CODE (decl) == TEMPLATE_DECL
 		&& DECL_UNINSTANTIATED_TEMPLATE_FRIEND_P (decl))
@@ -11323,7 +11334,8 @@ trees_out::key_mergeable (int tag, merge_kind mk, tree decl, tree inner,
 	    gcc_checking_assert (TREE_CODE (scope) == VAR_DECL
 				 || TREE_CODE (scope) == FIELD_DECL
 				 || TREE_CODE (scope) == PARM_DECL
-				 || TREE_CODE (scope) == TYPE_DECL);
+				 || TREE_CODE (scope) == TYPE_DECL
+				 || TREE_CODE (scope) == CONCEPT_DECL);
 	    /* Lambdas attached to fields are keyed to the class.  */
 	    if (TREE_CODE (scope) == FIELD_DECL)
 	      scope = TYPE_NAME (DECL_CONTEXT (scope));
@@ -11902,8 +11914,13 @@ trees_in::is_matching_decl (tree existing, tree decl, bool is_typedef)
 	{
 	  dump (dumper::MERGE)
 	    && dump ("Propagating deduced return type to %N", existing);
+	  FNDECL_USED_AUTO (e_inner) = true;
+	  DECL_SAVED_AUTO_RETURN_TYPE (existing) = TREE_TYPE (e_type);
 	  TREE_TYPE (existing) = change_return_type (TREE_TYPE (d_type), e_type);
 	}
+      else if (type_uses_auto (d_ret)
+	       && !same_type_p (TREE_TYPE (d_type), TREE_TYPE (e_type)))
+	goto mismatch;
     }
   else if (is_typedef)
     {
@@ -13424,9 +13441,10 @@ depset::hash::is_tu_local_entity (tree decl, bool explain/*=false*/)
       tree main_decl = TYPE_MAIN_DECL (type);
       if (!DECL_CLASS_SCOPE_P (main_decl)
 	  && !decl_function_context (main_decl)
-	  /* FIXME: Lambdas defined outside initializers.  We'll need to more
-	     thoroughly set LAMBDA_TYPE_EXTRA_SCOPE to check this.  */
-	  && !LAMBDA_TYPE_P (type))
+	  /* LAMBDA_EXPR_EXTRA_SCOPE will be set for lambdas defined in
+	     contexts where they would not be TU-local.  */
+	  && !(LAMBDA_TYPE_P (type)
+	       && LAMBDA_TYPE_EXTRA_SCOPE (type)))
 	{
 	  if (explain)
 	    inform (loc, "%qT has no name and is not defined within a class, "
@@ -18709,6 +18727,65 @@ module_state::write_inits (elf_out *to, depset::hash &table, unsigned *crc_ptr)
       for (tree init = list; init; init = TREE_CHAIN (init))
 	if (TREE_LANG_FLAG_0 (init))
 	  {
+	    if (STATIC_INIT_DECOMP_BASE_P (init))
+	      {
+		/* Ensure that in the returned result chain if the
+		   STATIC_INIT_DECOMP_*BASE_P flags are set, there is
+		   always one or more STATIC_INIT_DECOMP_BASE_P TREE_LIST
+		   followed by one or more STATIC_INIT_DECOMP_NONBASE_P.  */
+		int phase = 0;
+		tree last = NULL_TREE;
+		for (tree init2 = TREE_CHAIN (init);
+		     init2; init2 = TREE_CHAIN (init2))
+		  {
+		    if (phase == 0 && STATIC_INIT_DECOMP_BASE_P (init2))
+		      ;
+		    else if (phase == 0
+			     && STATIC_INIT_DECOMP_NONBASE_P (init2))
+		      {
+			phase = TREE_LANG_FLAG_0 (init2) ? 2 : 1;
+			last = init2;
+		      }
+		    else if (IN_RANGE (phase, 1, 2)
+			     && STATIC_INIT_DECOMP_NONBASE_P (init2))
+		      {
+			if (TREE_LANG_FLAG_0 (init2))
+			  phase = 2;
+			last = init2;
+		      }
+		    else
+		      break;
+		  }
+		if (phase == 2)
+		  {
+		    /* In that case, add markers about it so that the
+		       STATIC_INIT_DECOMP_BASE_P and
+		       STATIC_INIT_DECOMP_NONBASE_P flags can be restored.  */
+		    sec.tree_node (build_int_cst (integer_type_node,
+						  2 * passes + 1));
+		    phase = 1;
+		    for (tree init2 = init; init2 != TREE_CHAIN (last);
+			 init2 = TREE_CHAIN (init2))
+		      if (TREE_LANG_FLAG_0 (init2))
+			{
+			  tree decl = TREE_VALUE (init2);
+			  if (phase == 1
+			      && STATIC_INIT_DECOMP_NONBASE_P (init2))
+			    {
+			      sec.tree_node (build_int_cst (integer_type_node,
+							    2 * passes + 2));
+			      phase = 2;
+			    }
+			  dump ("Initializer:%u for %N", count, decl);
+			  sec.tree_node (decl);
+			  ++count;
+			}
+		    sec.tree_node (integer_zero_node);
+		    init = last;
+		    continue;
+		  }
+	      }
+
 	    tree decl = TREE_VALUE (init);
 
 	    dump ("Initializer:%u for %N", count, decl);
@@ -18779,16 +18856,54 @@ module_state::read_inits (unsigned count)
   dump.indent ();
 
   lazy_snum = ~0u;
+  int decomp_phase = 0;
+  tree *aggrp = NULL;
   for (unsigned ix = 0; ix != count; ix++)
     {
+      tree last = NULL_TREE;
+      if (decomp_phase)
+	last = *aggrp;
       /* Merely referencing the decl causes its initializer to be read
 	 and added to the correct list.  */
       tree decl = sec.tree_node ();
+      /* module_state::write_inits can add special INTEGER_CST markers in
+	 between the decls.  1 means STATIC_INIT_DECOMP_BASE_P entries
+	 follow in static_aggregates, 2 means STATIC_INIT_DECOMP_NONBASE_P
+	 entries follow in static_aggregates, 3 means
+	 STATIC_INIT_DECOMP_BASE_P entries follow in tls_aggregates,
+	 4 means STATIC_INIT_DECOMP_NONBASE_P follow in tls_aggregates,
+	 0 means end of STATIC_INIT_DECOMP_{,NON}BASE_P sequence.  */
+      if (tree_fits_shwi_p (decl))
+	{
+	  if (sec.get_overrun ())
+	    break;
+	  decomp_phase = tree_to_shwi (decl);
+	  if (decomp_phase)
+	    {
+	      aggrp = decomp_phase > 2 ? &tls_aggregates : &static_aggregates;
+	      last = *aggrp;
+	    }
+	  decl = sec.tree_node ();
+	}
 
       if (sec.get_overrun ())
 	break;
       if (decl)
-	dump ("Initializer:%u for %N", count, decl);
+	dump ("Initializer:%u for %N", ix, decl);
+      if (decomp_phase)
+	{
+	  tree init = *aggrp;
+	  gcc_assert (TREE_VALUE (init) == decl && TREE_CHAIN (init) == last);
+	  if ((decomp_phase & 1) != 0)
+	    STATIC_INIT_DECOMP_BASE_P (init) = 1;
+	  else
+	    STATIC_INIT_DECOMP_NONBASE_P (init) = 1;
+	}
+    }
+  if (decomp_phase && !sec.get_overrun ())
+    {
+      tree decl = sec.tree_node ();
+      gcc_assert (integer_zerop (decl));
     }
   lazy_snum = 0;
   post_load_processing ();
@@ -20298,11 +20413,12 @@ maybe_key_decl (tree ctx, tree decl)
     return;
 
   /* We only need to deal with lambdas attached to var, field,
-     parm, or type decls.  */
+     parm, type, or concept decls.  */
   if (TREE_CODE (ctx) != VAR_DECL
       && TREE_CODE (ctx) != FIELD_DECL
       && TREE_CODE (ctx) != PARM_DECL
-      && TREE_CODE (ctx) != TYPE_DECL)
+      && TREE_CODE (ctx) != TYPE_DECL
+      && TREE_CODE (ctx) != CONCEPT_DECL)
     return;
 
   /* For fields, key it to the containing type to handle deduplication

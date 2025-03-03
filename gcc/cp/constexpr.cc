@@ -122,7 +122,7 @@ ensure_literal_type_for_constexpr_object (tree decl)
 		  error_at (DECL_SOURCE_LOCATION (decl),
 			    "variable %qD of non-literal type %qT in "
 			    "%<constexpr%> function only available with "
-			    "%<-std=c++2b%> or %<-std=gnu++2b%>", decl, type);
+			    "%<-std=c++23%> or %<-std=gnu++23%>", decl, type);
 		  explain_non_literal_class (type);
 		  decl = error_mark_node;
 		}
@@ -839,9 +839,8 @@ cx_check_missing_mem_inits (tree ctype, tree body, bool complain)
       if (i < nelts)
 	{
 	  index = CONSTRUCTOR_ELT (body, i)->index;
-	  /* Skip base and vtable inits.  */
-	  if (TREE_CODE (index) != FIELD_DECL
-	      || DECL_ARTIFICIAL (index))
+	  /* Skip vptr adjustment represented with a COMPONENT_REF.  */
+	  if (TREE_CODE (index) != FIELD_DECL)
 	    continue;
 	}
 
@@ -852,7 +851,8 @@ cx_check_missing_mem_inits (tree ctype, tree body, bool complain)
 	    continue;
 	  if (DECL_UNNAMED_BIT_FIELD (field))
 	    continue;
-	  if (DECL_ARTIFICIAL (field))
+	  /* Artificial fields can be ignored unless they're bases.  */
+	  if (DECL_ARTIFICIAL (field) && !DECL_FIELD_IS_BASE (field))
 	    continue;
 	  if (ANON_AGGR_TYPE_P (TREE_TYPE (field)))
 	    {
@@ -2707,7 +2707,26 @@ replace_decl_r (tree *tp, int *walk_subtrees, void *data)
 {
   replace_decl_data *d = (replace_decl_data *) data;
 
-  if (*tp == d->decl)
+  /* We could be replacing
+       &<retval>.bar -> &foo.bar
+     where foo is a static VAR_DECL, so we need to recompute TREE_CONSTANT
+     on the ADDR_EXPR around it.  */
+  if (TREE_CODE (*tp) == ADDR_EXPR)
+    {
+      d->pset->add (*tp);
+      auto save_changed = d->changed;
+      d->changed = false;
+      cp_walk_tree (&TREE_OPERAND (*tp, 0), replace_decl_r, d, nullptr);
+      if (d->changed)
+	{
+	  cxx_mark_addressable (*tp);
+	  recompute_tree_invariant_for_addr_expr (*tp);
+	}
+      else
+	d->changed = save_changed;
+      *walk_subtrees = 0;
+    }
+  else if (*tp == d->decl)
     {
       *tp = unshare_expr (d->replacement);
       d->changed = true;
@@ -3388,11 +3407,22 @@ cxx_eval_call_expression (const constexpr_ctx *ctx, tree t,
 
 	    /* Rewrite all occurrences of the function's RESULT_DECL with the
 	       current object under construction.  */
-	    if (!*non_constant_p && ctx->object
+	    if (!*non_constant_p
+		&& ctx->object
 		&& CLASS_TYPE_P (TREE_TYPE (res))
 		&& !is_empty_class (TREE_TYPE (res)))
-	      if (replace_decl (&result, res, ctx->object))
-		cacheable = false;
+	      {
+		if (!same_type_ignoring_top_level_qualifiers_p
+		    (TREE_TYPE (res), TREE_TYPE (ctx->object)))
+		  *non_constant_p = true;
+		else if (replace_decl (&result, res, ctx->object))
+		  {
+		    cacheable = false;
+		    result = cxx_eval_constant_expression (ctx, result, lval,
+							   non_constant_p,
+							   overflow_p);
+		  }
+	      }
 
 	  /* Only cache a permitted result of a constant expression.  */
 	  if (cacheable && !reduced_constant_expression_p (result))
@@ -4150,12 +4180,17 @@ find_array_ctor_elt (tree ary, tree dindex, bool insert)
       else if (TREE_CODE (cindex) == INTEGER_CST
 	       && compare_tree_int (cindex, end - 1) == 0)
 	{
-	  if (i < end)
-	    return i;
 	  tree value = (*elts)[end - 1].value;
-	  if (TREE_CODE (value) == RAW_DATA_CST
-	      && wi::to_offset (dindex) < (wi::to_offset (cindex)
-					   + RAW_DATA_LENGTH (value)))
+	  if (i < end)
+	    {
+	      if (i == end - 1 && TREE_CODE (value) == RAW_DATA_CST)
+		begin = end - 1;
+	      else
+		return i;
+	    }
+	  else if (TREE_CODE (value) == RAW_DATA_CST
+		   && wi::to_offset (dindex) < (wi::to_offset (cindex)
+						+ RAW_DATA_LENGTH (value)))
 	    begin = end - 1;
 	  else
 	    begin = end;
@@ -5614,7 +5649,11 @@ cxx_eval_vec_init_1 (const constexpr_ctx *ctx, tree atype, tree init,
 	  if (init == void_node)
 	    /* Trivial default-init, don't do anything to the CONSTRUCTOR.  */
 	    return ctx->ctor;
-	  eltinit = cxx_eval_constant_expression (&new_ctx, init, lval,
+	  eltinit = init;
+	  if (CLASS_TYPE_P (elttype) && new_ctx.object)
+	    /* Clarify what object is being initialized (118285).  */
+	    eltinit = build2 (INIT_EXPR, elttype, new_ctx.object, eltinit);
+	  eltinit = cxx_eval_constant_expression (&new_ctx, eltinit, lval,
 						  non_constant_p, overflow_p);
 	  reuse = i == 0;
 	}
@@ -5627,6 +5666,9 @@ cxx_eval_vec_init_1 (const constexpr_ctx *ctx, tree atype, tree init,
 	  eltinit = (perform_implicit_conversion_flags
 		     (elttype, eltinit, complain,
 		      LOOKUP_IMPLICIT|LOOKUP_NO_NARROWING));
+	  if (CLASS_TYPE_P (elttype) && new_ctx.object)
+	    /* Clarify what object is being initialized (118285).  */
+	    eltinit = build2 (INIT_EXPR, elttype, new_ctx.object, eltinit);
 	  eltinit = cxx_eval_constant_expression (&new_ctx, eltinit, lval,
 						  non_constant_p, overflow_p);
 	}
@@ -6398,7 +6440,7 @@ cxx_eval_store_expression (const constexpr_ctx *ctx, tree t,
 	  break;
 
 	case REALPART_EXPR:
-	  gcc_assert (probe == target);
+	  gcc_assert (refs->is_empty ());
 	  vec_safe_push (refs, NULL_TREE);
 	  vec_safe_push (refs, probe);
 	  vec_safe_push (refs, TREE_TYPE (probe));
@@ -6406,7 +6448,7 @@ cxx_eval_store_expression (const constexpr_ctx *ctx, tree t,
 	  break;
 
 	case IMAGPART_EXPR:
-	  gcc_assert (probe == target);
+	  gcc_assert (refs->is_empty ());
 	  vec_safe_push (refs, NULL_TREE);
 	  vec_safe_push (refs, probe);
 	  vec_safe_push (refs, TREE_TYPE (probe));
@@ -7135,6 +7177,8 @@ cxx_eval_loop_expr (const constexpr_ctx *ctx, tree t,
     }
 
   tree body, cond = NULL_TREE, expr = NULL_TREE;
+  tree cond_prep = NULL_TREE, cond_cleanup = NULL_TREE;
+  unsigned cond_cleanup_depth = 0;
   int count = 0;
   switch (TREE_CODE (t))
     {
@@ -7148,6 +7192,8 @@ cxx_eval_loop_expr (const constexpr_ctx *ctx, tree t,
     case WHILE_STMT:
       body = WHILE_BODY (t);
       cond = WHILE_COND (t);
+      cond_prep = WHILE_COND_PREP (t);
+      cond_cleanup = WHILE_COND_CLEANUP (t);
       count = -1;
       break;
     case FOR_STMT:
@@ -7159,11 +7205,39 @@ cxx_eval_loop_expr (const constexpr_ctx *ctx, tree t,
       body = FOR_BODY (t);
       cond = FOR_COND (t);
       expr = FOR_EXPR (t);
+      cond_prep = FOR_COND_PREP (t);
+      cond_cleanup = FOR_COND_CLEANUP (t);
       count = -1;
       break;
     default:
       gcc_unreachable ();
     }
+  if (cond_prep)
+    gcc_assert (TREE_CODE (cond_prep) == BIND_EXPR);
+  auto cleanup_cond = [&] {
+    /* Clean up the condition variable after each iteration.  */
+    if (cond_cleanup_depth && !*non_constant_p)
+      {
+	auto_vec<tree, 4> cleanups (cond_cleanup_depth);
+	tree s = BIND_EXPR_BODY (cond_prep);
+	unsigned i;
+	for (i = cond_cleanup_depth; i; --i)
+	  {
+	    tree_stmt_iterator iter = tsi_last (s);
+	    s = tsi_stmt (iter);
+	    cleanups.quick_push (CLEANUP_EXPR (s));
+	    s = CLEANUP_BODY (s);
+	  }
+	tree c;
+	FOR_EACH_VEC_ELT_REVERSE (cleanups, i, c)
+	  cxx_eval_constant_expression (ctx, c, vc_discard, non_constant_p,
+					overflow_p);
+      }
+    if (cond_prep)
+      for (tree decl = BIND_EXPR_VARS (cond_prep);
+	   decl; decl = DECL_CHAIN (decl))
+	destroy_value_checked (ctx, decl, non_constant_p);
+  };
   do
     {
       if (count != -1)
@@ -7185,6 +7259,85 @@ cxx_eval_loop_expr (const constexpr_ctx *ctx, tree t,
 	    cxx_eval_constant_expression (ctx, expr, vc_prvalue,
 					  non_constant_p, overflow_p,
 					  jump_target);
+	  cleanup_cond ();
+	}
+
+      if (cond_prep)
+	{
+	  for (tree decl = BIND_EXPR_VARS (cond_prep);
+	       decl; decl = DECL_CHAIN (decl))
+	    ctx->global->clear_value (decl);
+	  if (cond_cleanup)
+	    {
+	      /* If COND_CLEANUP is non-NULL, we need to evaluate DEPTH
+		 nested STATEMENT_LISTs from inside of BIND_EXPR_BODY,
+		 but defer the evaluation of CLEANUP_EXPRs of CLEANUP_STMT
+		 at the end of those STATEMENT_LISTs.  */
+	      cond_cleanup_depth = 0;
+	      tree s = BIND_EXPR_BODY (cond_prep);
+	      for (unsigned depth = tree_to_uhwi (cond_cleanup);
+		   depth; --depth)
+		{
+		  for (tree_stmt_iterator i = tsi_start (s);
+		       !tsi_end_p (i); ++i)
+		    {
+		      tree stmt = *i;
+		      if (TREE_CODE (stmt) == DEBUG_BEGIN_STMT)
+			continue;
+		      if (tsi_one_before_end_p (i))
+			{
+			  /* The last statement in the STATEMENT_LIST
+			     has to be a CLEANUP_STMT (verified in
+			     finish_loop_cond_prep).  We want to
+			     evaluate just its CLEANUP_BODY part but not
+			     CLEANUP_EXPR part just yet.  */
+			  gcc_assert (TREE_CODE (stmt) == CLEANUP_STMT);
+			  /* If the CLEANUP_STMT is not actually to be
+			     evaluated, don't increment cond_cleanup_depth
+			     so that we don't evaluate the CLEANUP_EXPR
+			     for it later either.  */
+			  if (*jump_target)
+			    {
+			      depth = 1;
+			      break;
+			    }
+			  ++cond_cleanup_depth;
+			  /* If not in the innermost one, next iteration
+			     will handle CLEANUP_BODY similarly.  */
+			  if (depth > 1)
+			    {
+			      s = CLEANUP_BODY (stmt);
+			      break;
+			    }
+			  /* The innermost one can be evaluated normally.  */
+			  cxx_eval_constant_expression (ctx,
+							CLEANUP_BODY (stmt),
+							vc_discard,
+							non_constant_p,
+							overflow_p,
+							jump_target);
+			  break;
+			}
+		      /* And so should be evaluated statements which aren't
+			 last in the STATEMENT_LIST.  */
+		      cxx_eval_constant_expression (ctx, stmt, vc_discard,
+						    non_constant_p, overflow_p,
+						    jump_target);
+		      if (*non_constant_p
+			  || returns (jump_target)
+			  || breaks (jump_target)
+			  || continues (jump_target))
+			{
+			  depth = 1;
+			  break;
+			}
+		    }
+		}
+	    }
+	  else
+	    cxx_eval_constant_expression (ctx, BIND_EXPR_BODY (cond_prep),
+					  vc_discard, non_constant_p,
+					  overflow_p, jump_target);
 	}
 
       if (cond)
@@ -7221,6 +7374,8 @@ cxx_eval_loop_expr (const constexpr_ctx *ctx, tree t,
 	 && !continues (jump_target)
 	 && (!switches (jump_target) || count == 0)
 	 && !*non_constant_p);
+
+  cleanup_cond ();
 
   return NULL_TREE;
 }
@@ -7553,18 +7708,19 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
 		 definition, so don't try to look at the closure.  But if the
 		 captured variable is constant, try to evaluate it directly. */
 	      r = DECL_CAPTURED_VARIABLE (t);
-	      tree type = TREE_TYPE (t);
-	      if (TYPE_REF_P (type) != TYPE_REF_P (TREE_TYPE (r)))
-		{
-		  /* Adjust r to match the reference-ness of t.  */
-		  if (TYPE_REF_P (type))
-		    r = build_address (r);
-		  else
-		    r = convert_from_reference (r);
-		}
 	    }
 	  else
 	    r = DECL_VALUE_EXPR (t);
+
+	  tree type = TREE_TYPE (t);
+	  if (TYPE_REF_P (type) != TYPE_REF_P (TREE_TYPE (r)))
+	    {
+	      /* Adjust r to match the reference-ness of t.  */
+	      if (TYPE_REF_P (type))
+		r = build_address (r);
+	      else
+		r = convert_from_reference (r);
+	    }
 	  return cxx_eval_constant_expression (ctx, r, lval, non_constant_p,
 					       overflow_p);
 	}
@@ -8560,7 +8716,6 @@ cxx_eval_constant_expression (const constexpr_ctx *ctx, tree t,
 	*jump_target = TREE_OPERAND (t, 0);
       else
 	{
-	  gcc_assert (cxx_dialect >= cxx23);
 	  if (!ctx->quiet)
 	    error_at (loc, "%<goto%> is not a constant expression");
 	  *non_constant_p = true;
@@ -8973,6 +9128,11 @@ cxx_eval_outermost_constant_expr (tree t, bool allow_non_constant,
   r = cxx_eval_constant_expression (&ctx, r, vc_prvalue,
 				    &non_constant_p, &overflow_p);
 
+  /* If we got a non-simple TARGET_EXPR, the initializer was a sequence
+     of statements, and the result ought to be stored in ctx.ctor.  */
+  if (r == void_node && !constexpr_dtor && ctx.ctor)
+    r = ctx.ctor;
+
   if (!constexpr_dtor)
     verify_constant (r, allow_non_constant, &non_constant_p, &overflow_p);
   else
@@ -9079,6 +9239,16 @@ cxx_eval_outermost_constant_expr (tree t, bool allow_non_constant,
     r = mark_non_constant (r);
   else if (non_constant_p)
     return t;
+
+  /* Check we are not trying to return the wrong type.  */
+  if (!same_type_ignoring_top_level_qualifiers_p (type, TREE_TYPE (r)))
+    {
+      /* If so, this is not a constant expression.  */
+      if (!allow_non_constant)
+	error ("%qE is not a constant expression because it initializes "
+	       "a %qT rather than %qT", t, TREE_TYPE (t), type);
+      return t;
+    }
 
   if (should_unshare)
     r = unshare_expr (r);
@@ -9460,7 +9630,12 @@ maybe_constant_init_1 (tree t, tree decl, bool allow_non_constant,
   if (TREE_CODE (t) == CONVERT_EXPR
       && VOID_TYPE_P (TREE_TYPE (t)))
     t = TREE_OPERAND (t, 0);
-  if (TREE_CODE (t) == INIT_EXPR)
+  /* If the types don't match, the INIT_EXPR is initializing a subobject of
+     DECL and losing that information would cause mischief later.  */
+  if (TREE_CODE (t) == INIT_EXPR
+      && (!decl
+	  || same_type_ignoring_top_level_qualifiers_p (TREE_TYPE (decl),
+							TREE_TYPE (t))))
     t = TREE_OPERAND (t, 1);
   if (TREE_CODE (t) == TARGET_EXPR)
     t = TARGET_EXPR_INITIAL (t);
@@ -9586,6 +9761,7 @@ check_for_return_continue (tree *tp, int *walk_subtrees, void *data)
 
     case WHILE_STMT:
       *walk_subtrees = 0;
+      RECUR (WHILE_COND_PREP (t));
       RECUR (WHILE_COND (t));
       s = d->continue_stmt;
       b = d->break_stmt;
@@ -9597,6 +9773,7 @@ check_for_return_continue (tree *tp, int *walk_subtrees, void *data)
     case FOR_STMT:
       *walk_subtrees = 0;
       RECUR (FOR_INIT_STMT (t));
+      RECUR (FOR_COND_PREP (t));
       RECUR (FOR_COND (t));
       RECUR (FOR_EXPR (t));
       s = d->continue_stmt;
@@ -9685,7 +9862,8 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
     return true;
 
   if (TREE_THIS_VOLATILE (t) && want_rval
-      && !FUNC_OR_METHOD_TYPE_P (TREE_TYPE (t)))
+      && !FUNC_OR_METHOD_TYPE_P (TREE_TYPE (t))
+      && !NULLPTR_TYPE_P (TREE_TYPE (t)))
     {
       if (flags & tf_error)
 	constexpr_error (loc, fundef_p, "lvalue-to-rvalue conversion of "
@@ -10100,6 +10278,8 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
     case FOR_STMT:
       if (!RECUR (FOR_INIT_STMT (t), any))
 	return false;
+      if (!RECUR (FOR_COND_PREP (t), any))
+	return false;
       tmp = FOR_COND (t);
       if (!RECUR (tmp, rval))
 	return false;
@@ -10127,6 +10307,8 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
 	return false;
       if (!RECUR (FOR_BODY (t), any))
 	return false;
+      if (!RECUR (FOR_COND_CLEANUP (t), any))
+	return false;
       if (breaks (jump_target) || continues (jump_target))
 	*jump_target = NULL_TREE;
       return true;
@@ -10143,6 +10325,8 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
       return true;
 
     case WHILE_STMT:
+      if (!RECUR (WHILE_COND_PREP (t), any))
+	return false;
       tmp = WHILE_COND (t);
       if (!RECUR (tmp, rval))
 	return false;
@@ -10163,6 +10347,8 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
 	  return true;
 	}
       if (!RECUR (WHILE_BODY (t), any))
+	return false;
+      if (!RECUR (WHILE_COND_CLEANUP (t), any))
 	return false;
       if (breaks (jump_target) || continues (jump_target))
 	*jump_target = NULL_TREE;
@@ -10736,8 +10922,8 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
 	return true;
       else if (flags & tf_error)
 	constexpr_error (loc, fundef_p, "label definition in %<constexpr%> "
-			 "function only available with %<-std=c++2b%> or "
-			 "%<-std=gnu++2b%>");
+			 "function only available with %<-std=c++23%> or "
+			 "%<-std=gnu++23%>");
       return false;
 
     case ANNOTATE_EXPR:

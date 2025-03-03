@@ -342,6 +342,7 @@ const struct s390_processor processor_table[] =
   { "z14",    "arch12", PROCESSOR_3906_Z14,    &zEC12_cost,  12 },
   { "z15",    "arch13", PROCESSOR_8561_Z15,    &zEC12_cost,  13 },
   { "z16",    "arch14", PROCESSOR_3931_Z16,    &zEC12_cost,  14 },
+  { "arch15", "arch15", PROCESSOR_ARCH15,      &zEC12_cost,  15 },
   { "native", "",       PROCESSOR_NATIVE,      NULL,         0  }
 };
 
@@ -912,6 +913,12 @@ s390_expand_builtin (tree exp, rtx target, rtx subtarget ATTRIBUTE_UNUSED,
 	  error ("Builtin %qF requires z15 or higher", fndecl);
 	  return const0_rtx;
 	}
+
+      if ((bflags & B_VXE3) && !TARGET_VXE3)
+	{
+	  error ("Builtin %qF requires arch15 or higher", fndecl);
+	  return const0_rtx;
+	}
     }
   if (fcode >= S390_OVERLOADED_BUILTIN_VAR_OFFSET
       && fcode < S390_ALL_BUILTIN_MAX)
@@ -1198,6 +1205,9 @@ s390_handle_vectorbool_attribute (tree *node, tree name ATTRIBUTE_UNUSED,
   mode = TYPE_MODE (type);
   switch (mode)
     {
+    case E_TImode: case E_V1TImode:
+      result = s390_builtin_types[BT_BV1TI];
+      break;
     case E_DImode: case E_V2DImode:
       result = s390_builtin_types[BT_BV2DI];
       break;
@@ -3500,26 +3510,31 @@ s390_valid_shift_count (rtx op, HOST_WIDE_INT implicit_mask)
 
   /* Check for an and with proper constant.  */
   if (GET_CODE (op) == AND)
-  {
-    rtx op1 = XEXP (op, 0);
-    rtx imm = XEXP (op, 1);
+    {
+      rtx op1 = XEXP (op, 0);
+      rtx imm = XEXP (op, 1);
 
-    if (GET_CODE (op1) == SUBREG && subreg_lowpart_p (op1))
-      op1 = XEXP (op1, 0);
+      if (GET_CODE (op1) == SUBREG && subreg_lowpart_p (op1))
+	op1 = XEXP (op1, 0);
 
-    if (!(register_operand (op1, GET_MODE (op1)) || GET_CODE (op1) == PLUS))
-      return false;
+      if (!(register_operand (op1, GET_MODE (op1)) || GET_CODE (op1) == PLUS))
+	return false;
 
-    if (!immediate_operand (imm, GET_MODE (imm)))
-      return false;
+      /* Accept only CONST_INT as immediates, i.e., reject shift count operands
+	 which do not trivially fit the scheme of address operands.  Especially
+	 since strip_address_mutations() expects expressions of the form
+	 (and ... (const_int ...)) and fails for
+	 (and ... (const_wide_int ...)).  */
+      if (!const_int_operand (imm, GET_MODE (imm)))
+	return false;
 
-    HOST_WIDE_INT val = INTVAL (imm);
-    if (implicit_mask > 0
-	&& (val & implicit_mask) != implicit_mask)
-      return false;
+      HOST_WIDE_INT val = INTVAL (imm);
+      if (implicit_mask > 0
+	  && (val & implicit_mask) != implicit_mask)
+	return false;
 
-    op = op1;
-  }
+      op = op1;
+    }
 
   /* Check the rest.  */
   return s390_decompose_addrstyle_without_index (op, NULL, NULL);
@@ -7286,7 +7301,8 @@ s390_expand_vec_compare_cc (rtx target, enum rtx_code code,
   rtx tmp_reg = gen_reg_rtx (SImode);
   bool swap_p = false;
 
-  if (GET_MODE_CLASS (GET_MODE (cmp1)) == MODE_VECTOR_INT)
+  if (GET_MODE_CLASS (GET_MODE (cmp1)) == MODE_VECTOR_INT
+      || GET_MODE (cmp1) == TImode)
     {
       switch (code)
 	{
@@ -8574,7 +8590,7 @@ print_operand_address (FILE *file, rtx addr)
     'E': print opcode suffix for branch on index instruction.
     'G': print the size of the operand in bytes.
     'J': print tls_load/tls_gdcall/tls_ldcall suffix
-    'K': print @PLT suffix for call targets and load address values.
+    'K': print @PLT suffix for branch targets; do not use with larl.
     'M': print the second word of a TImode operand.
     'N': print the second word of a DImode operand.
     'O': print only the displacement of a memory reference or address.
@@ -8688,8 +8704,12 @@ print_operand (FILE *file, rtx x, int code)
       {
 	machine_mode mode;
 	short imm;
-	bool b = s390_constant_via_vrepi_p (x, &mode, &imm);
-	gcc_checking_assert (b);
+	if (!s390_constant_via_vrepi_p (x, &mode, &imm))
+	  {
+	    output_operand_lossage ("invalid constant for output "
+				    "modifier '%c'", code);
+	    return;
+	  }
 	switch (mode)
 	  {
 	  case QImode:
@@ -8714,8 +8734,12 @@ print_operand (FILE *file, rtx x, int code)
       {
 	machine_mode mode;
 	int start, end;
-	bool b = s390_constant_via_vgm_p (x, &mode, &start, &end);
-	gcc_checking_assert (b);
+	if (!s390_constant_via_vgm_p (x, &mode, &start, &end))
+	  {
+	    output_operand_lossage ("invalid constant for output "
+				    "modifier '%c'", code);
+	    return;
+	  }
 	switch (mode)
 	  {
 	  case QImode:
@@ -8739,8 +8763,12 @@ print_operand (FILE *file, rtx x, int code)
     case 'r':
       {
 	unsigned mask;
-	bool b = s390_constant_via_vgbm_p (x, &mask);
-	gcc_checking_assert (b);
+	if (!s390_constant_via_vgbm_p (x, &mask))
+	  {
+	    output_operand_lossage ("invalid constant for output "
+				    "modifier '%c'", code);
+	    return;
+	  }
 	fprintf (file, "%u", mask);
       }
       return;
@@ -8831,19 +8859,9 @@ print_operand (FILE *file, rtx x, int code)
 	 call even static functions via PLT.  ld will optimize @PLT away for
 	 normal code, and keep it for patches.
 
-	 Do not indiscriminately add @PLT in 31-bit mode due to the %r12
-	 restriction, use UNSPEC_PLT31 instead.
-
 	 @PLT only makes sense for functions, data is taken care of by
-	 -mno-pic-data-is-text-relative.
-
-	 Adding @PLT interferes with handling of weak symbols in non-PIC code,
-	 since their addresses are loaded with larl, which then always produces
-	 a non-NULL result, so skip them here as well.  */
-      if (TARGET_64BIT
-	  && GET_CODE (x) == SYMBOL_REF
-	  && SYMBOL_REF_FUNCTION_P (x)
-	  && !(SYMBOL_REF_WEAK (x) && !flag_pic))
+	 -mno-pic-data-is-text-relative.  */
+      if (GET_CODE (x) == SYMBOL_REF && SYMBOL_REF_FUNCTION_P (x))
 	fprintf (file, "@PLT");
       return;
     }
@@ -9151,6 +9169,7 @@ s390_issue_rate (void)
     case PROCESSOR_3906_Z14:
     case PROCESSOR_8561_Z15:
     case PROCESSOR_3931_Z16:
+    case PROCESSOR_ARCH15:
     default:
       return 1;
     }
@@ -15578,6 +15597,7 @@ s390_get_sched_attrmask (rtx_insn *insn)
 	mask |= S390_SCHED_ATTR_MASK_GROUPOFTWO;
       break;
     case PROCESSOR_3931_Z16:
+    case PROCESSOR_ARCH15:
       if (get_attr_z16_cracked (insn))
 	mask |= S390_SCHED_ATTR_MASK_CRACKED;
       if (get_attr_z16_expanded (insn))
@@ -15636,6 +15656,7 @@ s390_get_unit_mask (rtx_insn *insn, int *units)
 	mask |= 1 << 3;
       break;
     case PROCESSOR_3931_Z16:
+    case PROCESSOR_ARCH15:
       *units = 4;
       if (get_attr_z16_unit_lsu (insn))
 	mask |= 1 << 0;

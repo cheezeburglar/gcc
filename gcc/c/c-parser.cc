@@ -270,6 +270,11 @@ struct GTY(()) c_parser {
   /* Set for omp::decl attribute parsing to the decl to which it
      appertains.  */
   tree in_omp_decl_attribute;
+
+  /* Non-null only when parsing the body of an OpenMP metadirective.
+     Managed by c_parser_omp_metadirective.  */
+  struct omp_metadirective_parse_data * GTY((skip))
+    omp_metadirective_state;
 };
 
 /* Holds data needed to restore the token stream to its previous state
@@ -1455,9 +1460,11 @@ c_parser_skip_to_pragma_eol (c_parser *parser, bool error_if_not_eol = true)
    have consumed a non-nested ';'.  */
 
 static void
-c_parser_skip_to_end_of_block_or_statement (c_parser *parser)
+c_parser_skip_to_end_of_block_or_statement (c_parser *parser,
+					    bool metadirective_p = false)
 {
   unsigned nesting_depth = 0;
+  int bracket_depth = 0;
   bool save_error = parser->error;
 
   while (true)
@@ -1480,7 +1487,7 @@ c_parser_skip_to_end_of_block_or_statement (c_parser *parser)
 	case CPP_SEMICOLON:
 	  /* If the next token is a ';', we have reached the
 	     end of the statement.  */
-	  if (!nesting_depth)
+	  if (!nesting_depth && (!metadirective_p || bracket_depth <= 0))
 	    {
 	      /* Consume the ';'.  */
 	      c_parser_consume_token (parser);
@@ -1491,7 +1498,8 @@ c_parser_skip_to_end_of_block_or_statement (c_parser *parser)
 	case CPP_CLOSE_BRACE:
 	  /* If the next token is a non-nested '}', then we have
 	     reached the end of the current block.  */
-	  if (nesting_depth == 0 || --nesting_depth == 0)
+	  if ((nesting_depth == 0 || --nesting_depth == 0)
+	      && (!metadirective_p || bracket_depth <= 0))
 	    {
 	      c_parser_consume_token (parser);
 	      goto finished;
@@ -1502,6 +1510,19 @@ c_parser_skip_to_end_of_block_or_statement (c_parser *parser)
 	  /* If it the next token is a '{', then we are entering a new
 	     block.  Consume the entire block.  */
 	  ++nesting_depth;
+	  break;
+
+	case CPP_OPEN_PAREN:
+	  /* Track parentheses in case the statement is a standalone 'for'
+	     statement - we want to skip over the semicolons separating the
+	     operands.  */
+	  if (metadirective_p && nesting_depth == 0)
+	    ++bracket_depth;
+	  break;
+
+	case CPP_CLOSE_PAREN:
+	  if (metadirective_p && nesting_depth == 0)
+	    --bracket_depth;
 	  break;
 
 	case CPP_PRAGMA:
@@ -1752,6 +1773,7 @@ static void c_parser_omp_taskwait (c_parser *);
 static void c_parser_omp_taskyield (c_parser *);
 static void c_parser_omp_cancel (c_parser *);
 static void c_parser_omp_nothing (c_parser *);
+static void c_parser_omp_metadirective (c_parser *, bool *);
 
 enum pragma_context { pragma_external, pragma_struct, pragma_param,
 		      pragma_stmt, pragma_compound };
@@ -7785,6 +7807,31 @@ c_parser_all_labels (c_parser *parser)
   return attr;
 }
 
+
+/* Information used while parsing an OpenMP metadirective.  */
+struct omp_metadirective_parse_data {
+  /* These fields are used to unique-ify labels when reparsing the
+     code in a metadirective alternative.  */
+  vec<tree> * GTY((skip)) body_labels;
+  unsigned int region_num;
+};
+
+/* Helper function for c_parser_label: mangle a metadirective region
+   label NAME.  */
+static tree
+mangle_metadirective_region_label (c_parser *parser, tree name)
+{
+  if (parser->omp_metadirective_state->body_labels->contains (name))
+    {
+      const char *old_name = IDENTIFIER_POINTER (name);
+      char *new_name = (char *) XALLOCAVEC (char, strlen (old_name) + 32);
+      sprintf (new_name, "%s_MDR%u", old_name,
+	       parser->omp_metadirective_state->region_num);
+      return get_identifier (new_name);
+    }
+  return name;
+}
+
 /* Parse a label (C90 6.6.1, C99 6.8.1, C11 6.8.1).
 
    label:
@@ -7856,6 +7903,8 @@ c_parser_label (c_parser *parser, tree std_attrs)
       gcc_assert (c_parser_next_token_is (parser, CPP_COLON));
       c_parser_consume_token (parser);
       attrs = c_parser_gnu_attributes (parser);
+      if (parser->omp_metadirective_state)
+	name = mangle_metadirective_region_label (parser, name);
       tlab = define_label (loc2, name);
       if (tlab)
 	{
@@ -8102,8 +8151,10 @@ c_parser_statement_after_labels (c_parser *parser, bool *if_p,
 	  c_parser_consume_token (parser);
 	  if (c_parser_next_token_is (parser, CPP_NAME))
 	    {
-	      stmt = c_finish_goto_label (loc,
-					  c_parser_peek_token (parser)->value);
+	      tree name = c_parser_peek_token (parser)->value;
+	      if (parser->omp_metadirective_state)
+		name = mangle_metadirective_region_label (parser, name);
+	      stmt = c_finish_goto_label (loc, name);
 	      c_parser_consume_token (parser);
 	    }
 	  else if (c_parser_next_token_is (parser, CPP_MULT))
@@ -8751,7 +8802,8 @@ c_parser_while_statement (c_parser *parser, bool ivdep, unsigned short unroll,
   body = c_parser_c99_block_statement (parser, if_p, &loc_after_labels);
   if (loop_name && !C_DECL_LOOP_SWITCH_NAME_USED (loop_name))
     loop_name = NULL_TREE;
-  add_stmt (build_stmt (loc, WHILE_STMT, cond, body, loop_name));
+  add_stmt (build_stmt (loc, WHILE_STMT, cond, body, loop_name, NULL_TREE,
+			NULL_TREE));
   add_stmt (c_end_compound_stmt (loc, block, flag_isoc99));
   c_parser_maybe_reclassify_token (parser);
   if (num_names)
@@ -9156,7 +9208,7 @@ c_parser_for_statement (c_parser *parser, bool ivdep, unsigned short unroll,
     add_stmt (build_stmt (for_loc, FOR_STMT, NULL_TREE, cond, incr,
 			  body, NULL_TREE,
 			  loop_name && C_DECL_LOOP_SWITCH_NAME_USED (loop_name)
-			  ? loop_name : NULL_TREE));
+			  ? loop_name : NULL_TREE, NULL_TREE, NULL_TREE));
   add_stmt (c_end_compound_stmt (for_loc, block,
 				 flag_isoc99 || c_dialect_objc ()));
   c_parser_maybe_reclassify_token (parser);
@@ -15717,6 +15769,10 @@ c_parser_pragma (c_parser *parser, enum pragma_context context, bool *if_p,
       c_parser_omp_nothing (parser);
       return false;
 
+    case PRAGMA_OMP_METADIRECTIVE:
+      c_parser_omp_metadirective (parser, if_p);
+      return true;
+
     case PRAGMA_OMP_ERROR:
       return c_parser_omp_error (parser, context);
 
@@ -16252,7 +16308,6 @@ c_parser_omp_variable_list (c_parser *parser,
   auto_vec<c_token> tokens;
   unsigned int tokens_avail = 0;
   c_token *saved_tokens = NULL;
-  bool first = true;
 
   while (1)
     {
@@ -16288,7 +16343,6 @@ c_parser_omp_variable_list (c_parser *parser,
 		break;
 
 	      c_parser_consume_token (parser);
-	      first = false;
 	      continue;
 	    }
 
@@ -16452,8 +16506,7 @@ c_parser_omp_variable_list (c_parser *parser,
 	t = c_parser_predefined_identifier (parser).value;
       else
 	{
-	  if (first)
-	    c_parser_error (parser, "expected identifier");
+	  c_parser_error (parser, "expected identifier");
 	  break;
 	}
 
@@ -16647,7 +16700,6 @@ c_parser_omp_variable_list (c_parser *parser,
 	break;
 
       c_parser_consume_token (parser);
-      first = false;
     }
 
   return list;
@@ -22832,9 +22884,16 @@ c_parser_omp_atomic (location_t loc, c_parser *parser, bool openacc)
 	goto saw_error;
       if (code == NOP_EXPR)
 	{
-	  lhs = c_parser_expression (parser).value;
-	  lhs = c_fully_fold (lhs, false, NULL);
-	  if (lhs == error_mark_node)
+	  eloc = c_parser_peek_token (parser)->location;
+	  expr = c_parser_expression (parser);
+	  expr = default_function_array_read_conversion (eloc, expr);
+	  /* atomic write is represented by OMP_ATOMIC with NOP_EXPR
+	     opcode.  */
+	  code = OMP_ATOMIC;
+	  lhs = v;
+	  v = NULL_TREE;
+	  rhs = c_fully_fold (expr.value, false, NULL);
+	  if (rhs == error_mark_node)
 	    goto saw_error;
 	}
       else
@@ -22846,15 +22905,6 @@ c_parser_omp_atomic (location_t loc, c_parser *parser, bool openacc)
 	    goto saw_error;
 	  if (non_lvalue_p)
 	    lhs = non_lvalue (lhs);
-	}
-      if (code == NOP_EXPR)
-	{
-	  /* atomic write is represented by OMP_ATOMIC with NOP_EXPR
-	     opcode.  */
-	  code = OMP_ATOMIC;
-	  rhs = lhs;
-	  lhs = v;
-	  v = NULL_TREE;
 	}
       goto done;
     case OMP_ATOMIC_CAPTURE_NEW:
@@ -26702,12 +26752,9 @@ c_parser_omp_context_selector (c_parser *parser, enum omp_tss_code set,
 		{
 		  mark_exp_read (t);
 		  t = c_fully_fold (t, false, NULL);
-		  /* FIXME: this is bogus, both device_num and
-		     condition selectors allow arbitrary expressions.  */
-		  if (!INTEGRAL_TYPE_P (TREE_TYPE (t))
-		      || !tree_fits_shwi_p (t))
-		    error_at (token->location, "property must be "
-			      "constant integer expression");
+		  if (!INTEGRAL_TYPE_P (TREE_TYPE (t)))
+		    error_at (token->location,
+			      "property must be integer expression");
 		  else
 		    properties = make_trait_property (NULL_TREE, t,
 						      properties);
@@ -26933,7 +26980,8 @@ c_finish_omp_declare_variant (c_parser *parser, tree fndecl, tree parms)
 	  ctx  = c_parser_omp_context_selector_specification (parser, parms);
 	  if (ctx == error_mark_node)
 	    goto fail;
-	  ctx = omp_check_context_selector (match_loc, ctx, false);
+	  ctx = omp_check_context_selector (match_loc, ctx,
+					    OMP_CTX_DECLARE_VARIANT);
 	  if (ctx != error_mark_node && variant != error_mark_node)
 	    {
 	      if (TREE_CODE (variant) != FUNCTION_DECL)
@@ -27042,7 +27090,10 @@ c_finish_omp_declare_variant (c_parser *parser, tree fndecl, tree parms)
       else if (ccode == append_args)
 	{
 	  if (append_args_tree)
-	    error_at (append_args_loc, "too many %qs clauses", "append_args");
+	    {
+	      error_at (append_args_loc, "too many %qs clauses", "append_args");
+	      append_args_tree = NULL_TREE;
+	    }
 	  do
 	    {
 	      location_t loc = c_parser_peek_token (parser)->location;
@@ -27067,17 +27118,19 @@ c_finish_omp_declare_variant (c_parser *parser, tree fndecl, tree parms)
 		  || !c_parser_require (parser, CPP_CLOSE_PAREN,
 					"expected %<)%> or %<,%>"))
 		goto fail;
-	      tree t = build_omp_clause (loc, OMP_CLAUSE_INIT);
+	      tree t = build_tree_list (target ? boolean_true_node
+					       : boolean_false_node,
+					targetsync ? boolean_true_node
+						   : boolean_false_node);
+	      t = build1_loc (loc, NOP_EXPR, void_type_node, t);
+	      t = build_tree_list (t, prefer_type_tree);
 	      if (append_args_tree)
-		OMP_CLAUSE_CHAIN (append_args_last) = t;
+		{
+		  TREE_CHAIN (append_args_last) = t;
+		  append_args_last = t;
+		}
 	      else
 		append_args_tree = append_args_last = t;
-	      if (target)
-		OMP_CLAUSE_INIT_TARGET (t) = 1;
-	      if (targetsync)
-		OMP_CLAUSE_INIT_TARGETSYNC (t) = 1;
-	      if (prefer_type_tree)
-		OMP_CLAUSE_INIT_PREFER_TYPE (t) = prefer_type_tree;
 	      if (c_parser_next_token_is (parser, CPP_CLOSE_PAREN))
 		break;
 	      if (!c_parser_require (parser, CPP_COMMA, "expected %<)%> or %<,%>"))
@@ -27095,9 +27148,7 @@ c_finish_omp_declare_variant (c_parser *parser, tree fndecl, tree parms)
 				    OMP_TRAIT_CONSTRUCT_SIMD))
     {
       bool fail = false;
-      if (append_args_tree
-	  && TYPE_ARG_TYPES (TREE_TYPE (fndecl)) != NULL_TREE
-	  && TYPE_ARG_TYPES (TREE_TYPE (variant)) != NULL_TREE)
+      if (append_args_tree)
 	{
 	  int nappend_args = 0;
 	  int nbase_args = 0;
@@ -27107,6 +27158,11 @@ c_finish_omp_declare_variant (c_parser *parser, tree fndecl, tree parms)
 	  for (tree t = append_args_tree; t; t = TREE_CHAIN (t))
 	    nappend_args++;
 
+	  /* Store as purpose = arg number after which to append
+	     and value = list of interop items.  */
+	  append_args_tree = build_tree_list (build_int_cst (integer_type_node,
+							     nbase_args),
+					      append_args_tree);
 	  tree args, arg;
 	  args = arg = TYPE_ARG_TYPES (TREE_TYPE (variant));
 	  for (int j = 0; j < nbase_args && arg; j++, arg = TREE_CHAIN (arg))
@@ -27114,7 +27170,7 @@ c_finish_omp_declare_variant (c_parser *parser, tree fndecl, tree parms)
 	  for (int i = 0; i < nappend_args && arg; i++)
 	    arg = TREE_CHAIN (arg);
 	  tree saved_args;
-	  if (nbase_args)
+	  if (nbase_args && args)
 	    {
 	      saved_args = TREE_CHAIN (args);
 	      TREE_CHAIN (args) = arg;
@@ -27123,13 +27179,17 @@ c_finish_omp_declare_variant (c_parser *parser, tree fndecl, tree parms)
 	    {
 	      saved_args = args;
 	      TYPE_ARG_TYPES (TREE_TYPE (variant)) = arg;
+	      TYPE_NO_NAMED_ARGS_STDARG_P (TREE_TYPE (variant)) = 1;
 	    }
 	  if (!comptypes (TREE_TYPE (fndecl), TREE_TYPE (variant)))
 	    fail = true;
-	  if (nbase_args)
+	  if (nbase_args && args)
 	    TREE_CHAIN (args) = saved_args;
 	  else
-	    TYPE_ARG_TYPES (TREE_TYPE (variant)) = saved_args;
+	    {
+	      TYPE_ARG_TYPES (TREE_TYPE (variant)) = saved_args;
+	      TYPE_NO_NAMED_ARGS_STDARG_P (TREE_TYPE (variant)) = 0;
+	    }
 	  arg = saved_args;
 	  if (!fail)
 	    for (int i = 0; i < nappend_args; i++, arg = TREE_CHAIN (arg))
@@ -28794,12 +28854,18 @@ c_parser_omp_assumption_clauses (c_parser *parser, bool is_assume)
 			= c_omp_categorize_directive (directive[0],
 						      directive[1],
 						      directive[2]);
-		      if (dir == NULL
-			  || dir->kind == C_OMP_DIR_DECLARATIVE
-			  || dir->kind == C_OMP_DIR_INFORMATIONAL
-			  || dir->id == PRAGMA_OMP_END
-			  || (!dir->second && directive[1])
-			  || (!dir->third && directive[2]))
+		      if (dir
+			  && (dir->kind == C_OMP_DIR_DECLARATIVE
+			      || dir->kind == C_OMP_DIR_INFORMATIONAL
+			      || dir->kind == C_OMP_DIR_META))
+			error_at (dloc, "invalid OpenMP directive name in "
+					"%qs clause argument: declarative, "
+					"informational, and meta directives "
+					"not permitted", p);
+		      else if (dir == NULL
+			       || dir->id == PRAGMA_OMP_END
+			       || (!dir->second && directive[1])
+			       || (!dir->third && directive[2]))
 			error_at (dloc, "unknown OpenMP directive name in "
 					"%qs clause argument", p);
 		      else
@@ -28879,6 +28945,421 @@ c_parser_omp_assumes (c_parser *parser)
 {
   c_parser_consume_pragma (parser);
   c_parser_omp_assumption_clauses (parser, false);
+}
+
+/* Helper function for c_parser_omp_metadirective.  */
+
+static void
+analyze_metadirective_body (c_parser *parser,
+			    vec<c_token> &tokens,
+			    vec<tree> &labels)
+{
+  int nesting_depth = 0;
+  int bracket_depth = 0;
+  bool ignore_label = false;
+
+  /* Read in the body tokens to the tokens for each candidate directive.  */
+  while (1)
+    {
+      c_token *token = c_parser_peek_token (parser);
+      bool stop = false;
+
+      if (c_parser_next_token_is_keyword (parser, RID_CASE))
+	ignore_label = true;
+
+      switch (token->type)
+	{
+	case CPP_EOF:
+	  break;
+	case CPP_NAME:
+	  if (!ignore_label
+	      && c_parser_peek_2nd_token (parser)->type == CPP_COLON)
+	    labels.safe_push (token->value);
+	  goto add;
+	case CPP_OPEN_BRACE:
+	  ++nesting_depth;
+	  goto add;
+	case CPP_CLOSE_BRACE:
+	  if (--nesting_depth == 0 && bracket_depth == 0)
+	    stop = true;
+	  goto add;
+	case CPP_OPEN_PAREN:
+	  ++bracket_depth;
+	  goto add;
+	case CPP_CLOSE_PAREN:
+	  --bracket_depth;
+	  goto add;
+	case CPP_COLON:
+	  ignore_label = false;
+	  goto add;
+	case CPP_SEMICOLON:
+	  if (nesting_depth == 0 && bracket_depth == 0)
+	    stop = true;
+	  goto add;
+	default:
+	add:
+	  tokens.safe_push (*token);
+	  if (token->type == CPP_PRAGMA)
+	    c_parser_consume_pragma (parser);
+	  else if (token->type == CPP_PRAGMA_EOL)
+	    c_parser_skip_to_pragma_eol (parser);
+	  else
+	    c_parser_consume_token (parser);
+	  if (stop)
+	    break;
+	  continue;
+	}
+      break;
+    }
+}
+
+/* OpenMP 5.0:
+
+  # pragma omp metadirective [clause[, clause]]
+*/
+
+static void
+c_parser_omp_metadirective (c_parser *parser, bool *if_p)
+{
+  static unsigned int metadirective_region_count = 0;
+
+  tree ret;
+  auto_vec<c_token> directive_tokens;
+  auto_vec<c_token> body_tokens;
+  auto_vec<tree> body_labels;
+  auto_vec<const struct c_omp_directive *> directives;
+  auto_vec<tree> ctxs;
+  vec<struct omp_variant> candidates;
+  bool default_seen = false;
+  int directive_token_idx = 0;
+  tree standalone_body = NULL_TREE;
+  location_t pragma_loc = c_parser_peek_token (parser)->location;
+  bool requires_body = false;
+
+  ret = make_node (OMP_METADIRECTIVE);
+  SET_EXPR_LOCATION (ret, pragma_loc);
+  TREE_TYPE (ret) = void_type_node;
+  OMP_METADIRECTIVE_VARIANTS (ret) = NULL_TREE;
+
+  c_parser_consume_pragma (parser);
+  while (c_parser_next_token_is_not (parser, CPP_PRAGMA_EOL))
+    {
+      if (c_parser_next_token_is (parser, CPP_COMMA))
+	c_parser_consume_token (parser);
+      if (c_parser_next_token_is_not (parser, CPP_NAME)
+	  && c_parser_next_token_is_not (parser, CPP_KEYWORD))
+	{
+	  c_parser_error (parser, "expected %<when%>, "
+			  "%<otherwise%>, or %<default%> clause");
+	  goto error;
+	}
+
+      location_t match_loc = c_parser_peek_token (parser)->location;
+      const char *p = IDENTIFIER_POINTER (c_parser_peek_token (parser)->value);
+      c_parser_consume_token (parser);
+      bool default_p
+	= strcmp (p, "default") == 0 || strcmp (p, "otherwise") == 0;
+      if (default_p)
+	{
+	  if (default_seen)
+	    {
+	      error_at (match_loc, "too many %<otherwise%> or %<default%> "
+			"clauses in %<metadirective%>");
+	      c_parser_skip_to_end_of_block_or_statement (parser, true);
+	      goto error;
+	    }
+	  default_seen = true;
+	}
+      else if (default_seen)
+	{
+	  error_at (match_loc, "%<otherwise%> or %<default%> clause "
+		    "must appear last in %<metadirective%>");
+	  c_parser_skip_to_end_of_block_or_statement (parser, true);
+	  goto error;
+	}
+      if (!default_p && strcmp (p, "when") != 0)
+	{
+	  error_at (match_loc, "%qs is not valid for %qs",
+		    p, "metadirective");
+	  c_parser_skip_to_end_of_block_or_statement (parser, true);
+	  goto error;
+	}
+
+      matching_parens parens;
+      tree ctx = NULL_TREE;
+      bool skip = false;
+
+      if (!parens.require_open (parser))
+	goto error;
+
+      if (!default_p)
+	{
+	  ctx = c_parser_omp_context_selector_specification (parser,
+							     NULL_TREE);
+	  if (ctx == error_mark_node)
+	    goto error;
+	  ctx = omp_check_context_selector (match_loc, ctx,
+					    OMP_CTX_METADIRECTIVE);
+	  if (ctx == error_mark_node)
+	    goto error;
+
+	  /* Remove the selector from further consideration if it can be
+	     evaluated as a non-match at this point.  */
+	  skip = (omp_context_selector_matches (ctx, NULL_TREE, false) == 0);
+
+	  if (c_parser_next_token_is_not (parser, CPP_COLON))
+	    {
+	      c_parser_require (parser, CPP_COLON, "expected %<:%>");
+	      goto error;
+	    }
+	  c_parser_consume_token (parser);
+	}
+
+      /* Read in the directive type and create a dummy pragma token for
+	 it.  */
+      location_t loc = c_parser_peek_token (parser)->location;
+
+      const char *directive[3] = {};
+      int i;
+      for (i = 0; i < 3; i++)
+	{
+	  tree id;
+	  if (c_parser_peek_nth_token (parser, i + 1)->type
+	      == CPP_CLOSE_PAREN)
+	    {
+	      if (i == 0)
+		directive[i++] = "nothing";
+	      break;
+	    }
+	  else if (c_parser_peek_nth_token (parser, i + 1)->type
+		   == CPP_NAME)
+	    id = c_parser_peek_nth_token (parser, i + 1)->value;
+	  else if (c_parser_peek_nth_token (parser, i + 1)->keyword
+		   != RID_MAX)
+	    {
+	      enum rid rid
+		= c_parser_peek_nth_token (parser, i + 1)->keyword;
+	      id = ridpointers[rid];
+	    }
+	  else
+	    break;
+
+	  directive[i] = IDENTIFIER_POINTER (id);
+	}
+      if (i == 0)
+	{
+	  error_at (loc, "expected directive name");
+	  c_parser_skip_to_end_of_block_or_statement (parser, true);
+	  goto error;
+	}
+
+      const struct c_omp_directive *omp_directive
+	= c_omp_categorize_directive (directive[0],
+				      directive[1],
+				      directive[2]);
+
+      if (omp_directive == NULL)
+	{
+	  for (int j = 0; j < i; j++)
+	    c_parser_consume_token (parser);
+	  c_parser_error (parser, "unknown directive name");
+	  goto error;
+	}
+      else
+	{
+	  int token_count = 0;
+	  if (omp_directive->first) token_count++;
+	  if (omp_directive->second) token_count++;
+	  if (omp_directive->third) token_count++;
+	  for (int j = 0; j < token_count; j++)
+	    c_parser_consume_token (parser);
+	}
+      if (omp_directive->id == PRAGMA_OMP_METADIRECTIVE)
+	{
+	  c_parser_error (parser,
+			  "metadirectives cannot be used as variants of a "
+			  "%<metadirective%>");
+	  goto error;
+	}
+      if (omp_directive->kind == C_OMP_DIR_DECLARATIVE)
+	{
+	  sorry_at (loc, "declarative directive variants of a "
+			 "%<metadirective%> are not supported");
+	  goto error;
+	}
+      if (omp_directive->kind == C_OMP_DIR_CONSTRUCT)
+	requires_body = true;
+
+      if (!skip)
+	{
+	  c_token pragma_token;
+	  pragma_token.type = CPP_PRAGMA;
+	  pragma_token.location = loc;
+	  pragma_token.pragma_kind = (enum pragma_kind) omp_directive->id;
+
+	  directives.safe_push (omp_directive);
+	  directive_tokens.safe_push (pragma_token);
+	  ctxs.safe_push (ctx);
+	}
+
+      /* Read in tokens for the directive clauses.  */
+      int nesting_depth = 0;
+      while (1)
+	{
+	  c_token *token = c_parser_peek_token (parser);
+	  switch (token->type)
+	    {
+	    case CPP_EOF:
+	    case CPP_PRAGMA_EOL:
+	      break;
+	    case CPP_OPEN_PAREN:
+	      ++nesting_depth;
+	      goto add;
+	    case CPP_CLOSE_PAREN:
+	      if (nesting_depth-- == 0)
+		break;
+	      goto add;
+	    default:
+	    add:
+	      if (!skip)
+		directive_tokens.safe_push (*token);
+	      c_parser_consume_token (parser);
+	      continue;
+	    }
+	  break;
+	}
+
+      c_parser_consume_token (parser);
+
+      if (!skip)
+	{
+	  c_token eol_token;
+	  memset (&eol_token, 0, sizeof (eol_token));
+	  eol_token.type = CPP_PRAGMA_EOL;
+	  directive_tokens.safe_push (eol_token);
+	}
+    }
+  c_parser_skip_to_pragma_eol (parser);
+
+  if (!default_seen)
+    {
+      /* Add a default clause that evaluates to 'omp nothing'.  */
+      const struct c_omp_directive *omp_directive
+	= c_omp_categorize_directive ("nothing", NULL, NULL);
+
+      c_token pragma_token;
+      pragma_token.type = CPP_PRAGMA;
+      pragma_token.location = UNKNOWN_LOCATION;
+      pragma_token.pragma_kind = PRAGMA_OMP_NOTHING;
+
+      directives.safe_push (omp_directive);
+      directive_tokens.safe_push (pragma_token);
+      ctxs.safe_push (NULL_TREE);
+
+      c_token eol_token;
+      memset (&eol_token, 0, sizeof (eol_token));
+      eol_token.type = CPP_PRAGMA_EOL;
+      directive_tokens.safe_push (eol_token);
+    }
+
+  if (requires_body)
+    analyze_metadirective_body (parser, body_tokens, body_labels);
+
+  /* Process each candidate directive.  */
+  unsigned i;
+  tree ctx;
+
+  FOR_EACH_VEC_ELT (ctxs, i, ctx)
+    {
+      auto_vec<c_token> tokens;
+
+      /* Add the directive tokens.  */
+      do
+	tokens.safe_push (directive_tokens [directive_token_idx++]);
+      while (tokens.last ().type != CPP_PRAGMA_EOL);
+
+      /* Add the body tokens.  */
+      gcc_assert (requires_body || body_tokens.is_empty ());
+      for (unsigned j = 0; j < body_tokens.length (); j++)
+	tokens.safe_push (body_tokens[j]);
+
+      /* Make sure nothing tries to read past the end of the tokens.  */
+      c_token eof_token;
+      memset (&eof_token, 0, sizeof (eof_token));
+      eof_token.type = CPP_EOF;
+      tokens.safe_push (eof_token);
+      tokens.safe_push (eof_token);
+
+      unsigned int old_tokens_avail = parser->tokens_avail;
+      c_token *old_tokens = parser->tokens;
+      struct omp_attribute_pragma_state *old_in_omp_attribute_pragma
+	= parser->in_omp_attribute_pragma;
+      struct omp_metadirective_parse_data *old_state
+	= parser->omp_metadirective_state;
+
+      struct omp_metadirective_parse_data new_state;
+      new_state.body_labels = &body_labels;
+      new_state.region_num = ++metadirective_region_count;
+
+      parser->tokens = tokens.address ();
+      parser->tokens_avail = tokens.length ();
+      parser->in_omp_attribute_pragma = NULL;
+      parser->omp_metadirective_state = &new_state;
+
+      int prev_errorcount = errorcount;
+      tree directive = c_begin_compound_stmt (true);
+
+      c_parser_pragma (parser, pragma_compound, if_p, NULL_TREE);
+      directive = c_end_compound_stmt (pragma_loc, directive, true);
+      bool standalone_p
+	= directives[i]->kind == C_OMP_DIR_STANDALONE
+	  || directives[i]->kind == C_OMP_DIR_UTILITY;
+      if (standalone_p && requires_body)
+	{
+	  /* Parsing standalone directives will not consume the body
+	     tokens, so do that here.  */
+	  if (standalone_body == NULL_TREE)
+	    {
+	      standalone_body = push_stmt_list ();
+	      c_parser_statement (parser, if_p);
+	      standalone_body = pop_stmt_list (standalone_body);
+	    }
+	  else
+	    c_parser_skip_to_end_of_block_or_statement (parser, true);
+	}
+
+      tree body = standalone_p ? standalone_body : NULL_TREE;
+      tree variant = make_omp_metadirective_variant (ctx, directive, body);
+      OMP_METADIRECTIVE_VARIANTS (ret)
+	= chainon (OMP_METADIRECTIVE_VARIANTS (ret), variant);
+
+      /* Check that all valid tokens have been consumed if no parse errors
+	 encountered.  */
+      if (errorcount == prev_errorcount)
+	{
+	  gcc_assert (parser->tokens_avail == 2);
+	  gcc_assert (c_parser_next_token_is (parser, CPP_EOF));
+	  gcc_assert (c_parser_peek_2nd_token (parser)->type == CPP_EOF);
+	}
+
+      parser->tokens = old_tokens;
+      parser->tokens_avail = old_tokens_avail;
+      parser->in_omp_attribute_pragma = old_in_omp_attribute_pragma;
+      parser->omp_metadirective_state = old_state;
+    }
+
+  /* Try to resolve the metadirective early.  */
+  candidates = omp_early_resolve_metadirective (ret);
+  if (!candidates.is_empty ())
+    ret = c_omp_expand_variant_construct (candidates);
+
+  add_stmt (ret);
+  return;
+
+error:
+  if (parser->in_pragma)
+    c_parser_skip_to_pragma_eol (parser);
+  c_parser_skip_to_end_of_block_or_statement (parser, true);
 }
 
 /* Main entry point to parsing most OpenMP pragmas.  */

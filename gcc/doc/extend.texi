@@ -1004,17 +1004,16 @@ The ISO C++14 library also defines the @samp{i} suffix, so C++14 code
 that includes the @samp{<complex>} header cannot use @samp{i} for the
 GNU extension.  The @samp{j} suffix still has the GNU meaning.
 
-GCC can handle both implicit and explicit casts between the @code{_Complex}
-types and other @code{_Complex} types as casting both the real and imaginary
-parts to the scalar type.
-GCC can handle implicit and explicit casts from a scalar type to a @code{_Complex}
-type and where the imaginary part will be considered zero.
-The C front-end can handle implicit and explicit casts from a @code{_Complex} type
-to a scalar type where the imaginary part will be ignored. In C++ code, this cast
-is considered illformed and G++ will error out.
+GCC handles both implicit and explicit casts between the
+@code{_Complex} types with different scalar base types by casting both
+the real and imaginary parts to the base type of the result.
+GCC also handles implicit and explicit casts from a scalar type to a
+@code{_Complex} type, by giving the imaginary part a zero value.
 
-GCC provides a built-in function @code{__builtin_complex} will can be used to
-construct a complex value.
+The C front end can handle implicit and explicit casts from a
+@code{_Complex} type to a scalar type, which uses the value of the
+real part and ignores the imaginary part.  In C++ code, this cast is
+considered ill-formed and G++ diagnoses it as an error.
 
 @cindex @code{__real__} keyword
 @cindex @code{__imag__} keyword
@@ -1023,7 +1022,7 @@ GCC has a few extensions which can be used to extract the real
 and the imaginary part of the complex-valued expression. Note
 these expressions are lvalues if the @var{exp} is an lvalue.
 These expressions operands have the type of a complex type
-which might get prompoted to a complex type from a scalar type.
+which might get promoted to a complex type from a scalar type.
 E.g. @code{__real__ (int)@var{x}} is the same as casting to
 @code{_Complex int} before @code{__real__} is done.
 
@@ -1035,7 +1034,7 @@ E.g. @code{__real__ (int)@var{x}} is the same as casting to
 @tab Extract the imaginary part of @var{exp}.
 @end multitable
 
-For values of floating point, you should use the ISO C99
+For values of floating-point type, you should use the ISO C99
 functions, declared in @code{<complex.h>} and also provided as
 built-in functions by GCC@.
 
@@ -1053,7 +1052,7 @@ with a complex type.  This is a GNU extension; for values of
 floating type, you should use the ISO C99 functions @code{conjf},
 @code{conj} and @code{conjl}, declared in @code{<complex.h>} and also
 provided as built-in functions by GCC@. Note unlike the @code{__real__}
-and @code{__imag__} operators, this operator will not do an implicit cast
+and @code{__imag__} operators, this operator does not do an implicit cast
 to the complex type because the @samp{~} is already a normal operator.
 
 GCC can allocate complex automatic variables in a noncontiguous
@@ -2642,6 +2641,7 @@ GCC plugins may provide their own attributes.
 * Epiphany Function Attributes::
 * H8/300 Function Attributes::
 * IA-64 Function Attributes::
+* LoongArch Function Attributes::
 * M32C Function Attributes::
 * M32R/D Function Attributes::
 * m68k Function Attributes::
@@ -3525,7 +3525,7 @@ mismatched allocation and deallocation functions and diagnose them under
 the control of options such as @option{-Wmismatched-dealloc}.  It also
 makes it possible to diagnose attempts to deallocate objects that were not
 allocated dynamically, by @option{-Wfree-nonheap-object}.  To indicate
-that an allocation function both satisifies the nonaliasing property and
+that an allocation function both satisfies the nonaliasing property and
 has a deallocator associated with it, both the plain form of the attribute
 and the one with the @var{deallocator} argument must be used.  The same
 function can be both an allocator and a deallocator.  Since inlining one
@@ -3948,7 +3948,7 @@ caveats.
 If the pointer argument is also referred to by an @code{access} attribute on the
 function with @var{access-mode} either @code{read_only} or @code{read_write}
 and the latter attribute has the optional @var{size-index} argument
-referring to a size argument, this expressses the maximum size of the access.
+referring to a size argument, this expresses the maximum size of the access.
 For example, given:
 
 @smallexample
@@ -4377,7 +4377,7 @@ is a usage of a function with @code{target_clones} attribute.
 Note that any subsequent call of a function without @code{target_clone}
 from a @code{target_clone} caller will not lead to copying
 (target clone) of the called function.
-If you want to enforce such behaviour,
+If you want to enforce such behavior,
 we recommend declaring the calling function with the @code{flatten} attribute?
 
 @cindex @code{unavailable} function attribute
@@ -5640,6 +5640,80 @@ extern int foo () __attribute__((version_id ("20040821")));
 
 @noindent
 Calls to @code{foo} are mapped to calls to @code{foo@{20040821@}}.
+@end table
+
+@node LoongArch Function Attributes
+@subsection LoongArch Function Attributes
+
+These function attributes are supported by the LoongArch end:
+
+@table @code
+@cindex @code{strict-align} function attribute, LoongArch
+@item strict-align
+@itemx no-strict-align
+@code{strict-align} indicates that the compiler should not assume that unaligned
+memory references are handled by the system.  To allow the compiler to assume
+that aligned memory references are handled by the system, the inverse attribute
+@code{no-strict-align} can be specified.  The behavior is same as for the
+command-line option @option{-mstrict-align} and @option{-mno-strict-align}.
+
+@cindex @code{cmodel=} function attribute, LoongArch
+@item cmodel=
+Indicates that code should be generated for a particular code model for
+this function.  The behavior and permissible arguments are the same as
+for the command-line option @option{-mcmodel=}.
+
+@cindex @code{arch=} function attribute, LoongArch
+@item arch=
+Specifies the architecture version and architectural extensions to use
+for this function.  The behavior and permissible arguments are the same as
+for the @option{-march=} command-line option.
+
+@cindex @code{tune=} function attribute, LoongArch
+@item tune=
+Specifies the core for which to tune the performance of this function.
+The behavior and permissible arguments are the same as for the @option{-mtune=}
+command-line option.
+
+@cindex @code{lsx} function attribute, LoongArch
+@item lsx
+@itemx no-lsx
+@code{lsx} indicates that vector instruction generation is allowed (not allowed)
+when compiling the function.  The behavior is same as for the command-line option
+@option{-mlsx} and @option{-mno-lsx}.
+
+@cindex @code{lasx} function attribute, LoongArch
+@item lasx
+@itemx no-lasx
+@code{lasx} indicates that lasx instruction generation is allowed (not allowed)
+when compiling the function.  The behavior is slightly different from the
+command-line option @option{-mno-lasx}.
+Example:
+
+@smallexample
+test.c:
+typedef int v4i32 __attribute__ ((vector_size(16), aligned(16)));
+
+v4i32 a, b, c;
+#ifdef WITH_ATTR
+__attribute__ ((target("no-lasx"))) void
+#else
+void
+#endif
+test ()
+@{
+  c = a + b;
+@}
+@end smallexample
+@smallexample
+$ gcc test.c -o test.s -O2 -mlasx -DWITH_ATTR
+@end smallexample
+Compiled as above, 128-bit vectorization is possible.
+But the following method cannot perform 128-bit vectorization.
+@smallexample
+$ gcc test.c -o test.s -O2 -mlasx -mno-lasx
+@end smallexample
+
 @end table
 
 @node M32C Function Attributes
@@ -7526,35 +7600,31 @@ Enable/disable the generation of the USER_MSR instructions.
 Enable/disable the generation of the APX features, including
 EGPR, PUSH2POP2, NDD and PPX.
 
-@cindex @code{target("avx10.1")} function attribute, x86
-@item avx10.1
-@itemx no-avx10.1
-Enable/disable the generation of the AVX10.1 instructions.
-
 @cindex @code{target("avx10.1-256")} function attribute, x86
 @item avx10.1-256
 @itemx no-avx10.1-256
-Enable/disable the generation of the AVX10.1 instructions.
+Enable the generation of the AVX10.1 instructions with 256 bit support.
+Disable the generation of the AVX10.1 instructions.
 
 @cindex @code{target("avx10.1-512")} function attribute, x86
 @item avx10.1-512
 @itemx no-avx10.1-512
-Enable/disable the generation of the AVX10.1 512 bit instructions.
+Enable the generation of the AVX10.1 instructions with 512 bit support.
+Disable the generation of the AVX10.1 instructions.
 
 @cindex @code{target("avx10.2")} function attribute, x86
 @item avx10.2
 @itemx no-avx10.2
-Enable/disable the generation of the AVX10.2 instructions.
+Enable the generation of the AVX10.2 instructions with 512 bit support.
+Disable the generation of the AVX10.2 instructions.
 
 @cindex @code{target("avx10.2-256")} function attribute, x86
 @item avx10.2-256
-@itemx no-avx10.2-256
-Enable/disbale the generation of the AVX10.2 instructions.
+Enable the generation of the AVX10.2 instructions with 256 bit support.
 
 @cindex @code{target("avx10.2-512")} function attribute, x86
 @item avx10.2-512
-@itemx no-avx10.2-512
-Enable/disable the generation of the AVX10.2 512 bit instructions.
+Enable the generation of the AVX10.2 instructions with 512 bit support.
 
 @cindex @code{target("amx-avx512")} function attribute, x86
 @item amx-avx512
@@ -8000,7 +8070,7 @@ negative integer value, the compiler treats the value as zero.
 
 An explicit @code{counted_by} annotation defines a relationship between
 two objects, @code{p->array} and @code{p->count}, and there are the
-following requirementthat on the relationship between this pair:
+following requirements on the relationship between this pair:
 
 @itemize @bullet
 @item
@@ -8013,12 +8083,12 @@ available all the time.  This relationship must hold even after any of
 these related objects are updated during the program.
 @end itemize
 
-It's the user's responsibility to make sure the above requirements to
-be kept all the time.  Otherwise the compiler reports warnings,
-at the same time, the results of the array bound sanitizer and the
-@code{__builtin_dynamic_object_size} is undefined.
+It's the programmer's responsibility to make sure the above requirements to
+be kept all the time.  Otherwise the compiler reports warnings and
+the results of the array bound sanitizer and the
+@code{__builtin_dynamic_object_size} built-in are undefined.
 
-One important feature of the attribute is, a reference to the flexible
+One important feature of the attribute is that a reference to the flexible
 array member field uses the latest value assigned to the field that
 represents the number of the elements before that reference.  For example,
 
@@ -8030,7 +8100,7 @@ represents the number of the elements before that reference.  For example,
 @end smallexample
 
 @noindent
-in the above, @code{ref1} uses @code{val1} as the number of the elements in
+In the above, @code{ref1} uses @code{val1} as the number of the elements in
 @code{p->array}, and @code{ref2} uses @code{val2} as the number of elements
 in @code{p->array}.
 
@@ -8264,7 +8334,7 @@ between processor resets.
 
 This attribute is specific to ELF targets and relies on the linker
 script to place the sections with the @code{.persistent} prefix in the
-right location.  Specifically, some type of non-volatile, writeable
+right location.  Specifically, some type of non-volatile, writable
 memory is required.
 
 @cindex @code{section} variable attribute
@@ -8322,7 +8392,7 @@ The @code{strict_flex_array} attribute should be attached to the trailing
 array field of a structure.  It controls when to treat the trailing array
 field of a structure as a flexible array member for the purposes of accessing
 the elements of such an array.
-@var{level} must be an integer betwen 0 to 3.
+@var{level} must be an integer between 0 to 3.
 
 @var{level}=0 is the least strict level, all trailing arrays of structures
 are treated as flexible array members. @var{level}=3 is the strictest level,
@@ -8411,7 +8481,7 @@ With the option @code{-ftrivial-auto-var-init}, all the automatic variables
 that do not have explicit initializers will be initialized by the compiler.
 These additional compiler initializations might incur run-time overhead,
 sometimes dramatically.  This attribute can be used to mark some variables
-to be excluded from such automatical initialization in order to reduce runtime
+to be excluded from such automatic initialization in order to reduce runtime
 overhead.
 
 This attribute has no effect when the option @code{-ftrivial-auto-var-init}
@@ -8506,7 +8576,7 @@ The @code{weak} attribute is described in
 @cindex @code{aux} variable attribute, ARC
 @item aux
 The @code{aux} attribute is used to directly access the ARC's
-auxiliary register space from C.  The auxilirary register number is
+auxiliary register space from C.  The auxiliary register number is
 given via attribute argument.
 
 @end table
@@ -9132,7 +9202,7 @@ argument of an integer type.  It indicates that the returned pointer
 points to an object whose size is given by the function argument at
 @var{position-1}, or by the product of the arguments at @var{position-1}
 and @var{position-2}.  Meaningful sizes are positive values less than
-@code{PTRDIFF_MAX}.  Other sizes are disagnosed when detected.  GCC uses
+@code{PTRDIFF_MAX}.  Other sizes are diagnosed when detected.  GCC uses
 this information to improve the results of @code{__builtin_object_size}.
 
 For instance, the following declarations
@@ -10865,6 +10935,8 @@ for a C symbol, or to place a C variable in a specific register.
 * Basic Asm::          Inline assembler without operands.
 * Extended Asm::       Inline assembler with operands.
 * Constraints::        Constraints for @code{asm} operands
+* Asm constexprs::     C++11 constant expressions instead of string
+                       literals.
 * Asm Labels::         Specifying the assembler name to use for a C symbol.
 * Explicit Register Variables::  Defining variables residing in specified 
                        registers.
@@ -10920,23 +10992,6 @@ Some assemblers allow semicolons as a line separator. However,
 note that some assembler dialects use semicolons to start a comment.
 @end table
 
-@node asm constexprs
-With gnu++11 or later the string can also be a compile time constant expression
-inside parens.  The constant expression can return a string or a container
-with data and size members, following similar rules as C++26 @code{static_assert}
-message. Any string is converted to the character set of the source code.
-When this feature is available the @code{__GXX_CONSTEXPR_ASM__} cpp symbol is defined.
-
-@example
-#include <string>
-constexpr std::string_view genfoo() @{ return "foo"; @}
-
-void function()
-@{
-  asm((genfoo()));
-@}
-@end example
-
 @subsubheading Remarks
 Using extended @code{asm} (@pxref{Extended Asm}) typically produces
 smaller, safer, and more efficient code, and in most cases it is a
@@ -10944,15 +10999,10 @@ better solution than basic @code{asm}.  However, functions declared
 with the @code{naked} attribute require only basic @code{asm}
 (@pxref{Function Attributes}).
 
-Extended @code{asm} statements may be used both inside a C
-function or at file scope (``top-level''), where
-you can use this technique to emit assembler directives,
-define assembly language macros that can be invoked elsewhere in the file,
-or write entire functions in assembly language.
-Extended @code{asm} statements outside of functions may not use any
-qualifiers, may not specify clobbers, may not use @code{%}, @code{+} or
-@code{&} modifiers in constraints and can only use constraints which don't
-allow using any register.
+Basic @code{asm} statements may be used both inside a C function or at
+file scope (``top-level''), where you can use this technique to emit
+assembler directives, define assembly language macros that can be invoked
+elsewhere in the file, or write entire functions in assembly language.
 
 Safely accessing C data and calling functions from basic @code{asm} is more 
 complex than it may appear. To access C data, it is better to use extended 
@@ -11074,26 +11124,26 @@ perform a jump to one of the labels listed in the @var{GotoLabels}.
 This is a literal string that is the template for the assembler code. It is a 
 combination of fixed text and tokens that refer to the input, output, 
 and goto parameters. @xref{AssemblerTemplate}. With gnu++11 or later it can
-also be a constant expression inside parens (see @ref{asm constexprs}).
+also be a constant expression inside parens (see @ref{Asm constexprs}).
 
 @item OutputOperands
 A comma-separated list of the C variables modified by the instructions in the 
 @var{AssemblerTemplate}.  An empty list is permitted.  @xref{OutputOperands}.
 With gnu++11 or later the strings can also be constant expressions inside parens
-(see @ref{asm constexprs})
+(see @ref{Asm constexprs})
 
 @item InputOperands
 A comma-separated list of C expressions read by the instructions in the 
 @var{AssemblerTemplate}.  An empty list is permitted.  @xref{InputOperands}.
 With gnu++11 or later the strings can also be constant expressions inside parens
-(see @ref{asm constexprs})
+(see @ref{Asm constexprs})
 
 @item Clobbers
 A comma-separated list of registers or other values changed by the 
 @var{AssemblerTemplate}, beyond those listed as outputs.
 An empty list is permitted.  @xref{Clobbers and Scratch Registers}.
 With gnu++11 or later the strings can also be constant expressions inside parens
-(see @ref{asm constexprs})
+(see @ref{Asm constexprs})
 
 @item GotoLabels
 When you are using the @code{goto} form of @code{asm}, this section contains 
@@ -11115,9 +11165,17 @@ within C code. This may help you to maximize performance in time-sensitive
 code or to access assembly instructions that are not readily available to C 
 programs.
 
-Note that extended @code{asm} statements must be inside a function. Only 
-basic @code{asm} may be outside functions (@pxref{Basic Asm}).
-Functions declared with the @code{naked} attribute also require basic 
+Similarly to basic @code{asm}, extended @code{asm} statements may be used
+both inside a C function or at file scope (``top-level''), where you can
+use this technique to emit assembler directives, define assembly language
+macros that can be invoked elsewhere in the file, or write entire functions
+in assembly language.
+Extended @code{asm} statements outside of functions may not use any
+qualifiers, may not specify clobbers, may not use @code{%}, @code{+} or
+@code{&} modifiers in constraints and can only use constraints which don't
+allow using any register.
+
+Functions declared with the @code{naked} attribute require basic 
 @code{asm} (@pxref{Function Attributes}).
 
 While the uses of @code{asm} are many and varied, it may help to think of an 
@@ -11565,7 +11623,7 @@ for @code{d} by specifying both constraints.
 
 Some targets have a special register that holds the ``flags'' for the
 result of an operation or comparison.  Normally, the contents of that
-register are either unmodifed by the asm, or the @code{asm} statement is
+register are either unmodified by the asm, or the @code{asm} statement is
 considered to clobber the contents.
 
 On some targets, a special form of output operand exists by which
@@ -12532,7 +12590,7 @@ instruction, depending on the mode.
 @item @code{p} @tab Print the value of 2, raised to the power of the given
 constant.  Used to select the specified bit position.
 @item @code{r} @tab Inverse of condition code, for signed comparisons.
-@item @code{x} @tab Equivialent to @code{X}, but only for pointers.
+@item @code{x} @tab Equivalent to @code{X}, but only for pointers.
 @end multitable
 
 @anchor{loongarchOperandmodifiers}
@@ -12640,6 +12698,26 @@ The list below describes the supported modifiers and their effects for the SH fa
 @lowersections
 @include md.texi
 @raisesections
+
+@node Asm constexprs
+@subsection C++11 constant expressions instead of string literals
+
+With gnu++11 or later the string can also be a compile time constant expression
+inside parens.  The constant expression can return a container with data and size
+member functions, following similar rules as C++26 @code{static_assert}
+message.  Any string is converted to the character set of the source code.
+When this feature is available the @code{__GXX_CONSTEXPR_ASM__} preprocessor
+macro is predefined.
+
+@example
+#include <string>
+constexpr std::string_view genfoo() @{ return "foo"; @}
+
+void function()
+@{
+  asm((genfoo()));
+@}
+@end example
 
 @node Asm Labels
 @subsection Controlling Names Used in Assembler Code
@@ -13426,7 +13504,7 @@ well as in assignments and some casts.  You can specify a vector type as
 a return type for a function.  Vector types can also be used as function
 arguments.  It is possible to cast from one vector type to another,
 provided they are of the same size (in fact, you can also cast vectors
-to and from other datatypes of the same size).
+to and from other data types of the same size).
 
 You cannot operate between vectors of different lengths or different
 signedness without a cast.
@@ -14119,7 +14197,7 @@ i.e.@: they add 3 unsigned values, set what the last argument
 points to to 1 if any of the two additions overflowed (otherwise 0)
 and return the sum of those 3 unsigned values.  Note, while all
 the first 3 arguments can have arbitrary values, better code will be
-emitted if one of them (preferrably the third one) has only values
+emitted if one of them (preferably the third one) has only values
 0 or 1 (i.e.@: carry-in).
 
 @enddefbuiltin
@@ -15355,7 +15433,7 @@ a function if it does not.  For example:
 
 You may use this built-in function in either a macro or an inline
 function.  However, if you use it in an inlined function and pass an
-argument of the function as the argument to the built-in, GCC 
+argument of the function as the argument to the built-in, GCC
 never returns 1 when you call the inline function with a string constant
 or compound literal (@pxref{Compound Literals}) and does not return 1
 when you pass a constant numeric value to the inline function unless you
@@ -15463,7 +15541,7 @@ the pointer points to.  Inside of a union, the only cleared bits are
 bits that are padding bits for all the union members.
 
 This built-in-function is useful if the padding bits of an object might
-have intederminate values and the object representation needs to be
+have indeterminate values and the object representation needs to be
 bitwise compared to some other object, for example for atomic operations.
 
 For C++, @var{ptr} argument type should be pointer to trivially-copyable
@@ -15520,9 +15598,9 @@ when testing pointer or floating-point values.
 
 For the purposes of branch prediction optimizations, the probability that
 a @code{__builtin_expect} expression is @code{true} is controlled by GCC's
-@code{builtin-expect-probability} parameter, which defaults to 90%.  
+@code{builtin-expect-probability} parameter, which defaults to 90%.
 
-You can also use @code{__builtin_expect_with_probability} to explicitly 
+You can also use @code{__builtin_expect_with_probability} to explicitly
 assign a probability value to individual expressions.  If the built-in
 is used in a loop construct, the provided probability will influence
 the expected number of iterations made by loop optimizations.
@@ -15534,7 +15612,7 @@ the expected number of iterations made by loop optimizations.
 This function has the same semantics as @code{__builtin_expect},
 but the caller provides the expected probability that @var{exp} == @var{c}.
 The last argument, @var{probability}, is a floating-point value in the
-range 0.0 to 1.0, inclusive.  The @var{probability} argument must be
+range 0.0 to 1.0, inclusive.  The @var{probability} argument must be a
 constant floating-point expression.
 @enddefbuiltin
 
@@ -17286,14 +17364,6 @@ might increase delay time. @var{ticks} must be a compile-time
 integer constant; delays with a variable number of cycles are not supported.
 @enddefbuiltin
 
-@defbuiltin{int8_t __builtin_avr_flash_segment (const __memx void*)}
-This built-in takes a byte address to the 24-bit
-@ref{AVR Named Address Spaces,address space} @code{__memx} and returns
-the number of the flash segment (the 64 KiB chunk) where the address
-points to.  Counting starts at @code{0}.
-If the address does not point to flash memory, return @code{-1}.
-@enddefbuiltin
-
 @defbuiltin{uint8_t __builtin_avr_insert_bits (uint32_t @var{map}, uint8_t @var{bits}, uint8_t @var{val})}
 Insert bits from @var{bits} into @var{val} and return the resulting
 value. The nibbles of @var{map} determine how the insertion is
@@ -17360,6 +17430,26 @@ The open coded C versions take at least @code{5 + 4 * @var{offs}} cycles
 @defbuiltin{void __builtin_avr_nops (uint16_t @var{count})}
 Insert @var{count} @code{NOP} instructions.
 The number of instructions must be a compile-time integer constant.
+@enddefbuiltin
+
+@b{All of the following built-in functions are only available for GNU-C}
+
+@defbuiltin{int8_t __builtin_avr_flash_segment (const __memx void*)}
+This built-in takes a byte address to the 24-bit
+@ref{AVR Named Address Spaces,named address space} @code{__memx} and returns
+the number of the flash segment (the 64 KiB chunk) where the address
+points to.  Counting starts at @code{0}.
+If the address does not point to flash memory, return @code{-1}.
+@enddefbuiltin
+
+@defbuiltin{size_t __builtin_avr_strlen_flash (const __flash char*)}
+@defbuiltinx{size_t __builtin_avr_strlen_flashx (const __flashx char*)}
+@defbuiltinx{size_t __builtin_avr_strlen_memx (const __memx char*)}
+These built-ins return the length of a string located in
+named address-space @code{__flash}, @code{__flashx} or @code{__memx},
+respectively.  They are used to support functions like @code{strlen_F} from
+@w{@uref{https://avrdudes.github.io/avr-libc/avr-libc-user-manual/,AVR-LibC}}'s
+header @code{avr/flash.h}.
 @enddefbuiltin
 
 @noindent
@@ -18039,7 +18129,7 @@ The intrinsics provided are listed below:
     void __builtin_loongarch_break (imm0_32767)
 @end smallexample
 
-These instrisic functions are available by using @option{-mfrecipe}.
+These intrinsic functions are available by using @option{-mfrecipe}.
 @smallexample
     float __builtin_loongarch_frecipe_s (float);
     double  __builtin_loongarch_frecipe_d (double);
@@ -18119,7 +18209,7 @@ function you need to include @code{larchintrin.h}.
     void __break (imm0_32767)
 @end smallexample
 
-These instrisic functions are available by including @code{larchintrin.h} and
+These intrinsic functions are available by including @code{larchintrin.h} and
 using @option{-mfrecipe}.
 @smallexample
     float __frecipe_s (float);
@@ -18964,7 +19054,7 @@ __m128i __lsx_vxori_b (__m128i, imm0_255);
 __m128i __lsx_vxor_v (__m128i, __m128i);
 @end smallexample
 
-These instrisic functions are available by including @code{lsxintrin.h} and
+These intrinsic functions are available by including @code{lsxintrin.h} and
 using @option{-mfrecipe} and @option{-mlsx}.
 @smallexample
 __m128d __lsx_vfrecipe_d (__m128d);
@@ -19812,7 +19902,7 @@ __m256i __lasx_xvxori_b (__m256i, imm0_255);
 __m256i __lasx_xvxor_v (__m256i, __m256i);
 @end smallexample
 
-These instrisic functions are available by including @code{lasxintrin.h} and
+These intrinsic functions are available by including @code{lasxintrin.h} and
 using @option{-mfrecipe} and @option{-mlasx}.
 @smallexample
 __m256d __lasx_xvfrecipe_d (__m256d);
@@ -21844,8 +21934,18 @@ vector bool __int128 vec_sel (vector bool __int128,
                vector bool __int128, vector unsigned __int128);
 @end smallexample
 
-The instance is an extension of the exiting overloaded built-in @code{vec_sel}
+The instance is an extension of the existing overloaded built-in @code{vec_sel}
 that is documented in the PVIPR.
+
+@smallexample
+vector signed __int128 vec_perm (vector signed __int128,
+               vector signed __int128);
+vector unsigned __int128 vec_perm (vector unsigned __int128,
+               vector unsigned __int128);
+@end smallexample
+
+The instance is an extension of the existing overloaded built-in
+@code{vec_perm} that is documented in the PVIPR.
 
 @node Basic PowerPC Built-in Functions Available on ISA 2.06
 @subsubsection Basic PowerPC Built-in Functions Available on ISA 2.06
@@ -22018,7 +22118,7 @@ between @code{lo_1} and @code{hi_1} inclusive or the range bounded
 between @code{lo_2} and @code{hi_2} inclusive.
 
 The @code{__builtin_dfp_dtstsfi_lt} function returns a non-zero value
-if and only if the number of signficant digits of its @code{value} argument
+if and only if the number of significant digits of its @code{value} argument
 is less than its @code{comparison} argument.  The
 @code{__builtin_dfp_dtstsfi_lt_dd} and
 @code{__builtin_dfp_dtstsfi_lt_td} functions behave similarly, but
@@ -22026,7 +22126,7 @@ require that the type of the @code{value} argument be
 @code{__Decimal64} and @code{__Decimal128} respectively.
 
 The @code{__builtin_dfp_dtstsfi_gt} function returns a non-zero value
-if and only if the number of signficant digits of its @code{value} argument
+if and only if the number of significant digits of its @code{value} argument
 is greater than its @code{comparison} argument.  The
 @code{__builtin_dfp_dtstsfi_gt_dd} and
 @code{__builtin_dfp_dtstsfi_gt_td} functions behave similarly, but
@@ -22034,7 +22134,7 @@ require that the type of the @code{value} argument be
 @code{__Decimal64} and @code{__Decimal128} respectively.
 
 The @code{__builtin_dfp_dtstsfi_eq} function returns a non-zero value
-if and only if the number of signficant digits of its @code{value} argument
+if and only if the number of significant digits of its @code{value} argument
 equals its @code{comparison} argument.  The
 @code{__builtin_dfp_dtstsfi_eq_dd} and
 @code{__builtin_dfp_dtstsfi_eq_td} functions behave similarly, but
@@ -28364,6 +28464,7 @@ option is specified.  @xref{OpenMP}, and @ref{OpenACC}.
 @menu
 * AArch64 Pragmas::
 * ARM Pragmas::
+* LoongArch Pragmas::
 * M32C Pragmas::
 * PRU Pragmas::
 * RS/6000 and PowerPC Pragmas::
@@ -28415,6 +28516,18 @@ Set all subsequent functions to have the @code{short_call} attribute.
 Do not affect the @code{long_call} or @code{short_call} attributes of
 subsequent functions.
 @end table
+
+@node LoongArch Pragmas
+@subsection LoongArch Pragmas
+
+The list of attributes supported by Pragma is the same as that of target
+function attributes.  @xref{LoongArch Function Attributes}.
+
+Example:
+
+@smallexample
+#pragma GCC target("strict-align")
+@end smallexample
 
 @node M32C Pragmas
 @subsection M32C Pragmas
@@ -29377,7 +29490,7 @@ architectures, including Unix and Microsoft Windows platforms.
 It consists of a set of compiler directives, library routines,
 and environment variables that influence run-time behavior.
 
-GCC implements all of the @uref{https://openmp.org/specifications/,
+GCC implements all of the @uref{https://www.openmp.org/specifications/,
 OpenMP Application Program Interface v4.5}, and many features from later
 versions of the OpenMP specification.
 @xref{OpenMP Implementation Status,,,libgomp,
@@ -29640,7 +29753,7 @@ user with a way of explicitly directing the compiler to emit entities
 with vague linkage (and debugging information) in a particular
 translation unit.
 
-@emph{Note:} These @code{#pragma}s have been superceded as of GCC 2.7.2
+@emph{Note:} These @code{#pragma}s have been superseded as of GCC 2.7.2
 by COMDAT support and the ``key method'' heuristic
 mentioned in @ref{Vague Linkage}.  Using them can actually cause your
 program to grow due to unnecessary out-of-line copies of inline

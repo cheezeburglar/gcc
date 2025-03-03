@@ -1,3 +1,78 @@
+2025-02-22  shynur  <shynur@outlook.com>
+
+	* oacc-mem.c (acc_unmap_data, goacc_exit_datum_1, find_group_last,
+	goacc_enter_data_internal): Add '__attribute__((unused))'.
+	* target.c (gomp_unmap_vars_internal): Likewise.
+
+2025-02-11  Jason Merrill  <jason@redhat.com>
+
+	PR c++/188574
+	* testsuite/libgomp.c++/range-for-4.C: Adjust expected result.
+
+2025-02-07  Tobias Burnus  <tburnus@baylibre.com>
+
+	* plugin/plugin-gcn.c (ELFABIVERSION_AMDGPU_HSA_V6,
+	EF_AMDGPU_GENERIC_VERSION_V, EF_AMDGPU_GENERIC_VERSION_OFFSET,
+	GET_GENERIC_VERSION): New #define.
+	(elf_gcn_isa_is_generic): New.
+	(isa_matches_agent): Accept all generic code objects on the first
+	go; extend the diagnostic and handle runtime-failed case.
+	(create_and_finalize_hsa_program): Call it also after loading
+	the code failed, pass the status.
+
+2025-01-30  Sandra Loosemore  <sloosemore@baylibre.com>
+
+	* libgomp.texi (OpenMP 5.0): Mark metadirective and declare variant
+	as implemented.
+	(OpenMP 5.1): Mark target_device as supported.
+	Add changed interaction between declare target and OpenMP context
+	and dynamic selector support.
+	(OpenMP 5.2): Mark otherwise clause as supported, note that
+	default is also still accepted.
+
+2025-01-30  Sandra Loosemore  <sloosemore@baylibre.com>
+	    Kwok Cheung Yeung  <kcy@codesourcery.com>
+	    Sandra Loosemore  <sandra@codesourcery.com>
+	    Tobias Burnus  <tobias@codesourcery.com>
+	    Paul-Antoine Arras  <pa@codesourcery.com>
+
+	PR middle-end/112779
+	PR middle-end/113904
+	* testsuite/libgomp.fortran/metadirective-1.f90: New.
+	* testsuite/libgomp.fortran/metadirective-2.f90: New.
+	* testsuite/libgomp.fortran/metadirective-3.f90: New.
+	* testsuite/libgomp.fortran/metadirective-4.f90: New.
+	* testsuite/libgomp.fortran/metadirective-5.f90: New.
+	* testsuite/libgomp.fortran/metadirective-6.f90: New.
+
+2025-01-30  Tobias Burnus  <tburnus@baylibre.com>
+
+	* libgomp.texi (Impl. Status): Update for accumpulated changes
+	related to 'dispatch' and interop.
+
+2025-01-16  Sandra Loosemore  <sloosemore@baylibre.com>
+	    Kwok Cheung Yeung  <kcy@codesourcery.com>
+	    Sandra Loosemore  <sandra@codesourcery.com>
+
+	* testsuite/libgomp.c-c++-common/metadirective-1.c: New.
+	* testsuite/libgomp.c-c++-common/metadirective-2.c: New.
+	* testsuite/libgomp.c-c++-common/metadirective-3.c: New.
+	* testsuite/libgomp.c-c++-common/metadirective-4.c: New.
+	* testsuite/libgomp.c-c++-common/metadirective-5.c: New.
+	* testsuite/libgomp.c-c++-common/metadirective-late-1.c: New.
+	* testsuite/libgomp.c-c++-common/metadirective-late-2.c: New.
+	* testsuite/libgomp.c-c++-common/metadirective-target-device.c: New.
+
+2025-01-16  Sandra Loosemore  <sloosemore@baylibre.com>
+	    Kwok Cheung Yeung  <kcy@codesourcery.com>
+	    Sandra Loosemore  <sandra@codesourcery.com>
+
+	PR middle-end/112779
+	PR middle-end/113904
+	* testsuite/libgomp.c++/metadirective-template-1.C: New.
+	* testsuite/libgomp.c++/metadirective-template-2.C: New.
+	* testsuite/libgomp.c++/metadirective-template-3.C: New.
+
 2025-01-13  Paul-Antoine Arras  <parras@baylibre.com>
 
 	* testsuite/libgomp.fortran/dispatch-1.f90: Add missing target

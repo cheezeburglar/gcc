@@ -903,7 +903,8 @@ public:
   bool valid_p () const { return m_state == state_type::VALID; }
   bool unknown_p () const { return m_state == state_type::UNKNOWN; }
   bool empty_p () const { return m_state == state_type::EMPTY; }
-  bool change_vtype_only_p () const { return m_change_vtype_only; }
+  bool change_vtype_only_p () const { return m_change_vtype_only
+					     && !TARGET_XTHEADVECTOR; }
 
   void set_valid () { m_state = state_type::VALID; }
   void set_unknown () { m_state = state_type::UNKNOWN; }
@@ -1755,7 +1756,8 @@ private:
   inline void use_max_sew_and_lmul_with_next_ratio (vsetvl_info &prev,
 						    const vsetvl_info &next)
   {
-    prev.set_vlmul (calculate_vlmul (prev.get_sew (), next.get_ratio ()));
+    int max_sew = MAX (prev.get_sew (), next.get_sew ());
+    prev.set_vlmul (calculate_vlmul (max_sew, next.get_ratio ()));
     use_max_sew (prev, next);
     prev.set_ratio (next.get_ratio ());
   }
