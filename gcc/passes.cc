@@ -1831,13 +1831,13 @@ execute_function_dump (function *fn, void *data)
 
       pop_cfun ();
     }
-  // TODO: THORP
-  // We also have the current opt_pass. Should be okay? need to be able
-  // to stream out JSON objects so the stack doesn't blow up.
-  if (flag_save_json)
-    {
+// TODO: THORP
+// We also have the current opt_pass. Should be okay? need to be able
+// to stream out JSON objects so the stack doesn't blow up.
+//  if (flag_save_json)
+//    {
 
-    }
+//    }
 }
 
 /* This function is called when an internal compiler error is encountered.
