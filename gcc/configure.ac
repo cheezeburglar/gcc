@@ -618,7 +618,7 @@ ACX_PROG_CC_WARNING_OPTS(
 		       [])), [c_loose_warn])
 ACX_PROG_CXX_WARNING_OPTS(
 	m4_quote(m4_do([-Wmissing-format-attribute ], [-Wconditionally-supported ],
-		       [-Woverloaded-virtual], [-Wmissing-declarations])), [strict_warn])
+		       [-Woverloaded-virtual ], [-Wmissing-declarations])), [strict_warn])
 ACX_PROG_CC_WARNING_OPTS(
 	m4_quote(m4_do([-Wold-style-definition -Wc++-compat])), [c_strict_warn])
 ACX_PROG_CXX_WARNING_ALMOST_PEDANTIC(
