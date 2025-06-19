@@ -161,6 +161,8 @@ ggc_internal_cleared_alloc (size_t s CXX_MEM_STAT_INFO)
 /* Resize a block.  */
 extern void *ggc_realloc (void *, size_t CXX_MEM_STAT_INFO);
 
+extern void *ggc_realloc_stat (void *, size_t MEM_STAT_DECL);
+
 /* Free a block.  To be used when known for certain it's not reachable.  */
 extern void ggc_free (void *);
 
