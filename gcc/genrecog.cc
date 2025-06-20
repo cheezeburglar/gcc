@@ -989,7 +989,7 @@ struct acceptance_type
   } u;
 };
 
-bool
+static bool
 operator == (const acceptance_type &a, const acceptance_type &b)
 {
   if (a.partial_p != b.partial_p)
@@ -1000,7 +1000,7 @@ operator == (const acceptance_type &a, const acceptance_type &b)
     return a.u.full.code == b.u.full.code;
 }
 
-bool
+static bool
 operator != (const acceptance_type &a, const acceptance_type &b)
 {
   return !operator == (a, b);
@@ -1051,7 +1051,7 @@ parameter::parameter ()
 parameter::parameter (type_enum type_in, bool is_param_in, uint64_t value_in)
   : type (type_in), is_param (is_param_in), value (value_in) {}
 
-bool
+static bool
 operator == (const parameter &param1, const parameter &param2)
 {
   return (param1.type == param2.type
@@ -1059,7 +1059,7 @@ operator == (const parameter &param1, const parameter &param2)
 	  && param1.value == param2.value);
 }
 
-bool
+static bool
 operator != (const parameter &param1, const parameter &param2)
 {
   return !operator == (param1, param2);
@@ -1375,7 +1375,7 @@ rtx_test::single_outcome_p () const
   return terminal_p () || kind == rtx_test::SET_OP;
 }
 
-bool
+static bool
 operator == (const rtx_test &a, const rtx_test &b)
 {
   if (a.pos != b.pos || a.kind != b.kind)
@@ -1422,7 +1422,7 @@ operator == (const rtx_test &a, const rtx_test &b)
   gcc_unreachable ();
 }
 
-bool
+static bool
 operator != (const rtx_test &a, const rtx_test &b)
 {
   return !operator == (a, b);
@@ -1479,7 +1479,7 @@ int_set::end ()
   return address () + length ();
 }
 
-bool
+static bool
 operator == (const int_set &a, const int_set &b)
 {
   if (a.length () != b.length ())
@@ -1490,7 +1490,7 @@ operator == (const int_set &a, const int_set &b)
   return true;
 }
 
-bool
+static bool
 operator != (const int_set &a, const int_set &b)
 {
   return !operator == (a, b);
@@ -2044,7 +2044,7 @@ cse_tests (position *pos, state *s, known_conditions *kc)
 /* Return the type of value that can be used to parameterize test KIND,
    or parameter::UNSET if none.  */
 
-parameter::type_enum
+static parameter::type_enum
 transition_parameter_type (rtx_test::kind_enum kind)
 {
   switch (kind)
@@ -3889,7 +3889,7 @@ pattern_pos::pattern_pos (rtx pattern_in, position *pos_in)
 /* Compare entries according to their depth-first order.  There shouldn't
    be two entries at the same position.  */
 
-bool
+static bool
 operator < (const pattern_pos &e1, const pattern_pos &e2)
 {
   int diff = compare_positions (e1.pos, e2.pos);
