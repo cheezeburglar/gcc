@@ -639,7 +639,7 @@ struct composite_cache {
   struct composite_cache* next;
 };
 
-tree
+static tree
 composite_type_internal (tree t1, tree t2, struct composite_cache* cache)
 {
   enum tree_code code1;
