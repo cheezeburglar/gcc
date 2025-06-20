@@ -1033,7 +1033,7 @@ enum combined_fn {
 
 /* Return true if CODE represents a commutative tree code.  Otherwise
    return false.  */
-bool
+static bool
 commutative_tree_code (enum tree_code code)
 {
   switch (code)
@@ -1070,7 +1070,7 @@ commutative_tree_code (enum tree_code code)
 
 /* Return true if CODE represents a ternary tree code for which the
    first two operands are commutative.  Otherwise return false.  */
-bool
+static bool
 commutative_ternary_tree_code (enum tree_code code)
 {
   switch (code)
@@ -1088,7 +1088,7 @@ commutative_ternary_tree_code (enum tree_code code)
 
 /* Return true if CODE is a comparison.  */
 
-bool
+static bool
 comparison_code_p (enum tree_code code)
 {
   switch (code)
@@ -1384,7 +1384,7 @@ operator==(id_base &id, enum tree_code code)
 
 /* Lookup the identifier ID.  Allow "null" if ALLOW_NULL.  */
 
-id_base *
+static id_base *
 get_operator (const char *id, bool allow_null = false)
 {
   if (allow_null && strcmp (id, "null") == 0)
@@ -1432,7 +1432,7 @@ get_operator (const char *id, bool allow_null = false)
 /* Return the comparison operators that results if the operands are
    swapped.  This is safe for floating-point.  */
 
-id_base *
+static id_base *
 swap_tree_comparison (operator_id *p)
 {
   switch (p->code)
@@ -1707,7 +1707,7 @@ public:
 
 /* Debugging routines for dumping the AST.  */
 
-DEBUG_FUNCTION void
+DEBUG_FUNCTION static void
 print_operand (operand *o, FILE *f = stderr, bool flattened = false)
 {
   if (capture *c = dyn_cast<capture *> (o))
@@ -1747,7 +1747,7 @@ print_operand (operand *o, FILE *f = stderr, bool flattened = false)
     gcc_unreachable ();
 }
 
-DEBUG_FUNCTION void
+DEBUG_FUNCTION static void
 print_matches (class simplify *s, FILE *f = stderr)
 {
   fprintf (f, "for expression: ");
@@ -1911,7 +1911,7 @@ lower_commutative (simplify *s, vec<simplify *>& simplifiers)
 /* Strip conditional operations using group GRP from O and its
    children if STRIP, else replace them with an unconditional operation.  */
 
-operand *
+static operand *
 lower_opt (operand *o, unsigned char grp, bool strip)
 {
   if (capture *c = dyn_cast<capture *> (o))
@@ -2127,7 +2127,7 @@ lower_cond (simplify *s, vec<simplify *>& simplifiers)
 
 /* Return true if O refers to ID.  */
 
-bool
+static bool
 contains_id (operand *o, user_id *id)
 {
   if (capture *c = dyn_cast<capture *> (o))
@@ -2161,7 +2161,7 @@ contains_id (operand *o, user_id *id)
 
 /* In AST operand O replace operator ID with operator WITH.  */
 
-operand *
+static operand *
 replace_id (operand *o, user_id *id, id_base *with)
 {
   /* Deep-copy captures and expressions, replacing operations as
@@ -2546,7 +2546,7 @@ public:
 
 /* Compare two AST operands O1 and O2 and return true if they are equal.  */
 
-bool
+static bool
 cmp_operand (operand *o1, operand *o2)
 {
   if (!o1 || !o2 || o1->type != o2->type)
@@ -3186,7 +3186,7 @@ static char *fail_label;
 
 /* Code generation off the decision tree and the refered AST nodes.  */
 
-bool
+static bool
 is_conversion (id_base *op)
 {
   return (*op == CONVERT_EXPR
@@ -3196,7 +3196,7 @@ is_conversion (id_base *op)
 	  || *op == VIEW_CONVERT_EXPR);
 }
 
-bool
+static bool
 possible_noop_convert (id_base *op)
 {
   return (*op == CONVERT_EXPR
@@ -5085,7 +5085,7 @@ decision_tree::gen (vec <FILE *> &files, bool gimple)
 
 /* Output code to implement the predicate P from the decision tree DT.  */
 
-void
+static void
 write_predicate (FILE *f, predicate_id *p, decision_tree &dt, bool gimple)
 {
   fp_decl (f, "\nbool\n%s%s (tree t%s%s)",
