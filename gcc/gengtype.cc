@@ -2578,7 +2578,7 @@ output_escaped_param (const struct walk_type_data *d, const char *param,
 	}
 }
 
-const char *
+static const char *
 get_string_option (options_p opt, const char *key)
 {
   for (; opt; opt = opt->next)
@@ -2594,7 +2594,7 @@ struct seen_tag
   struct seen_tag *next;
 };
 
-int
+static int
 already_seen_tag (struct seen_tag *seen_tags, const char *tag)
 {
   /* Linear search, so O(n^2), but n is currently small.  */
@@ -2608,7 +2608,7 @@ already_seen_tag (struct seen_tag *seen_tags, const char *tag)
   return 0;
 }
 
-void
+static void
 mark_tag_as_seen (struct seen_tag **seen_tags, const char *tag)
 {
   /* Add to front of linked list. */
