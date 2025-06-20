@@ -835,7 +835,7 @@ handle_overloaded_gen (overloaded_name *oname, FILE *file)
     }
 }
 
-void
+static void
 print_header (FILE *file)
 {
   fprintf (file, "/* Generated automatically by the program `genemit'\n\
