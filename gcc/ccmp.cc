@@ -132,7 +132,7 @@ ccmp_candidate_p (gimple *g, bool outer = false)
 }
 
 /* Extract the comparison we want to do from the tree.  */
-void
+static void
 get_compare_parts (tree t, rtx_code *rcode,
 		   tree *rhs1, tree *rhs2)
 {

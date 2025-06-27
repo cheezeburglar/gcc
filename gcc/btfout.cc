@@ -264,7 +264,7 @@ btf_calc_num_vbytes (ctf_dtdef_ref dtd)
 
 /* Initialize BTF section (.BTF) for output.  */
 
-void
+static void
 init_btf_sections (void)
 {
   btf_info_section = get_section (BTF_INFO_SECTION_NAME, BTF_INFO_SECTION_FLAGS,
@@ -862,7 +862,7 @@ output_btf_datasec_types (void)
 
 /* Write out all BTF debug info.  */
 
-void
+static void
 btf_output (ctf_container_ref ctfc)
 {
   output_btf_header (ctfc);

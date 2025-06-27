@@ -506,6 +506,9 @@ extern unsigned bitmap_first_set_bit (const_bitmap);
 extern unsigned bitmap_clear_first_set_bit (bitmap);
 extern unsigned bitmap_last_set_bit (const_bitmap);
 
+extern void bitmap_elt_clear_from (bitmap, bitmap_element *);
+extern void debug_bitmap_elt_file (FILE *, const bitmap_element *);
+
 /* Compute bitmap hash (for purposes of hashing etc.)  */
 extern hashval_t bitmap_hash (const_bitmap);
 

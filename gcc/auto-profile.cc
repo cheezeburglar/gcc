@@ -1112,7 +1112,7 @@ set_bb_annotated (basic_block bb, bb_set *annotated)
 }
 
 /* Update profile_count by known autofdo count.  */
-void
+static void
 update_count_by_afdo_count (profile_count *count, gcov_type c)
 {
   if (c)

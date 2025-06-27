@@ -852,7 +852,7 @@ alias_ptr_types_compatible_p (tree t1, tree t2)
 
 /* Create emptry alias set entry.  */
 
-alias_set_entry *
+static alias_set_entry *
 init_alias_set_entry (alias_set_type set)
 {
   alias_set_entry *ase = ggc_alloc<alias_set_entry> ();
@@ -1244,7 +1244,7 @@ record_alias_subset (alias_set_type superset, alias_set_type subset)
    for fields that are not marked non-addressable.  For array types, we
    only record the component type if it is not marked non-aliased.  */
 
-void
+static void
 record_component_aliases (tree type, alias_set_type superset)
 {
   tree field;
