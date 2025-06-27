@@ -237,7 +237,7 @@ get_bc_label (enum bc_t bc)
 
 /* Return the location from EXPR, or OR_LOC if the former is unknown.  */
 
-location_t
+static location_t
 expr_loc_or_loc (const_tree expr, location_t or_loc)
 {
   tree t = CONST_CAST_TREE (expr);

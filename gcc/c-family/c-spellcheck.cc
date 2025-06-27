@@ -110,6 +110,10 @@ test_name_reserved_for_implementation_p ()
 
 /* Run all of the selftests within this file.  */
 
+// TODO: This might not be right; we can maybe slap static on this
+// since its in the namespace? THOR
+void c_spellcheck_cc_tests ();
+
 void
 c_spellcheck_cc_tests ()
 {

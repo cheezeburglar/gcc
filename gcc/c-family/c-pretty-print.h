@@ -141,4 +141,6 @@ void pp_c_integer_constant (c_pretty_printer *, tree);
 
 void print_c_tree (FILE *file, tree t, dump_flags_t);
 
+DEBUG_FUNCTION void debug_c_tree (tree);
+
 #endif /* GCC_C_PRETTY_PRINTER */
