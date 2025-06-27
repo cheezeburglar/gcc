@@ -178,7 +178,7 @@ ctf_list_add_ctf_vars (ctf_container_ref ctfc, ctf_dvdef_ref var)
 
 /* Initialize the various sections and labels for CTF output.  */
 
-void
+static void
 init_ctf_sections (void)
 {
   /* Note : Even in case of LTO, the compiler continues to generate a single
@@ -205,7 +205,7 @@ ctf_preprocess_var (ctf_container_ref ctfc, ctf_dvdef_ref var)
 
 /* CTF preprocess callback routine for CTF variables.  */
 
-int
+static int
 ctf_dvd_preprocess_cb (ctf_dvdef_ref * slot, void * arg)
 {
   ctf_dvd_preprocess_arg_t * dvd_arg =  (ctf_dvd_preprocess_arg_t *)arg;
@@ -230,7 +230,7 @@ ctf_dvd_preprocess_cb (ctf_dvdef_ref * slot, void * arg)
 
 /* CTF preprocess callback routine for CTF types.  */
 
-int
+static int
 ctf_dtd_preprocess_cb (ctf_dtdef_ref * slot, void * arg)
 {
   uint32_t kind;
