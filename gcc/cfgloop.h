@@ -374,6 +374,8 @@ extern bool loop_exits_to_bb_p (class loop *, basic_block);
 extern bool loop_exits_from_bb_p (class loop *, basic_block);
 extern void mark_loop_exit_edges (void);
 extern dump_user_location_t get_loop_location (class loop *loop);
+extern HOST_WIDE_INT max_stmt_executions_int (class loop *);
+extern HOST_WIDE_INT likely_max_stmt_executions_int (class loop *);
 
 /* Loops & cfg manipulation.  */
 extern basic_block *get_loop_body (const class loop *);

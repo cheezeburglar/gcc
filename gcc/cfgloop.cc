@@ -1152,6 +1152,7 @@ record_loop_exits (void)
 /* Dumps information about the exit in *SLOT to FILE.
    Callback for htab_traverse.  */
 
+extern int dump_recorded_exit (loop_exit **, FILE *);
 int
 dump_recorded_exit (loop_exit **slot, FILE *file)
 {
