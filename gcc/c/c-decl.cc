@@ -9972,8 +9972,9 @@ resort_field_decl_cmp (const void *x_p, const void *y_p)
 }
 
 /* Resort DECL_SORTED_FIELDS because pointers have been reordered.  */
+// TODO: THis talks to GTY; may break THOR
 
-void
+static void
 resort_sorted_fields (void *obj,
 		      void * ARG_UNUSED (orig_obj),
 		      gt_pointer_operator new_value,

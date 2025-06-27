@@ -574,7 +574,7 @@ c_parser_peek_nth_token (c_parser *parser, unsigned int n)
    in.  Raw look-ahead tokens remain available for when the non-raw
    functions above are called.  */
 
-c_token *
+static c_token *
 c_parser_peek_nth_token_raw (c_parser *parser, unsigned int n)
 {
   /* N is 1-based, not zero-based.  */
