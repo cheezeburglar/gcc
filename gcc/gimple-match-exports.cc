@@ -1349,6 +1349,8 @@ associative_binary_op_p (code_helper code, tree type)
   return associative_binary_fn_p (associated_internal_fn (cfn, type));
 }
 
+#ifdef GCC_OPTABS_TREE_H
+
 /* Return true if the target directly supports operation CODE on type TYPE.
    QUERY_TYPE acts as for optab_for_tree_code.  */
 
@@ -1391,6 +1393,8 @@ directly_supported_p (code_helper code, tree otype, tree itype,
 	  && direct_internal_fn_supported_p (ifn, tree_pair (otype, itype),
 					     OPTIMIZE_FOR_SPEED));
 }
+
+#endif
 
 
 /* A wrapper around the internal-fn.cc versions of get_conditional_internal_fn

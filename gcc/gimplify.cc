@@ -10318,6 +10318,10 @@ struct omp_mapping_group {
   struct omp_mapping_group *next;
 };
 
+// TODO: Either weird decl in gimplify.cc of modify makefile THOR
+
+void debug_mapping_group (omp_mapping_group *);
+
 DEBUG_FUNCTION void
 debug_mapping_group (omp_mapping_group *grp)
 {
@@ -11407,7 +11411,7 @@ omp_directive_maps_explicitly (hash_map<tree_operand_hash_no_se,
    sure the outer mapping does (at least) the same transfers to/from the device
    as the inner mapping.  */
 
-bool
+static bool
 omp_check_mapping_compatibility (location_t loc,
 				 omp_mapping_group *outer,
 				 omp_mapping_group *inner)
@@ -11503,7 +11507,7 @@ omp_check_mapping_compatibility (location_t loc,
    mapping type of the latter to ALLOC (ready for processing by
    omp_build_struct_sibling_lists).  */
 
-void
+static void
 omp_resolve_clause_dependencies (enum tree_code code,
 				 vec<omp_mapping_group> *groups,
 				 hash_map<tree_operand_hash_no_se,
@@ -11748,7 +11752,7 @@ omp_resolve_clause_dependencies (enum tree_code code,
    whole-struct mappings on the same directive, and duplicate clause
    detection.  */
 
-void
+static void
 oacc_resolve_clause_dependencies (vec<omp_mapping_group> *groups,
 				  hash_map<tree_operand_hash_no_se,
 					   omp_mapping_group *> *grpmap)
