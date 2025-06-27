@@ -689,7 +689,7 @@ symbol_table::remove_unreachable_nodes (FILE *file)
    as needed, also clear EXPLICIT_REFS if the references to given variable
    do not need to be explicit.  */
 
-void
+static void
 process_references (varpool_node *vnode,
 		    bool *written, bool *address_taken,
 		    bool *read, bool *explicit_refs)
@@ -723,7 +723,7 @@ process_references (varpool_node *vnode,
 
 /* Set TREE_READONLY bit.  */
 
-bool
+static bool
 set_readonly_bit (varpool_node *vnode, void *data ATTRIBUTE_UNUSED)
 {
   TREE_READONLY (vnode->decl) = true;
@@ -732,7 +732,7 @@ set_readonly_bit (varpool_node *vnode, void *data ATTRIBUTE_UNUSED)
 
 /* Set writeonly bit and clear the initalizer, since it will not be needed.  */
 
-bool
+static bool
 set_writeonly_bit (varpool_node *vnode, void *data)
 {
   vnode->writeonly = true;
@@ -751,7 +751,7 @@ set_writeonly_bit (varpool_node *vnode, void *data)
 
 /* Clear addressale bit of VNODE.  */
 
-bool
+static bool
 clear_addressable_bit (varpool_node *vnode, void *data ATTRIBUTE_UNUSED)
 {
   vnode->address_taken = false;
@@ -1380,7 +1380,7 @@ make_pass_ipa_cdtor_merge (gcc::context *ctxt)
     - BOTTOM by BOTTOM in AUX pointer (to save lookups)
     - known single user by cgraph pointer in SINGLE_USER_MAP.  */
 
-cgraph_node *
+static cgraph_node *
 meet (cgraph_node *function, varpool_node *var,
        hash_map<varpool_node *, cgraph_node *> &single_user_map)
 {
@@ -1406,7 +1406,7 @@ meet (cgraph_node *function, varpool_node *var,
    Check all uses of VNODE and see if they are used by single function FUNCTION.
    SINGLE_USER_MAP represents the dataflow lattice.  */
 
-cgraph_node *
+static cgraph_node *
 propagate_single_user (varpool_node *vnode, cgraph_node *function,
 		       hash_map<varpool_node *, cgraph_node *> &single_user_map)
 {
