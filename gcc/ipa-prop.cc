@@ -5680,7 +5680,7 @@ useful_ipcp_transformation_info_p (ipcp_transformation *ts)
 
 /* Write into OB IPA-CP transfromation summary TS describing NODE.  */
 
-void
+static void
 write_ipcp_transformation_info (output_block *ob, cgraph_node *node,
 				ipcp_transformation *ts)
 {

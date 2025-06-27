@@ -376,7 +376,7 @@ get_base_var (tree t)
 
 /* Scale function of calls in NODE by ratio ORIG_COUNT/NODE->count.  */
 
-void
+static void
 scale_ipa_profile_for_fn (struct cgraph_node *node, profile_count orig_count)
 {
   profile_count to = node->count;

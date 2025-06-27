@@ -129,4 +129,6 @@ interposable_eaf_flags (int modref_flags, int flags)
   return modref_flags;
 }
 
+void debug_eaf_flags (int);
+
 #endif

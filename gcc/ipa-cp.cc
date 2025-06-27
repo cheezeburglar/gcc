@@ -2499,7 +2499,7 @@ propagate_context_across_jump_function (cgraph_edge *cs,
 /* Propagate bits across jfunc that is associated with
    edge cs and update dest_lattice accordingly.  */
 
-bool
+static bool
 propagate_bits_across_jump_function (cgraph_edge *cs, int idx,
 				     ipa_jump_func *jfunc,
 				     ipcp_bits_lattice *dest_lattice)
@@ -4522,7 +4522,7 @@ dump_profile_updates (cgraph_node *node, bool spec)
    to local one in this case.  In eany case, return the new value.  ORIG_NODE
    is the original node and its count has not been updaed yet.  */
 
-profile_count
+static profile_count
 lenient_count_portion_handling (profile_count remainder, cgraph_node *orig_node)
 {
   if (remainder.ipa_p () && !remainder.ipa ().nonzero_p ()
@@ -5825,7 +5825,9 @@ copy_known_vectors_add_val (ipa_auto_call_arg_values *avals,
    a replacement equivalent to VALUE, INDEX and OFFSET among those in the
    AGGVALS list.  */
 
-DEBUG_FUNCTION bool
+// TODO: Thor Ask about this on mailing list
+
+DEBUG_FUNCTION static bool
 ipcp_val_agg_replacement_ok_p (vec<ipa_argagg_value, va_gc> *aggvals,
 			       int index, HOST_WIDE_INT offset, tree value)
 {
@@ -5840,7 +5842,7 @@ ipcp_val_agg_replacement_ok_p (vec<ipa_argagg_value, va_gc> *aggvals,
 /* Return true if offset is minus one because source of a polymorphic context
    cannot be an aggregate value.  */
 
-DEBUG_FUNCTION bool
+DEBUG_FUNCTION static bool
 ipcp_val_agg_replacement_ok_p (vec<ipa_argagg_value, va_gc> *,
 			       int , HOST_WIDE_INT offset,
 			       ipa_polymorphic_call_context)

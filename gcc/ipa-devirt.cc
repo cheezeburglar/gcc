@@ -189,6 +189,7 @@ static bool odr_types_equivalent_p (tree, tree, bool, bool *,
 				    location_t, location_t);
 static void warn_odr (tree t1, tree t2, tree st1, tree st2,
 		      bool warn, bool *warned, const char *reason);
+void debug_tree_odr_name (tree type, bool demangle);
 
 static bool odr_violation_reported = false;
 
@@ -538,7 +539,7 @@ static hash_map <nofree_string_hash, odr_enum> *odr_enum_map = NULL;
 static struct obstack odr_enum_obstack;
 
 /* Set TYPE_BINFO of TYPE and its variants to BINFO.  */
-void
+static void
 set_type_binfo (tree type, tree binfo)
 {
   for (; type; type = TYPE_NEXT_VARIANT (type))
@@ -3380,7 +3381,7 @@ possible_polymorphic_call_targets (tree otr_type,
   return nodes;
 }
 
-bool
+static bool
 add_decl_warning (const tree &key ATTRIBUTE_UNUSED, const decl_warn_count &value,
 		  vec<const decl_warn_count*> *vec)
 {
@@ -3555,7 +3556,7 @@ update_type_inheritance_graph (void)
    Rule out cxa_pure_virtual, noreturns, function declared cold and
    other obvious cases.  */
 
-bool
+static bool
 likely_target_p (struct cgraph_node *n)
 {
   int flags;

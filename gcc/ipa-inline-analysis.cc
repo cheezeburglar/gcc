@@ -156,7 +156,7 @@ free_growth_caches (void)
 
 /* Return hints derived from EDGE.   */
 
-int
+static int
 simple_edge_hints (struct cgraph_edge *edge)
 {
   int hints = 0;

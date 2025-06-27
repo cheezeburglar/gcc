@@ -262,7 +262,7 @@ check_speculations_1 (cgraph_node *n, vec<cgraph_edge *> *new_edges,
    unfortunately means this function has to have external linkage, otherwise
    the code will not compile with gcc 4.8.  */
 
-bool
+static bool
 push_all_edges_in_set_to_vec (cgraph_edge * const &e,
 			      vec<cgraph_edge *> *new_edges)
 {

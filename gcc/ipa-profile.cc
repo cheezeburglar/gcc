@@ -118,7 +118,7 @@ account_time_size (hash_table<histogram_hash> *hashtable,
   (*val)->size += size;
 }
 
-int
+static int
 cmp_counts (const void *v1, const void *v2)
 {
   const histogram_entry *h1 = *(const histogram_entry * const *)v1;
@@ -622,8 +622,7 @@ ipa_propagate_frequency_1 (struct cgraph_node *node, void *data)
 }
 
 /* Return ture if NODE contains hot calls.  */
-
-bool
+static bool
 contains_hot_call_p (struct cgraph_node *node)
 {
   struct cgraph_edge *e;

@@ -157,7 +157,7 @@ ipa_reference_var_uid (tree t)
 
 /* Return ID used by ipa-reference bitmaps.  Create new entry if
    T is not in map.  Set EXISTED accordinly  */
-int
+static int
 ipa_reference_var_get_or_insert_uid (tree t, bool *existed)
 {
   int &id = ipa_reference_vars_map->get_or_insert
