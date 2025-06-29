@@ -4077,7 +4077,7 @@ asan_expand_check_ifn (gimple_stmt_iterator *iter, bool use_calls)
 					     shadow_ptr_type);
 //      gimple *shadow_test = build_assign (NE_EXPR, shadow, 0);
       gimple *shadow_test = gimple_build_assign (
-				make_ssa_name(TREE_TYPE(shadow)),
+				make_ssa_name(boolean_type_node),
 				NE_EXPR,
 				shadow,
 				build_int_cst (TREE_TYPE (shadow), 0));
@@ -4163,7 +4163,7 @@ asan_expand_check_ifn (gimple_stmt_iterator *iter, bool use_calls)
 						 shadow_ptr_type);
 //	  gimple *shadow_test = build_assign (NE_EXPR, shadow, 0);
 	  gimple *shadow_test = gimple_build_assign (
-				  make_ssa_name(TREE_TYPE(shadow)),
+				  make_ssa_name(boolean_type_node),
 				  NE_EXPR,
 				  shadow,
 				  build_int_cst (TREE_TYPE (shadow), 0));
