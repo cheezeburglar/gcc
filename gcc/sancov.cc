@@ -32,7 +32,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "tm_p.h"
 #include "stmt.h"
 #include "gimple-iterator.h"
-#include "gimple-builder.h"
 #include "tree-cfg.h"
 #include "tree-pass.h"
 #include "tree-iterator.h"

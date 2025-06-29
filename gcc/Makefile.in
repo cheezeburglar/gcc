@@ -1491,7 +1491,6 @@ OBJS = \
 	ggc-tests.o \
 	gimple.o \
 	gimple-array-bounds.o \
-	gimple-builder.o \
 	gimple-expr.o \
 	gimple-if-to-switch.o \
 	gimple-iterator.o \
@@ -4065,7 +4064,7 @@ PLUGIN_HEADERS = $(TREE_H) $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) \
   fold-const.h fold-const-call.h tree-cfg.h tree-into-ssa.h tree-ssanames.h \
   print-tree.h varasm.h context.h tree-phinodes.h stor-layout.h \
   ssa-iterators.h $(RESOURCE_H) tree-cfgcleanup.h attribs.h calls.h \
-  cfgexpand.h diagnostic-color.h gcc-symtab.h gimple-builder.h gimple-low.h \
+  cfgexpand.h diagnostic-color.h gcc-symtab.h gimple-low.h \
   gimple-walk.h gimplify-me.h pass_manager.h print-rtl.h stmt.h \
   tree-dfa.h tree-hasher.h tree-nested.h tree-object-size.h tree-outof-ssa.h \
   tree-parloops.h tree-ssa-address.h tree-ssa-coalesce.h tree-ssa-dom.h \

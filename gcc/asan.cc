@@ -56,7 +56,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "output.h"
 #include "langhooks.h"
 #include "cfgloop.h"
-#include "gimple-builder.h"
 #include "gimple-fold.h"
 #include "ubsan.h"
 #include "builtins.h"
@@ -4119,6 +4118,7 @@ asan_expand_check_ifn (gimple_stmt_iterator *iter, bool use_calls)
 					       GE_EXPR,
 					       t,
 					       shadow));
+      gimple_seq_add_stmt(&seq,
 			  gimple_build_assign (make_ssa_name(
 						 TREE_TYPE (gimple_assign_lhs(shadow_test))),
 					       BIT_AND_EXPR,
