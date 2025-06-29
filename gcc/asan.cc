@@ -4075,7 +4075,12 @@ asan_expand_check_ifn (gimple_stmt_iterator *iter, bool use_calls)
 	 & ((base_addr & 7) + (real_size_in_bytes - 1)) >= shadow).  */
       tree shadow = build_shadow_mem_access (&gsi, loc, base_addr,
 					     shadow_ptr_type);
-      gimple *shadow_test = build_assign (NE_EXPR, shadow, 0);
+//      gimple *shadow_test = build_assign (NE_EXPR, shadow, 0);
+      gimple *shadow_test = gimple_build_assign (
+				make_ssa_name(TREE_TYPE(shadow)),
+				NE_EXPR,
+				shadow,
+				build_int_cst (TREE_TYPE (shadow), 0));
       gimple_seq seq = NULL;
       gimple_seq_add_stmt (&seq, shadow_test);
       /* Aligned (>= 8 bytes) can test just
@@ -4083,21 +4088,55 @@ asan_expand_check_ifn (gimple_stmt_iterator *iter, bool use_calls)
 	 to be 0.  */
       if (align < 8)
 	{
-	  gimple_seq_add_stmt (&seq, build_assign (BIT_AND_EXPR,
-						   base_addr, 7));
-	  gimple_seq_add_stmt (&seq,
-			       build_type_cast (shadow_type,
-						gimple_seq_last (seq)));
+        gimple_seq_add_stmt (
+            &seq,
+            gimple_build_assign (make_ssa_name (TREE_TYPE (base_addr)),
+				 BIT_AND_EXPR,
+				 base_addr,
+				 build_int_cst (TREE_TYPE (base_addr), 7)));
+        gimple_seq_add_stmt (
+            &seq,
+            gimple_build_assign (make_ssa_name(shadow_type),
+				 NOP_EXPR,
+				 gimple_assign_lhs (gimple_seq_last (seq))));
+//	  gimple_seq_add_stmt (&seq, build_assign (BIT_AND_EXPR,
+//						   base_addr, 7));
+//	  gimple_seq_add_stmt (&seq,
+//			       build_type_cast (shadow_type,
+//						gimple_seq_last (seq)));
 	  if (real_size_in_bytes > 1)
-	    gimple_seq_add_stmt (&seq,
-				 build_assign (PLUS_EXPR,
-					       gimple_seq_last (seq),
-					       real_size_in_bytes - 1));
+            gimple_seq_add_stmt (
+              &seq,
+              gimple_build_assign (make_ssa_name(
+				     TREE_TYPE (
+				       gimple_assign_lhs (gimple_seq_last(seq)))),
+				   PLUS_EXPR,
+				   gimple_assign_lhs (gimple_seq_last (seq)),
+				   build_int_cst (
+				     TREE_TYPE (gimple_assign_lhs (
+						   gimple_seq_last (seq))),
+				     real_size_in_bytes - 1)));
+//	    gimple_seq_add_stmt (&seq,
+//				 build_assign (PLUS_EXPR,
+//					       gimple_seq_last (seq),
+//					       real_size_in_bytes - 1));
 	  t = gimple_assign_lhs (gimple_seq_last_stmt (seq));
 	}
       else
 	t = build_int_cst (shadow_type, real_size_in_bytes - 1);
-      gimple_seq_add_stmt (&seq, build_assign (GE_EXPR, t, shadow));
+      gimple_seq_add_stmt(&seq, 
+			  gimple_build_assign (make_ssa_name(boolean_type_node),
+					       GE_EXPR,
+					       t,
+					       shadow));
+//      gimple_seq_add_stmt (&seq, build_assign (GE_EXPR, t, shadow));
+//      gimple_seq_add_stmt(&seq, 
+//			  gimple_build_assign (make_ssa_name(
+//						 TREE_TYPE (gimple_assign_lhs(shadow_test))),
+//					       BIT_AND_EXPR,
+//					       gimple_assign_lhs (shadow_test),
+//					       gimple_assign_lhs (
+//						   gimple_seq_last (seq))));
       gimple_seq_add_stmt (&seq, build_assign (BIT_AND_EXPR, shadow_test,
 					       gimple_seq_last (seq)));
       t = gimple_assign_lhs (gimple_seq_last (seq));
@@ -4122,20 +4161,56 @@ asan_expand_check_ifn (gimple_stmt_iterator *iter, bool use_calls)
 
 	  tree shadow = build_shadow_mem_access (&gsi, loc, base_end_addr,
 						 shadow_ptr_type);
-	  gimple *shadow_test = build_assign (NE_EXPR, shadow, 0);
+//	  gimple *shadow_test = build_assign (NE_EXPR, shadow, 0);
+	  gimple *shadow_test = gimple_build_assign (
+				  make_ssa_name(TREE_TYPE(shadow)),
+				  NE_EXPR,
+				  shadow,
+				  build_int_cst (TREE_TYPE (shadow), 0));
 	  gimple_seq seq = NULL;
 	  gimple_seq_add_stmt (&seq, shadow_test);
-	  gimple_seq_add_stmt (&seq, build_assign (BIT_AND_EXPR,
-						   base_end_addr, 7));
-	  gimple_seq_add_stmt (&seq, build_type_cast (shadow_type,
-						      gimple_seq_last (seq)));
-	  gimple_seq_add_stmt (&seq, build_assign (GE_EXPR,
-						   gimple_seq_last (seq),
-						   shadow));
-	  gimple_seq_add_stmt (&seq, build_assign (BIT_AND_EXPR, shadow_test,
-						   gimple_seq_last (seq)));
-	  gimple_seq_add_stmt (&seq, build_assign (BIT_IOR_EXPR, t,
-						   gimple_seq_last (seq)));
+//	  gimple_seq_add_stmt (&seq, build_assign (BIT_AND_EXPR,
+//						   base_end_addr, 7));
+	  gimple_seq_add_stmt (
+	    &seq,
+	    gimple_build_assign (
+	      make_ssa_name (TREE_TYPE (base_end_addr)),
+	      BIT_AND_EXPR,
+	      base_end_addr,
+	      build_int_cst (TREE_TYPE (base_end_addr), 7)));
+//	  gimple_seq_add_stmt (&seq, build_type_cast (shadow_type,
+//						      gimple_seq_last (seq)));
+	  gimple_seq_add_stmt (&seq,
+			       gimple_build_assign (
+				  make_ssa_name(shadow_type),
+				  NOP_EXPR,
+				  gimple_assign_lhs (gimple_seq_last (seq))));
+//	gimple_seq_add_stmt (&seq, build_assign (GE_EXPR,
+//                                               gimple_seq_last (seq),
+//                                               shadow))
+	gimple_seq_add_stmt (&seq,
+			     gimple_build_assign (
+				make_ssa_name (boolean_type_node),
+				GE_EXPR,
+				gimple_assign_lhs (gimple_seq_last (seq)),
+				shadow));
+//	  gimple_seq_add_stmt (&seq, build_assign (BIT_AND_EXPR, shadow_test,
+//						   gimple_seq_last (seq)));
+	  gimple_seq_add_stmt (&seq,
+			       gimple_build_assign (
+				 make_ssa_name (TREE_TYPE (
+				   gimple_assign_lhs (gimple_seq_last (shadow_test)))),
+				 BIT_AND_EXPR, 
+				 gimple_assign_lhs (shadow_test),
+				 gimple_assign_lhs (gimple_seq_last (seq))));
+//	  gimple_seq_add_stmt (&seq, build_assign (BIT_IOR_EXPR, t,
+//						   gimple_seq_last (seq)));
+	  gimple_seq_add_stmt (&seq,
+			       gimple_build_assign (
+				 make_ssa_name (TREE_TYPE (t)),
+				 BIT_IOR_EXPR, 
+				 t,
+				 gimple_assign_lhs (gimple_seq_last (seq))));
 	  t = gimple_assign_lhs (gimple_seq_last (seq));
 	  gimple_seq_set_location (seq, loc);
 	  gsi_insert_seq_after (&gsi, seq, GSI_CONTINUE_LINKING);
