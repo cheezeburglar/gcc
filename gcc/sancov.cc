@@ -36,6 +36,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-cfg.h"
 #include "tree-pass.h"
 #include "tree-iterator.h"
+#include "value-range.h"
+#include "stringpool.h"
+#include "tree-ssanames.h"
 #include "fold-const.h"
 #include "stringpool.h"
 #include "attribs.h"
@@ -111,7 +114,9 @@ instrument_comparison (gimple_stmt_iterator *gsi, tree lhs, tree rhs)
 	    lhs = fold_convert (to_type, lhs);
 	  else
 	    {
-	      gimple_seq_add_stmt (&seq, build_type_cast (to_type, lhs));
+	      gimple_seq_add_stmt (
+		  &seq,
+		  gimple_build_assign (make_ssa_name(to_type), NOP_EXPR, lhs));
 	      lhs = gimple_assign_lhs (gimple_seq_last_stmt (seq));
 	    }
 
@@ -119,7 +124,9 @@ instrument_comparison (gimple_stmt_iterator *gsi, tree lhs, tree rhs)
 	    rhs = fold_convert (to_type, rhs);
 	  else
 	    {
-	      gimple_seq_add_stmt (&seq, build_type_cast (to_type, rhs));
+	      gimple_seq_add_stmt (
+		  &seq,
+		  gimple_build_assign (make_ssa_name(to_type), NOP_EXPR, rhs));
 	      rhs = gimple_assign_lhs (gimple_seq_last_stmt (seq));
 	    }
 	}
@@ -219,7 +226,12 @@ instrument_switch (gimple_stmt_iterator *gsi, gimple *stmt, function *fun)
 	index = fold_convert (uint64_type_node, index);
       else
 	{
-	  gimple_seq_add_stmt (&seq, build_type_cast (uint64_type_node, index));
+//	  gimple_seq_add_stmt (&seq, build_type_cast (uint64_type_node, index));
+          gimple_seq_add_stmt (
+              &seq,
+              gimple_build_assign (make_ssa_name(uint64_type_node),
+				   NOP_EXPR,
+				   index));
 	  index = gimple_assign_lhs (gimple_seq_last_stmt (seq));
 	}
     }
