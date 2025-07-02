@@ -1871,6 +1871,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        */
       iterator
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR //TODO: this might be bad. THOR
       erase(const_iterator __position)
 #else
       erase(iterator __position)
@@ -1895,6 +1896,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        */
       iterator
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR //TODO: this might be bad. THOR
       erase(const_iterator __first, const_iterator __last)
 #else
       erase(iterator __first, iterator __last)
@@ -1912,6 +1914,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *
        *  Whether the allocators are swapped depends on the allocator traits.
        */
+      // TODO: I don't know if we should poke this.
       void
       swap(deque& __x) _GLIBCXX_NOEXCEPT
       {
@@ -2406,6 +2409,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   */
   template<typename _Tp, typename _Alloc>
     _GLIBCXX_NODISCARD
+    _GLIBCXX26_CONSTEXPR
     inline bool
     operator==(const deque<_Tp, _Alloc>& __x, const deque<_Tp, _Alloc>& __y)
     { return __x.size() == __y.size()
@@ -2425,6 +2429,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   */
   template<typename _Tp, typename _Alloc>
     [[nodiscard]]
+    constexpr
     inline __detail::__synth3way_t<_Tp>
     operator<=>(const deque<_Tp, _Alloc>& __x, const deque<_Tp, _Alloc>& __y)
     {
@@ -2446,6 +2451,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   */
   template<typename _Tp, typename _Alloc>
     _GLIBCXX_NODISCARD
+    _GLIBCXX26_CONSTEXPR
     inline bool
     operator<(const deque<_Tp, _Alloc>& __x, const deque<_Tp, _Alloc>& __y)
     { return std::lexicographical_compare(__x.begin(), __x.end(),
@@ -2454,6 +2460,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   /// Based on operator==
   template<typename _Tp, typename _Alloc>
     _GLIBCXX_NODISCARD
+    _GLIBCXX26_CONSTEXPR
     inline bool
     operator!=(const deque<_Tp, _Alloc>& __x, const deque<_Tp, _Alloc>& __y)
     { return !(__x == __y); }
@@ -2461,6 +2468,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   /// Based on operator<
   template<typename _Tp, typename _Alloc>
     _GLIBCXX_NODISCARD
+    _GLIBCXX26_CONSTEXPR
     inline bool
     operator>(const deque<_Tp, _Alloc>& __x, const deque<_Tp, _Alloc>& __y)
     { return __y < __x; }
@@ -2468,6 +2476,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   /// Based on operator<
   template<typename _Tp, typename _Alloc>
     _GLIBCXX_NODISCARD
+    _GLIBCXX26_CONSTEXPR
     inline bool
     operator<=(const deque<_Tp, _Alloc>& __x, const deque<_Tp, _Alloc>& __y)
     { return !(__y < __x); }
@@ -2475,6 +2484,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   /// Based on operator<
   template<typename _Tp, typename _Alloc>
     _GLIBCXX_NODISCARD
+    _GLIBCXX26_CONSTEXPR
     inline bool
     operator>=(const deque<_Tp, _Alloc>& __x, const deque<_Tp, _Alloc>& __y)
     { return !(__x < __y); }
@@ -2482,6 +2492,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   /// See std::deque::swap().
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR //TODO: this might be bad. THOR
     inline void
     swap(deque<_Tp,_Alloc>& __x, deque<_Tp,_Alloc>& __y)
     _GLIBCXX_NOEXCEPT_IF(noexcept(__x.swap(__y)))
