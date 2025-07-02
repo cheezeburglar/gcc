@@ -2030,6 +2030,15 @@ ftms = {
   };
 };
 
+ftms = {
+  name = constexpr_containers;
+  values = {
+    v = 202502L;
+    cxxmin = 26;
+    hosted = yes; //What is this? THOR
+  };
+};
+
 // Standard test specifications.
 stds[97] = ">= 199711L";
 stds[03] = ">= 199711L";
