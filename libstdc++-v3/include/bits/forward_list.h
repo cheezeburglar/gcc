@@ -806,6 +806,7 @@ namespace __fwdlist
        *  @brief  Creates a %forward_list with no elements.
        *  @param  __al  An allocator object.
        */
+      _GLIBCXX26_CONSTEXPR
       explicit
       forward_list(const _Alloc& __al) noexcept
       : _Base(_Node_alloc_type(__al))
@@ -816,6 +817,7 @@ namespace __fwdlist
        *  @param  __list  Input list to copy.
        *  @param  __al    An allocator object.
        */
+      _GLIBCXX26_CONSTEXPR
       forward_list(const forward_list& __list,
 		   const __type_identity_t<_Alloc>& __al)
       : _Base(_Node_alloc_type(__al))
@@ -906,6 +908,7 @@ namespace __fwdlist
        * @since C++23
        */
       template<__detail::__container_compatible_range<_Tp> _Rg>
+	_GLIBCXX26_CONSTEXPR
 	forward_list(from_range_t, _Rg&& __rg, const _Alloc& __a = _Alloc())
 	: _Base(_Node_alloc_type(__a))
 	{
@@ -925,6 +928,7 @@ namespace __fwdlist
        *  @param  __list  A %forward_list of identical element and allocator
        *                  types.
        */
+      _GLIBCXX26_CONSTEXPR
       forward_list(const forward_list& __list)
       : _Base(_Node_alloc_traits::_S_select_on_copy(
 		__list._M_get_Node_allocator()))
@@ -939,6 +943,7 @@ namespace __fwdlist
        *  moved instance. The contents of the moved instance are a valid, but
        *  unspecified %forward_list.
        */
+      _GLIBCXX26_CONSTEXPR
       forward_list(forward_list&&) = default;
 
       /**
@@ -949,6 +954,7 @@ namespace __fwdlist
        *  Create a %forward_list consisting of copies of the elements
        *  in the initializer_list `__il`.  This is linear in `__il.size()`.
        */
+      _GLIBCXX26_CONSTEXPR
       forward_list(std::initializer_list<_Tp> __il,
 		   const _Alloc& __al = _Alloc())
       : _Base(_Node_alloc_type(__al))
@@ -957,6 +963,7 @@ namespace __fwdlist
       /**
        *  @brief  The forward_list dtor.
        */
+      _GLIBCXX26_CONSTEXPR
       ~forward_list() noexcept
       { }
 
@@ -969,6 +976,7 @@ namespace __fwdlist
        *
        *  Whether the allocator is copied depends on the allocator traits.
        */
+      _GLIBCXX26_CONSTEXPR
       forward_list&
       operator=(const forward_list& __list);
 
@@ -986,6 +994,7 @@ namespace __fwdlist
        *
        *  Whether the allocator is moved depends on the allocator traits.
        */
+      _GLIBCXX26_CONSTEXPR
       forward_list&
       operator=(forward_list&& __list)
       noexcept(_Node_alloc_traits::_S_nothrow_move())
@@ -1022,6 +1031,7 @@ namespace __fwdlist
        *  elements in the initializer_list `__il`.  This is linear in
        *  `__il.size()`.
        */
+      _GLIBCXX26_CONSTEXPR
       forward_list&
       operator=(std::initializer_list<_Tp> __il)
       {
@@ -1043,6 +1053,7 @@ namespace __fwdlist
        */
       template<typename _InputIterator,
 	       typename = std::_RequireInputIter<_InputIterator>>
+	_GLIBCXX26_CONSTEXPR
 	void
 	assign(_InputIterator __first, _InputIterator __last)
 	{
@@ -1077,6 +1088,7 @@ namespace __fwdlist
        * @since C++23
        */
       template<__detail::__container_compatible_range<_Tp> _Rg>
+	_GLIBCXX26_CONSTEXPR
 	void
 	assign_range(_Rg&& __rg)
 	{
@@ -1116,6 +1128,7 @@ namespace __fwdlist
        *  %forward_list, and that the resulting %forward_list has `__n`
        *  elements.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       assign(size_type __n, const _Tp& __val)
       {
@@ -1152,11 +1165,13 @@ namespace __fwdlist
        *  elements in the initializer_list `__il`.  This is linear in
        *  `__il.size()`.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       assign(std::initializer_list<_Tp> __il)
       { assign(__il.begin(), __il.end()); }
 
       /// Get a copy of the memory allocation object.
+      _GLIBCXX26_CONSTEXPR
       allocator_type
       get_allocator() const noexcept
       { return allocator_type(this->_M_get_Node_allocator()); }
@@ -1168,6 +1183,7 @@ namespace __fwdlist
        *  in the %forward_list.  Iteration is done in ordinary element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       iterator
       before_begin() noexcept
       { return iterator(this->_M_impl._M_head._M_base_ptr()); }
@@ -1178,6 +1194,7 @@ namespace __fwdlist
        *  element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       before_begin() const noexcept
       { return const_iterator(this->_M_impl._M_head._M_base_ptr()); }
@@ -1187,6 +1204,7 @@ namespace __fwdlist
        *  in the %forward_list.  Iteration is done in ordinary element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       iterator
       begin() noexcept
       { return iterator(this->_M_impl._M_head._M_next); }
@@ -1197,6 +1215,7 @@ namespace __fwdlist
        *  element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       begin() const noexcept
       { return const_iterator(this->_M_impl._M_head._M_next); }
@@ -1207,6 +1226,7 @@ namespace __fwdlist
        *  element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       iterator
       end() noexcept
       { return iterator(nullptr); }
@@ -1217,6 +1237,7 @@ namespace __fwdlist
        *  element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       end() const noexcept
       { return const_iterator(nullptr); }
@@ -1227,6 +1248,7 @@ namespace __fwdlist
        *  element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cbegin() const noexcept
       { return const_iterator(this->_M_impl._M_head._M_next); }
@@ -1237,6 +1259,7 @@ namespace __fwdlist
        *  element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cbefore_begin() const noexcept
       { return const_iterator(this->_M_impl._M_head._M_base_ptr()); }
@@ -1247,6 +1270,7 @@ namespace __fwdlist
        *  ordinary element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cend() const noexcept
       { return const_iterator(nullptr); }
@@ -1256,6 +1280,7 @@ namespace __fwdlist
        *  equal end().)
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       bool
       empty() const noexcept
       { return this->_M_impl._M_head._M_next == nullptr; }
@@ -1264,6 +1289,7 @@ namespace __fwdlist
        *  Returns the largest possible number of elements of %forward_list.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       size_type
       max_size() const noexcept
       { return _Node_alloc_traits::max_size(this->_M_get_Node_allocator()); }
@@ -1275,6 +1301,7 @@ namespace __fwdlist
        *  element of the %forward_list.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       reference
       front()
       {
@@ -1288,6 +1315,7 @@ namespace __fwdlist
        *  element of the %forward_list.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       const_reference
       front() const
       {
@@ -1334,6 +1362,7 @@ namespace __fwdlist
        *  can be done in constant time, and does not invalidate iterators
        *  and references.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       push_front(const _Tp& __val)
       { this->_M_insert_after(cbefore_begin(), __val); }
@@ -1341,6 +1370,7 @@ namespace __fwdlist
       /**
        *
        */
+      _GLIBCXX26_CONSTEXPR
       void
       push_front(_Tp&& __val)
       { this->_M_insert_after(cbefore_begin(), std::move(__val)); }
@@ -1362,6 +1392,7 @@ namespace __fwdlist
        * @since C++23
        */
       template<__detail::__container_compatible_range<_Tp> _Rg>
+        _GLIBCXX26_CONSTEXPR
 	void
 	prepend_range(_Rg&& __rg)
 	{
@@ -1384,6 +1415,7 @@ namespace __fwdlist
        *  is needed, it should be retrieved before `pop_front()` is
        *  called.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       pop_front()
       {
@@ -1405,6 +1437,7 @@ namespace __fwdlist
        *  and references.
        */
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	emplace_after(const_iterator __pos, _Args&&... __args)
 	{ return iterator(this->_M_insert_after(__pos,
@@ -1422,6 +1455,7 @@ namespace __fwdlist
        *  operation can be done in constant time, and does not
        *  invalidate iterators and references.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert_after(const_iterator __pos, const _Tp& __val)
       { return iterator(this->_M_insert_after(__pos, __val)); }
@@ -1429,6 +1463,7 @@ namespace __fwdlist
       /**
        *
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert_after(const_iterator __pos, _Tp&& __val)
       { return iterator(this->_M_insert_after(__pos, std::move(__val))); }
@@ -1448,6 +1483,7 @@ namespace __fwdlist
        *  This operation is linear in the number of elements inserted and
        *  does not invalidate iterators and references.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert_after(const_iterator __pos, size_type __n, const _Tp& __val);
 
@@ -1468,6 +1504,7 @@ namespace __fwdlist
        */
       template<typename _InputIterator,
 	       typename = std::_RequireInputIter<_InputIterator>>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	insert_after(const_iterator __pos,
 		     _InputIterator __first, _InputIterator __last);
@@ -1487,6 +1524,7 @@ namespace __fwdlist
        *  This operation is linear in the number of elements inserted and
        *  does not invalidate iterators and references.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert_after(const_iterator __pos, std::initializer_list<_Tp> __il)
       { return insert_after(__pos, __il.begin(), __il.end()); }
@@ -1508,6 +1546,7 @@ namespace __fwdlist
        * @since C++23
        */
       template<__detail::__container_compatible_range<_Tp> _Rg>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	insert_range_after(const_iterator __position, _Rg&& __rg)
 	{
@@ -1534,6 +1573,7 @@ namespace __fwdlist
        *  is itself a pointer, the pointed-to memory is not touched in
        *  any way.  Managing the pointer is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase_after(const_iterator __pos)
       { return iterator(this->_M_erase_after(__pos._M_const_cast()._M_node)); }
@@ -1557,6 +1597,7 @@ namespace __fwdlist
        *  pointed-to memory is not touched in any way.  Managing the pointer
        *  is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase_after(const_iterator __pos, const_iterator __last)
       {
@@ -1576,6 +1617,7 @@ namespace __fwdlist
        *
        *  Whether the allocators are swapped depends on the allocator traits.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       swap(forward_list& __list) noexcept
       {
@@ -1596,6 +1638,7 @@ namespace __fwdlist
        *  is truncated, otherwise the %forward_list is extended and the
        *  new elements are default constructed.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       resize(size_type __sz);
 
@@ -1611,6 +1654,7 @@ namespace __fwdlist
        *  is truncated, otherwise the %forward_list is extended and new
        *  elements are populated with given data.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       resize(size_type __sz, const value_type& __val);
 
@@ -1622,6 +1666,7 @@ namespace __fwdlist
        *  pointers, the pointed-to memory is not touched in any way.
        *  Managing the pointer is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       clear() noexcept
       { this->_M_erase_after(this->_M_impl._M_head._M_base_ptr(), nullptr); }
@@ -1639,6 +1684,7 @@ namespace __fwdlist
        *
        *  Requires `this != &x`.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       splice_after(const_iterator __pos, forward_list&& __list) noexcept
       {
@@ -1646,6 +1692,7 @@ namespace __fwdlist
 	  _M_splice_after(__pos, __list.before_begin(), __list.end());
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       splice_after(const_iterator __pos, forward_list& __list) noexcept
       { splice_after(__pos, std::move(__list)); }
@@ -1660,10 +1707,12 @@ namespace __fwdlist
        *  Removes the element in list `__list` referenced by `__i` and
        *  inserts it into the current list after `__pos`.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       splice_after(const_iterator __pos, forward_list&& __list,
 		   const_iterator __i) noexcept;
 
+      _GLIBCXX26_CONSTEXPR
       void
       splice_after(const_iterator __pos, forward_list& __list,
 		   const_iterator __i) noexcept
@@ -1683,11 +1732,13 @@ namespace __fwdlist
        *  Undefined if `__pos` is in `(__before,__last)`.
        *  @{
        */
+      _GLIBCXX26_CONSTEXPR
       void
       splice_after(const_iterator __pos, forward_list&&,
 		   const_iterator __before, const_iterator __last) noexcept
       { _M_splice_after(__pos, __before, __last); }
 
+      _GLIBCXX26_CONSTEXPR
       void
       splice_after(const_iterator __pos, forward_list&,
 		   const_iterator __before, const_iterator __last) noexcept
@@ -1717,6 +1768,7 @@ namespace __fwdlist
        *  responsibility.
        */
       _GLIBCXX_FWDLIST_REMOVE_RETURN_TYPE_TAG
+      _GLIBCXX26_CONSTEXPR
       __remove_return_type
       remove(const _Tp& __val);
 
@@ -1732,6 +1784,7 @@ namespace __fwdlist
        *  responsibility.
        */
       template<typename _Pred>
+	_GLIBCXX26_CONSTEXPR
 	__remove_return_type
 	remove_if(_Pred __pred);
 
@@ -1746,6 +1799,7 @@ namespace __fwdlist
        *  the pointer is the user's responsibility.
        */
       _GLIBCXX_FWDLIST_REMOVE_RETURN_TYPE_TAG
+      _GLIBCXX26_CONSTEXPR
       __remove_return_type
       unique()
       { return unique(std::equal_to<_Tp>()); }
@@ -1765,6 +1819,7 @@ namespace __fwdlist
        *  Managing the pointer is the user's responsibility.
        */
       template<typename _BinPred>
+	_GLIBCXX26_CONSTEXPR
 	__remove_return_type
 	unique(_BinPred __binary_pred);
 
@@ -1777,10 +1832,12 @@ namespace __fwdlist
        *  sorted order, leaving `__list` empty when complete.  Elements in
        *  this list precede elements in `__list` that are equal.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       merge(forward_list&& __list)
       { merge(std::move(__list), std::less<_Tp>()); }
 
+      _GLIBCXX26_CONSTEXPR
       void
       merge(forward_list& __list)
       { merge(std::move(__list)); }
@@ -1797,10 +1854,12 @@ namespace __fwdlist
        *  according to comp().
        */
       template<typename _Comp>
+	_GLIBCXX26_CONSTEXPR
 	void
 	merge(forward_list&& __list, _Comp __comp);
 
       template<typename _Comp>
+	_GLIBCXX26_CONSTEXPR
 	void
 	merge(forward_list& __list, _Comp __comp)
 	{ merge(std::move(__list), __comp); }
@@ -1811,6 +1870,7 @@ namespace __fwdlist
        *  Sorts the elements of this list in NlogN time.  Equivalent
        *  elements remain in list order.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       sort()
       { sort(std::less<_Tp>()); }
@@ -1822,6 +1882,7 @@ namespace __fwdlist
        *  elements remain in list order.
        */
       template<typename _Comp>
+	_GLIBCXX26_CONSTEXPR
 	void
 	sort(_Comp __comp);
 
@@ -1830,6 +1891,7 @@ namespace __fwdlist
        *
        *  Reverse the order of elements in the list in linear time.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       reverse() noexcept
       { this->_M_impl._M_head._M_reverse_after(); }

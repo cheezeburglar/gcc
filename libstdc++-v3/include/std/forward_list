@@ -76,6 +76,7 @@ namespace std _GLIBCXX_VISIBILITY(default)
 {
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
   template<typename _Tp, typename _Alloc, typename _Predicate>
+    _GLIBCXX26_CONSTEXPR
     inline typename forward_list<_Tp, _Alloc>::size_type
     erase_if(forward_list<_Tp, _Alloc>& __cont, _Predicate __pred)
     { return __cont.remove_if(__pred); }
