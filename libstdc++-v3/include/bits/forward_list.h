@@ -1973,6 +1973,7 @@ namespace __fwdlist
    */
   template<typename _Tp, typename _Alloc>
     [[__nodiscard__]]
+    _GLIBCXX26_CONSTEXPR
     bool
     operator==(const forward_list<_Tp, _Alloc>& __lx,
 	       const forward_list<_Tp, _Alloc>& __ly);
@@ -1991,6 +1992,7 @@ namespace __fwdlist
   */
   template<typename _Tp, typename _Alloc>
     [[nodiscard]]
+    _GLIBCXX26_CONSTEXPR
     inline __detail::__synth3way_t<_Tp>
     operator<=>(const forward_list<_Tp, _Alloc>& __x,
 		const forward_list<_Tp, _Alloc>& __y)
@@ -2055,6 +2057,7 @@ namespace __fwdlist
 
   /// See std::forward_list::swap().
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     inline void
     swap(forward_list<_Tp, _Alloc>& __lx,
 	 forward_list<_Tp, _Alloc>& __ly)
