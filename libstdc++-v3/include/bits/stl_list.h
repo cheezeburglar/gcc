@@ -1117,6 +1117,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  @brief  Creates a %list with no elements.
        */
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       list() = default;
 #else
       list() { }
@@ -1126,6 +1127,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  @brief  Creates a %list with no elements.
        *  @param  __a  An allocator object.
        */
+      _GLIBCXX26_CONSTEXPR
       explicit
       list(const allocator_type& __a) _GLIBCXX_NOEXCEPT
       : _Base(_Node_alloc_type(__a)) { }
@@ -1139,6 +1141,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  This constructor fills the %list with @a __n default
        *  constructed elements.
        */
+      _GLIBCXX26_CONSTEXPR
       explicit
       list(size_type __n, const allocator_type& __a = allocator_type())
       : _Base(_Node_alloc_type(__a))
@@ -1152,6 +1155,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *
        *  This constructor fills the %list with @a __n copies of @a __value.
        */
+      _GLIBCXX26_CONSTEXPR
       list(size_type __n, const value_type& __value,
 	   const allocator_type& __a = allocator_type())
       : _Base(_Node_alloc_type(__a))
@@ -1179,6 +1183,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  The newly-created %list uses a copy of the allocation object used
        *  by @a __x (unless the allocator traits dictate a different object).
        */
+      _GLIBCXX26_CONSTEXPR
       list(const list& __x)
       : _Base(_Node_alloc_traits::
 	      _S_select_on_copy(__x._M_get_Node_allocator()))
@@ -1192,6 +1197,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  instance. The contents of the moved instance are a valid, but
        *  unspecified %list.
        */
+      _GLIBCXX26_CONSTEXPR
       list(list&&) = default;
 
       /**
@@ -1202,11 +1208,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  Create a %list consisting of copies of the elements in the
        *  initializer_list @a __l.  This is linear in __l.size().
        */
+      _GLIBCXX26_CONSTEXPR
       list(initializer_list<value_type> __l,
 	   const allocator_type& __a = allocator_type())
       : _Base(_Node_alloc_type(__a))
       { _M_initialize_dispatch(__l.begin(), __l.end(), __false_type()); }
 
+      _GLIBCXX26_CONSTEXPR
       list(const list& __x, const __type_identity_t<allocator_type>& __a)
       : _Base(_Node_alloc_type(__a))
       { _M_initialize_dispatch(__x.begin(), __x.end(), __false_type()); }
@@ -1227,6 +1235,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
       }
 
     public:
+      _GLIBCXX26_CONSTEXPR
       list(list&& __x, const __type_identity_t<allocator_type>& __a)
       noexcept(_Node_alloc_traits::_S_always_equal())
       : list(std::move(__x), __a,
@@ -1247,6 +1256,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
 #if __cplusplus >= 201103L
       template<typename _InputIterator,
 	       typename = std::_RequireInputIter<_InputIterator>>
+	_GLIBCXX26_CONSTEXPR
 	list(_InputIterator __first, _InputIterator __last,
 	     const allocator_type& __a = allocator_type())
 	: _Base(_Node_alloc_type(__a))
@@ -1269,6 +1279,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        * @since C++23
        */
       template<__detail::__container_compatible_range<_Tp> _Rg>
+	_GLIBCXX26_CONSTEXPR
 	list(from_range_t, _Rg&& __rg, const _Alloc& __a = _Alloc())
 	: _Base(_Node_alloc_type(__a))
 	{
@@ -1287,7 +1298,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  memory is not touched in any way.  Managing the pointer is
        *  the user's responsibility.
        */
-      ~list() = default;
+      _GLIBCXX26_CONSTEXPR ~list() = default;
 #endif
 
       /**
@@ -1298,6 +1309,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *
        *  Whether the allocator is copied depends on the allocator traits.
        */
+      _GLIBCXX26_CONSTEXPR
       list&
       operator=(const list& __x);
 
@@ -1314,6 +1326,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *
        *  Whether the allocator is moved depends on the allocator traits.
        */
+      _GLIBCXX26_CONSTEXPR
       list&
       operator=(list&& __x)
       noexcept(_Node_alloc_traits::_S_nothrow_move())
@@ -1352,6 +1365,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  Replace the contents of the %list with copies of the elements
        *  in the initializer_list @a __l.  This is linear in l.size().
        */
+      _GLIBCXX26_CONSTEXPR
       list&
       operator=(initializer_list<value_type> __l)
       {
@@ -1366,6 +1380,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        * @since C++23
        */
       template<__detail::__container_compatible_range<_Tp> _Rg>
+	_GLIBCXX26_CONSTEXPR
 	void
 	assign_range(_Rg&& __rg)
 	{
@@ -1396,6 +1411,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  and that the resulting %list's size is the same as the number
        *  of elements assigned.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       assign(size_type __n, const value_type& __val)
       { _M_fill_assign(__n, __val); }
@@ -1415,6 +1431,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
 #if __cplusplus >= 201103L
       template<typename _InputIterator,
 	       typename = std::_RequireInputIter<_InputIterator>>
+	_GLIBCXX26_CONSTEXPR
 	void
 	assign(_InputIterator __first, _InputIterator __last)
 	{ _M_assign_dispatch(__first, __last, __false_type()); }
@@ -1437,12 +1454,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  Replace the contents of the %list with copies of the elements
        *  in the initializer_list @a __l.  This is linear in __l.size().
        */
+      _GLIBCXX26_CONSTEXPR
       void
       assign(initializer_list<value_type> __l)
       { this->_M_assign_dispatch(__l.begin(), __l.end(), __false_type()); }
 #endif
 
       /// Get a copy of the memory allocation object.
+      _GLIBCXX26_CONSTEXPR
       allocator_type
       get_allocator() const _GLIBCXX_NOEXCEPT
       { return allocator_type(_Base::_M_get_Node_allocator()); }
@@ -1453,6 +1472,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  %list.  Iteration is done in ordinary element order.
        */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       iterator
       begin() _GLIBCXX_NOEXCEPT
       { return iterator(this->_M_impl._M_node._M_next); }
@@ -1463,6 +1483,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  element order.
        */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       begin() const _GLIBCXX_NOEXCEPT
       { return const_iterator(this->_M_impl._M_node._M_next); }
@@ -1473,6 +1494,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  order.
        */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       iterator
       end() _GLIBCXX_NOEXCEPT
       { return iterator(this->_M_impl._M_node._M_base()); }
@@ -1483,6 +1505,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  element order.
        */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       end() const _GLIBCXX_NOEXCEPT
       { return const_iterator(this->_M_impl._M_node._M_base()); }
@@ -1493,6 +1516,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  order.
        */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       reverse_iterator
       rbegin() _GLIBCXX_NOEXCEPT
       { return reverse_iterator(end()); }
@@ -1503,6 +1527,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  element order.
        */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       const_reverse_iterator
       rbegin() const _GLIBCXX_NOEXCEPT
       { return const_reverse_iterator(end()); }
@@ -1513,6 +1538,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  reverse element order.
        */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       reverse_iterator
       rend() _GLIBCXX_NOEXCEPT
       { return reverse_iterator(begin()); }
@@ -1523,6 +1549,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  element order.
        */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       const_reverse_iterator
       rend() const _GLIBCXX_NOEXCEPT
       { return const_reverse_iterator(begin()); }
@@ -1534,6 +1561,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cbegin() const noexcept
       { return const_iterator(this->_M_impl._M_node._M_next); }
@@ -1544,6 +1572,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cend() const noexcept
       { return const_iterator(this->_M_impl._M_node._M_base()); }
@@ -1554,6 +1583,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       const_reverse_iterator
       crbegin() const noexcept
       { return const_reverse_iterator(end()); }
@@ -1564,6 +1594,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  element order.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       const_reverse_iterator
       crend() const noexcept
       { return const_reverse_iterator(begin()); }
@@ -1574,7 +1605,9 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  Returns true if the %list is empty.  (Thus begin() would equal
        *  end().)
        */
-      _GLIBCXX_NODISCARD bool
+      _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
+      bool
       empty() const _GLIBCXX_NOEXCEPT
       {
 	return this->_M_impl._M_node._M_next == this->_M_impl._M_node._M_base();
@@ -1582,6 +1615,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
 
       /**  Returns the number of elements in the %list.  */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       size_type
       size() const _GLIBCXX_NOEXCEPT
       {
@@ -1594,6 +1628,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
 
       /**  Returns the size() of the largest possible %list.  */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       size_type
       max_size() const _GLIBCXX_NOEXCEPT
       { return _Node_alloc_traits::max_size(_M_get_Node_allocator()); }
@@ -1608,6 +1643,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  current size the %list is truncated, otherwise default
        *  constructed elements are appended.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       resize(size_type __new_size);
 
@@ -1621,6 +1657,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  current size the %list is truncated, otherwise the %list is
        *  extended and new elements are populated with given data.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       resize(size_type __new_size, const value_type& __x);
 #else
@@ -1644,6 +1681,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  element of the %list.
        */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       reference
       front() _GLIBCXX_NOEXCEPT
       {
@@ -1656,6 +1694,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  element of the %list.
        */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       const_reference
       front() const _GLIBCXX_NOEXCEPT
       {
@@ -1668,6 +1707,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  of the %list.
        */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       reference
       back() _GLIBCXX_NOEXCEPT
       {
@@ -1682,6 +1722,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  element of the %list.
        */
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       const_reference
       back() const _GLIBCXX_NOEXCEPT
       {
@@ -1702,17 +1743,20 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  done in constant time, and does not invalidate iterators and
        *  references.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       push_front(const value_type& __x)
       { this->_M_insert(begin(), __x); }
 
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       void
       push_front(value_type&& __x)
       { this->_M_insert(begin(), std::move(__x)); }
 
       template<typename... _Args>
 #if __cplusplus > 201402L
+	_GLIBCXX26_CONSTEXPR
 	reference
 #else
 	void
@@ -1740,6 +1784,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        * @since C++23
        */
       template<__detail::__container_compatible_range<_Tp> _Rg>
+	_GLIBCXX26_CONSTEXPR
 	void
 	prepend_range(_Rg&& __rg)
 	{
@@ -1761,6 +1806,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        * @since C++23
        */
       template<__detail::__container_compatible_range<_Tp> _Rg>
+	_GLIBCXX26_CONSTEXPR
 	void
 	append_range(_Rg&& __rg)
 	{
@@ -1782,6 +1828,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  is needed, it should be retrieved before pop_front() is
        *  called.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       pop_front() _GLIBCXX_NOEXCEPT
       {
@@ -1799,17 +1846,20 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  in constant time, and does not invalidate iterators and
        *  references.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       push_back(const value_type& __x)
       { this->_M_insert(end(), __x); }
 
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       void
       push_back(value_type&& __x)
       { this->_M_insert(end(), std::move(__x)); }
 
       template<typename... _Args>
 #if __cplusplus > 201402L
+	_GLIBCXX26_CONSTEXPR
 	reference
 #else
 	void
@@ -1834,6 +1884,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  Note that no data is returned, and if the last element's data
        *  is needed, it should be retrieved before pop_back() is called.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       pop_back() _GLIBCXX_NOEXCEPT
       {
@@ -1873,9 +1924,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  @{
        */
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const_iterator __position, const value_type& __x);
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const_iterator __position, value_type&& __x)
       { return emplace(__position, std::move(__x)); }
@@ -1901,6 +1954,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  This operation is linear in the number of elements inserted and
        *  does not invalidate iterators and references.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const_iterator __p, initializer_list<value_type> __l)
       { return this->insert(__p, __l.begin(), __l.end()); }
@@ -1921,6 +1975,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  does not invalidate iterators and references.
        */
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const_iterator __position, size_type __n, const value_type& __x);
 #else
@@ -1950,6 +2005,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
 #if __cplusplus >= 201103L
       template<typename _InputIterator,
 	       typename = std::_RequireInputIter<_InputIterator>>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	insert(const_iterator __position, _InputIterator __first,
 	       _InputIterator __last);
@@ -1981,6 +2037,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        * @since C++23
        */
       template<__detail::__container_compatible_range<_Tp> _Rg>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	insert_range(const_iterator __position, _Rg&& __rg)
 	{
@@ -2010,6 +2067,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  is itself a pointer, the pointed-to memory is not touched in
        *  any way.  Managing the pointer is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
 #if __cplusplus >= 201103L
       erase(const_iterator __position) noexcept;
@@ -2035,6 +2093,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  pointed-to memory is not touched in any way.  Managing the pointer
        *  is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
 #if __cplusplus >= 201103L
       erase(const_iterator __first, const_iterator __last) noexcept
@@ -2058,6 +2117,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *
        *  Whether the allocators are swapped depends on the allocator traits.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       swap(list& __x) _GLIBCXX_NOEXCEPT
       {
@@ -2078,6 +2138,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  pointers, the pointed-to memory is not touched in any way.
        *  Managing the pointer is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       clear() _GLIBCXX_NOEXCEPT
       {
@@ -2097,6 +2158,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *
        *  Requires this != @a __x.
        */
+      _GLIBCXX26_CONSTEXPR
       void
 #if __cplusplus >= 201103L
       splice(const_iterator __position, list&& __x) noexcept
@@ -2117,6 +2179,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
       }
 
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       void
       splice(const_iterator __position, list& __x) noexcept
       { splice(__position, std::move(__x)); }
@@ -2134,6 +2197,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  @{
        */
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       void
       splice(const_iterator __position, list&& __x, const_iterator __i) noexcept
 #else
@@ -2157,6 +2221,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
       }
 
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       void
       splice(const_iterator __position, list& __x, const_iterator __i) noexcept
       { splice(__position, std::move(__x), __i); }
@@ -2176,6 +2241,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  Undefined if @a __position is in [__first,__last).
        */
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       void
       splice(const_iterator __position, list&& __x, const_iterator __first,
 	     const_iterator __last) noexcept
@@ -2216,6 +2282,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *
        *  Undefined if @a __position is in [__first,__last).
        */
+      _GLIBCXX26_CONSTEXPR
       void
       splice(const_iterator __position, list& __x, const_iterator __first,
 	     const_iterator __last) noexcept
@@ -2245,6 +2312,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  responsibility.
        */
       _GLIBCXX_LIST_REMOVE_RETURN_TYPE_TAG
+      _GLIBCXX26_CONSTEXPR
       __remove_return_type
       remove(const _Tp& __value);
 
@@ -2260,6 +2328,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  responsibility.
        */
       template<typename _Predicate>
+	_GLIBCXX26_CONSTEXPR
 	__remove_return_type
 	remove_if(_Predicate);
 
@@ -2274,6 +2343,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  the pointer is the user's responsibility.
        */
       _GLIBCXX_LIST_REMOVE_RETURN_TYPE_TAG
+      _GLIBCXX26_CONSTEXPR
       __remove_return_type
       unique();
 
@@ -2305,9 +2375,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  this list precede elements in @a __x that are equal.
        */
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       void
       merge(list&& __x);
 
+      _GLIBCXX26_CONSTEXPR
       void
       merge(list& __x)
       { merge(std::move(__x)); }
@@ -2331,10 +2403,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        */
 #if __cplusplus >= 201103L
       template<typename _StrictWeakOrdering>
+	_GLIBCXX26_CONSTEXPR
 	void
 	merge(list&& __x, _StrictWeakOrdering __comp);
 
       template<typename _StrictWeakOrdering>
+	_GLIBCXX26_CONSTEXPR
 	void
 	merge(list& __x, _StrictWeakOrdering __comp)
 	{ merge(std::move(__x), __comp); }
@@ -2350,6 +2424,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  Reverse the order of elements in the list in linear time.
        */
       void
+      _GLIBCXX26_CONSTEXPR
       reverse() _GLIBCXX_NOEXCEPT
       { this->_M_impl._M_node._M_reverse(); }
 
@@ -2359,6 +2434,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  Sorts the elements of this list in NlogN time.  Equivalent
        *  elements remain in list order.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       sort();
 
@@ -2616,6 +2692,7 @@ _GLIBCXX_END_NAMESPACE_CXX11
   */
   template<typename _Tp, typename _Alloc>
     _GLIBCXX_NODISCARD
+    _GLIBCXX26_CONSTEXPR
     inline bool
     operator==(const list<_Tp, _Alloc>& __x, const list<_Tp, _Alloc>& __y)
     {
@@ -2652,6 +2729,7 @@ _GLIBCXX_END_NAMESPACE_CXX11
   */
   template<typename _Tp, typename _Alloc>
     [[nodiscard]]
+    _GLIBCXX26_CONSTEXPR
     inline __detail::__synth3way_t<_Tp>
     operator<=>(const list<_Tp, _Alloc>& __x, const list<_Tp, _Alloc>& __y)
     {
