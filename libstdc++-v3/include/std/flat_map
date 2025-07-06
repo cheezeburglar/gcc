@@ -36,8 +36,6 @@
 #define __glibcxx_want_flat_map
 #include <bits/version.h>
 
-#define __cpp_lib_flat_map //TODO: remove
-
 #ifdef __cpp_lib_flat_map // >= C++23
 
 #include <compare>
