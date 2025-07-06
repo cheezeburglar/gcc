@@ -86,12 +86,14 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     protected:
       constexpr _Node_handle_common() noexcept : _M_ptr() { }
 
+      _GLIBCXX26_CONSTEXPR
       ~_Node_handle_common()
       {
 	if (!empty())
 	  _M_reset();
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Node_handle_common(_Node_handle_common&& __nh) noexcept
       : _M_ptr(__nh._M_ptr)
       {
@@ -99,6 +101,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	  _M_move(std::move(__nh));
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Node_handle_common&
       operator=(_Node_handle_common&& __nh) noexcept
       {
@@ -256,15 +259,17 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     {
     public:
       constexpr _Node_handle() noexcept = default;
-      ~_Node_handle() = default;
-      _Node_handle(_Node_handle&&) noexcept = default;
+      _GLIBCXX26_CONSTEXPR ~_Node_handle() = default;
+      _GLIBCXX26_CONSTEXPR _Node_handle(_Node_handle&&) noexcept = default;
 
+      _GLIBCXX26_CONSTEXPR
       _Node_handle&
       operator=(_Node_handle&&) noexcept = default;
 
       using key_type = _Key;
       using mapped_type = typename _Value::second_type;
 
+      _GLIBCXX26_CONSTEXPR
       key_type&
       key() const noexcept
       {
@@ -272,6 +277,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	return *_M_pkey;
       }
 
+      _GLIBCXX26_CONSTEXPR
       mapped_type&
       mapped() const noexcept
       {
@@ -279,6 +285,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	return *_M_pmapped;
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       swap(_Node_handle& __nh) noexcept
       {
@@ -288,6 +295,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	swap(_M_pmapped, __nh._M_pmapped);
       }
 
+      _GLIBCXX26_CONSTEXPR
       friend void
       swap(_Node_handle& __x, _Node_handle& __y)
       noexcept(noexcept(__x.swap(__y)))
@@ -362,10 +370,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	return *this->_M_ptr->_M_valptr();
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       swap(_Node_handle& __nh) noexcept
       { this->_M_swap(__nh); }
 
+      _GLIBCXX26_CONSTEXPR
       friend void
       swap(_Node_handle& __x, _Node_handle& __y)
       noexcept(noexcept(__x.swap(__y)))
