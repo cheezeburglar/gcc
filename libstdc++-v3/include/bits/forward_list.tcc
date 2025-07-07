@@ -130,6 +130,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     forward_list<_Tp, _Alloc>&
     forward_list<_Tp, _Alloc>::
     operator=(const forward_list& __list)
@@ -172,6 +173,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     forward_list<_Tp, _Alloc>::
     resize(size_type __sz)
@@ -191,6 +193,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     forward_list<_Tp, _Alloc>::
     resize(size_type __sz, const value_type& __val)
@@ -229,6 +232,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     forward_list<_Tp, _Alloc>::
     splice_after(const_iterator __pos, forward_list&&,
@@ -280,6 +284,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     auto
     forward_list<_Tp, _Alloc>::
     remove(const _Tp& __val) -> __remove_return_type
@@ -303,6 +308,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template<typename _Pred>
+      _GLIBCXX26_CONSTEXPR
       auto
       forward_list<_Tp, _Alloc>::
       remove_if(_Pred __pred) -> __remove_return_type
@@ -326,6 +332,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template<typename _BinPred>
+      _GLIBCXX26_CONSTEXPR
       auto
       forward_list<_Tp, _Alloc>::
       unique(_BinPred __binary_pred) -> __remove_return_type
@@ -358,6 +365,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template<typename _Comp>
+      _GLIBCXX26_CONSTEXPR
       void
       forward_list<_Tp, _Alloc>::
       merge(forward_list&& __list, _Comp __comp)
@@ -408,6 +416,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, class _Alloc>
     template<typename _Comp>
+      _GLIBCXX26_CONSTEXPR
       void
       forward_list<_Tp, _Alloc>::
       sort(_Comp __comp)
