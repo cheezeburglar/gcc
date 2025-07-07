@@ -148,6 +148,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       //construct/destroy/copy
 
       /// Default constructor.
+      _GLIBCXX26_CONSTEXPR
       unordered_map() = default;
 
       /**
@@ -157,6 +158,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param __eql  A key equality functor.
        *  @param __a  An allocator object.
        */
+      _GLIBCXX26_CONSTEXPR
       explicit
       unordered_map(size_type __n,
 		    const hasher& __hf = hasher(),
@@ -179,6 +181,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  distance(__first,__last)).
        */
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	unordered_map(_InputIterator __first, _InputIterator __last,
 		      size_type __n = 0,
 		      const hasher& __hf = hasher(),
@@ -188,15 +191,18 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	{ }
 
       /// Copy constructor.
+      _GLIBCXX26_CONSTEXPR
       unordered_map(const unordered_map&) = default;
 
       /// Move constructor.
+      _GLIBCXX26_CONSTEXPR
       unordered_map(unordered_map&&) = default;
 
       /**
        *  @brief Creates an %unordered_map with no elements.
        *  @param __a An allocator object.
        */
+      _GLIBCXX26_CONSTEXPR
       explicit
       unordered_map(const allocator_type& __a)
 	: _M_h(__a)
@@ -207,6 +213,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        * @param  __uset  Input %unordered_map to copy.
        * @param  __a  An allocator object.
        */
+      _GLIBCXX26_CONSTEXPR
       unordered_map(const unordered_map& __umap,
 		    const allocator_type& __a)
       : _M_h(__umap._M_h, __a)
@@ -217,6 +224,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __uset Input %unordered_map to move.
        *  @param  __a    An allocator object.
        */
+      _GLIBCXX26_CONSTEXPR
       unordered_map(unordered_map&& __umap,
 		    const allocator_type& __a)
 	noexcept( noexcept(_Hashtable(std::move(__umap._M_h), __a)) )
@@ -234,6 +242,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Create an %unordered_map consisting of copies of the elements in the
        *  list. This is linear in N (where N is @a __l.size()).
        */
+      _GLIBCXX26_CONSTEXPR
       unordered_map(initializer_list<value_type> __l,
 		    size_type __n = 0,
 		    const hasher& __hf = hasher(),
@@ -242,10 +251,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       : _M_h(__l, __n, __hf, __eql, __a)
       { }
 
+      _GLIBCXX26_CONSTEXPR
       unordered_map(size_type __n, const allocator_type& __a)
       : unordered_map(__n, hasher(), key_equal(), __a)
       { }
 
+      _GLIBCXX26_CONSTEXPR
       unordered_map(size_type __n, const hasher& __hf,
 		    const allocator_type& __a)
       : unordered_map(__n, __hf, key_equal(), __a)
@@ -260,6 +271,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	{ }
 
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	unordered_map(_InputIterator __first, _InputIterator __last,
 		      size_type __n,
 		      const allocator_type& __a)
@@ -267,12 +279,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	{ }
 
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	unordered_map(_InputIterator __first, _InputIterator __last,
 		      size_type __n, const hasher& __hf,
 		      const allocator_type& __a)
 	  : unordered_map(__first, __last, __n, __hf, key_equal(), __a)
 	{ }
 
+      _GLIBCXX26_CONSTEXPR
       unordered_map(initializer_list<value_type> __l,
 		    size_type __n,
 		    const allocator_type& __a)
@@ -286,6 +300,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       : unordered_map(__l, 0, hasher(), key_equal(), __a)
       { }
 
+      _GLIBCXX26_CONSTEXPR
       unordered_map(initializer_list<value_type> __l,
 		    size_type __n, const hasher& __hf,
 		    const allocator_type& __a)
@@ -307,6 +322,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  range. This is linear in N (where N is `std::ranges::size(__rg)`).
        */
        template<__detail::__container_compatible_range<value_type> _Rg>
+	 _GLIBCXX26_CONSTEXPR
 	 unordered_map(from_range_t, _Rg&& __rg,
 		       size_type __n = 0,
 		       const hasher& __hf = hasher(),
@@ -323,23 +339,31 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	  { insert_range(std::forward<_Rg>(__rg)); }
 
        template<__detail::__container_compatible_range<value_type> _Rg>
+	 _GLIBCXX26_CONSTEXPR
 	 unordered_map(from_range_t, _Rg&& __rg, size_type __n,
 		       const allocator_type& __a)
 	  : _M_h(__n, hasher(), key_equal(), __a)
 	  { insert_range(std::forward<_Rg>(__rg)); }
 
        template<__detail::__container_compatible_range<value_type> _Rg>
+	 _GLIBCXX26_CONSTEXPR
 	 unordered_map(from_range_t, _Rg&& __rg, size_type __n,
 		       const hasher& __hf, const allocator_type& __a)
 	  : _M_h(__n, __hf, key_equal(), __a)
 	  { insert_range(std::forward<_Rg>(__rg)); }
 #endif
 
+      /// Default destructor.
+      _GLIBCXX26_CONSTEXPR
+      ~unordered_map() = default;
+
       /// Copy assignment operator.
+      _GLIBCXX26_CONSTEXPR
       unordered_map&
       operator=(const unordered_map&) = default;
 
       /// Move assignment operator.
+      _GLIBCXX26_CONSTEXPR
       unordered_map&
       operator=(unordered_map&&) = default;
 
@@ -354,6 +378,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  that the resulting %unordered_map's size is the same as the number
        *  of elements assigned.
        */
+      _GLIBCXX26_CONSTEXPR
       unordered_map&
       operator=(initializer_list<value_type> __l)
       {
@@ -362,6 +387,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 
       ///  Returns the allocator object used by the %unordered_map.
+      _GLIBCXX26_CONSTEXPR
       allocator_type
       get_allocator() const noexcept
       { return _M_h.get_allocator(); }
@@ -369,16 +395,20 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       // size and capacity:
 
       ///  Returns true if the %unordered_map is empty.
-      _GLIBCXX_NODISCARD bool
+      _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
+      bool
       empty() const noexcept
       { return _M_h.empty(); }
 
       ///  Returns the size of the %unordered_map.
+      _GLIBCXX26_CONSTEXPR
       size_type
       size() const noexcept
       { return _M_h.size(); }
 
       ///  Returns the maximum size of the %unordered_map.
+      _GLIBCXX26_CONSTEXPR
       size_type
       max_size() const noexcept
       { return _M_h.max_size(); }
@@ -389,6 +419,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Returns a read/write iterator that points to the first element in the
        *  %unordered_map.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       begin() noexcept
       { return _M_h.begin(); }
@@ -398,10 +429,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Returns a read-only (constant) iterator that points to the first
        *  element in the %unordered_map.
        */
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       begin() const noexcept
       { return _M_h.begin(); }
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cbegin() const noexcept
       { return _M_h.begin(); }
@@ -411,6 +444,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Returns a read/write iterator that points one past the last element in
        *  the %unordered_map.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       end() noexcept
       { return _M_h.end(); }
@@ -420,10 +454,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Returns a read-only (constant) iterator that points one past the last
        *  element in the %unordered_map.
        */
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       end() const noexcept
       { return _M_h.end(); }
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cend() const noexcept
       { return _M_h.end(); }
@@ -452,6 +488,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Insertion requires amortized constant time.
        */
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	std::pair<iterator, bool>
 	emplace(_Args&&... __args)
 	{ return _M_h.emplace(std::forward<_Args>(__args)...); }
@@ -483,12 +520,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Insertion requires amortized constant time.
        */
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	emplace_hint(const_iterator __pos, _Args&&... __args)
 	{ return _M_h.emplace_hint(__pos, std::forward<_Args>(__args)...); }
 
 #ifdef __glibcxx_node_extract // >= C++17 && HOSTED
       /// Extract a node.
+      _GLIBCXX26_CONSTEXPR
       node_type
       extract(const_iterator __pos)
       {
@@ -497,16 +536,19 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 
       /// Extract a node.
+      _GLIBCXX26_CONSTEXPR
       node_type
       extract(const key_type& __key)
       { return _M_h.extract(__key); }
 
       /// Re-insert an extracted node.
+      _GLIBCXX26_CONSTEXPR
       insert_return_type
       insert(node_type&& __nh)
       { return _M_h._M_reinsert_node(std::move(__nh)); }
 
       /// Re-insert an extracted node.
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const_iterator, node_type&& __nh)
       { return _M_h._M_reinsert_node(std::move(__nh)).position; }
@@ -536,6 +578,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Insertion requires amortized constant time.
        */
       template <typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	pair<iterator, bool>
 	try_emplace(const key_type& __k, _Args&&... __args)
 	{
@@ -544,6 +587,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
       // move-capable overload
       template <typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	pair<iterator, bool>
 	try_emplace(key_type&& __k, _Args&&... __args)
 	{
@@ -580,6 +624,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Insertion requires amortized constant time.
        */
       template <typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	try_emplace(const_iterator __hint, const key_type& __k,
 		    _Args&&... __args)
@@ -590,6 +635,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
       // move-capable overload
       template <typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	try_emplace(const_iterator __hint, key_type&& __k, _Args&&... __args)
 	{
@@ -616,17 +662,20 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *
        *  Insertion requires amortized constant time.
        */
+      _GLIBCXX26_CONSTEXPR
       std::pair<iterator, bool>
       insert(const value_type& __x)
       { return _M_h.insert(__x); }
 
       // _GLIBCXX_RESOLVE_LIB_DEFECTS
       // 2354. Unnecessary copying when inserting into maps with braced-init
+      _GLIBCXX26_CONSTEXPR
       std::pair<iterator, bool>
       insert(value_type&& __x)
       { return _M_h.insert(std::move(__x)); }
 
       template<typename _Pair>
+	_GLIBCXX26_CONSTEXPR
 	__enable_if_t<is_constructible<value_type, _Pair&&>::value,
 		      pair<iterator, bool>>
 	insert(_Pair&& __x)
@@ -655,17 +704,20 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *
        *  Insertion requires amortized constant time.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const_iterator __hint, const value_type& __x)
       { return _M_h.insert(__hint, __x); }
 
       // _GLIBCXX_RESOLVE_LIB_DEFECTS
       // 2354. Unnecessary copying when inserting into maps with braced-init
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const_iterator __hint, value_type&& __x)
       { return _M_h.insert(__hint, std::move(__x)); }
 
       template<typename _Pair>
+	_GLIBCXX26_CONSTEXPR
 	__enable_if_t<is_constructible<value_type, _Pair&&>::value, iterator>
 	insert(const_iterator __hint, _Pair&& __x)
 	{ return _M_h.emplace_hint(__hint, std::forward<_Pair>(__x)); }
@@ -681,6 +733,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Complexity similar to that of the range constructor.
        */
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	void
 	insert(_InputIterator __first, _InputIterator __last)
 	{ _M_h.insert(__first, __last); }
@@ -692,6 +745,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *
        *  Complexity similar to that of the range constructor.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       insert(initializer_list<value_type> __l)
       { _M_h.insert(__l); }
@@ -704,6 +758,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *               the map's value type.
        */
       template<__detail::__container_compatible_range<value_type> _Rg>
+	_GLIBCXX26_CONSTEXPR
 	void
 	insert_range(_Rg&& __rg)
 	{
@@ -736,6 +791,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Insertion requires amortized constant time.
        */
       template <typename _Obj>
+	_GLIBCXX26_CONSTEXPR
 	pair<iterator, bool>
 	insert_or_assign(const key_type& __k, _Obj&& __obj)
 	{
@@ -748,6 +804,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
       // move-capable overload
       template <typename _Obj>
+	_GLIBCXX26_CONSTEXPR
 	pair<iterator, bool>
 	insert_or_assign(key_type&& __k, _Obj&& __obj)
 	{
@@ -785,6 +842,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Insertion requires amortized constant time.
        */
       template <typename _Obj>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	insert_or_assign(const_iterator __hint, const key_type& __k,
 			 _Obj&& __obj)
@@ -797,6 +855,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
       // move-capable overload
       template <typename _Obj>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	insert_or_assign(const_iterator __hint, key_type&& __k, _Obj&& __obj)
 	{
@@ -822,11 +881,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  element is itself a pointer, the pointed-to memory is not touched in
        *  any way.  Managing the pointer is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase(const_iterator __position)
       { return _M_h.erase(__position); }
 
       // LWG 2059.
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase(iterator __position)
       { return _M_h.erase(__position); }
@@ -844,6 +905,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  element is itself a pointer, the pointed-to memory is not touched in
        *  any way.  Managing the pointer is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       size_type
       erase(const key_type& __x)
       { return _M_h.erase(__x); }
@@ -862,6 +924,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  the element is itself a pointer, the pointed-to memory is not touched
        *  in any way.  Managing the pointer is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase(const_iterator __first, const_iterator __last)
       { return _M_h.erase(__first, __last); }
@@ -872,6 +935,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  elements themselves are pointers, the pointed-to memory is not touched
        *  in any way.  Managing the pointer is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       clear() noexcept
       { _M_h.clear(); }
@@ -886,6 +950,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Note that the global std::swap() function is specialized such that
        *  std::swap(m1,m2) will feed to this function.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       swap(unordered_map& __x)
       noexcept( noexcept(_M_h.swap(__x._M_h)) )
@@ -896,6 +961,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	friend class std::_Hash_merge_helper;
 
       template<typename _H2, typename _P2>
+	_GLIBCXX26_CONSTEXPR
 	void
 	merge(unordered_map<_Key, _Tp, _H2, _P2, _Alloc>& __source)
 	{
@@ -908,6 +974,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	}
 
       template<typename _H2, typename _P2>
+	_GLIBCXX26_CONSTEXPR
 	void
 	merge(unordered_map<_Key, _Tp, _H2, _P2, _Alloc>&& __source)
 	{
@@ -916,6 +983,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	}
 
       template<typename _H2, typename _P2>
+	_GLIBCXX26_CONSTEXPR
 	void
 	merge(unordered_multimap<_Key, _Tp, _H2, _P2, _Alloc>& __source)
 	{
@@ -924,6 +992,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	}
 
       template<typename _H2, typename _P2>
+	_GLIBCXX26_CONSTEXPR
 	void
 	merge(unordered_multimap<_Key, _Tp, _H2, _P2, _Alloc>&& __source)
 	{ merge(__source); }
@@ -933,12 +1002,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
       ///  Returns the hash functor object with which the %unordered_map was
       ///  constructed.
+      _GLIBCXX26_CONSTEXPR
       hasher
       hash_function() const
       { return _M_h.hash_function(); }
 
       ///  Returns the key comparison object with which the %unordered_map was
       ///  constructed.
+      _GLIBCXX26_CONSTEXPR
       key_equal
       key_eq() const
       { return _M_h.key_eq(); }
@@ -957,23 +1028,27 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  pointing to the sought after element.  If unsuccessful it returns the
        *  past-the-end ( @c end() ) iterator.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       find(const key_type& __x)
       { return _M_h.find(__x); }
 
 #if __cplusplus > 201703L
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	auto
 	find(const _Kt& __x) -> decltype(_M_h._M_find_tr(__x))
 	{ return _M_h._M_find_tr(__x); }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       find(const key_type& __x) const
       { return _M_h.find(__x); }
 
 #if __cplusplus > 201703L
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	auto
 	find(const _Kt& __x) const -> decltype(_M_h._M_find_tr(__x))
 	{ return _M_h._M_find_tr(__x); }
@@ -990,12 +1065,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  %unordered_map the result will either be 0 (not present) or 1
        *  (present).
        */
+      _GLIBCXX26_CONSTEXPR
       size_type
       count(const key_type& __x) const
       { return _M_h.count(__x); }
 
 #if __cplusplus > 201703L
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	auto
 	count(const _Kt& __x) const -> decltype(_M_h._M_count_tr(__x))
 	{ return _M_h._M_count_tr(__x); }
@@ -1009,11 +1086,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __x  Key of elements to be located.
        *  @return  True if there is any element with the specified key.
        */
+      _GLIBCXX26_CONSTEXPR
       bool
       contains(const key_type& __x) const
       { return _M_h.find(__x) != _M_h.end(); }
 
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	auto
 	contains(const _Kt& __x) const
 	-> decltype(_M_h._M_find_tr(__x), void(), true)
@@ -1030,24 +1109,28 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *
        *  This function probably only makes sense for %unordered_multimap.
        */
+      _GLIBCXX26_CONSTEXPR
       std::pair<iterator, iterator>
       equal_range(const key_type& __x)
       { return _M_h.equal_range(__x); }
 
 #if __cplusplus > 201703L
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	auto
 	equal_range(const _Kt& __x)
 	-> decltype(_M_h._M_equal_range_tr(__x))
 	{ return _M_h._M_equal_range_tr(__x); }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       std::pair<const_iterator, const_iterator>
       equal_range(const key_type& __x) const
       { return _M_h.equal_range(__x); }
 
 #if __cplusplus > 201703L
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	auto
 	equal_range(const _Kt& __x) const
 	-> decltype(_M_h._M_equal_range_tr(__x))
@@ -1068,10 +1151,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *
        *  Lookup requires constant time.
        */
+      _GLIBCXX26_CONSTEXPR
       mapped_type&
       operator[](const key_type& __k)
       { return _M_h[__k]; }
 
+      _GLIBCXX26_CONSTEXPR
       mapped_type&
       operator[](key_type&& __k)
       { return _M_h[std::move(__k)]; }
@@ -1085,10 +1170,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *           such a data is present in the %unordered_map.
        *  @throw  std::out_of_range  If no such data is present.
        */
+      _GLIBCXX26_CONSTEXPR
       mapped_type&
       at(const key_type& __k)
       { return _M_h.at(__k); }
 
+      _GLIBCXX26_CONSTEXPR
       const mapped_type&
       at(const key_type& __k) const
       { return _M_h.at(__k); }
@@ -1097,11 +1184,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       // bucket interface.
 
       /// Returns the number of buckets of the %unordered_map.
+      _GLIBCXX26_CONSTEXPR
       size_type
       bucket_count() const noexcept
       { return _M_h.bucket_count(); }
 
       /// Returns the maximum number of buckets of the %unordered_map.
+      _GLIBCXX26_CONSTEXPR
       size_type
       max_bucket_count() const noexcept
       { return _M_h.max_bucket_count(); }
@@ -1111,6 +1200,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        * @param  __n  A bucket index.
        * @return  The number of elements in the bucket.
        */
+      _GLIBCXX26_CONSTEXPR
       size_type
       bucket_size(size_type __n) const
       { return _M_h.bucket_size(__n); }
@@ -1120,6 +1210,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        * @param  __key  A key instance.
        * @return  The key bucket index.
        */
+      _GLIBCXX26_CONSTEXPR
       size_type
       bucket(const key_type& __key) const
       { return _M_h.bucket(__key); }
@@ -1130,6 +1221,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __n The bucket index.
        *  @return  A read/write local iterator.
        */
+      _GLIBCXX26_CONSTEXPR
       local_iterator
       begin(size_type __n)
       { return _M_h.begin(__n); }
@@ -1141,10 +1233,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __n The bucket index.
        *  @return  A read-only local iterator.
        */
+      _GLIBCXX26_CONSTEXPR
       const_local_iterator
       begin(size_type __n) const
       { return _M_h.begin(__n); }
 
+      _GLIBCXX26_CONSTEXPR
       const_local_iterator
       cbegin(size_type __n) const
       { return _M_h.cbegin(__n); }
@@ -1156,6 +1250,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __n The bucket index.
        *  @return  A read/write local iterator.
        */
+      _GLIBCXX26_CONSTEXPR
       local_iterator
       end(size_type __n)
       { return _M_h.end(__n); }
@@ -1167,10 +1262,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __n The bucket index.
        *  @return  A read-only local iterator.
        */
+      _GLIBCXX26_CONSTEXPR
       const_local_iterator
       end(size_type __n) const
       { return _M_h.end(__n); }
 
+      _GLIBCXX26_CONSTEXPR
       const_local_iterator
       cend(size_type __n) const
       { return _M_h.cend(__n); }
@@ -1179,12 +1276,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       // hash policy.
 
       /// Returns the average number of elements per bucket.
+      _GLIBCXX26_CONSTEXPR
       float
       load_factor() const noexcept
       { return _M_h.load_factor(); }
 
       /// Returns a positive number that the %unordered_map tries to keep the
       /// load factor less than or equal to.
+      _GLIBCXX26_CONSTEXPR
       float
       max_load_factor() const noexcept
       { return _M_h.max_load_factor(); }
@@ -1193,6 +1292,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @brief  Change the %unordered_map maximum load factor.
        *  @param  __z The new maximum load factor.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       max_load_factor(float __z)
       { _M_h.max_load_factor(__z); }
@@ -1204,6 +1304,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Rehash will occur only if the new number of buckets respect the
        *  %unordered_map maximum load factor.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       rehash(size_type __n)
       { _M_h.rehash(__n); }
@@ -1215,12 +1316,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *
        *  Same as rehash(ceil(n / max_load_factor())).
        */
+      _GLIBCXX26_CONSTEXPR
       void
       reserve(size_type __n)
       { _M_h.reserve(__n); }
 
       template<typename _Key1, typename _Tp1, typename _Hash1, typename _Pred1,
 	       typename _Alloc1>
+	_GLIBCXX26_CONSTEXPR
         friend bool
 	operator==(const unordered_map<_Key1, _Tp1, _Hash1, _Pred1, _Alloc1>&,
 		   const unordered_map<_Key1, _Tp1, _Hash1, _Pred1, _Alloc1>&);
@@ -1416,6 +1519,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       //construct/destroy/copy
 
       /// Default constructor.
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap() = default;
 
       /**
@@ -1425,6 +1529,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param __eql  A key equality functor.
        *  @param __a  An allocator object.
        */
+      _GLIBCXX26_CONSTEXPR
       explicit
       unordered_multimap(size_type __n,
 			 const hasher& __hf = hasher(),
@@ -1447,6 +1552,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  distance(__first,__last)).
        */
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	unordered_multimap(_InputIterator __first, _InputIterator __last,
 			   size_type __n = 0,
 			   const hasher& __hf = hasher(),
@@ -1456,15 +1562,18 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	{ }
 
       /// Copy constructor.
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap(const unordered_multimap&) = default;
 
       /// Move constructor.
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap(unordered_multimap&&) = default;
 
       /**
        *  @brief Creates an %unordered_multimap with no elements.
        *  @param __a An allocator object.
        */
+      _GLIBCXX26_CONSTEXPR
       explicit
       unordered_multimap(const allocator_type& __a)
       : _M_h(__a)
@@ -1475,6 +1584,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        * @param  __uset  Input %unordered_multimap to copy.
        * @param  __a  An allocator object.
        */
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap(const unordered_multimap& __ummap,
 			 const allocator_type& __a)
       : _M_h(__ummap._M_h, __a)
@@ -1485,6 +1595,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __uset Input %unordered_multimap to move.
        *  @param  __a    An allocator object.
        */
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap(unordered_multimap&& __ummap,
 			 const allocator_type& __a)
 	noexcept( noexcept(_Hashtable(std::move(__ummap._M_h), __a)) )
@@ -1502,6 +1613,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Create an %unordered_multimap consisting of copies of the elements in
        *  the list. This is linear in N (where N is @a __l.size()).
        */
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap(initializer_list<value_type> __l,
 			 size_type __n = 0,
 			 const hasher& __hf = hasher(),
@@ -1510,10 +1622,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       : _M_h(__l, __n, __hf, __eql, __a)
       { }
 
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap(size_type __n, const allocator_type& __a)
       : unordered_multimap(__n, hasher(), key_equal(), __a)
       { }
 
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap(size_type __n, const hasher& __hf,
 			 const allocator_type& __a)
       : unordered_multimap(__n, __hf, key_equal(), __a)
@@ -1528,6 +1642,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	{ }
 
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	unordered_multimap(_InputIterator __first, _InputIterator __last,
 			   size_type __n,
 			   const allocator_type& __a)
@@ -1535,6 +1650,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	{ }
 
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	unordered_multimap(_InputIterator __first, _InputIterator __last,
 			   size_type __n, const hasher& __hf,
 			   const allocator_type& __a)
@@ -1548,12 +1664,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       : unordered_multimap(__l, 0, hasher(), key_equal(), __a)
       { }
 
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap(initializer_list<value_type> __l,
 			 size_type __n,
 			 const allocator_type& __a)
       : unordered_multimap(__l, __n, hasher(), key_equal(), __a)
       { }
 
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap(initializer_list<value_type> __l,
 			 size_type __n, const hasher& __hf,
 			 const allocator_type& __a)
@@ -1591,12 +1709,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	  { insert_range(std::forward<_Rg>(__rg)); }
 
        template<__detail::__container_compatible_range<value_type> _Rg>
+	 _GLIBCXX26_CONSTEXPR
 	 unordered_multimap(from_range_t, _Rg&& __rg, size_type __n,
 			    const allocator_type& __a)
 	  : _M_h(__n, hasher(), key_equal(), __a)
 	  { insert_range(std::forward<_Rg>(__rg)); }
 
        template<__detail::__container_compatible_range<value_type> _Rg>
+	 _GLIBCXX26_CONSTEXPR
 	 unordered_multimap(from_range_t, _Rg&& __rg, size_type __n,
 			    const hasher& __hf, const allocator_type& __a)
 	  : _M_h(__n, __hf, key_equal(), __a)
@@ -1604,10 +1724,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif
 
       /// Copy assignment operator.
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap&
       operator=(const unordered_multimap&) = default;
 
       /// Move assignment operator.
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap&
       operator=(unordered_multimap&&) = default;
 
@@ -1622,6 +1744,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  and that the resulting %unordered_multimap's size is the same as the
        *  number of elements assigned.
        */
+      _GLIBCXX26_CONSTEXPR
       unordered_multimap&
       operator=(initializer_list<value_type> __l)
       {
@@ -1630,6 +1753,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 
       ///  Returns the allocator object used by the %unordered_multimap.
+      _GLIBCXX26_CONSTEXPR
       allocator_type
       get_allocator() const noexcept
       { return _M_h.get_allocator(); }
@@ -1637,16 +1761,20 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       // size and capacity:
 
       ///  Returns true if the %unordered_multimap is empty.
-      _GLIBCXX_NODISCARD bool
+      _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
+      bool
       empty() const noexcept
       { return _M_h.empty(); }
 
       ///  Returns the size of the %unordered_multimap.
+      _GLIBCXX26_CONSTEXPR
       size_type
       size() const noexcept
       { return _M_h.size(); }
 
       ///  Returns the maximum size of the %unordered_multimap.
+      _GLIBCXX26_CONSTEXPR
       size_type
       max_size() const noexcept
       { return _M_h.max_size(); }
@@ -1657,6 +1785,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Returns a read/write iterator that points to the first element in the
        *  %unordered_multimap.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       begin() noexcept
       { return _M_h.begin(); }
@@ -1666,10 +1795,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Returns a read-only (constant) iterator that points to the first
        *  element in the %unordered_multimap.
        */
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       begin() const noexcept
       { return _M_h.begin(); }
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cbegin() const noexcept
       { return _M_h.begin(); }
@@ -1679,6 +1810,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Returns a read/write iterator that points one past the last element in
        *  the %unordered_multimap.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       end() noexcept
       { return _M_h.end(); }
@@ -1688,10 +1820,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Returns a read-only (constant) iterator that points one past the last
        *  element in the %unordered_multimap.
        */
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       end() const noexcept
       { return _M_h.end(); }
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cend() const noexcept
       { return _M_h.end(); }
@@ -1715,6 +1849,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Insertion requires amortized constant time.
        */
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	emplace(_Args&&... __args)
 	{ return _M_h.emplace(std::forward<_Args>(__args)...); }
@@ -1742,6 +1877,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Insertion requires amortized constant time.
        */
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	emplace_hint(const_iterator __pos, _Args&&... __args)
 	{ return _M_h.emplace_hint(__pos, std::forward<_Args>(__args)...); }
@@ -1756,15 +1892,18 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *
        *  Insertion requires amortized constant time.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const value_type& __x)
       { return _M_h.insert(__x); }
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(value_type&& __x)
       { return _M_h.insert(std::move(__x)); }
 
       template<typename _Pair>
+	_GLIBCXX26_CONSTEXPR
 	__enable_if_t<is_constructible<value_type, _Pair&&>::value, iterator>
 	insert(_Pair&& __x)
         { return _M_h.emplace(std::forward<_Pair>(__x)); }
@@ -1790,17 +1929,20 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *
        *  Insertion requires amortized constant time.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const_iterator __hint, const value_type& __x)
       { return _M_h.insert(__hint, __x); }
 
       // _GLIBCXX_RESOLVE_LIB_DEFECTS
       // 2354. Unnecessary copying when inserting into maps with braced-init
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const_iterator __hint, value_type&& __x)
       { return _M_h.insert(__hint, std::move(__x)); }
 
       template<typename _Pair>
+	_GLIBCXX26_CONSTEXPR
 	__enable_if_t<is_constructible<value_type, _Pair&&>::value, iterator>
 	insert(const_iterator __hint, _Pair&& __x)
         { return _M_h.emplace_hint(__hint, std::forward<_Pair>(__x)); }
@@ -1816,6 +1958,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Complexity similar to that of the range constructor.
        */
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	void
 	insert(_InputIterator __first, _InputIterator __last)
 	{ _M_h.insert(__first, __last); }
@@ -1828,6 +1971,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *
        *  Complexity similar to that of the range constructor.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       insert(initializer_list<value_type> __l)
       { _M_h.insert(__l); }
@@ -1840,6 +1984,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *               the maps's value type.
        */
       template<__detail::__container_compatible_range<value_type> _Rg>
+	_GLIBCXX26_CONSTEXPR
 	void
 	insert_range(_Rg&& __rg)
 	{
@@ -1860,6 +2005,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
 #ifdef __glibcxx_node_extract // >= C++17 && HOSTED
       /// Extract a node.
+      _GLIBCXX26_CONSTEXPR
       node_type
       extract(const_iterator __pos)
       {
@@ -1868,16 +2014,19 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 
       /// Extract a node.
+      _GLIBCXX26_CONSTEXPR
       node_type
       extract(const key_type& __key)
       { return _M_h.extract(__key); }
 
       /// Re-insert an extracted node.
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(node_type&& __nh)
       { return _M_h._M_reinsert_node_multi(cend(), std::move(__nh)); }
 
       /// Re-insert an extracted node.
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const_iterator __hint, node_type&& __nh)
       { return _M_h._M_reinsert_node_multi(__hint, std::move(__nh)); }
@@ -1897,11 +2046,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  element is itself a pointer, the pointed-to memory is not touched in
        *  any way.  Managing the pointer is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase(const_iterator __position)
       { return _M_h.erase(__position); }
 
       // LWG 2059.
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase(iterator __position)
       { return _M_h.erase(__position); }
@@ -1918,6 +2069,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  element is itself a pointer, the pointed-to memory is not touched in
        *  any way.  Managing the pointer is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       size_type
       erase(const key_type& __x)
       { return _M_h.erase(__x); }
@@ -1937,6 +2089,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  the element is itself a pointer, the pointed-to memory is not touched
        *  in any way.  Managing the pointer is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase(const_iterator __first, const_iterator __last)
       { return _M_h.erase(__first, __last); }
@@ -1947,6 +2100,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  elements themselves are pointers, the pointed-to memory is not touched
        *  in any way.  Managing the pointer is the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       clear() noexcept
       { _M_h.clear(); }
@@ -1961,6 +2115,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Note that the global std::swap() function is specialized such that
        *  std::swap(m1,m2) will feed to this function.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       swap(unordered_multimap& __x)
       noexcept( noexcept(_M_h.swap(__x._M_h)) )
@@ -1971,6 +2126,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	friend class std::_Hash_merge_helper;
 
       template<typename _H2, typename _P2>
+	_GLIBCXX26_CONSTEXPR
 	void
 	merge(unordered_multimap<_Key, _Tp, _H2, _P2, _Alloc>& __source)
 	{
@@ -1984,6 +2140,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	}
 
       template<typename _H2, typename _P2>
+	_GLIBCXX26_CONSTEXPR
 	void
 	merge(unordered_multimap<_Key, _Tp, _H2, _P2, _Alloc>&& __source)
 	{
@@ -1993,6 +2150,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	}
 
       template<typename _H2, typename _P2>
+	_GLIBCXX26_CONSTEXPR
 	void
 	merge(unordered_map<_Key, _Tp, _H2, _P2, _Alloc>& __source)
 	{
@@ -2002,6 +2160,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	}
 
       template<typename _H2, typename _P2>
+	_GLIBCXX26_CONSTEXPR
 	void
 	merge(unordered_map<_Key, _Tp, _H2, _P2, _Alloc>&& __source)
 	{ merge(__source); }
@@ -2011,12 +2170,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
       ///  Returns the hash functor object with which the %unordered_multimap
       ///  was constructed.
+      _GLIBCXX26_CONSTEXPR
       hasher
       hash_function() const
       { return _M_h.hash_function(); }
 
       ///  Returns the key comparison object with which the %unordered_multimap
       ///  was constructed.
+      _GLIBCXX26_CONSTEXPR
       key_equal
       key_eq() const
       { return _M_h.key_eq(); }
@@ -2035,23 +2196,27 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  pointing to the sought after element.  If unsuccessful it returns the
        *  past-the-end ( @c end() ) iterator.
        */
+      _GLIBCXX26_CONSTEXPR
       iterator
       find(const key_type& __x)
       { return _M_h.find(__x); }
 
 #if __cplusplus > 201703L
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	auto
 	find(const _Kt& __x) -> decltype(_M_h._M_find_tr(__x))
 	{ return _M_h._M_find_tr(__x); }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       find(const key_type& __x) const
       { return _M_h.find(__x); }
 
 #if __cplusplus > 201703L
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	auto
 	find(const _Kt& __x) const -> decltype(_M_h._M_find_tr(__x))
 	{ return _M_h._M_find_tr(__x); }
@@ -2064,12 +2229,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __x  Key to count.
        *  @return  Number of elements with specified key.
        */
+      _GLIBCXX26_CONSTEXPR
       size_type
       count(const key_type& __x) const
       { return _M_h.count(__x); }
 
 #if __cplusplus > 201703L
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	auto
 	count(const _Kt& __x) const -> decltype(_M_h._M_count_tr(__x))
 	{ return _M_h._M_count_tr(__x); }
@@ -2083,11 +2250,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __x  Key of elements to be located.
        *  @return  True if there is any element with the specified key.
        */
+      _GLIBCXX26_CONSTEXPR
       bool
       contains(const key_type& __x) const
       { return _M_h.find(__x) != _M_h.end(); }
 
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	auto
 	contains(const _Kt& __x) const
 	-> decltype(_M_h._M_find_tr(__x), void(), true)
@@ -2102,24 +2271,28 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @return  Pair of iterators that possibly points to the subsequence
        *           matching given key.
        */
+      _GLIBCXX26_CONSTEXPR
       std::pair<iterator, iterator>
       equal_range(const key_type& __x)
       { return _M_h.equal_range(__x); }
 
 #if __cplusplus > 201703L
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	auto
 	equal_range(const _Kt& __x)
 	-> decltype(_M_h._M_equal_range_tr(__x))
 	{ return _M_h._M_equal_range_tr(__x); }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       std::pair<const_iterator, const_iterator>
       equal_range(const key_type& __x) const
       { return _M_h.equal_range(__x); }
 
 #if __cplusplus > 201703L
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	auto
 	equal_range(const _Kt& __x) const
 	-> decltype(_M_h._M_equal_range_tr(__x))
@@ -2130,11 +2303,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       // bucket interface.
 
       /// Returns the number of buckets of the %unordered_multimap.
+      _GLIBCXX26_CONSTEXPR
       size_type
       bucket_count() const noexcept
       { return _M_h.bucket_count(); }
 
       /// Returns the maximum number of buckets of the %unordered_multimap.
+      _GLIBCXX26_CONSTEXPR
       size_type
       max_bucket_count() const noexcept
       { return _M_h.max_bucket_count(); }
@@ -2144,6 +2319,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        * @param  __n  A bucket index.
        * @return  The number of elements in the bucket.
        */
+      _GLIBCXX26_CONSTEXPR
       size_type
       bucket_size(size_type __n) const
       { return _M_h.bucket_size(__n); }
@@ -2153,6 +2329,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        * @param  __key  A key instance.
        * @return  The key bucket index.
        */
+      _GLIBCXX26_CONSTEXPR
       size_type
       bucket(const key_type& __key) const
       { return _M_h.bucket(__key); }
@@ -2163,6 +2340,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __n The bucket index.
        *  @return  A read/write local iterator.
        */
+      _GLIBCXX26_CONSTEXPR
       local_iterator
       begin(size_type __n)
       { return _M_h.begin(__n); }
@@ -2174,10 +2352,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __n The bucket index.
        *  @return  A read-only local iterator.
        */
+      _GLIBCXX26_CONSTEXPR
       const_local_iterator
       begin(size_type __n) const
       { return _M_h.begin(__n); }
 
+      _GLIBCXX26_CONSTEXPR
       const_local_iterator
       cbegin(size_type __n) const
       { return _M_h.cbegin(__n); }
@@ -2189,6 +2369,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __n The bucket index.
        *  @return  A read/write local iterator.
        */
+      _GLIBCXX26_CONSTEXPR
       local_iterator
       end(size_type __n)
       { return _M_h.end(__n); }
@@ -2200,10 +2381,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @param  __n The bucket index.
        *  @return  A read-only local iterator.
        */
+      _GLIBCXX26_CONSTEXPR
       const_local_iterator
       end(size_type __n) const
       { return _M_h.end(__n); }
 
+      _GLIBCXX26_CONSTEXPR
       const_local_iterator
       cend(size_type __n) const
       { return _M_h.cend(__n); }
@@ -2212,12 +2395,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       // hash policy.
 
       /// Returns the average number of elements per bucket.
+      _GLIBCXX26_CONSTEXPR
       float
       load_factor() const noexcept
       { return _M_h.load_factor(); }
 
       /// Returns a positive number that the %unordered_multimap tries to keep
       /// the load factor less than or equal to.
+      _GLIBCXX26_CONSTEXPR
       float
       max_load_factor() const noexcept
       { return _M_h.max_load_factor(); }
@@ -2226,6 +2411,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @brief  Change the %unordered_multimap maximum load factor.
        *  @param  __z The new maximum load factor.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       max_load_factor(float __z)
       { _M_h.max_load_factor(__z); }
@@ -2237,6 +2423,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  Rehash will occur only if the new number of buckets respect the
        *  %unordered_multimap maximum load factor.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       rehash(size_type __n)
       { _M_h.rehash(__n); }
@@ -2248,12 +2435,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *
        *  Same as rehash(ceil(n / max_load_factor())).
        */
+      _GLIBCXX26_CONSTEXPR
       void
       reserve(size_type __n)
       { _M_h.reserve(__n); }
 
       template<typename _Key1, typename _Tp1, typename _Hash1, typename _Pred1,
 	       typename _Alloc1>
+	_GLIBCXX26_CONSTEXPR
         friend bool
 	operator==(const unordered_multimap<_Key1, _Tp1,
 					    _Hash1, _Pred1, _Alloc1>&,
