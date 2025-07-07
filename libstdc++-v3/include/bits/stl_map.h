@@ -786,7 +786,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *
        *  Insertion requires logarithmic time.
        */
-      template <typename... _Args
+      template <typename... _Args>
 	_GLIBCXX26_CONSTEXPR
 	pair<iterator, bool>
 	try_emplace(const key_type& __k, _Args&&... __args)
