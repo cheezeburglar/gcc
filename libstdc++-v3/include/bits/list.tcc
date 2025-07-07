@@ -93,10 +93,10 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename list<_Tp, _Alloc>::iterator
     list<_Tp, _Alloc>::
 #if __cplusplus >= 201103L
-    _GLIBCXX26_CONSTEXPR
     insert(const_iterator __position, const value_type& __x)
 #else
     insert(iterator __position, const value_type& __x)
@@ -145,10 +145,10 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename list<_Tp, _Alloc>::iterator
     list<_Tp, _Alloc>::
 #if __cplusplus >= 201103L
-    _GLIBCXX26_CONSTEXPR
     erase(const_iterator __position) noexcept
 #else
     erase(iterator __position)
@@ -226,6 +226,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     list<_Tp, _Alloc>::
     resize(size_type __new_size)
@@ -292,7 +293,6 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
-    _GLIBCXX26_CONSTEXPR
     void
     list<_Tp, _Alloc>::
     _M_fill_assign(size_type __n, const value_type& __val)
@@ -308,7 +308,6 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template <typename _InputIterator>
-      _GLIBCXX26_CONSTEXPR
       void
       list<_Tp, _Alloc>::
       _M_assign_dispatch(_InputIterator __first2, _InputIterator __last2,
@@ -332,6 +331,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename list<_Tp, _Alloc>::__remove_return_type
     list<_Tp, _Alloc>::
     remove(const value_type& __value)
