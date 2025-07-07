@@ -795,16 +795,16 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       template<typename _Key2>
 	requires same_as<_Key2, _Key> || __transparent_comparator<_Compare>
-	_GLIBCXX26_CONSTEXPR
 	[[nodiscard]]
+	_GLIBCXX26_CONSTEXPR
 	pair<iterator, iterator>
 	equal_range(const _Key2& __x)
 	{ return std::equal_range(begin(), end(), __x, _M_comp); }
 
       template<typename _Key2>
 	requires same_as<_Key2, _Key> || __transparent_comparator<_Compare>
-	_GLIBCXX26_CONSTEXPR
 	[[nodiscard]]
+	_GLIBCXX26_CONSTEXPR
 	pair<const_iterator, const_iterator>
 	equal_range(const _Key2& __x) const
 	{ return std::equal_range(begin(), end(), __x, _M_comp); }
