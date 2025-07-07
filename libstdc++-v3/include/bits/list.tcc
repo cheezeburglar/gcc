@@ -80,6 +80,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #if __cplusplus >= 201103L
   template<typename _Tp, typename _Alloc>
     template<typename... _Args>
+      _GLIBCXX26_CONSTEXPR
       typename list<_Tp, _Alloc>::iterator
       list<_Tp, _Alloc>::
       emplace(const_iterator __position, _Args&&... __args)
@@ -95,6 +96,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     typename list<_Tp, _Alloc>::iterator
     list<_Tp, _Alloc>::
 #if __cplusplus >= 201103L
+    _GLIBCXX26_CONSTEXPR
     insert(const_iterator __position, const value_type& __x)
 #else
     insert(iterator __position, const value_type& __x)
@@ -108,6 +110,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
 #if __cplusplus >= 201103L
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename list<_Tp, _Alloc>::iterator
     list<_Tp, _Alloc>::
     insert(const_iterator __position, size_type __n, const value_type& __x)
@@ -124,6 +127,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template<typename _InputIterator, typename>
+      _GLIBCXX26_CONSTEXPR
       typename list<_Tp, _Alloc>::iterator
       list<_Tp, _Alloc>::
       insert(const_iterator __position, _InputIterator __first,
@@ -144,6 +148,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     typename list<_Tp, _Alloc>::iterator
     list<_Tp, _Alloc>::
 #if __cplusplus >= 201103L
+    _GLIBCXX26_CONSTEXPR
     erase(const_iterator __position) noexcept
 #else
     erase(iterator __position)
@@ -233,6 +238,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     list<_Tp, _Alloc>::
     resize(size_type __new_size, const value_type& __x)
@@ -245,6 +251,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 #else
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     list<_Tp, _Alloc>::
     resize(size_type __new_size, value_type __x)
@@ -258,6 +265,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     list<_Tp, _Alloc>&
     list<_Tp, _Alloc>::
     operator=(const list& __x)
@@ -284,6 +292,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     list<_Tp, _Alloc>::
     _M_fill_assign(size_type __n, const value_type& __val)
@@ -299,6 +308,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template <typename _InputIterator>
+      _GLIBCXX26_CONSTEXPR
       void
       list<_Tp, _Alloc>::
       _M_assign_dispatch(_InputIterator __first2, _InputIterator __last2,
@@ -358,6 +368,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename list<_Tp, _Alloc>::__remove_return_type
     list<_Tp, _Alloc>::
     unique()
@@ -393,6 +404,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     list<_Tp, _Alloc>::
 #if __cplusplus >= 201103L
@@ -433,6 +445,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template <typename _StrictWeakOrdering>
+      _GLIBCXX26_CONSTEXPR
       void
       list<_Tp, _Alloc>::
 #if __cplusplus >= 201103L
@@ -472,6 +485,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     list<_Tp, _Alloc>::
     sort()
@@ -536,6 +550,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template <typename _Predicate>
+      _GLIBCXX26_CONSTEXPR
       typename list<_Tp, _Alloc>::__remove_return_type
       list<_Tp, _Alloc>::
       remove_if(_Predicate __pred)
@@ -569,6 +584,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template <typename _BinaryPredicate>
+      _GLIBCXX26_CONSTEXPR
       typename list<_Tp, _Alloc>::__remove_return_type
       list<_Tp, _Alloc>::
       unique(_BinaryPredicate __binary_pred)
@@ -607,6 +623,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template <typename _StrictWeakOrdering>
+      _GLIBCXX26_CONSTEXPR
       void
       list<_Tp, _Alloc>::
       sort(_StrictWeakOrdering __comp)
