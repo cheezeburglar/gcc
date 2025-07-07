@@ -79,6 +79,7 @@
 #define __glibcxx_want_node_extract
 #define __glibcxx_want_nonmember_container_access
 #define __glibcxx_want_tuple_like
+#define __glibcxx_want_containers_constexpr
 #include <bits/version.h>
 
 #if __cplusplus >= 201703L
@@ -107,6 +108,7 @@ namespace std _GLIBCXX_VISIBILITY(default)
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
   template<typename _Key, typename _Tp, typename _Compare, typename _Alloc,
 	   typename _Predicate>
+    _GLIBCXX26_CONSTEXPR
     inline typename map<_Key, _Tp, _Compare, _Alloc>::size_type
     erase_if(map<_Key, _Tp, _Compare, _Alloc>& __cont, _Predicate __pred)
     {
@@ -116,6 +118,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   template<typename _Key, typename _Tp, typename _Compare, typename _Alloc,
 	   typename _Predicate>
+    _GLIBCXX26_CONSTEXPR
     inline typename multimap<_Key, _Tp, _Compare, _Alloc>::size_type
     erase_if(multimap<_Key, _Tp, _Compare, _Alloc>& __cont, _Predicate __pred)
     {
