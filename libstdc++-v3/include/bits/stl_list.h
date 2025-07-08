@@ -1906,6 +1906,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  and references.
        */
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	emplace(const_iterator __position, _Args&&... __args);
 #endif
@@ -2360,6 +2361,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  Managing the pointer is the user's responsibility.
        */
       template<typename _BinaryPredicate>
+	_GLIBCXX26_CONSTEXPR
 	__remove_return_type
 	unique(_BinaryPredicate);
 
@@ -2445,6 +2447,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        *  elements remain in list order.
        */
       template<typename _StrictWeakOrdering>
+	_GLIBCXX26_CONSTEXPR
 	void
 	sort(_StrictWeakOrdering);
 

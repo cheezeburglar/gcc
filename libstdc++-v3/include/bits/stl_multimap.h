@@ -269,8 +269,8 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       { _M_t._M_insert_range_equal(__l.begin(), __l.end()); }
 
       /// Allocator-extended range constructor.
-      _GLIBCXX26_CONSTEXPR
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	multimap(_InputIterator __first, _InputIterator __last,
 		 const allocator_type& __a)
 	: _M_t(_Pair_alloc_type(__a))
