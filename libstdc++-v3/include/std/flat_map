@@ -34,6 +34,7 @@
 #endif
 
 #define __glibcxx_want_flat_map
+#define __glibcxx_want_containers_constexpr
 #include <bits/version.h>
 
 #ifdef __cpp_lib_flat_map // >= C++23
