@@ -1265,8 +1265,8 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  from [__first,__last).  This is linear in N (where N is
        *  distance(__first,__last)).
        */
-      _GLIBCXX26_CONSTEXPR
       template<typename _InputIterator>
+      _GLIBCXX26_CONSTEXPR
 	unordered_multiset(_InputIterator __first, _InputIterator __last,
 			   size_type __n = 0,
 			   const hasher& __hf = hasher(),
