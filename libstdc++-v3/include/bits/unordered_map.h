@@ -2577,6 +2577,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif
 
   template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
+    _GLIBCXX26_CONSTEXPR
     inline void
     swap(unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 	 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
@@ -2584,6 +2585,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     { __x.swap(__y); }
 
   template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
+    _GLIBCXX26_CONSTEXPR
     inline void
     swap(unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 	 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
@@ -2591,6 +2593,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     { __x.swap(__y); }
 
   template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
+    _GLIBCXX26_CONSTEXPR
     inline bool
     operator==(const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 	       const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
@@ -2605,6 +2608,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif
 
   template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
+    _GLIBCXX26_CONSTEXPR
     inline bool
     operator==(const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 	       const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
