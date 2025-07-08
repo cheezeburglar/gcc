@@ -630,44 +630,55 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       ~_Hashtable() noexcept;
 
+      _GLIBCXX26_CONSTEXPR
       void
       swap(_Hashtable&)
       noexcept(__and_<__is_nothrow_swappable<_Hash>,
 		      __is_nothrow_swappable<_Equal>>::value);
 
       // Basic container operations
+      _GLIBCXX26_CONSTEXPR
       iterator
       begin() noexcept
       { return iterator(_M_begin()); }
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       begin() const noexcept
       { return const_iterator(_M_begin()); }
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       end() noexcept
       { return iterator(nullptr); }
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       end() const noexcept
       { return const_iterator(nullptr); }
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cbegin() const noexcept
       { return const_iterator(_M_begin()); }
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cend() const noexcept
       { return const_iterator(nullptr); }
 
+      _GLIBCXX26_CONSTEXPR
       size_type
       size() const noexcept
       { return _M_element_count; }
 
-      _GLIBCXX_NODISCARD bool
+      _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
+      bool
       empty() const noexcept
       { return size() == 0; }
 
+      _GLIBCXX26_CONSTEXPR
       allocator_type
       get_allocator() const noexcept
       { return allocator_type(this->_M_node_allocator()); }
@@ -990,6 +1001,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 			   __hash_code __code, __node_ptr __n);
 
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	std::pair<iterator, bool>
 	_M_emplace_uniq(_Args&&... __args);
 
@@ -2336,6 +2348,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	   typename _Hash, typename _RangeHash, typename _Unused,
 	   typename _RehashPolicy, typename _Traits>
     template<typename... _Args>
+      _GLIBCXX26_CONSTEXPR
       auto
       _Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,
 		 _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::
