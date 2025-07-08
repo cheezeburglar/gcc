@@ -1192,12 +1192,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       ///@}
 
       template<typename _K1, typename _T1, typename _C1, typename _A1>
+	_GLIBCXX26_CONSTEXPR
 	friend bool
 	operator==(const multimap<_K1, _T1, _C1, _A1>&,
 		   const multimap<_K1, _T1, _C1, _A1>&);
 
 #if __cpp_lib_three_way_comparison
       template<typename _K1, typename _T1, typename _C1, typename _A1>
+	_GLIBCXX26_CONSTEXPR
 	friend __detail::__synth3way_t<pair<const _K1, _T1>>
 	operator<=>(const multimap<_K1, _T1, _C1, _A1>&,
 		    const multimap<_K1, _T1, _C1, _A1>&);

@@ -1039,11 +1039,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       ///@}
 
       template<typename _K1, typename _C1, typename _A1>
+	_GLIBCXX26_CONSTEXPR
 	friend bool
 	operator==(const set<_K1, _C1, _A1>&, const set<_K1, _C1, _A1>&);
 
 #if __cpp_lib_three_way_comparison
       template<typename _K1, typename _C1, typename _A1>
+	_GLIBCXX26_CONSTEXPR
 	friend __detail::__synth3way_t<_K1>
 	operator<=>(const set<_K1, _C1, _A1>&, const set<_K1, _C1, _A1>&);
 #else
