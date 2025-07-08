@@ -2611,6 +2611,7 @@ namespace __rb_tree
   template<typename _Key, typename _Val, typename _KoV,
 	   typename _Compare, typename _Alloc>
     template<bool _MoveValues, typename _NodeGen>
+    _GLIBCXX26_CONSTEXPR
       typename _Rb_tree<_Key, _Val, _KoV, _Compare, _Alloc>::_Base_ptr
       _Rb_tree<_Key, _Val, _KoV, _Compare, _Alloc>::
       _M_copy(_Node_ptr __x, _Base_ptr __p, _NodeGen& __node_gen)
@@ -2651,6 +2652,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     _M_erase(_Node_ptr __x)
@@ -2667,6 +2669,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename _Rb_tree<_Key, _Val, _KeyOfValue,
 		      _Compare, _Alloc>::_Base_ptr
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
@@ -2683,6 +2686,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename _Rb_tree<_Key, _Val, _KeyOfValue,
 		      _Compare, _Alloc>::_Base_ptr
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
@@ -2699,6 +2703,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     pair<typename _Rb_tree<_Key, _Val, _KeyOfValue,
 			   _Compare, _Alloc>::iterator,
 	 typename _Rb_tree<_Key, _Val, _KeyOfValue,
@@ -2731,6 +2736,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     pair<typename _Rb_tree<_Key, _Val, _KeyOfValue,
 			   _Compare, _Alloc>::const_iterator,
 	 typename _Rb_tree<_Key, _Val, _KeyOfValue,
@@ -2763,6 +2769,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     swap(_Rb_tree& __t)
@@ -2796,6 +2803,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     pair<typename _Rb_tree<_Key, _Val, _KeyOfValue,
 			   _Compare, _Alloc>::_Base_ptr,
 	 typename _Rb_tree<_Key, _Val, _KeyOfValue,
@@ -2828,6 +2836,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     pair<typename _Rb_tree<_Key, _Val, _KeyOfValue,
 			   _Compare, _Alloc>::_Base_ptr,
 	 typename _Rb_tree<_Key, _Val, _KeyOfValue,
@@ -2851,6 +2860,7 @@ namespace __rb_tree
 #if __cplusplus >= 201103L
     template<typename _Arg>
 #endif
+    _GLIBCXX26_CONSTEXPR
     pair<typename _Rb_tree<_Key, _Val, _KeyOfValue,
 			   _Compare, _Alloc>::iterator, bool>
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
@@ -2880,6 +2890,7 @@ namespace __rb_tree
 #if __cplusplus >= 201103L
     template<typename _Arg>
 #endif
+    _GLIBCXX26_CONSTEXPR
     typename _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::iterator
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
 #if __cplusplus >= 201103L
@@ -2897,6 +2908,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     pair<typename _Rb_tree<_Key, _Val, _KeyOfValue,
 			   _Compare, _Alloc>::_Base_ptr,
 	 typename _Rb_tree<_Key, _Val, _KeyOfValue,
@@ -2959,6 +2971,7 @@ namespace __rb_tree
 #else
     template<typename _NodeGen>
 #endif
+      _GLIBCXX26_CONSTEXPR
       typename _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::iterator
       _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
       _M_insert_unique_(const_iterator __position,
@@ -2981,6 +2994,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     pair<typename _Rb_tree<_Key, _Val, _KeyOfValue,
 			   _Compare, _Alloc>::_Base_ptr,
 	 typename _Rb_tree<_Key, _Val, _KeyOfValue,
@@ -3040,6 +3054,7 @@ namespace __rb_tree
 #else
     template<typename _NodeGen>
 #endif
+      _GLIBCXX26_CONSTEXPR
       typename _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::iterator
       _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
       _M_insert_equal_(const_iterator __position,
@@ -3064,6 +3079,7 @@ namespace __rb_tree
 #if __cplusplus >= 201103L
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     auto
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     _M_insert_node(_Base_ptr __x, _Base_ptr __p, _Node_ptr __z)
@@ -3081,6 +3097,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     auto
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     _M_insert_lower_node(_Base_ptr __p, _Node_ptr __z)
@@ -3098,6 +3115,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     auto
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     _M_insert_equal_lower_node(_Node_ptr __z)
@@ -3117,6 +3135,7 @@ namespace __rb_tree
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
     template<typename... _Args>
+      _GLIBCXX26_CONSTEXPR
       auto
       _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
       _M_emplace_unique(_Args&&... __args)
@@ -3132,6 +3151,7 @@ namespace __rb_tree
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
     template<typename... _Args>
+      _GLIBCXX26_CONSTEXPR
       auto
       _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
       _M_emplace_equal(_Args&&... __args)
@@ -3145,6 +3165,7 @@ namespace __rb_tree
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
     template<typename... _Args>
+      _GLIBCXX26_CONSTEXPR
       auto
       _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
       _M_emplace_hint_unique(const_iterator __pos, _Args&&... __args)
@@ -3160,6 +3181,7 @@ namespace __rb_tree
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
     template<typename... _Args>
+      _GLIBCXX26_CONSTEXPR
       auto
       _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
       _M_emplace_hint_equal(const_iterator __pos, _Args&&... __args)
@@ -3176,6 +3198,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     _M_erase_aux(const_iterator __position)
@@ -3188,6 +3211,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     _M_erase_aux(const_iterator __first, const_iterator __last)
@@ -3201,6 +3225,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::size_type
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     erase(const _Key& __x)
@@ -3214,6 +3239,7 @@ namespace __rb_tree
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
     typename _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::size_type
+    _GLIBCXX26_CONSTEXPR
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     _M_erase_unique(const _Key& __x)
     {
@@ -3227,6 +3253,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename _Rb_tree<_Key, _Val, _KeyOfValue,
 		      _Compare, _Alloc>::iterator
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
@@ -3239,6 +3266,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename _Rb_tree<_Key, _Val, _KeyOfValue,
 		      _Compare, _Alloc>::const_iterator
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
@@ -3251,6 +3279,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::size_type
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     count(const _Key& __k) const
