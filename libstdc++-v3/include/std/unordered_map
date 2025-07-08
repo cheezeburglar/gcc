@@ -56,7 +56,7 @@
 #define __glibcxx_want_nonmember_container_access
 #define __glibcxx_want_unordered_map_try_emplace
 #define __glibcxx_want_tuple_like
-#define __glibcxx_want_container_constexpr
+#define __glibcxx_want_containers_constexpr
 #include <bits/version.h>
 
 #if __cplusplus >= 201703L
