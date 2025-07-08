@@ -451,6 +451,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
       typedef _Alloc		  allocator_type;
 
+      _GLIBCXX26_CONSTEXPR
       allocator_type
       get_allocator() const _GLIBCXX_NOEXCEPT
       { return allocator_type(_M_get_Tp_allocator()); }
@@ -458,23 +459,28 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       typedef _Deque_iterator<_Tp, _Tp&, _Ptr>	  iterator;
       typedef _Deque_iterator<_Tp, const _Tp&, _Ptr_const>   const_iterator;
 
+      _GLIBCXX26_CONSTEXPR
       _Deque_base()
       : _M_impl()
       { _M_initialize_map(0); }
 
+      _GLIBCXX26_CONSTEXPR
       _Deque_base(size_t __num_elements)
       : _M_impl()
       { _M_initialize_map(__num_elements); }
 
+      _GLIBCXX26_CONSTEXPR
       _Deque_base(const allocator_type& __a, size_t __num_elements)
       : _M_impl(__a)
       { _M_initialize_map(__num_elements); }
 
+      _GLIBCXX26_CONSTEXPR
       _Deque_base(const allocator_type& __a)
       : _M_impl(__a)
       { /* Caller must initialize map. */ }
 
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       _Deque_base(_Deque_base&& __x)
       : _M_impl(std::move(__x._M_get_Tp_allocator()))
       {
@@ -483,10 +489,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	  this->_M_impl._M_swap_data(__x._M_impl);
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Deque_base(_Deque_base&& __x, const allocator_type& __a)
       : _M_impl(std::move(__x._M_impl), _Tp_alloc_type(__a))
       { __x._M_initialize_map(0); }
 
+      _GLIBCXX26_CONSTEXPR
       _Deque_base(_Deque_base&& __x, const allocator_type& __a, size_t __n)
       : _M_impl(__a)
       {
@@ -505,6 +513,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       ~_Deque_base() _GLIBCXX_NOEXCEPT;
 
       typedef typename iterator::_Map_pointer _Map_pointer;
@@ -555,30 +564,37 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	{ }
 
 #if __cplusplus >= 201103L
+	_GLIBCXX26_CONSTEXPR
 	_Deque_impl(_Deque_impl&&) = default;
 
+	_GLIBCXX26_CONSTEXPR
 	_Deque_impl(_Tp_alloc_type&& __a) noexcept
 	: _Tp_alloc_type(std::move(__a))
 	{ }
 
+	_GLIBCXX26_CONSTEXPR
 	_Deque_impl(_Deque_impl&& __d, _Tp_alloc_type&& __a)
 	: _Tp_alloc_type(std::move(__a)), _Deque_impl_data(std::move(__d))
 	{ }
 #endif
       };
 
+      _GLIBCXX26_CONSTEXPR
       _Tp_alloc_type&
       _M_get_Tp_allocator() _GLIBCXX_NOEXCEPT
       { return this->_M_impl; }
 
+      _GLIBCXX26_CONSTEXPR
       const _Tp_alloc_type&
       _M_get_Tp_allocator() const _GLIBCXX_NOEXCEPT
       { return this->_M_impl; }
 
+      _GLIBCXX26_CONSTEXPR
       _Map_alloc_type
       _M_get_map_allocator() const _GLIBCXX_NOEXCEPT
       { return _Map_alloc_type(_M_get_Tp_allocator()); }
 
+      _GLIBCXX26_CONSTEXPR
       _Ptr
       _M_allocate_node()
       {
@@ -586,6 +602,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return _Traits::allocate(_M_impl, __deque_buf_size(sizeof(_Tp)));
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_deallocate_node(_Ptr __p) _GLIBCXX_NOEXCEPT
       {
@@ -593,6 +610,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	_Traits::deallocate(_M_impl, __p, __deque_buf_size(sizeof(_Tp)));
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Map_pointer
       _M_allocate_map(size_t __n)
       {
@@ -600,6 +618,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return _Map_alloc_traits::allocate(__map_alloc, __n);
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_deallocate_map(_Map_pointer __p, size_t __n) _GLIBCXX_NOEXCEPT
       {
@@ -617,6 +636,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     };
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     _Deque_base<_Tp, _Alloc>::
     ~_Deque_base() _GLIBCXX_NOEXCEPT
     {
@@ -637,6 +657,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
    *  The initial underlying memory layout is a bit complicated...
   */
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     _Deque_base<_Tp, _Alloc>::
     _M_initialize_map(size_t __num_elements)
@@ -676,6 +697,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     _Deque_base<_Tp, _Alloc>::
     _M_create_nodes(_Map_pointer __nstart, _Map_pointer __nfinish)
@@ -694,6 +716,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     _Deque_base<_Tp, _Alloc>::
     _M_destroy_nodes(_Map_pointer __nstart,
@@ -854,8 +877,8 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       /**
        *  @brief  Creates a %deque with no elements.
        */
-      _GLIBCXX26_CONSTEXPR
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       deque() = default;
 #else
       deque() { }
