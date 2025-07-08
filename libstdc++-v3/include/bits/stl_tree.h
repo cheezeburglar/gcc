@@ -1548,13 +1548,16 @@ namespace __rb_tree
 #if __cplusplus < 201103L
       _Rb_tree() { }
 #else
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree() = default;
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree(const _Compare& __comp,
 	       const allocator_type& __a = allocator_type())
       : _M_impl(__comp, _Node_allocator(__a)) { }
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree(const _Rb_tree& __x)
       : _M_impl(__x._M_impl)
       {
@@ -1563,10 +1566,12 @@ namespace __rb_tree
       }
 
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree(const allocator_type& __a)
       : _M_impl(_Node_allocator(__a))
       { }
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree(const _Rb_tree& __x, const allocator_type& __a)
       : _M_impl(__x._M_impl._M_key_compare, _Node_allocator(__a))
       {
@@ -1574,8 +1579,10 @@ namespace __rb_tree
 	  _M_root() = _M_copy(__x);
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree(_Rb_tree&&) = default;
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree(_Rb_tree&& __x, const allocator_type& __a)
       : _Rb_tree(std::move(__x), _Node_allocator(__a))
       { }
@@ -1594,6 +1601,7 @@ namespace __rb_tree
       }
 
     public:
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree(_Rb_tree&& __x, _Node_allocator&& __a)
       noexcept( noexcept(
 	_Rb_tree(std::declval<_Rb_tree&&>(), std::declval<_Node_allocator&&>(),
@@ -1603,61 +1611,77 @@ namespace __rb_tree
       { }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       ~_Rb_tree() _GLIBCXX_NOEXCEPT
       { _M_erase(_M_begin_node()); }
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree&
       operator=(const _Rb_tree& __x);
 
       // Accessors.
+      _GLIBCXX26_CONSTEXPR
       _Compare
       key_comp() const
       { return _M_impl._M_key_compare; }
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       begin() _GLIBCXX_NOEXCEPT
       { return iterator(this->_M_impl._M_header._M_left); }
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       begin() const _GLIBCXX_NOEXCEPT
       { return const_iterator(this->_M_impl._M_header._M_left); }
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       end() _GLIBCXX_NOEXCEPT
       { return iterator(_M_end()); }
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       end() const _GLIBCXX_NOEXCEPT
       { return const_iterator(_M_end()); }
 
+      _GLIBCXX26_CONSTEXPR
       reverse_iterator
       rbegin() _GLIBCXX_NOEXCEPT
       { return reverse_iterator(end()); }
 
+      _GLIBCXX26_CONSTEXPR
       const_reverse_iterator
       rbegin() const _GLIBCXX_NOEXCEPT
       { return const_reverse_iterator(end()); }
 
+      _GLIBCXX26_CONSTEXPR
       reverse_iterator
       rend() _GLIBCXX_NOEXCEPT
       { return reverse_iterator(begin()); }
 
+      _GLIBCXX26_CONSTEXPR
       const_reverse_iterator
       rend() const _GLIBCXX_NOEXCEPT
       { return const_reverse_iterator(begin()); }
 
-      _GLIBCXX_NODISCARD bool
+      _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
+      bool
       empty() const _GLIBCXX_NOEXCEPT
       { return _M_impl._M_node_count == 0; }
 
+      _GLIBCXX26_CONSTEXPR
       size_type
       size() const _GLIBCXX_NOEXCEPT
       { return _M_impl._M_node_count; }
 
+      _GLIBCXX26_CONSTEXPR
       size_type
       max_size() const _GLIBCXX_NOEXCEPT
       { return _Node_alloc_traits::max_size(_M_get_Node_allocator()); }
 
+      _GLIBCXX26_CONSTEXPR
       void
       swap(_Rb_tree& __t)
       _GLIBCXX_NOEXCEPT_IF(__is_nothrow_swappable<_Compare>::value);
@@ -1665,18 +1689,22 @@ namespace __rb_tree
       // Insert/erase.
 #if __cplusplus >= 201103L
       template<typename _Arg>
+	_GLIBCXX26_CONSTEXPR
 	pair<iterator, bool>
 	_M_insert_unique(_Arg&& __x);
 
       template<typename _Arg>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_insert_equal(_Arg&& __x);
 
       template<typename _Arg, typename _NodeGen>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_insert_unique_(const_iterator __pos, _Arg&& __x, _NodeGen&);
 
       template<typename _Arg>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_insert_unique_(const_iterator __pos, _Arg&& __x)
 	{
@@ -1685,10 +1713,12 @@ namespace __rb_tree
 	}
 
       template<typename _Arg, typename _NodeGen>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_insert_equal_(const_iterator __pos, _Arg&& __x, _NodeGen&);
 
       template<typename _Arg>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_insert_equal_(const_iterator __pos, _Arg&& __x)
 	{
@@ -1697,18 +1727,22 @@ namespace __rb_tree
 	}
 
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	pair<iterator, bool>
 	_M_emplace_unique(_Args&&... __args);
 
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_emplace_equal(_Args&&... __args);
 
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_emplace_hint_unique(const_iterator __pos, _Args&&... __args);
 
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_emplace_hint_equal(const_iterator __pos, _Args&&... __args);
 
@@ -1717,6 +1751,7 @@ namespace __rb_tree
 	  = is_same<value_type, typename iterator_traits<_Iter>::value_type>;
 
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	__enable_if_t<__same_value_type<_InputIterator>::value>
 	_M_insert_range_unique(_InputIterator __first, _InputIterator __last)
 	{
@@ -1726,6 +1761,7 @@ namespace __rb_tree
 	}
 
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	__enable_if_t<!__same_value_type<_InputIterator>::value>
 	_M_insert_range_unique(_InputIterator __first, _InputIterator __last)
 	{
@@ -1734,6 +1770,7 @@ namespace __rb_tree
 	}
 
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	__enable_if_t<__same_value_type<_InputIterator>::value>
 	_M_insert_range_equal(_InputIterator __first, _InputIterator __last)
 	{
@@ -1743,6 +1780,7 @@ namespace __rb_tree
 	}
 
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	__enable_if_t<!__same_value_type<_InputIterator>::value>
 	_M_insert_range_equal(_InputIterator __first, _InputIterator __last)
 	{
@@ -1810,6 +1848,7 @@ namespace __rb_tree
       // _GLIBCXX_RESOLVE_LIB_DEFECTS
       // DR 130. Associative erase should return an iterator.
       _GLIBCXX_ABI_TAG_CXX11
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase(const_iterator __position)
       {
@@ -1822,6 +1861,7 @@ namespace __rb_tree
 
       // LWG 2059.
       _GLIBCXX_ABI_TAG_CXX11
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase(iterator __position)
       {
@@ -1847,9 +1887,11 @@ namespace __rb_tree
       }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       size_type
       erase(const key_type& __x);
 
+      _GLIBCXX26_CONSTEXPR
       size_type
       _M_erase_unique(const key_type& __x);
 
@@ -1857,6 +1899,7 @@ namespace __rb_tree
       // _GLIBCXX_RESOLVE_LIB_DEFECTS
       // DR 130. Associative erase should return an iterator.
       _GLIBCXX_ABI_TAG_CXX11
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase(const_iterator __first, const_iterator __last)
       {
@@ -1873,6 +1916,7 @@ namespace __rb_tree
       { _M_erase_aux(__first, __last); }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       void
       clear() _GLIBCXX_NOEXCEPT
       {
@@ -1881,19 +1925,24 @@ namespace __rb_tree
       }
 
       // Set operations.
+      _GLIBCXX26_CONSTEXPR
       iterator
       find(const key_type& __k);
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       find(const key_type& __k) const;
 
+      _GLIBCXX26_CONSTEXPR
       size_type
       count(const key_type& __k) const;
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       lower_bound(const key_type& __k)
       { return iterator(_M_lower_bound(_M_begin(), _M_end(), __k)); }
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       lower_bound(const key_type& __k) const
       {
@@ -1901,10 +1950,12 @@ namespace __rb_tree
 	  (_M_lower_bound(_M_begin(), _M_end(), __k));
       }
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       upper_bound(const key_type& __k)
       { return iterator(_M_upper_bound(_M_begin(), _M_end(), __k)); }
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       upper_bound(const key_type& __k) const
       {
@@ -1912,15 +1963,18 @@ namespace __rb_tree
 	  (_M_upper_bound(_M_begin(), _M_end(), __k));
       }
 
+      _GLIBCXX26_CONSTEXPR
       pair<iterator, iterator>
       equal_range(const key_type& __k);
 
+      _GLIBCXX26_CONSTEXPR
       pair<const_iterator, const_iterator>
       equal_range(const key_type& __k) const;
 
 #if __cplusplus >= 201402L
       template<typename _Kt,
 	       typename _Req = __has_is_transparent_t<_Compare, _Kt>>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_find_tr(const _Kt& __k)
 	{
@@ -1930,6 +1984,7 @@ namespace __rb_tree
 
       template<typename _Kt,
 	       typename _Req = __has_is_transparent_t<_Compare, _Kt>>
+	_GLIBCXX26_CONSTEXPR
 	const_iterator
 	_M_find_tr(const _Kt& __k) const
 	{
@@ -1941,6 +1996,7 @@ namespace __rb_tree
 
       template<typename _Kt,
 	       typename _Req = __has_is_transparent_t<_Compare, _Kt>>
+	_GLIBCXX26_CONSTEXPR
 	size_type
 	_M_count_tr(const _Kt& __k) const
 	{
@@ -1950,6 +2006,7 @@ namespace __rb_tree
 
       template<typename _Kt,
 	       typename _Req = __has_is_transparent_t<_Compare, _Kt>>
+	_GLIBCXX26_CONSTEXPR
 	_Base_ptr
 	_M_lower_bound_tr(const _Kt& __k) const
 	{
@@ -1968,6 +2025,7 @@ namespace __rb_tree
 
       template<typename _Kt,
 	       typename _Req = __has_is_transparent_t<_Compare, _Kt>>
+	_GLIBCXX26_CONSTEXPR
 	_Base_ptr
 	_M_upper_bound_tr(const _Kt& __k) const
 	{
@@ -1986,6 +2044,7 @@ namespace __rb_tree
 
       template<typename _Kt,
 	       typename _Req = __has_is_transparent_t<_Compare, _Kt>>
+	_GLIBCXX26_CONSTEXPR
 	pair<iterator, iterator>
 	_M_equal_range_tr(const _Kt& __k)
 	{
@@ -1997,6 +2056,7 @@ namespace __rb_tree
 
       template<typename _Kt,
 	       typename _Req = __has_is_transparent_t<_Compare, _Kt>>
+	_GLIBCXX26_CONSTEXPR
 	pair<const_iterator, const_iterator>
 	_M_equal_range_tr(const _Kt& __k) const
 	{
@@ -2014,6 +2074,7 @@ namespace __rb_tree
       __rb_verify() const;
 
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree&
       operator=(_Rb_tree&&)
       noexcept(_Node_alloc_traits::_S_nothrow_move()
@@ -2068,6 +2129,7 @@ namespace __rb_tree
 
     public:
       /// Re-insert an extracted node.
+      _GLIBCXX26_CONSTEXPR
       insert_return_type
       _M_reinsert_node_unique(node_type&& __nh)
       {
@@ -2098,6 +2160,7 @@ namespace __rb_tree
       }
 
       /// Re-insert an extracted node.
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_reinsert_node_equal(node_type&& __nh)
       {
@@ -2119,6 +2182,7 @@ namespace __rb_tree
       }
 
       /// Re-insert an extracted node.
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_reinsert_node_hint_unique(const_iterator __hint, node_type&& __nh)
       {
@@ -2142,6 +2206,7 @@ namespace __rb_tree
       }
 
       /// Re-insert an extracted node.
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_reinsert_node_hint_equal(const_iterator __hint, node_type&& __nh)
       {
@@ -2163,6 +2228,7 @@ namespace __rb_tree
       }
 
       /// Extract a node.
+      _GLIBCXX26_CONSTEXPR
       node_type
       extract(const_iterator __pos)
       {
@@ -2188,6 +2254,7 @@ namespace __rb_tree
       }
 
       /// Extract a node.
+      _GLIBCXX26_CONSTEXPR
       node_type
       extract(const key_type& __k)
       {
@@ -2207,6 +2274,7 @@ namespace __rb_tree
 
       /// Merge from a compatible container into one with unique keys.
       template<typename _Compare2>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_merge_unique(_Compatible_tree<_Compare2>& __src) noexcept
 	{
@@ -2229,6 +2297,7 @@ namespace __rb_tree
 
       /// Merge from a compatible container into one with equivalent keys.
       template<typename _Compare2>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_merge_equal(_Compatible_tree<_Compare2>& __src) noexcept
 	{
@@ -2250,7 +2319,7 @@ namespace __rb_tree
 	}
 #endif // C++17 node_extract
 
-      friend bool
+      friend _GLIBCXX26_CONSTEXPR bool
       operator==(const _Rb_tree& __x, const _Rb_tree& __y)
       {
 	return __x.size() == __y.size()
@@ -2258,7 +2327,7 @@ namespace __rb_tree
       }
 
 #if __cpp_lib_three_way_comparison
-      friend auto
+      friend _GLIBCXX26_CONSTEXPR auto
       operator<=>(const _Rb_tree& __x, const _Rb_tree& __y)
       {
 	if constexpr (requires { typename __detail::__synth3way_t<_Val>; })
