@@ -1516,6 +1516,7 @@ namespace __detail
 
       // Allocate a node and construct an element within it.
       template<typename... _Args>
+	  _GLIBCXX26_CONSTEXPR
 	__node_ptr
 	_M_allocate_node(_Args&&... __args);
 
@@ -1543,6 +1544,7 @@ namespace __detail
   // functions.
   template<typename _NodeAlloc>
     template<typename... _Args>
+      _GLIBCXX26_CONSTEXPR
       auto
       _Hashtable_alloc<_NodeAlloc>::_M_allocate_node(_Args&&... __args)
       -> __node_ptr
