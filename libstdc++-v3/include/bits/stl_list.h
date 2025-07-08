@@ -108,6 +108,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       void
       _M_reverse() _GLIBCXX_USE_NOEXCEPT;
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_hook(_List_node_base* const __position) _GLIBCXX_USE_NOEXCEPT;
 
@@ -2545,6 +2546,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
       }
 #else
      template<typename... _Args>
+       _GLIBCXX26_CONSTEXPR
        void
        _M_insert(iterator __position, _Args&&... __args)
        {
