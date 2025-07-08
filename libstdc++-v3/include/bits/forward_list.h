@@ -694,6 +694,7 @@ namespace __fwdlist
       }
 
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	_Node_ptr
 	_M_create_node(_Args&&... __args)
 	{
@@ -725,12 +726,15 @@ namespace __fwdlist
 #pragma GCC diagnostic pop
 
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	_Base_ptr
 	_M_insert_after(const_iterator __pos, _Args&&... __args);
 
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr
       _M_erase_after(_Base_ptr __pos);
 
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr
       _M_erase_after(_Base_ptr __pos, _Base_ptr __last);
     };
@@ -1339,6 +1343,7 @@ namespace __fwdlist
        */
       template<typename... _Args>
 #if __cplusplus > 201402L
+	_GLIBCXX26_CONSTEXPR
 	reference
 #else
 	void
