@@ -37,8 +37,6 @@
 #define __glibcxx_want_containers_constexpr
 #include <bits/version.h>
 
-#define __cpp_lib_flat_set 1
-
 #ifdef __cpp_lib_flat_set // >= C++23
 
 #include <compare>
