@@ -109,9 +109,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       class value_compare
       {
 	[[no_unique_address]]
-	_GLIBCXX26_CONSTEXPR
 	key_compare _M_comp;
-	value_compare(key_compare __c) : _M_comp(__c) { }
+	_GLIBCXX26_CONSTEXPR value_compare(key_compare __c) : _M_comp(__c) { }
 
       public:
 	_GLIBCXX26_CONSTEXPR
