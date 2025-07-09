@@ -46,6 +46,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template<typename... _Args>
+      _GLIBCXX26_CONSTEXPR
       auto
       _Fwd_list_base<_Tp, _Alloc>::
       _M_insert_after(const_iterator __pos, _Args&&... __args)
@@ -59,6 +60,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     auto
     _Fwd_list_base<_Tp, _Alloc>::
     _M_erase_after(_Base_ptr __pos)
@@ -71,6 +73,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     auto
     _Fwd_list_base<_Tp, _Alloc>::
     _M_erase_after(_Base_ptr __pos, _Base_ptr __last)
