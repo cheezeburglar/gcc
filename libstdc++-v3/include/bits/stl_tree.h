@@ -1853,9 +1853,11 @@ namespace __rb_tree
 #endif
 
     private:
+      _GLIBCXX26_CONSTEXPR
       void
       _M_erase_aux(const_iterator __position);
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_erase_aux(const_iterator __first, const_iterator __last);
 
@@ -2555,6 +2557,7 @@ namespace __rb_tree
     template<typename _NodeGen>
 #endif
       typename _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::iterator
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
       _M_insert_(_Base_ptr __x, _Base_ptr __p,
 #if __cplusplus >= 201103L
