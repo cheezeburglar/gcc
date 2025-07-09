@@ -1456,16 +1456,20 @@ namespace __rb_tree
 	node_type>;
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       pair<_Base_ptr, _Base_ptr>
       _M_get_insert_unique_pos(const key_type& __k);
 
+      _GLIBCXX26_CONSTEXPR
       pair<_Base_ptr, _Base_ptr>
       _M_get_insert_equal_pos(const key_type& __k);
 
+      _GLIBCXX26_CONSTEXPR
       pair<_Base_ptr, _Base_ptr>
       _M_get_insert_hint_unique_pos(const_iterator __pos,
 				    const key_type& __k);
 
+      _GLIBCXX26_CONSTEXPR
       pair<_Base_ptr, _Base_ptr>
       _M_get_insert_hint_equal_pos(const_iterator __pos,
 				   const key_type& __k);
@@ -1473,23 +1477,29 @@ namespace __rb_tree
     private:
 #if __cplusplus >= 201103L
       template<typename _Arg, typename _NodeGen>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_insert_(_Base_ptr __x, _Base_ptr __y, _Arg&& __v, _NodeGen&);
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_insert_node(_Base_ptr __x, _Base_ptr __y, _Node_ptr __z);
 
       template<typename _Arg>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_insert_lower(_Base_ptr __y, _Arg&& __v);
 
       template<typename _Arg>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_insert_equal_lower(_Arg&& __x);
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_insert_lower_node(_Base_ptr __p, _Node_ptr __z);
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_insert_equal_lower_node(_Node_ptr __z);
 #else
@@ -1510,10 +1520,12 @@ namespace __rb_tree
       enum { __as_lvalue, __as_rvalue };
 
       template<bool _MoveValues, typename _NodeGen>
+	_GLIBCXX26_CONSTEXPR
 	_Base_ptr
 	_M_copy(_Node_ptr, _Base_ptr, _NodeGen&);
 
       template<bool _MoveValues, typename _NodeGen>
+	_GLIBCXX26_CONSTEXPR
 	_Base_ptr
 	_M_copy(const _Rb_tree& __x, _NodeGen& __gen)
 	{
@@ -1525,6 +1537,7 @@ namespace __rb_tree
 	  return __root;
 	}
 
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr
       _M_copy(const _Rb_tree& __x)
       {
@@ -1532,13 +1545,16 @@ namespace __rb_tree
 	return _M_copy<__as_lvalue>(__x, __an);
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_erase(_Node_ptr __x);
 
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr
       _M_lower_bound(_Base_ptr __x, _Base_ptr __y,
 		     const _Key& __k) const;
 
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr
       _M_upper_bound(_Base_ptr __x, _Base_ptr __y,
 		     const _Key& __k) const;
@@ -2455,6 +2471,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     inline _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>&
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     operator=(_Rb_tree&& __x)
@@ -2496,6 +2513,7 @@ namespace __rb_tree
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>&
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     operator=(const _Rb_tree& __x)
@@ -2564,6 +2582,7 @@ namespace __rb_tree
 #if __cplusplus >= 201103L
     template<typename _Arg>
 #endif
+    _GLIBCXX26_CONSTEXPR
     typename _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::iterator
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
 #if __cplusplus >= 201103L
@@ -2589,6 +2608,7 @@ namespace __rb_tree
 #if __cplusplus >= 201103L
     template<typename _Arg>
 #endif
+    _GLIBCXX26_CONSTEXPR
     typename _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::iterator
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
 #if __cplusplus >= 201103L
@@ -2611,7 +2631,7 @@ namespace __rb_tree
   template<typename _Key, typename _Val, typename _KoV,
 	   typename _Compare, typename _Alloc>
     template<bool _MoveValues, typename _NodeGen>
-    _GLIBCXX26_CONSTEXPR
+      _GLIBCXX26_CONSTEXPR
       typename _Rb_tree<_Key, _Val, _KoV, _Compare, _Alloc>::_Base_ptr
       _Rb_tree<_Key, _Val, _KoV, _Compare, _Alloc>::
       _M_copy(_Node_ptr __x, _Base_ptr __p, _NodeGen& __node_gen)
