@@ -626,8 +626,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	_Map_alloc_traits::deallocate(__map_alloc, __p, __n);
       }
 
+      _GLIBCXX26_CONSTEXPR
       void _M_initialize_map(size_t);
+      _GLIBCXX26_CONSTEXPR
       void _M_create_nodes(_Map_pointer __nstart, _Map_pointer __nfinish);
+      _GLIBCXX26_CONSTEXPR
       void _M_destroy_nodes(_Map_pointer __nstart,
 			    _Map_pointer __nfinish) _GLIBCXX_NOEXCEPT;
       enum { _S_initial_map_size = 8 };
