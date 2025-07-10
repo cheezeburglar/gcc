@@ -449,6 +449,7 @@ namespace __detail
       }
 
 #if __cpp_impl_three_way_comparison >= 201907L
+      _GLIBCXX26_CONSTEXPR
       friend bool
       operator==(const _Node_iterator&, const _Node_iterator&) = default;
 #else

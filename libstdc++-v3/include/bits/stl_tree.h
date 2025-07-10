@@ -428,6 +428,7 @@ namespace __rb_tree
 	return __tmp;
       }
 
+      _GLIBCXX26_CONSTEXPR
       friend bool
       operator==(const _Rb_tree_iterator& __x,
 		 const _Rb_tree_iterator& __y) _GLIBCXX_NOEXCEPT

@@ -358,11 +358,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       ~_Node_handle() = default;
       _Node_handle(_Node_handle&&) noexcept = default;
 
+      _GLIBCXX26_CONSTEXPR
       _Node_handle&
       operator=(_Node_handle&&) noexcept = default;
 
       using value_type = _Value;
 
+      _GLIBCXX26_CONSTEXPR
       value_type&
       value() const noexcept
       {
