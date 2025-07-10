@@ -381,9 +381,11 @@ namespace __rb_tree
       typedef _Rb_tree_node_base::_Base_ptr	_Base_ptr;
       typedef _Rb_tree_node<_Tp>*		_Node_ptr;
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree_iterator() _GLIBCXX_NOEXCEPT
       : _M_node() { }
 
+      _GLIBCXX26_CONSTEXPR
       explicit
       _Rb_tree_iterator(_Base_ptr __x) _GLIBCXX_NOEXCEPT
       : _M_node(__x) { }

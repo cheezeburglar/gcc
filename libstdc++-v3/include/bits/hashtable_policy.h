@@ -376,7 +376,9 @@ namespace __detail
 
       __node_type* _M_cur;
 
+      _GLIBCXX26_CONSTEXPR
       _Node_iterator_base() : _M_cur(nullptr) { }
+      _GLIBCXX26_CONSTEXPR
       _Node_iterator_base(__node_type* __p) noexcept
       : _M_cur(__p) { }
 
