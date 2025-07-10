@@ -456,13 +456,16 @@ namespace __rb_tree
       typedef _Rb_tree_node_base::_Base_ptr	_Base_ptr;
       typedef const _Rb_tree_node<_Tp>*		_Node_ptr;
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree_const_iterator() _GLIBCXX_NOEXCEPT
       : _M_node() { }
 
+      _GLIBCXX26_CONSTEXPR
       explicit
       _Rb_tree_const_iterator(_Base_ptr __x) _GLIBCXX_NOEXCEPT
       : _M_node(__x) { }
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree_const_iterator(const iterator& __it) _GLIBCXX_NOEXCEPT
       : _M_node(__it._M_node) { }
 
