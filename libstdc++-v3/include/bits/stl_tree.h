@@ -1307,6 +1307,7 @@ namespace __rb_tree
 	{
 	  typedef _Rb_tree_key_compare<_Key_compare> _Base_key_compare;
 
+	  _GLIBCXX26_CONSTEXPR
 	  _Rb_tree_impl()
 	    _GLIBCXX_NOEXCEPT_IF(
 		is_nothrow_default_constructible<_Node_allocator>::value
@@ -1314,6 +1315,7 @@ namespace __rb_tree
 	  : _Node_allocator()
 	  { }
 
+	  _GLIBCXX26_CONSTEXPR
 	  _Rb_tree_impl(const _Rb_tree_impl& __x)
 	  : _Node_allocator(_Node_alloc_traits::_S_select_on_copy(__x))
 	  , _Base_key_compare(__x._M_key_compare)
@@ -1329,17 +1331,20 @@ namespace __rb_tree
 	    noexcept( is_nothrow_move_constructible<_Base_key_compare>::value )
 	  = default;
 
+	  _GLIBCXX26_CONSTEXPR
 	  explicit
 	  _Rb_tree_impl(_Node_allocator&& __a)
 	  : _Node_allocator(std::move(__a))
 	  { }
 
+	  _GLIBCXX26_CONSTEXPR
 	  _Rb_tree_impl(_Rb_tree_impl&& __x, _Node_allocator&& __a)
 	  : _Node_allocator(std::move(__a)),
 	    _Base_key_compare(std::move(__x)),
 	    _Header_t(std::move(__x))
 	  { }
 
+	  _GLIBCXX26_CONSTEXPR
 	  _Rb_tree_impl(const _Key_compare& __comp, _Node_allocator&& __a)
 	  : _Node_allocator(std::move(__a)), _Base_key_compare(__comp)
 	  { }

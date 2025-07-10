@@ -293,8 +293,10 @@ namespace __detail
   {
     _Hash_node_base* _M_nxt;
 
+    _GLIBCXX26_CONSTEXPR
     _Hash_node_base() noexcept : _M_nxt() { }
 
+    _GLIBCXX26_CONSTEXPR
     _Hash_node_base(_Hash_node_base* __next) noexcept : _M_nxt(__next) { }
   };
 
@@ -597,6 +599,7 @@ namespace __detail
   {
     using __has_load_factor = true_type;
 
+    _GLIBCXX26_CONSTEXPR
     _Prime_rehash_policy(float __z = 1.0) noexcept
     : _M_max_load_factor(__z), _M_next_resize(0) { }
 
