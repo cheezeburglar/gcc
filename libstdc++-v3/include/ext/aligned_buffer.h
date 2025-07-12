@@ -105,23 +105,19 @@ namespace __gnu_cxx
 
       void*
       _M_addr() noexcept
-      {
-        return static_cast<void*>(&_M_storage);
-      }
+      { return __builtin_bit_cast(void*, &_M_storage); }
 
       const void*
       _M_addr() const noexcept
-      {
-        return static_cast<const void*>(&_M_storage);
-      }
+      { return __builtin_bit_cast(const void*, &_M_storage); }
 
       _Tp*
       _M_ptr() noexcept
-      { return static_cast<_Tp*>(_M_addr()); }
+      { return __builtin_bit_cast(_Tp*, &_M_storage); }
 
       const _Tp*
       _M_ptr() const noexcept
-      { return static_cast<const _Tp*>(_M_addr()); }
+      { return __builtin_bit_cast(const _Tp*, &_M_storage); }
     };
 #endif
 
