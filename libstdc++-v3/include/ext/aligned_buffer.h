@@ -76,11 +76,11 @@ namespace __gnu_cxx
 
       _Tp*
       _M_ptr() noexcept
-      { return __builtin_bit_cast(_Tp*, &_M_storage); }
+      { return __builtin_bit_cast(_Tp*, _M_addr()); }
 
       const _Tp*
       _M_ptr() const noexcept
-      { return __builtin_bit_cast(const _Tp*, &_M_storage); }
+      { return __builtin_bit_cast(const _Tp*, &_M_addr()); }
     };
 
 #if _GLIBCXX_INLINE_VERSION
@@ -113,11 +113,11 @@ namespace __gnu_cxx
 
       _Tp*
       _M_ptr() noexcept
-      { return __builtin_bit_cast(_Tp*, &_M_storage); }
+      { return __builtin_bit_cast(_Tp*, &_M_addr()); }
 
       const _Tp*
       _M_ptr() const noexcept
-      { return __builtin_bit_cast(const _Tp*, &_M_storage); }
+      { return __builtin_bit_cast(const _Tp*, &_M_addr()); }
     };
 #endif
 
