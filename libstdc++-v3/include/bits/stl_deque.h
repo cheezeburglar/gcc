@@ -554,11 +554,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       struct _Deque_impl
       : public _Tp_alloc_type, public _Deque_impl_data
       {
+	_GLIBCXX26_CONSTEXPR
 	_Deque_impl() _GLIBCXX_NOEXCEPT_IF(
 	  is_nothrow_default_constructible<_Tp_alloc_type>::value)
 	: _Tp_alloc_type()
 	{ }
 
+	_GLIBCXX26_CONSTEXPR
 	_Deque_impl(const _Tp_alloc_type& __a) _GLIBCXX_NOEXCEPT
 	: _Tp_alloc_type(__a)
 	{ }

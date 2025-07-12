@@ -193,6 +193,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       union _Optional_alloc
       {
 	_Optional_alloc() { }
+	_GLIBCXX26_CONSTEXPR //for constexpr containers we need this to be a literal type. TODO: thor
 	~_Optional_alloc() { }
 
 	_Optional_alloc(_Optional_alloc&&) = delete;
