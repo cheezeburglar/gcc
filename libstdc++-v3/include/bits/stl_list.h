@@ -554,7 +554,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       typedef _List_node* _Node_ptr;
 
 #if __cplusplus >= 201103L
-      alignas(_Tp ) union __u {  _Tp _M_storage; };
+      alignas(_Tp ) typedef union
+	{
+	     _Tp _M_storage;
+	} _Uninit_storage __attribute__ ((__aligned_as(alignof(_Tp))__));
+      _Uninit_storage __u;
       _Tp*	 _M_valptr()	   { return __u._M_storage;}
       _Tp const* _M_valptr() const { return __u._M_storage;}
 //      __gnu_cxx::__aligned_membuf<_Tp> _M_storage;
