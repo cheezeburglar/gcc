@@ -556,7 +556,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #if __cplusplus >= 201103L
       union _Uninit_storage
 	{
-	  _Uninit_storage () nexcept {}
+	  _Uninit_storage () noexcept {}
 	  ~_Uninit_storage () {}
 	     _Tp _M_storage;
 	} ((aligned(alignof(_Tp))));
