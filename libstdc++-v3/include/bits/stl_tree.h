@@ -224,15 +224,21 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       _M_valptr() const
       { return std::__addressof(_M_value_field); }
 #else
-      __gnu_cxx::__aligned_membuf<_Val> _M_storage;
+      union _Uninit_storage
+	{
+	  _Uninit_storage () noexcept {}
+	  ~_Uninit_storage () {}
+	     _Tp _M_storage;
+	} __attribute__ ((aligned(alignof(_Val))));
+      _Uninit_storage __u;
 
       _Val*
       _M_valptr()
-      { return _M_storage._M_ptr(); }
+      { return std::addressof(__u._M_storage); }
 
       const _Val*
       _M_valptr() const
-      { return _M_storage._M_ptr(); }
+      { return std::addressof(__u._M_storage); }
 #endif
 
       _Rb_tree_node*
