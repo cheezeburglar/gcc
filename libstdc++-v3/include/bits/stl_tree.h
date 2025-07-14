@@ -532,6 +532,7 @@ namespace __rb_tree
     };
 
   __attribute__((__nonnull__))
+  __GLIBCXX26_CONSTEXPR
   void
   _Rb_tree_insert_and_rebalance(const bool __insert_left,
 				_Rb_tree_node_base* __x,
@@ -697,6 +698,7 @@ namespace __rb_tree
       typedef _Rb_tree_const_iterator<_Val>	_Const_iterator;
 
       __attribute__((__nonnull__))
+      __GLIBCXX26_CONSTEXPR
       static void
       _S_insert_and_rebalance(const bool __insert_left,
 			      _Node_base* __x, _Node_base* __p,
