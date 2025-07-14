@@ -108,6 +108,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       void
       _M_reverse() _GLIBCXX_USE_NOEXCEPT;
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_hook(_List_node_base* const __position) _GLIBCXX_USE_NOEXCEPT;
 
@@ -201,6 +202,7 @@ namespace __list
       void
       _M_transfer(_Base_ptr const __first, _Base_ptr const __last) noexcept;
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_hook(_Base_ptr const __position) noexcept
       {
