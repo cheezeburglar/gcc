@@ -228,7 +228,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	{
 	  _Uninit_storage () noexcept {}
 	  ~_Uninit_storage () {}
-	     _Tp _M_storage;
+	     _Val _M_storage;
 	} __attribute__ ((aligned(alignof(_Val))));
       _Uninit_storage __u;
 
