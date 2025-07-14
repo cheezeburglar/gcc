@@ -561,8 +561,8 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	     _Tp _M_storage;
 	} __attribute__ ((aligned(alignof(_Tp))));
       _Uninit_storage __u;
-      _Tp*	 _M_valptr()	   { return __u._M_storage;}
-      _Tp const* _M_valptr() const { return __u._M_storage;}
+      _Tp*	 _M_valptr()	   { return std::__addressof(__u._M_storage);}
+      _Tp const* _M_valptr() const { return std::__addressof(__u._M_storage);}
 //      __gnu_cxx::__aligned_membuf<_Tp> _M_storage;
 //      _Tp*       _M_valptr()       { return _M_storage._M_ptr(); }
 //      _Tp const* _M_valptr() const { return _M_storage._M_ptr(); }
