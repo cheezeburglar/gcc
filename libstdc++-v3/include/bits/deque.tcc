@@ -524,6 +524,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   template<typename _Tp, typename _Alloc>
 #if __cplusplus >= 201103L
     template<typename... _Args>
+      _GLIBCXX26_CONSTEXPR
       void
       deque<_Tp, _Alloc>::
       _M_push_front_aux(_Args&&... __args)
