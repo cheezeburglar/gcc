@@ -1,4 +1,4 @@
-#include <deque>
+#include <queue>
 
 #ifndef __cpp_lib_constexpr_deque
 //Should we do something here?
@@ -17,6 +17,8 @@ constexpr int push_and_pop_test() {
   return a;
 }
 
+static_assert(push_and_pop_test() = 1 + 2);
+
 constexpr void move_test()
 {
   std::queue<int> a,b;
@@ -28,5 +30,3 @@ constexpr void move_test()
   static_assert( c.size() == 1 && c.front() == 1 );
   static_assert( b.size() == 0 );
 }
-
-static_assert(queue_test() = 1 + 2);
