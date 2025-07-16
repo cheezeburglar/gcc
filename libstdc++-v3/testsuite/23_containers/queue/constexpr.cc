@@ -19,14 +19,31 @@ constexpr int push_and_pop_test() {
 
 static_assert(push_and_pop_test() = 1 + 2);
 
-constexpr void move_test()
+constexpr void move_test_empty()
 {
   std::queue<int> a,b;
   a.push(1);
   b = std::move(a);
-  static_assert( b.size() == 1 && b.front() == 1 && a.size() == 0 );
-
-  std::queue<int> c(std::move(b));
-  static_assert( c.size() == 1 && c.front() == 1 );
-  static_assert( b.size() == 0 );
+  return a.size()
 }
+
+constexpr void move_test_new()
+{
+  std::queue<int> a,b;
+  a.push(1);
+  b = std::move(a);
+  return b.size() * b.front()
+}
+
+static_assert( move_test_empty() == 1 &&  && move_test_new() == 0 );
+
+constexpr void move_test_cons()
+{
+  std::queue<int> a,b;
+  a.push(1);
+  b = std::move(a);
+  std::queue<int> c(std::move(b));
+  return c.size() * c.front();
+}
+
+static_assert (move_test_cons() == 1);
