@@ -1007,8 +1007,9 @@ ftms = {
 
 ftms = {
   name = mdspan;
+  no_stdname = true; // FIXME: remove
   values = {
-    v = 202207;
+    v = 1; // FIXME: 202207
     cxxmin = 23;
   };
 };
@@ -1090,10 +1091,6 @@ ftms = {
 
 ftms = {
   name = shift;
-  values = {
-    v = 202202;
-    cxxmin = 23;
-  };
   values = {
     v = 201806;
     cxxmin = 20;
@@ -1989,14 +1986,6 @@ ftms = {
 };
 
 ftms = {
-  name = inplace_vector;
-  values = {
-    v = 202406;
-    cxxmin = 26;
-  };
-};
-
-ftms = {
   name = indirect;
   values = {
     v = 202502;
@@ -2009,15 +1998,6 @@ ftms = {
   name = polymorphic;
   values = {
     v = 202502;
-    cxxmin = 26;
-    hosted = yes;
-  };
-};
-
-ftms = {
-  name = smart_ptr_owner_equality;
-  values = {
-    v = 202306;
     cxxmin = 26;
     hosted = yes;
   };
@@ -2051,21 +2031,10 @@ ftms = {
 };
 
 ftms = {
-  name = bitset;  // ...construct from string_view
+  name = constexpr_containers;
   values = {
-    v = 202306;
+    v = 202502L;
     cxxmin = 26;
-  };
-};
-
-ftms = {
-  name = constexpr_exceptions;
-  // TODO Remove when PR121114 is resolved
-  no_stdname = true;
-  values = {
-    v = 1; // TODO 202411;
-    cxxmin = 26;
-    extra_cond = "__cpp_constexpr_exceptions >= 202411L";
   };
 };
 

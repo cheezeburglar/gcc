@@ -91,6 +91,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif
 
   template <typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     deque<_Tp, _Alloc>&
     deque<_Tp, _Alloc>::
     operator=(const deque& __x)
@@ -133,6 +134,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   template<typename _Tp, typename _Alloc>
     template<typename... _Args>
 #if __cplusplus > 201402L
+      _GLIBCXX26_CONSTEXPR
       typename deque<_Tp, _Alloc>::reference
 #else
       void
@@ -157,6 +159,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   template<typename _Tp, typename _Alloc>
     template<typename... _Args>
 #if __cplusplus > 201402L
+      _GLIBCXX26_CONSTEXPR
       typename deque<_Tp, _Alloc>::reference
 #else
       void
@@ -183,6 +186,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #if __cplusplus >= 201103L
   template<typename _Tp, typename _Alloc>
     template<typename... _Args>
+      _GLIBCXX26_CONSTEXPR
       typename deque<_Tp, _Alloc>::iterator
       deque<_Tp, _Alloc>::
       emplace(const_iterator __position, _Args&&... __args)
@@ -206,6 +210,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif
 
   template <typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename deque<_Tp, _Alloc>::iterator
     deque<_Tp, _Alloc>::
 #if __cplusplus >= 201103L
@@ -519,6 +524,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   template<typename _Tp, typename _Alloc>
 #if __cplusplus >= 201103L
     template<typename... _Args>
+      _GLIBCXX26_CONSTEXPR
       void
       deque<_Tp, _Alloc>::
       _M_push_front_aux(_Args&&... __args)
@@ -907,6 +913,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template<__detail::__container_compatible_range<_Tp> _Rg>
+      _GLIBCXX26_CONSTEXPR
       auto
       deque<_Tp, _Alloc>::
       insert_range(const_iterator __pos, _Rg&& __rg)
@@ -947,6 +954,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
    template<typename _Tp, typename _Alloc>
      template<__detail::__container_compatible_range<_Tp> _Rg>
+      _GLIBCXX26_CONSTEXPR
        void
        deque<_Tp, _Alloc>::
        prepend_range(_Rg&& __rg)
@@ -989,6 +997,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
    template<typename _Tp, typename _Alloc>
      template<__detail::__container_compatible_range<_Tp> _Rg>
+       _GLIBCXX26_CONSTEXPR
        void
        deque<_Tp, _Alloc>::
        append_range(_Rg&& __rg)

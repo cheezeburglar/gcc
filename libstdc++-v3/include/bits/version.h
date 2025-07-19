@@ -1126,9 +1126,8 @@
 
 #if !defined(__cpp_lib_mdspan)
 # if (__cplusplus >= 202100L)
-#  define __glibcxx_mdspan 202207L
+#  define __glibcxx_mdspan 1L
 #  if defined(__glibcxx_want_all) || defined(__glibcxx_want_mdspan)
-#   define __cpp_lib_mdspan 202207L
 #  endif
 # endif
 #endif /* !defined(__cpp_lib_mdspan) && defined(__glibcxx_want_mdspan) */
@@ -1225,12 +1224,7 @@
 #undef __glibcxx_want_constexpr_utility
 
 #if !defined(__cpp_lib_shift)
-# if (__cplusplus >= 202100L)
-#  define __glibcxx_shift 202202L
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_shift)
-#   define __cpp_lib_shift 202202L
-#  endif
-# elif (__cplusplus >= 202002L)
+# if (__cplusplus >= 202002L)
 #  define __glibcxx_shift 201806L
 #  if defined(__glibcxx_want_all) || defined(__glibcxx_want_shift)
 #   define __cpp_lib_shift 201806L
@@ -2229,16 +2223,6 @@
 #endif /* !defined(__cpp_lib_modules) && defined(__glibcxx_want_modules) */
 #undef __glibcxx_want_modules
 
-#if !defined(__cpp_lib_inplace_vector)
-# if (__cplusplus >  202302L)
-#  define __glibcxx_inplace_vector 202406L
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_inplace_vector)
-#   define __cpp_lib_inplace_vector 202406L
-#  endif
-# endif
-#endif /* !defined(__cpp_lib_inplace_vector) && defined(__glibcxx_want_inplace_vector) */
-#undef __glibcxx_want_inplace_vector
-
 #if !defined(__cpp_lib_indirect)
 # if (__cplusplus >  202302L) && _GLIBCXX_HOSTED
 #  define __glibcxx_indirect 202502L
@@ -2258,16 +2242,6 @@
 # endif
 #endif /* !defined(__cpp_lib_polymorphic) && defined(__glibcxx_want_polymorphic) */
 #undef __glibcxx_want_polymorphic
-
-#if !defined(__cpp_lib_smart_ptr_owner_equality)
-# if (__cplusplus >  202302L) && _GLIBCXX_HOSTED
-#  define __glibcxx_smart_ptr_owner_equality 202306L
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_smart_ptr_owner_equality)
-#   define __cpp_lib_smart_ptr_owner_equality 202306L
-#  endif
-# endif
-#endif /* !defined(__cpp_lib_smart_ptr_owner_equality) && defined(__glibcxx_want_smart_ptr_owner_equality) */
-#undef __glibcxx_want_smart_ptr_owner_equality
 
 #if !defined(__cpp_lib_sstream_from_string_view)
 # if (__cplusplus >  202302L) && _GLIBCXX_HOSTED
@@ -2299,23 +2273,34 @@
 #endif /* !defined(__cpp_lib_exception_ptr_cast) && defined(__glibcxx_want_exception_ptr_cast) */
 #undef __glibcxx_want_exception_ptr_cast
 
-#if !defined(__cpp_lib_bitset)
-# if (__cplusplus >  202302L)
-#  define __glibcxx_bitset 202306L
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_bitset)
-#   define __cpp_lib_bitset 202306L
+#if !defined(_cpp_lib_constexpr_deque)
+# if (__cplusplus > 202502L)
+#  define __glibcxx_constexpr_deque // TODO: idk lol
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_deque)
+#   define __cpp_lib_constexpr_deque 202502L
 #  endif
 # endif
-#endif /* !defined(__cpp_lib_bitset) && defined(__glibcxx_want_bitset) */
-#undef __glibcxx_want_bitset
+#endif
+#undef __glibcxx_want_constexpr_deque
 
-#if !defined(__cpp_lib_constexpr_exceptions)
-# if (__cplusplus >  202302L) && (__cpp_constexpr_exceptions >= 202411L)
-#  define __glibcxx_constexpr_exceptions 1L
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_exceptions)
+#if !defined(_cpp_lib_constexpr_queue)
+# if (__cplusplus > 202502L)
+#  define __glibcxx_constexpr_queue // TODO: idk lol
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_queue)
+#   define __cpp_lib_constexpr_queue 202502L
 #  endif
 # endif
-#endif /* !defined(__cpp_lib_constexpr_exceptions) && defined(__glibcxx_want_constexpr_exceptions) */
-#undef __glibcxx_want_constexpr_exceptions
+#endif
+#undef __glibcxx_want_constexpr_queue
+
+#if !defined(_cpp_lib_constexpr_stack)
+# if (__cplusplus > 202502L)
+#  define __glibcxx_constexpr_stack // TODO: idk lol
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_stack)
+#   define __cpp_lib_constexpr_stack 202502L
+#  endif
+# endif
+#endif
+#undef __glibcxx_want_constexpr_stack
 
 #undef __glibcxx_want_all
