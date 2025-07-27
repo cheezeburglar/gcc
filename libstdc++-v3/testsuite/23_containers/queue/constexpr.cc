@@ -5,17 +5,18 @@
 #ifndef __cpp_lib_constexpr_containers
 # error "Feature test macro for constexpr_containers is missing in <queue>"
 #elif __cpp_lib_constexpr_containers != 202502L
-# error "Feature test macro for constexpr containers has wrong value."
+# error "Feature test macro for constexpr containers has wrong value in <queue>"
 #endif
 
 #ifndef __cpp_lib_constexpr_queue
 #error "Feature test macro for constexpr queue is missing in <queue>"
 #elif __cpp_lib_constexpr_queue != 202502L
-# error "Feature test macro for constexpr queue has wrong value."
+# error "Feature test macro for constexpr queue has wrong value in <queue>"
 #endif
 
 #include <ranges>
 #include <functional>
+#include <vector>
 #include <testsuite_hooks.h>
 
 template<typename T>
