@@ -1,0 +1,242 @@
+// { dg-do compile { target c++26 } }
+
+#include <deque>
+
+#ifndef __cpp_lib_constexpr_containers
+# error "Feature test macro for constexpr_containers is missing in <deque>"
+#elif __cpp_lib_constexpr_containers != 202502L
+# error "Feature test macro for constexpr containers has wrong value in <deque>"
+#endif
+
+#ifndef __cpp_lib_constexpr_deque
+#error "Feature test macro for constexpr deque is missing in <deque>"
+#elif __cpp_lib_constexpr_deque != 202502L
+# error "Feature test macro for constexpr deque has wrong value in <deque>"
+#endif
+
+#include <ranges>
+#include <testsuite_hooks.h>
+
+template<typename T>
+struct Alloc : std::allocator<T>
+{
+  using std::allocator<T>::allocator;
+
+  int personality = 0;
+  constexpr explicit Alloc (int p) : personality(p) { }
+
+  template<typename U>
+    constexpr Alloc(const Alloc<U>& a) : personality(a.personality) { }
+};
+
+constexpr bool ctor_tests()
+{
+  std::deque<int> dq1 ();
+
+  Alloc<int> aa (6); // todo: replace FIXME:
+  std::deque<int> dq2 (aa);
+  std::deque<int> dq3 (size_type 4, aa);
+  std::deque<int> dq4 (size_type 4, int (5), aa); // FIXME:
+
+  auto rg = {2, 3, 5, 7};
+  auto dq5 = std::deque(rg.begin(), rg.end(), aa);
+
+  auto dq6 = std::deque(std::from_range_t, std::ranges::iota(0,7), aa);
+
+  std::deque<int> dq7 (dq1);
+  std::deque<int>dq8 (std::move(dq1));
+
+  std::deque<int> dq9 (dq1, aa);
+  std::deque<int> dq10 (std::move(dq1), aa);
+  std::deque<int> dq11 ({2, 3, 5, 7}, aa);
+
+  // alloc aware
+
+}
+
+constexpr bool insert_tests()
+{
+
+  auto rg {1, 2, 3, 4, 5};
+
+  dq1.insert(dq1.begin() , 1);
+  dq1.insert(dq1.end(), 2);
+  VERIFY(dq1.size() == 2);
+  VERIFY(dq1.front() == 2);
+  VERIFY(dq1.back() == 2);
+
+  dq1.insert(dq1.end(), 1, 3);
+
+  dq1.insert(dq1.end(), rg.begin() + 3, rg.end());
+
+  VERIFY(dq1.pop_front() == 1);
+  VERIFY(dq1.pop_front() == 2);
+  VERIFY(dq1.pop_front() == 3);
+  VERIFY(dq1.pop_front() == 4);
+  VERIFY(dq1.pop_front() == 5);
+
+  dq1.insert(d1.begin(), rg.begin(), rg.end());
+  VERIFY(dq1[0] == 1);
+  VERIFY(dq1[1] == 2);
+  VERIFY(dq1[2] == 3);
+  VERIFY(dq1[3] == 4);
+  VERIFY(dq1[4] == 5);
+
+  dq1.insert_range(dq1.end(), rg);
+  VERIFY(dq1[5] == 1);
+  VERIFY(dq1[6] == 2);
+  VERIFY(dq1[7] == 3);
+  VERIFY(dq1[8] == 4);
+  VERIFY(dq1[9] == 5);
+
+  std::deque<int> dq2 {2, 3, 5, 7};
+  dq2.erase(dq2.begin());
+  VERIFY(dq2.size() == 3);
+  dq2.clear();
+  VERIFY(dq2.size() == 0);
+  VERIFY(dq2.empty());
+
+  std::deque<int> dq3, dq4;
+  dq3.insert_range(d2.begin(), rg);
+  dq4.append_range(rg);
+  VERIFY(dq3 == dq4);
+  dq3.erase(dq3.begin() + 1, dq3.end());
+  dq3.prepend_range(rg.begin() + 1, rg.end());
+  VERIFY(dq3 == dq4);
+
+
+  struct S {
+    int foo;
+    S (int i, int j) : foo{i + j} {}
+  };
+  std::deque<S> dq5 ();
+  const S& s0 = dq5.emplace(dq5.cbegin(), 0, 1);
+  const S& s1 = dq5.emplace_back(1, 1);
+  const S& s2 = dq5.emplace_front(2, 1);
+  VERIFY(dq5.front().foo == 3);
+  VERIFY(dq5.back().foo == 2);
+  VERIFY(dq5.[1].foo == 2);
+
+  std::deque<int> dq6 {2, 3};
+  dq6.push_front(1);
+  dq6.push_back(4);
+  VERIFY(dq6.pop_front() == 1);
+  VERIFY(dq6.pop_back() == 4);
+
+  std::deque<int> dq7 {1, 2};
+  dq7.resize(4);
+  VERIFY(dq7.back() == 0);
+  dq7.resize(2);
+  VERIFY(dq7.pop_front() == 1);
+  VERIFY(dq7.pop_back() == 2);
+  dq7.resize(2);
+  VERIFY(dq7.pop_front() == 0);
+  VERIFY(dq7.pop_back() == 0);
+
+  std::deque<int> dq8 {1, 4};
+  dq8.swap(dq6);
+  VERIFY(dq6.front() == 1);
+  VERIFY(dq6.back() == 4);
+  VERIFY(dq8.front() == 2);
+  VERIFY(dq8.back() == 3);
+
+  return true;
+}
+
+// TODO: do we really need this?
+
+constexpr bool iterators_tests()
+{
+  std::deque<int> dq0 ();
+  VERIFY(dq0.begin() == dq0.end());
+  dq0.resize(1);
+  VERIFY(dq0.begin() == dq0.end());
+  dq0.resize(2);
+  VERIFY(dq0.begin() != dq0.end());
+  VERIFY(dq0.cbegin() == dq0.begin());
+  VERIFY(dq0.crbegin() == dq0.rbegin());
+  VERIFY(dq0.cend() == dq0.end());
+  VERIFY(dq0.crend() == dq0.rend());
+
+  auto it = v.begin();
+  VERIFY(it[0] == 0 );
+  VERIFY(&*it == &v.front() );
+  VERIFY(&it[1] == &v[1] );
+  VERIFY(it++ == v.begin() );
+  VERIFY(++it == v.end() );
+  VERIFY((it - 2) == v.begin() );
+  VERIFY((it - v.begin()) == 2 );
+  it -= 2;
+  it += 1;
+  VERIFY((it + 1) == v.end() );
+  VERIFY((1 + it) == v.end() );
+  it = it + 1;
+  auto it2 = v.begin();
+  std::swap(it, it2);
+  VERIFY(it == v.begin() );
+  VERIFY(it2 == v.end() );
+
+  auto rit = v.rbegin();
+  VERIFY( rit[0] == 0 );
+  VERIFY( &*rit == &v.back() );
+  VERIFY( &rit[1] == &v[0] );
+  VERIFY( rit++ == v.rbegin() );
+  VERIFY( ++rit == v.rend() );
+  VERIFY( (rit - 2) == v.rbegin() );
+  VERIFY( (rit - v.rbegin()) == 2 );
+  rit -= 2;
+  rit += 1;
+  VERIFY( (rit + 1) == v.rend() );
+  VERIFY( (1 + rit) == v.rend() );
+  rit = rit + 1;
+  auto rit2 = v.rbegin();
+  std::swap(rit, rit2);
+  VERIFY( rit == v.rbegin() );
+  VERIFY( rit2 == v.rend() );
+
+  return true;
+}
+
+constexpr bool capacity_tests()
+{
+  std::deque<int> dq0 ();
+  VERIFY(dq0.empty());
+  VERIFY(dq0.max_size());
+  dq0.push(0);
+  VERIFY(dq0.size()) == 1;
+  dq0.pop();
+  VERIFY(dq0.shrink_to_fit()); // implementation defined
+}
+
+constexpr bool nonmember_tests()
+{
+  std::deque<int> dq0 {0, 1};
+  std::deque<int> dq1 {0, 1};
+
+  VERIFY( (dq0 == dq1) == true );
+  VERIFY( (dq0 != dq1) == false );
+  VERIFY( (dq0 <= dq1) == true );
+  VERIFY( (dq0 >= dq1) == true );
+  VERIFY( (dq0 < dq1) == false );
+  VERIFY( (dq0 > dq1) == false );
+  VERIFY( (dq0 <=> dq1) != 0 );
+  VERIFY( (dq0 <=> dq1) <= 0 );
+  VERIFY( (dq0 <=> dq1)  < 0 );
+  VERIFY( (dq0 <=> dq1) >= 0 );
+  VERIFY( (dq0 <=> dq1)  > 0 );
+
+  std::deque<int> dq2 {1, 2};
+  std::swap(dq1, dq2);
+
+  VERIFY( (dq0 == dq1) == false );
+  VERIFY( (dq0 != dq1) == true );
+  VERIFY( (dq0 <= dq1) == true );
+  VERIFY( (dq0 >= dq1) == false );
+  VERIFY( (dq0 < dq1) == true );
+  VERIFY( (dq0 > dq1) == false );
+  VERIFY( (dq0 <=> dq1) != 0 );
+  VERIFY( (dq0 <=> dq1) <= 0 );
+  VERIFY( (dq0 <=> dq1)  < 0 );
+  VERIFY( (dq0 <=> dq1) >= 0 );
+  VERIFY( (dq0 <=> dq1)  > 0 );
+}
