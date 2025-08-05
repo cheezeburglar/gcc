@@ -36,8 +36,8 @@ constexpr bool ctor_tests()
 
   Alloc<int> aa (6); // todo: replace FIXME:
   std::deque<int> dq2 (aa);
-  std::deque<int> dq3 (size_t 4, aa);
-  std::deque<int> dq4 (size_t 4, int (5), aa); // FIXME:
+  std::deque<int> dq3 (4, aa);
+  std::deque<int> dq4 (4, 5, aa); // FIXME:
 
   auto rg = {1, 2, 3, 4, 5};
   auto dq5 = std::deque(rg.begin(), rg.end(), aa);
