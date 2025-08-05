@@ -2086,12 +2086,14 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  push_back on each value from the iterator.
        */
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_range_initialize(_InputIterator __first, _InputIterator __last,
 			    std::input_iterator_tag);
 
       // called by the second initialize_dispatch above
       template<typename _ForwardIterator>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_range_initialize(_ForwardIterator __first, _ForwardIterator __last,
 			    std::forward_iterator_tag);
