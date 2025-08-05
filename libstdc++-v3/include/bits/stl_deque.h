@@ -179,6 +179,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       _Deque_iterator& operator=(const _Deque_iterator&) = default;
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_const_cast() const _GLIBCXX_NOEXCEPT
       { return iterator(_M_cur, _M_node); }
@@ -2621,6 +2622,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   /// See std::deque::swap().
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     inline void
     swap(deque<_Tp,_Alloc>& __x, deque<_Tp,_Alloc>& __y)
     _GLIBCXX_NOEXCEPT_IF(noexcept(__x.swap(__y)))
