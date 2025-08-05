@@ -131,6 +131,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       typedef __ptr_rebind<_Ptr, _Elt_pointer>		   _Map_pointer;
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       static size_t _S_buffer_size() _GLIBCXX_NOEXCEPT
       { return __deque_buf_size(sizeof(_Tp)); }
 
