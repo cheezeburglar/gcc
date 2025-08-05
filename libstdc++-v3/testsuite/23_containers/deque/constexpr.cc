@@ -117,7 +117,7 @@ constexpr bool insert_tests()
     S (int i, int j) : foo{i + j} {}
   };
   std::deque<S> dq5 {};
-  const S& s0 = dq5.emplace(dq5.end(), 0, 1);
+  dq5.emplace(dq5.end(), 0, 1);
   const S& s1 = dq5.emplace_back(1, 1);
   const S& s2 = dq5.emplace_front(2, 1);
   VERIFY(dq5.front().foo == 3);
