@@ -38,21 +38,25 @@ constexpr bool ctor_tests()
   std::deque<int> dq3 (size_type 4, aa);
   std::deque<int> dq4 (size_type 4, int (5), aa); // FIXME:
 
-  auto rg = {2, 3, 5, 7};
+  auto rg {1, 2, 3, 4, 5};
   auto dq5 = std::deque(rg.begin(), rg.end(), aa);
 
-  auto dq6 = std::deque(std::from_range_t, std::ranges::iota(0,7), aa);
+  auto dq6 = std::deque(std::from_range_t, std::ranges::iota(1,6), aa);
+  VERIFY(dq5 == dq6);
 
   std::deque<int> dq7 (dq1);
+  VERIFY(dq7 == dq1);
   std::deque<int>dq8 (std::move(dq1));
+  VERIFY(dq8 == dq7);
 
   std::deque<int> dq9 (dq1, aa);
   std::deque<int> dq10 (std::move(dq1), aa);
   std::deque<int> dq11 ({2, 3, 5, 7}, aa);
 
-  // alloc aware
-
+  return true;
 }
+
+static_assert(ctor_tests());
 
 constexpr bool insert_tests()
 {
@@ -143,6 +147,8 @@ constexpr bool insert_tests()
   return true;
 }
 
+static_assert(insert_tests());
+
 // TODO: do we really need this?
 
 constexpr bool iterators_tests()
@@ -197,6 +203,8 @@ constexpr bool iterators_tests()
   return true;
 }
 
+static_assert(iterators_tests());
+
 constexpr bool capacity_tests()
 {
   std::deque<int> dq0 ();
@@ -206,7 +214,11 @@ constexpr bool capacity_tests()
   VERIFY(dq0.size()) == 1;
   dq0.pop();
   VERIFY(dq0.shrink_to_fit()); // implementation defined
+
+  return true;
 }
+
+static_assert(capacity_tests());
 
 constexpr bool nonmember_tests()
 {
@@ -217,26 +229,31 @@ constexpr bool nonmember_tests()
   VERIFY( (dq0 != dq1) == false );
   VERIFY( (dq0 <= dq1) == true );
   VERIFY( (dq0 >= dq1) == true );
-  VERIFY( (dq0 < dq1) == false );
-  VERIFY( (dq0 > dq1) == false );
-  VERIFY( (dq0 <=> dq1) != 0 );
+  VERIFY( (dq0  < dq1) == false );
+  VERIFY( (dq0  > dq1) == false );
+  VERIFY( (dq0 <=> dq1) == 0 );
   VERIFY( (dq0 <=> dq1) <= 0 );
-  VERIFY( (dq0 <=> dq1)  < 0 );
   VERIFY( (dq0 <=> dq1) >= 0 );
-  VERIFY( (dq0 <=> dq1)  > 0 );
 
-  std::deque<int> dq2 {1, 2};
+  std::deque<int> dq2 {2, 4};
   std::swap(dq1, dq2);
 
   VERIFY( (dq0 == dq1) == false );
   VERIFY( (dq0 != dq1) == true );
   VERIFY( (dq0 <= dq1) == true );
   VERIFY( (dq0 >= dq1) == false );
-  VERIFY( (dq0 < dq1) == true );
-  VERIFY( (dq0 > dq1) == false );
+  VERIFY( (dq0  < dq1) == true );
+  VERIFY( (dq0  > dq1) == false );
   VERIFY( (dq0 <=> dq1) != 0 );
   VERIFY( (dq0 <=> dq1) <= 0 );
   VERIFY( (dq0 <=> dq1)  < 0 );
-  VERIFY( (dq0 <=> dq1) >= 0 );
-  VERIFY( (dq0 <=> dq1)  > 0 );
+
+  std::erase(dq0, 0);
+  VERIFY( dq0.pop() == 1 );
+
+  std::erase_if(dq1, [](int x) { return x % 2 == 0; });
+  VERIFY( dq1.empty() );
+  return true;
 }
+
+static_assert(nonmember_tests());
