@@ -1421,6 +1421,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  %deque's current size the %deque is truncated, otherwise
        *  default constructed elements are appended.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       resize(size_type __new_size)
       {
@@ -2201,9 +2202,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       void _M_push_front_aux(const value_type&);
 #else
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	void _M_push_back_aux(_Args&&... __args);
 
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	void _M_push_front_aux(_Args&&... __args);
 #endif
 
