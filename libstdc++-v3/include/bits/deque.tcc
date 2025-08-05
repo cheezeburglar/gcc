@@ -237,6 +237,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
    }
 
   template <typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename deque<_Tp, _Alloc>::iterator
     deque<_Tp, _Alloc>::
     _M_erase(iterator __position)
@@ -260,6 +261,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template <typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename deque<_Tp, _Alloc>::iterator
     deque<_Tp, _Alloc>::
     _M_erase(iterator __first, iterator __last)
@@ -377,6 +379,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template <typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     bool
     deque<_Tp, _Alloc>::
     _M_shrink_to_fit()
@@ -1061,6 +1064,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
      }
 
   template <typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     deque<_Tp, _Alloc>::
     _M_new_elements_at_front(size_type __new_elems)
@@ -1086,6 +1090,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template <typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     deque<_Tp, _Alloc>::
     _M_new_elements_at_back(size_type __new_elems)
@@ -1111,6 +1116,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template <typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     deque<_Tp, _Alloc>::
     _M_reallocate_map(size_type __nodes_to_add, bool __add_at_front)

@@ -184,11 +184,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       { return iterator(_M_cur, _M_node); }
 
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       reference
       operator*() const _GLIBCXX_NOEXCEPT
       { return *_M_cur; }
 
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       pointer
       operator->() const _GLIBCXX_NOEXCEPT
       { return _M_cur; }
@@ -399,6 +401,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       // parameters.
       template<typename _RefR, typename _PtrR>
 	_GLIBCXX_NODISCARD
+	_GLIBCXX26_CONSTEXPR
 	friend difference_type
 	operator-(const _Self& __x,
 		  const _Deque_iterator<_Tp, _RefR, _PtrR>& __y)
@@ -411,6 +414,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	}
 
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       friend _Self
       operator+(const _Self& __x, difference_type __n) _GLIBCXX_NOEXCEPT
       {
@@ -420,6 +424,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       friend _Self
       operator-(const _Self& __x, difference_type __n) _GLIBCXX_NOEXCEPT
       {
@@ -429,6 +434,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       friend _Self
       operator+(difference_type __n, const _Self& __x) _GLIBCXX_NOEXCEPT
       { return __x + __n; }
