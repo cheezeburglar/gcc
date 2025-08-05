@@ -885,6 +885,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       typedef _Alloc					allocator_type;
 
     private:
+      _GLIBCXX26_CONSTEXPR
       static size_t _S_buffer_size() _GLIBCXX_NOEXCEPT
       { return __deque_buf_size(sizeof(_Tp)); }
 
@@ -2327,16 +2328,19 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
       // Internal erase functions follow.
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_destroy_data_aux(iterator __first, iterator __last);
 
       // Called by ~deque().
       // NB: Doesn't deallocate the nodes.
       template<typename _Alloc1>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_destroy_data(iterator __first, iterator __last, const _Alloc1&)
 	{ _M_destroy_data_aux(__first, __last); }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_destroy_data(iterator __first, iterator __last,
 		      const std::allocator<_Tp>&)

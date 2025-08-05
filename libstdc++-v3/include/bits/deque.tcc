@@ -1051,6 +1051,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif // containers_ranges
 
    template<typename _Tp, typename _Alloc>
+     _GLIBCXX26_CONSTEXPR
      void
      deque<_Tp, _Alloc>::
      _M_destroy_data_aux(iterator __first, iterator __last)
