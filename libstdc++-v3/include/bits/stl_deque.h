@@ -2087,14 +2087,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        */
       template<typename _InputIterator>
 	void
-	GLIBCXX26_CONSTEXPR
 	_M_range_initialize(_InputIterator __first, _InputIterator __last,
 			    std::input_iterator_tag);
 
       // called by the second initialize_dispatch above
       template<typename _ForwardIterator>
 	void
-	GLIBCXX26_CONSTEXPR
 	_M_range_initialize(_ForwardIterator __first, _ForwardIterator __last,
 			    std::forward_iterator_tag);
       ///@}
