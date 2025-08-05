@@ -167,41 +167,41 @@ constexpr bool iterators_tests()
   VERIFY(dq0.cend() == dq0.end());
   VERIFY(dq0.crend() == dq0.rend());
 
-  auto it = v.begin();
+  auto it = dq0.begin();
   VERIFY(it[0] == 0 );
-  VERIFY(&*it == &v.front() );
+  VERIFY(&*it == &dq0.front() );
   VERIFY(&it[1] == &v[1] );
-  VERIFY(it++ == v.begin() );
-  VERIFY(++it == v.end() );
-  VERIFY((it - 2) == v.begin() );
-  VERIFY((it - v.begin()) == 2 );
+  VERIFY(it++ == dq0.begin() );
+  VERIFY(++it == dq0.end() );
+  VERIFY((it - 2) == dq0.begin() );
+  VERIFY((it - dq0.begin()) == 2 );
   it -= 2;
   it += 1;
-  VERIFY((it + 1) == v.end() );
-  VERIFY((1 + it) == v.end() );
+  VERIFY((it + 1) == dq0.end() );
+  VERIFY((1 + it) == dq0.end() );
   it = it + 1;
-  auto it2 = v.begin();
+  auto it2 = dq0.begin();
   std::swap(it, it2);
-  VERIFY(it == v.begin() );
-  VERIFY(it2 == v.end() );
+  VERIFY(it == dq0.begin() );
+  VERIFY(it2 == dq0.end() );
 
-  auto rit = v.rbegin();
+  auto rit = dq0.rbegin();
   VERIFY( rit[0] == 0 );
-  VERIFY( &*rit == &v.back() );
+  VERIFY( &*rit == &dq0.back() );
   VERIFY( &rit[1] == &v[0] );
-  VERIFY( rit++ == v.rbegin() );
-  VERIFY( ++rit == v.rend() );
-  VERIFY( (rit - 2) == v.rbegin() );
-  VERIFY( (rit - v.rbegin()) == 2 );
+  VERIFY( rit++ == dq0.rbegin() );
+  VERIFY( ++rit == dq0.rend() );
+  VERIFY( (rit - 2) == dq0.rbegin() );
+  VERIFY( (rit - dq0.rbegin()) == 2 );
   rit -= 2;
   rit += 1;
-  VERIFY( (rit + 1) == v.rend() );
-  VERIFY( (1 + rit) == v.rend() );
+  VERIFY( (rit + 1) == dq0.rend() );
+  VERIFY( (1 + rit) == dq0.rend() );
   rit = rit + 1;
-  auto rit2 = v.rbegin();
+  auto rit2 = dq0.rbegin();
   std::swap(rit, rit2);
-  VERIFY( rit == v.rbegin() );
-  VERIFY( rit2 == v.rend() );
+  VERIFY( rit == dq0.rbegin() );
+  VERIFY( rit2 == dq0.rend() );
 
   return true;
 }
@@ -214,7 +214,7 @@ constexpr bool capacity_tests()
   VERIFY(dq0.empty());
   VERIFY(dq0.max_size());
   dq0.push_front(0);
-  VERIFY(dq0.size()) == 1;
+  VERIFY(dq0.size() == 1);
   dq0.erase(dq0.begin());
   dq0.shrink_to_fit();
 
