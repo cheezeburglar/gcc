@@ -166,10 +166,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       template<typename _Iter,
 	       typename = _Require<is_same<_Self, const_iterator>,
 				   is_same<_Iter, iterator>>>
+       _GLIBCXX26_CONSTEXPR
        _Deque_iterator(const _Iter& __x) noexcept
        : _M_cur(__x._M_cur), _M_first(__x._M_first),
 	 _M_last(__x._M_last), _M_node(__x._M_node) { }
 
+      _GLIBCXX26_CONSTEXPR
       _Deque_iterator(const _Deque_iterator& __x) noexcept
        : _M_cur(__x._M_cur), _M_first(__x._M_first),
 	 _M_last(__x._M_last), _M_node(__x._M_node) { }
@@ -274,6 +276,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       friend bool
       operator==(const _Self& __x, const _Self& __y) _GLIBCXX_NOEXCEPT
       { return __x._M_cur == __y._M_cur; }
@@ -283,6 +286,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       // operators are in scope (for additional details, see libstdc++/3628)
       template<typename _RefR, typename _PtrR>
 	_GLIBCXX_NODISCARD
+	_GLIBCXX26_CONSTEXPR
 	friend bool
 	operator==(const _Self& __x,
 		   const _Deque_iterator<_Tp, _RefR, _PtrR>& __y)
@@ -372,6 +376,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif // three-way comparison
 
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       friend difference_type
       operator-(const _Self& __x, const _Self& __y) _GLIBCXX_NOEXCEPT
       {
