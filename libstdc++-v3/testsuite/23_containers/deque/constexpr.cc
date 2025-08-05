@@ -15,6 +15,7 @@
 #endif
 
 #include <ranges>
+#include <numeric>
 #include <testsuite_hooks.h>
 
 template<typename T>
@@ -35,13 +36,13 @@ constexpr bool ctor_tests()
 
   Alloc<int> aa (6); // todo: replace FIXME:
   std::deque<int> dq2 (aa);
-  std::deque<int> dq3 (size_type 4, aa);
-  std::deque<int> dq4 (size_type 4, int (5), aa); // FIXME:
+  std::deque<int> dq3 (size_t 4, aa);
+  std::deque<int> dq4 (size_t 4, int (5), aa); // FIXME:
 
-  auto rg {1, 2, 3, 4, 5};
+  auto rg = {1, 2, 3, 4, 5};
   auto dq5 = std::deque(rg.begin(), rg.end(), aa);
 
-  auto dq6 = std::deque(std::from_range_t, std::ranges::iota(1,6), aa);
+  auto dq6 = std::deque<int>(std::from_range_t, std::ranges::iota(1,6), aa);
   VERIFY(dq5 == dq6);
 
   std::deque<int> dq7 (dq1);
@@ -60,8 +61,9 @@ static_assert(ctor_tests());
 
 constexpr bool insert_tests()
 {
+  std::deque<int> dq1 {};
 
-  auto rg {1, 2, 3, 4, 5};
+  auto rg = {1, 2, 3, 4, 5};
 
   dq1.insert(dq1.begin() , 1);
   dq1.insert(dq1.end(), 2);
