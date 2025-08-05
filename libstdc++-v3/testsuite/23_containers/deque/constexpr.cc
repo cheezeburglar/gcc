@@ -127,15 +127,16 @@ constexpr bool insert_tests()
   std::deque<int> dq6 {2, 3};
   dq6.push_front(1);
   dq6.push_back(4);
-  VERIFY(dq6.pop_front() == 1);
-  VERIFY(dq6.pop_back() == 4);
+  VERIFY(dq6.front() == 1);
+  VERIFY(dq6.back() == 4);
 
   std::deque<int> dq7 {1, 2};
   dq7.resize(4);
   VERIFY(dq7.back() == 0);
   dq7.resize(2);
-  VERIFY(dq7.pop_front() == 1);
-  VERIFY(dq7.pop_back() == 2);
+  VERIFY(dq7.front() == 1);
+  VERIFY(dq7.back() == 2);
+  dq7.clear();
   dq7.resize(2);
   VERIFY(dq7.pop_front() == 0);
   VERIFY(dq7.pop_back() == 0);
