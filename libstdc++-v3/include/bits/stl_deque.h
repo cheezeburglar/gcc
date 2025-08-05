@@ -525,6 +525,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	iterator _M_start;
 	iterator _M_finish;
 
+	_GLIBCXX26_CONSTEXPR
 	_Deque_impl_data() _GLIBCXX_NOEXCEPT
 	: _M_map(), _M_map_size(), _M_start(), _M_finish()
 	{ }

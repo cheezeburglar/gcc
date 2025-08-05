@@ -420,6 +420,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template <typename _Tp, typename _Alloc>
     template <typename _InputIterator>
+      _GLIBCXX26_CONSTEXPR
       void
       deque<_Tp, _Alloc>::
       _M_range_initialize(_InputIterator __first, _InputIterator __last,
@@ -444,6 +445,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template <typename _Tp, typename _Alloc>
     template <typename _ForwardIterator>
+      _GLIBCXX26_CONSTEXPR
       void
       deque<_Tp, _Alloc>::
       _M_range_initialize(_ForwardIterator __first, _ForwardIterator __last,
