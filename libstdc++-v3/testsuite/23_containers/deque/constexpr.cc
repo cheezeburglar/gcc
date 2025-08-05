@@ -82,7 +82,7 @@ constexpr bool insert_tests()
   VERIFY(dq1[4] == 5);
   dq1.clear();
 
-  dq1.insert(d1.begin(), rg.begin(), rg.end());
+  dq1.insert(dq1.begin(), rg.begin(), rg.end());
   VERIFY(dq1[0] == 1);
   VERIFY(dq1[1] == 2);
   VERIFY(dq1[2] == 3);
@@ -104,7 +104,7 @@ constexpr bool insert_tests()
   VERIFY(dq2.empty());
 
   std::deque<int> dq3, dq4;
-  dq3.insert_range(d2.begin(), rg);
+  dq3.insert_range(dq3.begin(), rg);
   dq4.append_range(rg);
   VERIFY(dq3 == dq4);
   dq3.erase(dq3.begin() + 1, dq3.end());
@@ -171,7 +171,7 @@ constexpr bool iterators_tests()
   auto it = dq0.begin();
   VERIFY(it[0] == 0 );
   VERIFY(&*it == &dq0.front() );
-  VERIFY(&it[1] == &v[1] );
+  VERIFY(&it[1] == &dq0[1] );
   VERIFY(it++ == dq0.begin() );
   VERIFY(++it == dq0.end() );
   VERIFY((it - 2) == dq0.begin() );
@@ -189,7 +189,7 @@ constexpr bool iterators_tests()
   auto rit = dq0.rbegin();
   VERIFY( rit[0] == 0 );
   VERIFY( &*rit == &dq0.back() );
-  VERIFY( &rit[1] == &v[0] );
+  VERIFY( &rit[1] == &dq0[0] );
   VERIFY( rit++ == dq0.rbegin() );
   VERIFY( ++rit == dq0.rend() );
   VERIFY( (rit - 2) == dq0.rbegin() );
