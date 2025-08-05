@@ -193,6 +193,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       operator->() const _GLIBCXX_NOEXCEPT
       { return _M_cur; }
 
+      _GLIBCXX26_CONSTEXPR
       _Self&
       operator++() _GLIBCXX_NOEXCEPT
       {
@@ -205,6 +206,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return *this;
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Self
       operator++(int) _GLIBCXX_NOEXCEPT
       {
@@ -213,6 +215,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return __tmp;
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Self&
       operator--() _GLIBCXX_NOEXCEPT
       {
@@ -225,6 +228,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return *this;
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Self
       operator--(int) _GLIBCXX_NOEXCEPT
       {
@@ -233,6 +237,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return __tmp;
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Self&
       operator+=(difference_type __n) _GLIBCXX_NOEXCEPT
       {
@@ -252,11 +257,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return *this;
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Self&
       operator-=(difference_type __n) _GLIBCXX_NOEXCEPT
       { return *this += -__n; }
 
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       reference
       operator[](difference_type __n) const _GLIBCXX_NOEXCEPT
       { return *(*this + __n); }
@@ -2358,6 +2365,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
       ///@{
       /// Memory-handling helpers for the previous internal insert functions.
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_reserve_elements_at_front(size_type __n)
       {
@@ -2368,6 +2376,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return this->_M_impl._M_start - difference_type(__n);
       }
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_reserve_elements_at_back(size_type __n)
       {
@@ -2378,9 +2387,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return this->_M_impl._M_finish + difference_type(__n);
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_new_elements_at_front(size_type __new_elements);
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_new_elements_at_back(size_type __new_elements);
       ///@}
@@ -2394,6 +2405,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  actually add the nodes.  Can invalidate _M_map pointers.
        *  (And consequently, %deque iterators.)
        */
+      _GLIBCXX26_CONSTEXPR
       void
       _M_reserve_map_at_back(size_type __nodes_to_add = 1)
       {
@@ -2402,6 +2414,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	  _M_reallocate_map(__nodes_to_add, false);
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_reserve_map_at_front(size_type __nodes_to_add = 1)
       {
@@ -2410,6 +2423,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	  _M_reallocate_map(__nodes_to_add, true);
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_reallocate_map(size_type __nodes_to_add, bool __add_at_front);
       ///@}
