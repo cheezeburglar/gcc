@@ -2316,6 +2316,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 
       // Called by erase(q1, q2).
+      _GLIBCXX26_CONSTEXPR
       void
       _M_erase_at_begin(iterator __pos)
       {
@@ -2326,6 +2327,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
       // Called by erase(q1, q2), resize(), clear(), _M_assign_aux,
       // _M_fill_assign, operator=.
+      _GLIBCXX26_CONSTEXPR
       void
       _M_erase_at_end(iterator __pos)
       {
@@ -2335,17 +2337,21 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	this->_M_impl._M_finish = __pos;
       }
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_erase(iterator __pos);
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_erase(iterator __first, iterator __last);
 
 #if __cplusplus >= 201103L
       // Called by resize(sz).
+      _GLIBCXX26_CONSTEXPR
       void
       _M_default_append(size_type __n);
 
+      _GLIBCXX26_CONSTEXPR
       bool
       _M_shrink_to_fit();
 #endif

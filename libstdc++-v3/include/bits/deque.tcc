@@ -1385,6 +1385,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Ref, typename _Ptr, typename _II>
+    _GLIBCXX26_CONSTEXPR
     bool
     __equal_dit(
 	const _GLIBCXX_STD_C::_Deque_iterator<_Tp, _Ref, _Ptr>& __first1,
