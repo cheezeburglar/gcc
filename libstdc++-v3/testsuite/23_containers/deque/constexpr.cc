@@ -42,7 +42,7 @@ constexpr bool ctor_tests()
   auto rg = {1, 2, 3, 4, 5};
   auto dq5 = std::deque(rg.begin(), rg.end(), aa);
 
-  auto dq6 = std::deque<int>(std::from_range_t, std::ranges::iota(1,6), aa);
+  auto dq6 = std::deque<int>(std::from_range, rg, aa);
   VERIFY(dq5 == dq6);
 
   std::deque<int> dq7 (dq1);
