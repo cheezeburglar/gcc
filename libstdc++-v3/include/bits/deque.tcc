@@ -399,6 +399,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif
 
   template <typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     deque<_Tp, _Alloc>::
     _M_fill_initialize(const value_type& __value)

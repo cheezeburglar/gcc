@@ -148,6 +148,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       _Elt_pointer _M_last;
       _Map_pointer _M_node;
 
+      _GLIBCXX26_CONSTEXPR
       _Deque_iterator(_Elt_pointer __x, _Map_pointer __y) _GLIBCXX_NOEXCEPT
       : _M_cur(__x), _M_first(*__y),
 	_M_last(*__y + _S_buffer_size()), _M_node(__y) { }
@@ -305,6 +306,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
 #if __cpp_lib_three_way_comparison
       [[nodiscard]]
+      _GLIBCXX26_CONSTEXPR
       friend strong_ordering
       operator<=>(const _Self& __x, const _Self& __y) noexcept
       {
@@ -562,6 +564,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	{ __x = _Deque_impl_data(); }
 #endif
 
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_swap_data(_Deque_impl_data& __x) _GLIBCXX_NOEXCEPT
 	{
