@@ -210,10 +210,11 @@ constexpr bool capacity_tests()
   std::deque<int> dq0 ();
   VERIFY(dq0.empty());
   VERIFY(dq0.max_size());
-  dq0.push(0);
+  dq0.push_front(0);
   VERIFY(dq0.size()) == 1;
-  dq0.pop();
-  VERIFY(dq0.shrink_to_fit()); // implementation defined
+  dq0.erase(0);
+  bool x = dq0.shrink_to_fit();
+  VERIFY( x ); // implementation defined
 
   return true;
 }
@@ -249,7 +250,7 @@ constexpr bool nonmember_tests()
   VERIFY( (dq0 <=> dq1)  < 0 );
 
   std::erase(dq0, 0);
-  VERIFY( dq0.pop() == 1 );
+  VERIFY( dq0.front() == 1 );
 
   std::erase_if(dq1, [](int x) { return x % 2 == 0; });
   VERIFY( dq1.empty() );
