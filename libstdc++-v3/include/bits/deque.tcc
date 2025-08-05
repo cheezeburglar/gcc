@@ -311,6 +311,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 
   template <typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     deque<_Tp, _Alloc>::
     _M_fill_insert(iterator __pos, size_type __n, const value_type& __x)
@@ -649,6 +650,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template <typename _Tp, typename _Alloc>
     template <typename _InputIterator>
+      _GLIBCXX26_CONSTEXPR
       void
       deque<_Tp, _Alloc>::
       _M_range_insert_aux(iterator __pos,
@@ -658,6 +660,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template <typename _Tp, typename _Alloc>
     template <typename _ForwardIterator>
+      _GLIBCXX26_CONSTEXPR
       void
       deque<_Tp, _Alloc>::
       _M_range_insert_aux(iterator __pos,
@@ -679,6 +682,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   template<typename _Tp, typename _Alloc>
 #if __cplusplus >= 201103L
     template<typename... _Args>
+      _GLIBCXX26_CONSTEXPR
       typename deque<_Tp, _Alloc>::iterator
       deque<_Tp, _Alloc>::
       _M_emplace_aux(iterator __pos, _Args&&... __args)
