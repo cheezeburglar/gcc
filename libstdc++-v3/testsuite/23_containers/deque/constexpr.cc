@@ -31,7 +31,7 @@ struct Alloc : std::allocator<T>
 
 constexpr bool ctor_tests()
 {
-  std::deque<int> dq1 ();
+  std::deque<int> dq1 {};
 
   Alloc<int> aa (6); // todo: replace FIXME:
   std::deque<int> dq2 (aa);
@@ -113,7 +113,7 @@ constexpr bool insert_tests()
     int foo;
     S (int i, int j) : foo{i + j} {}
   };
-  std::deque<S> dq5 ();
+  std::deque<S> dq5 {};
   const S& s0 = dq5.emplace(dq5.cbegin(), 0, 1);
   const S& s1 = dq5.emplace_back(1, 1);
   const S& s2 = dq5.emplace_front(2, 1);
@@ -153,7 +153,7 @@ static_assert(insert_tests());
 
 constexpr bool iterators_tests()
 {
-  std::deque<int> dq0 ();
+  std::deque<int> dq0 {};
   VERIFY(dq0.begin() == dq0.end());
   dq0.resize(1);
   VERIFY(dq0.begin() == dq0.end());
@@ -207,14 +207,13 @@ static_assert(iterators_tests());
 
 constexpr bool capacity_tests()
 {
-  std::deque<int> dq0 ();
+  std::deque<int> dq0 {};
   VERIFY(dq0.empty());
   VERIFY(dq0.max_size());
   dq0.push_front(0);
   VERIFY(dq0.size()) == 1;
   dq0.erase(0);
-  bool x = dq0.shrink_to_fit();
-  VERIFY( x ); // implementation defined
+  VERIFY(dq0.shrink_to_fit()); // implementation defined
 
   return true;
 }
