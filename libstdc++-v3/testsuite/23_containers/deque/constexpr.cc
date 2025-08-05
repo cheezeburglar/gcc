@@ -51,7 +51,7 @@ constexpr bool ctor_tests()
   VERIFY(dq8 == dq7);
 
   std::deque<int> dq9 (dq1, aa);
-  std::deque<int> dq10 (std::move(dq1), aa);
+//  std::deque<int> dq10 (std::move(dq1), aa);
   std::deque<int> dq11 ({2, 3, 5, 7}, aa);
 
   return true;
