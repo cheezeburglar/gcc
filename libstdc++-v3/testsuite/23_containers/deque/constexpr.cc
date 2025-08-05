@@ -107,8 +107,8 @@ constexpr bool insert_tests()
   dq3.insert_range(dq3.begin(), rg);
   dq4.append_range(rg);
   VERIFY(dq3 == dq4);
-  dq3.erase(dq3.begin() + 1, dq3.end());
-  dq3.prepend_range(rg.begin() + 1, rg.end());
+  dq3.erase(dq3.begin(), dq3.end());
+  dq3.prepend_range(rg);
   VERIFY(dq3 == dq4);
 
 
@@ -117,12 +117,12 @@ constexpr bool insert_tests()
     S (int i, int j) : foo{i + j} {}
   };
   std::deque<S> dq5 {};
-  const S& s0 = dq5.emplace(dq5.cbegin(), 0, 1);
+  const S& s0 = dq5.emplace(dq5.end(), 0, 1);
   const S& s1 = dq5.emplace_back(1, 1);
   const S& s2 = dq5.emplace_front(2, 1);
   VERIFY(dq5.front().foo == 3);
   VERIFY(dq5.back().foo == 2);
-  VERIFY(dq5.[1].foo == 2);
+  VERIFY(dq5[1].foo == 2);
 
   std::deque<int> dq6 {2, 3};
   dq6.push_front(1);
@@ -138,8 +138,8 @@ constexpr bool insert_tests()
   VERIFY(dq7.back() == 2);
   dq7.clear();
   dq7.resize(2);
-  VERIFY(dq7.pop_front() == 0);
-  VERIFY(dq7.pop_back() == 0);
+  VERIFY(dq7.front() == 0);
+  VERIFY(dq7.back() == 0);
 
   std::deque<int> dq8 {1, 4};
   dq8.swap(dq6);
