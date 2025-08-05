@@ -2231,8 +2231,10 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	void _M_push_front_aux(_Args&&... __args);
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       void _M_pop_back_aux();
 
+      _GLIBCXX26_CONSTEXPR
       void _M_pop_front_aux();
       ///@}
 
@@ -2264,22 +2266,26 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
       // insert [__first, __last) at the front, assumes distance(__first, __last) is n
       template<typename _InputIterator, typename _Sentinel>
+      _GLIBCXX26_CONSTEXPR
       void _M_range_prepend(_InputIterator __first, _Sentinel __last,
 			    size_type __n);
 
       // insert [__first, __last) at the back, assumes distance(__first, __last) is n
       template<typename _InputIterator, typename _Sentinel>
+      _GLIBCXX26_CONSTEXPR
       void _M_range_append(_InputIterator __first, _Sentinel __last,
 			   size_type __n);
 
       // called by the second insert_dispatch above
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_range_insert_aux(iterator __pos, _InputIterator __first,
 			    _InputIterator __last, std::input_iterator_tag);
 
       // called by the second insert_dispatch above
       template<typename _ForwardIterator>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_range_insert_aux(iterator __pos, _ForwardIterator __first,
 			    _ForwardIterator __last, std::forward_iterator_tag);
@@ -2287,6 +2293,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       // Called by insert(p,n,x), and the range insert when it turns out to be
       // the same thing.  Can use fill functions in optimal situations,
       // otherwise passes off to insert_aux(p,n,x).
+      _GLIBCXX26_CONSTEXPR
       void
       _M_fill_insert(iterator __pos, size_type __n, const value_type& __x);
 
@@ -2295,11 +2302,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       iterator
       _M_insert_aux(iterator __pos, const value_type& __x);
 #else
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_insert_aux(iterator __pos, const value_type& __x)
       { return _M_emplace_aux(__pos, __x); }
 
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_emplace_aux(iterator __pos, _Args&&... __args);
 #endif
