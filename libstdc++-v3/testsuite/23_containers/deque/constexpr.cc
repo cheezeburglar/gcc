@@ -75,11 +75,12 @@ constexpr bool insert_tests()
 
   dq1.insert(dq1.end(), rg.begin() + 3, rg.end());
 
-  VERIFY(dq1.pop_front() == 1);
-  VERIFY(dq1.pop_front() == 2);
-  VERIFY(dq1.pop_front() == 3);
-  VERIFY(dq1.pop_front() == 4);
-  VERIFY(dq1.pop_front() == 5);
+  VERIFY(dq1[0] == 1);
+  VERIFY(dq1[1] == 2);
+  VERIFY(dq1[2] == 3);
+  VERIFY(dq1[3] == 4);
+  VERIFY(dq1[4] == 5);
+  dq1.clear();
 
   dq1.insert(d1.begin(), rg.begin(), rg.end());
   VERIFY(dq1[0] == 1);
@@ -214,8 +215,8 @@ constexpr bool capacity_tests()
   VERIFY(dq0.max_size());
   dq0.push_front(0);
   VERIFY(dq0.size()) == 1;
-  dq0.erase(0);
-  VERIFY(dq0.shrink_to_fit()); // implementation defined
+  dq0.erase(dq0.begin());
+  dq0.shrink_to_fit();
 
   return true;
 }
