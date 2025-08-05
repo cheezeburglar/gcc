@@ -572,6 +572,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   // Called only if _M_impl._M_finish._M_cur == _M_impl._M_finish._M_first.
   template <typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void deque<_Tp, _Alloc>::
     _M_pop_back_aux()
     {
@@ -588,6 +589,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   //   _M_impl._M_start._M_cur == _M_impl._M_start._M_last,
   // then the deque must have at least two nodes.
   template <typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void deque<_Tp, _Alloc>::
     _M_pop_front_aux()
     {
@@ -600,6 +602,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template <typename _Tp, typename _Alloc>
     template <typename _InputIterator, typename _Sentinel>
+      _GLIBCXX26_CONSTEXPR
       void
       deque<_Tp, _Alloc>::
       _M_range_prepend(_InputIterator __first, _Sentinel __last,
@@ -622,6 +625,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template <typename _Tp, typename _Alloc>
     template <typename _InputIterator, typename _Sentinel>
+      _GLIBCXX26_CONSTEXPR
       void
       deque<_Tp, _Alloc>::
       _M_range_append(_InputIterator __first, _Sentinel __last,

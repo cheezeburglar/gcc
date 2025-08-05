@@ -555,10 +555,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	{ }
 
 #if __cplusplus >= 201103L
+	_GLIBCXX26_CONSTEXPR
 	_Deque_impl_data(const _Deque_impl_data&) = default;
+	_GLIBCXX26_CONSTEXPR
 	_Deque_impl_data&
 	operator=(const _Deque_impl_data&) = default;
 
+	_GLIBCXX26_CONSTEXPR
 	_Deque_impl_data(_Deque_impl_data&& __x) noexcept
 	: _Deque_impl_data(__x)
 	{ __x = _Deque_impl_data(); }
@@ -2138,6 +2141,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  This function is called only when the user provides an explicit size
        *  (with or without an explicit exemplar value).
        */
+      _GLIBCXX26_CONSTEXPR
       void
       _M_fill_initialize(const value_type& __value);
 
