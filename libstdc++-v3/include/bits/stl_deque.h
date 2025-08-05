@@ -263,6 +263,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  _M_cur, which should therefore be set by the caller
        *  immediately afterwards, based on _M_first and _M_last.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       _M_set_node(_Map_pointer __new_node) _GLIBCXX_NOEXCEPT
       {
@@ -2058,6 +2059,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	}
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       static size_t
       _S_check_init_len(size_t __n, const allocator_type& __a)
       {
@@ -2067,6 +2069,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return __n;
       }
 
+      _GLIBCXX26_CONSTEXPR
       static size_type
       _S_max_size(const _Tp_alloc_type& __a) _GLIBCXX_NOEXCEPT
       {
