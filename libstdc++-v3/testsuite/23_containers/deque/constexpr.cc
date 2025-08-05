@@ -40,9 +40,9 @@ constexpr bool ctor_tests()
   std::deque<int> dq4 (4, 5, aa); // FIXME:
 
   auto rg = {1, 2, 3, 4, 5};
-  auto dq5 = std::deque(rg.begin(), rg.end(), aa);
+  auto dq5 = std::deque(rg.begin(), rg.end());
 
-  auto dq6 = std::deque<int>(std::from_range, rg, aa);
+  auto dq6 = std::deque<int>(std::from_range, rg);
   VERIFY(dq5 == dq6);
 
   std::deque<int> dq7 (dq1);
