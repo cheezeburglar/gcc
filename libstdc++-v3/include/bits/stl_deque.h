@@ -2125,6 +2125,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
 #if __cplusplus >= 201103L
       // called by deque(n).
+      _GLIBCXX26_CONSTEXPR
       void
       _M_default_initialize();
 #endif
