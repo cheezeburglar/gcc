@@ -151,6 +151,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       : _M_cur(__x), _M_first(*__y),
 	_M_last(*__y + _S_buffer_size()), _M_node(__y) { }
 
+      _GLIBCXX26_CONSTEXPR
       _Deque_iterator() _GLIBCXX_NOEXCEPT
       : _M_cur(), _M_first(), _M_last(), _M_node() { }
 
