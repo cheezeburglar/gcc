@@ -2,12 +2,6 @@
 
 #include <queue>
 
-#ifndef __cpp_lib_constexpr_containers
-# error "Feature test macro for constexpr_containers is missing in <queue>"
-#elif __cpp_lib_constexpr_containers != 202502L
-# error "Feature test macro for constexpr containers has wrong value in <queue>"
-#endif
-
 #ifndef __cpp_lib_constexpr_queue
 #error "Feature test macro for constexpr queue is missing in <queue>"
 #elif __cpp_lib_constexpr_queue != 202502L
@@ -17,6 +11,7 @@
 #include <ranges>
 #include <functional>
 #include <vector>
+#include <numeric>
 #include <testsuite_hooks.h>
 
 template<typename T>
@@ -75,12 +70,26 @@ constexpr bool ctor_tests()
   int rg[4] = {2, 3, 5, 7};
   std::queue<int> q8(std::begin(rg), std::end(rg));
   VERIFY(q8.size() == std::size(rg));
-  VERIFY(q8.pop() == 2 && q8.pop() == 3 && q8.pop() == 5 && q8.pop() == 7);
+  VERIFY(q8.front() == 2);
+  q8.pop();
+  VERIFY(q8.front() == 3);
+  q8.pop();
+  VERIFY(q8.front() == 5);
+  q8.pop();
+  VERIFY(q8.front() == 7);
+  q8.pop();
 
   std::queue<int> q9(std::begin(rg), std::end(rg), aa);
   VERIFY(q9.size() == std::size(rg));
   VERIFY(q9.get_allocator() == aa);
-  VERIFY(q9.pop() == 2 && q9.pop() == 3 && q9.pop() == 5 && q9.pop() == 7);
+  VERIFY(q9.front() == 2);
+  q9.pop();
+  VERIFY(q9.front() == 3);
+  q9.pop();
+  VERIFY(q9.front() == 5);
+  q9.pop();
+  VERIFY(q9.front() == 7);
+  q9.pop();
 
   auto q10 = std::queue(std::from_range_t, std::ranges::iota(0, 7));
   VERIFY(q10.size() == 7);
@@ -125,10 +134,14 @@ constexpr int push_range_test()
   const auto rg = {2, 3, 5, 7};
   a.push_range(rg);
   VERIFY (a.size() == 4);
-  VERIFY (a.pop() == 2);
-  VERIFY (a.pop() == 3);
-  VERIFY (a.pop() == 5);
-  VERIFY (a.pop() == 7);
+  VERIFY (a.front() == 2);
+  a.pop();
+  VERIFY (a.front() == 3);
+  a.pop();
+  VERIFY (a.front() == 5);
+  a.pop();
+  VERIFY (a.front() == 7);
+  a.pop();
   VERIFY (a.size() == 0);
   return true;
 }
@@ -219,17 +232,38 @@ constexpr bool ctor_tests()
   std::priority_queue<int> pq10(std::begin(rg), std::end(rg),
 			       std::less<int>());
   VERIFY(pq10.size() == std::size(rg));
-  VERIFY(pq10.pop() == 2 && pq10.pop() == 3 && pq10.pop() == 5 && pq10.pop() == 7);
+  VERIFY(pq10.top() == 7);
+  pq10.pop();
+  VERIFY(pq10.top() == 5);
+  pq10.pop();
+  VERIFY(pq10.top() == 3);
+  pq10.pop();
+  VERIFY(pq10.top() == 2);
+  pq10.pop();
 
   std::priority_queue<int> pq11(std::begin(rg), std::end(rg),
 			       std::less<int>(), v1);
   verify(pq11.size() == std::size(rg));
-  verify(pq11.pop() == 2 && pq11.pop() == 3 && pq11.pop() == 5 && pq11.pop() == 7);
+  VERIFY(pq11.top() == 7);
+  pq11.pop();
+  VERIFY(pq11.top() == 5);
+  pq11.pop();
+  VERIFY(pq11.top() == 3);
+  pq11.pop();
+  VERIFY(pq11.top() == 2);
+  pq11.pop();
 
   std::priority_queue<int> pq12(std::begin(rg), std::end(rg),
 			       std::less<int>(), std::move(v1));
-  verify(pq12.size() == std::size(rg));
-  verify(pq12.pop() == 2 && pq12.pop() == 3 && pq12.pop() == 5 && pq12.pop() == 7);
+  VERIFY(pq11.size() == std::size(rg));
+  VERIFY(pq11.top() == 7);
+  pq11.pop();
+  VERIFY(pq11.top() == 5);
+  pq11.pop();
+  VERIFY(pq11.top() == 3);
+  pq11.pop();
+  VERIFY(pq11.top() == 2);
+  pq11.pop();
 
   auto pq13 = std::priority_queue(std::from_range_t, std::ranges::iota(0, 7), std::less<int>());
   VERIFY(pq13.size() == 7);
@@ -242,54 +276,55 @@ static_assert( ctor_tests() );
 constexpr bool alloc_aware_ctor_tests()
 {
   constexpr std::allocator<int> alloc;
-  int rg[4] = {2, 3, 5, 7};
+  auto rg = {0, 1};
   std::vector<int> v0 {};
   constexpr std::priority_queue<int> pq14 (alloc);
-  VERIFY(pq14.get_allocator() == alloc);
 
   constexpr std::priority_queue<int> pq15 (std::less<int>(), alloc);
-  VERIFY(pq15.get_allocator() == alloc);
+  pq15.push(0);
+  pq15.push(1);
+  VERIFY(pq15.top() == 0);
 
   constexpr std::priority_queue<int> pq16 (std::less<int>(), v0, alloc);
-  VERIFY(pq16.get_allocator() == alloc);
+  pq16.push(0);
+  pq16.push(1);
+  VERIFY(pq16.top() == 0);
 
   constexpr std::priority_queue<int> pq17 (std::less<int>(), std::move(v0), alloc);
-  VERIFY(pq17.get_allocator() == alloc);
+  pq17.push(0);
+  pq17.push(1);
+  VERIFY(pq17.top() == 0);
 
   constexpr std::priority_queue<int> pq18 (pq17, alloc);
-  VERIFY(pq18 == pq17);
   VERIFY(pq18.size() == pq17.size());
-  VERIFY(pq18.get_allocator() == alloc);
+  VERIFY(pq18.top() == 0);
 
   constexpr std::priority_queue<int> pq19 (std::move(pq17), alloc);
-  VERIFY(pq19 == pq18);
   VERIFY(pq19.size() == pq18.size());
-  VERIFY(pq19.get_allocator() == alloc);
+  VERIFY(pq18.top() == 0);
 
   std::vector<int> v1 {};
 
   std::priority_queue<int> pq20(std::begin(rg), std::end(rg),
 			       std::less<int>(), alloc);
+  VERIFY(pq20.top() == 0);
   VERIFY(pq20.size() == std::size(rg));
-  VERIFY(pq20.pop() == 2 && pq20.pop() == 3 && pq20.pop() == 5 && pq20.pop() == 7);
 
   std::priority_queue<int> pq21(std::begin(rg), std::end(rg),
 			       std::less<int>(), v1, alloc);
+  VERIFY(pq21.top() == 0);
   VERIFY(pq21.size() == std::size(rg));
-  VERIFY(pq21.pop() == 2 && pq21.pop() == 3 && pq21.pop() == 5 && pq21.pop() == 7);
 
   std::priority_queue<int> pq22(std::begin(rg), std::end(rg),
 			       std::less<int>(), std::move(v1), alloc);
+  VERIFY(pq21.top() == 0);
   VERIFY(pq22.size() == std::size(rg));
-  VERIFY(pq22.pop() == 2 && pq22.pop() == 3 && pq22.pop() == 5 && pq22.pop() == 7);
 
   auto pq23 = std::priority_queue(std::from_range_t, std::ranges::iota(0, 7), alloc);
   VERIFY(pq23.size() == 7);
-  VERIFY(pq23.get_alloc() == alloc);
 
   auto pq24 = std::priority_queue(std::from_range_t, std::ranges::iota(0, 7), std::less<int>(), alloc);
   VERIFY(pq24.size() == 7);
-  VERIFY(pq24.get_allocator() == aa);
 
   return true;
 }
@@ -319,15 +354,19 @@ static_assert( top_test() );
 
 constexpr int push_range_test()
 {
-  std::priority_queue<int> a;
+  std::priority_queue<int> pq;
   const auto rg = {2, 3, 5, 7};
-  a.push_range(rg);
-  VERIFY (a.size() == 4);
-  VERIFY (a.pop() == 7);
-  VERIFY (a.pop() == 5);
-  VERIFY (a.pop() == 3);
-  VERIFY (a.pop() == 2);
-  VERIFY (a.size() == 0);
+  pq.push_range(rg);
+  VERIFY (pq.size() == 4);
+  VERIFY (pq.top() == 7);
+  pq.pop();
+  VERIFY (pq.top() == 5);
+  pq.pop();
+  VERIFY (pq.top() == 3);
+  pq.pop();
+  VERIFY (pq.top() == 2);
+  pq.pop();
+  VERIFY (pq.size() == 0);
   return true;
 }
 
@@ -358,32 +397,11 @@ constexpr bool emplace_test()
   const S& s1 = a.emplace(0, 0);
   const S& s2 = a.emplace(1, 0);
   VERIFY (a.size() == 2);
-  VERIFY (a.top() == s2);
+  VERIFY (a.top().foo == 1);
   a.pop();
-  VERIFY (a.top() == s1);
+  VERIFY (a.top().foo == 0);
   return true;
 }
 
 static_assert( emplace_test() );
-
-constexpr bool operator_test()
-{
-  std::priority_queue<int> a, b;
-  a.push(1);
-  b.push(1);
-  VERIFY ( a == b );
-  VERIFY ( a <= b );
-  VERIFY ( a >= b );
-  b.pop();
-  b.push(2);
-  VERIFY ( a < b );
-  VERIFY ( !(a > b) );
-  VERIFY ( a <= b );
-  VERIFY ( !(a >= b) );
-  VERIFY ( a != b );
-  return true;
-}
-
-static_assert( operator_test() );
-
 } // end priority_queue_test
