@@ -91,13 +91,13 @@ constexpr bool ctor_tests()
   VERIFY(q9.front() == 7);
   q9.pop();
 
-  auto q10 = std::queue<int>(std::from_range_t, std::ranges::iota(0, 7));
+  auto q10 = std::queue<int>(std::from_range_t, std::ranges::views::iota(0, 7));
   VERIFY(q10.size() == 7);
 
-  auto q11 = std::queue<int>(std::from_range_t, std::ranges::iota(0, 7), alloc);
+  auto q11 = std::queue<int>(std::from_range_t, std::ranges::views::iota(0, 7), alloc);
   VERIFY(q11.size() == 7);
 
-  auto q12 = std::queue<int>(std::from_range_t, std::ranges::iota(0, 7), aa);
+  auto q12 = std::queue<int>(std::from_range_t, std::ranges::views::iota(0, 7), aa);
   VERIFY(q12.size() == 7);
 
   return true;
@@ -263,7 +263,7 @@ constexpr bool ctor_tests()
   VERIFY(pq11.top() == 2);
   pq11.pop();
 
-  auto pq13 = std::priority_queue(std::from_range_t, std::ranges::iota(0, 7), std::less<int>());
+  auto pq13 = std::priority_queue(std::from_range_t, std::ranges::views::iota(0, 7), std::less<int>());
   VERIFY(pq13.size() == 7);
 
   return true;
@@ -318,10 +318,10 @@ constexpr bool alloc_aware_ctor_tests()
   VERIFY(pq21.top() == 0);
   VERIFY(pq22.size() == std::size(rg));
 
-  auto pq23 = std::priority_queue(std::from_range_t, std::ranges::iota(0, 7), alloc);
+  auto pq23 = std::priority_queue(std::from_range_t, std::ranges::views::iota(0, 7), alloc);
   VERIFY(pq23.size() == 7);
 
-  auto pq24 = std::priority_queue(std::from_range_t, std::ranges::iota(0, 7), std::less<int>(), alloc);
+  auto pq24 = std::priority_queue(std::from_range_t, std::ranges::views::iota(0, 7), std::less<int>(), alloc);
   VERIFY(pq24.size() == 7);
 
   return true;
