@@ -37,23 +37,27 @@ constexpr bool ctor_tests()
   VERIFY(q1.size() = 2);
 
   constexpr std::queue<int> q2 (q1);
-  VERIFY(q2 == q1);
   VERIFY(q2.size() == q1.size());
+  VERIFY(q2.front() == q1.front());
+  VERIFY(q2.back() == q1.back());
 
   constexpr std::queue<int> q3 (std::move(q2));
-  VERIFY(q3 == q1);
   VERIFY(q3.size() == q1.size());
+  VERIFY(q3.front() == q1.front());
+  VERIFY(q3.back() == q1.back());
   VERIFY(q2.empty());
 
   constexpr std::allocator<int> alloc;
   constexpr std::queue<int> q4 (alloc);
   q4.push(1);
-  q4.push(4);
+  q4.push(2);
   VERIFY(q4.size() == 2);
 
   constexpr std::queue<int> q5 (q4, alloc);
   VERIFY(q5 == q4);
   VERIFY(q5.size() == q4.size());
+  VERIFY(q5.front() == q4.front());
+  VERIFY(q5.back() == q4.back());
   VERIFY(q5.get_allocator() == alloc);
 
   constexpr std::queue<int> q6 (std::move(q5), alloc);
