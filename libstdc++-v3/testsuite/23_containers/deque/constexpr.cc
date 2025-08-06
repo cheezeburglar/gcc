@@ -123,6 +123,8 @@ constexpr bool insert_tests()
   dq6.push_back(4);
   VERIFY(dq6.front() == 1);
   VERIFY(dq6.back() == 4);
+  dq6.pop_front();
+  dq6.pop_back();
 
   std::deque<int> dq7 {1, 2};
   dq7.resize(4);
