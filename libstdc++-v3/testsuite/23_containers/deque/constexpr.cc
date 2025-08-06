@@ -68,7 +68,7 @@ constexpr bool insert_tests()
   dq1.insert(dq1.begin() , 1);
   dq1.insert(dq1.end(), 2);
   VERIFY(dq1.size() == 2);
-  VERIFY(dq1.front() == 2);
+  VERIFY(dq1.front() == 1);
   VERIFY(dq1.back() == 2);
 
   dq1.insert(dq1.end(), 1, 3);
