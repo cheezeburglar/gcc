@@ -204,7 +204,7 @@ namespace priority_queue_tests {
 
 constexpr bool ctor_tests()
 {
-  constexpr std::vector<int> v0 {0, 1, 2, 3};
+  std::vector<int> v0 {0, 1, 2, 3};
 
   constexpr std::priority_queue<int> pq1;
   VERIFY(pq1.size() == 0 && pq1.empty());
