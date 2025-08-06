@@ -388,14 +388,14 @@ struct S
 {
   int foo;
   S(int i, int j) : foo{i + j} {}
-  friend bool operator< (S const& x, S const& y) { return x.id < y.id; }
+  friend bool operator< (S const& x, S const& y) { return x.foo < y.foo; }
 }
 
 constexpr bool emplace_test()
 {
   std::priority_queue<S> a;
-  const S& s1 = a.emplace(0, 0);
-  const S& s2 = a.emplace(1, 0);
+  a.emplace(0, 0);
+  a.emplace(1, 0);
   VERIFY (a.size() == 2);
   VERIFY (a.top().foo == 1);
   a.pop();
