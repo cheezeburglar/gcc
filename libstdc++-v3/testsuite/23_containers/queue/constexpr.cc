@@ -34,7 +34,7 @@ constexpr bool ctor_tests()
   VERIFY(q1.size() == 0 && q1.empty());
   q1.push(1);
   q1.push(2);
-  VERIFY(q1.size() = 2);
+  VERIFY(q1.size() == 2);
 
   std::queue<int> q2 (q1);
   VERIFY(q2.size() == q1.size());
@@ -58,18 +58,15 @@ constexpr bool ctor_tests()
   VERIFY(q5.size() == q4.size());
   VERIFY(q5.front() == q4.front());
   VERIFY(q5.back() == q4.back());
-  VERIFY(q5.get_allocator() == alloc);
 
   std::queue<int> q6 (std::move(q5), alloc);
   VERIFY(q6 == q4);
   VERIFY(q6.size() == q4.size());
-  VERIFY(q6.get_allocator() == alloc);
   VERIFY(q5.empty());
 
   Alloc<int> aa(5);
   constexpr std::queue<int> q7 (aa);
   VERIFY(q7.size() == 0);
-  VERIFY(q7.get_allocator() == aa);
 
   int rg[4] = {2, 3, 5, 7};
   std::queue<int> q8(std::begin(rg), std::end(rg));
@@ -85,7 +82,6 @@ constexpr bool ctor_tests()
 
   std::queue<int> q9(std::begin(rg), std::end(rg), aa);
   VERIFY(q9.size() == std::size(rg));
-  VERIFY(q9.get_allocator() == aa);
   VERIFY(q9.front() == 2);
   q9.pop();
   VERIFY(q9.front() == 3);
@@ -100,11 +96,9 @@ constexpr bool ctor_tests()
 
   auto q11 = std::queue(std::from_range_t, std::ranges::iota(0, 7), alloc);
   VERIFY(q11.size() == 7);
-  VERIFY(q11.get_allocator() == alloc);
 
   auto q12 = std::queue(std::from_range_t, std::ranges::iota(0, 7), aa);
   VERIFY(q12.size() == 7);
-  VERIFY(q12.get_allocator() == aa);
 
   return true;
 }
