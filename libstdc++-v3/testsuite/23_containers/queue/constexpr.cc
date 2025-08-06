@@ -24,49 +24,49 @@ struct Alloc : std::allocator<T>
 
   template<typename U>
     constexpr Alloc(const Alloc<U>& a) : personality(a.personality) { }
-}
+};
 
 namespace queue_tests {
 
 constexpr bool ctor_tests()
 {
-  constexpr std::queue<int> q1;
+  std::queue<int> q1;
   VERIFY(q1.size() == 0 && q1.empty());
   q1.push(1);
   q1.push(2);
   VERIFY(q1.size() = 2);
 
-  constexpr std::queue<int> q2 (q1);
+  std::queue<int> q2 (q1);
   VERIFY(q2.size() == q1.size());
   VERIFY(q2.front() == q1.front());
   VERIFY(q2.back() == q1.back());
 
-  constexpr std::queue<int> q3 (std::move(q2));
+  std::queue<int> q3 (std::move(q2));
   VERIFY(q3.size() == q1.size());
   VERIFY(q3.front() == q1.front());
   VERIFY(q3.back() == q1.back());
   VERIFY(q2.empty());
 
-  constexpr std::allocator<int> alloc;
-  constexpr std::queue<int> q4 (alloc);
+  std::allocator<int> alloc;
+  std::queue<int> q4 (alloc);
   q4.push(1);
   q4.push(2);
   VERIFY(q4.size() == 2);
 
-  constexpr std::queue<int> q5 (q4, alloc);
+  std::queue<int> q5 (q4, alloc);
   VERIFY(q5 == q4);
   VERIFY(q5.size() == q4.size());
   VERIFY(q5.front() == q4.front());
   VERIFY(q5.back() == q4.back());
   VERIFY(q5.get_allocator() == alloc);
 
-  constexpr std::queue<int> q6 (std::move(q5), alloc);
+  std::queue<int> q6 (std::move(q5), alloc);
   VERIFY(q6 == q4);
   VERIFY(q6.size() == q4.size());
   VERIFY(q6.get_allocator() == alloc);
   VERIFY(q5.empty());
 
-  constexpr Alloc<int> aa(5);
+  Alloc<int> aa(5);
   constexpr std::queue<int> q7 (aa);
   VERIFY(q7.size() == 0);
   VERIFY(q7.get_allocator() == aa);
@@ -168,7 +168,7 @@ struct S
 {
   int foo;
   S(int i, int j) : foo{i + j} {}
-}
+};
 
 constexpr bool emplace_test()
 {
@@ -247,7 +247,7 @@ constexpr bool ctor_tests()
 
   std::priority_queue<int> pq11(std::begin(rg), std::end(rg),
 			       std::less<int>(), v1);
-  verify(pq11.size() == std::size(rg));
+  VERIFY(pq11.size() == std::size(rg));
   VERIFY(pq11.top() == 7);
   pq11.pop();
   VERIFY(pq11.top() == 5);
