@@ -2031,9 +2031,25 @@ ftms = {
 };
 
 ftms = {
-  name = constexpr_containers;
+  name = constexpr_queue;
   values = {
-    v = 202502L;
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
+  name = constexpr_deque;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
+  name = constexpr_stack;
+  values = {
+    v = 202502;
     cxxmin = 26;
   };
 };

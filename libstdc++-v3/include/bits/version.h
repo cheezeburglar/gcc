@@ -2273,34 +2273,34 @@
 #endif /* !defined(__cpp_lib_exception_ptr_cast) && defined(__glibcxx_want_exception_ptr_cast) */
 #undef __glibcxx_want_exception_ptr_cast
 
-#if !defined(_cpp_lib_constexpr_deque)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_deque // TODO: idk lol
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_deque)
-#   define __cpp_lib_constexpr_deque 202502L
-#  endif
-# endif
-#endif
-#undef __glibcxx_want_constexpr_deque
-
-#if !defined(_cpp_lib_constexpr_queue)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_queue // TODO: idk lol
+#if !defined(__cpp_lib_constexpr_queue)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_queue 202502L
 #  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_queue)
 #   define __cpp_lib_constexpr_queue 202502L
 #  endif
 # endif
-#endif
+#endif /* !defined(__cpp_lib_constexpr_queue) && defined(__glibcxx_want_constexpr_queue) */
 #undef __glibcxx_want_constexpr_queue
 
-#if !defined(_cpp_lib_constexpr_stack)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_stack // TODO: idk lol
+#if !defined(__cpp_lib_constexpr_deque)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_deque 202502L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_deque)
+#   define __cpp_lib_constexpr_deque 202502L
+#  endif
+# endif
+#endif /* !defined(__cpp_lib_constexpr_deque) && defined(__glibcxx_want_constexpr_deque) */
+#undef __glibcxx_want_constexpr_deque
+
+#if !defined(__cpp_lib_constexpr_stack)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_stack 202502L
 #  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_stack)
 #   define __cpp_lib_constexpr_stack 202502L
 #  endif
 # endif
-#endif
+#endif /* !defined(__cpp_lib_constexpr_stack) && defined(__glibcxx_want_constexpr_stack) */
 #undef __glibcxx_want_constexpr_stack
 
 #undef __glibcxx_want_all
