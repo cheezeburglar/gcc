@@ -275,31 +275,31 @@ static_assert( ctor_tests() );
 
 constexpr bool alloc_aware_ctor_tests()
 {
-  constexpr std::allocator<int> alloc;
+  std::allocator<int> alloc;
   auto rg = {0, 1};
   std::vector<int> v0 {};
-  constexpr std::priority_queue<int> pq14 (alloc);
+  std::priority_queue<int> pq14 (alloc);
 
-  constexpr std::priority_queue<int> pq15 (std::less<int>(), alloc);
+  std::priority_queue<int> pq15 (std::less<int>(), alloc);
   pq15.push(0);
   pq15.push(1);
   VERIFY(pq15.top() == 0);
 
-  constexpr std::priority_queue<int> pq16 (std::less<int>(), v0, alloc);
+  std::priority_queue<int> pq16 (std::less<int>(), v0, alloc);
   pq16.push(0);
   pq16.push(1);
   VERIFY(pq16.top() == 0);
 
-  constexpr std::priority_queue<int> pq17 (std::less<int>(), std::move(v0), alloc);
+  std::priority_queue<int> pq17 (std::less<int>(), std::move(v0), alloc);
   pq17.push(0);
   pq17.push(1);
   VERIFY(pq17.top() == 0);
 
-  constexpr std::priority_queue<int> pq18 (pq17, alloc);
+  std::priority_queue<int> pq18 (pq17, alloc);
   VERIFY(pq18.size() == pq17.size());
   VERIFY(pq18.top() == 0);
 
-  constexpr std::priority_queue<int> pq19 (std::move(pq17), alloc);
+  std::priority_queue<int> pq19 (std::move(pq17), alloc);
   VERIFY(pq19.size() == pq18.size());
   VERIFY(pq18.top() == 0);
 
@@ -378,7 +378,7 @@ constexpr int swap_test()
   a.push(2);
   b.push(4);
   std::swap(a, b);
-  static_assert ( a.pop() - b.pop() == 2 );
+  static_assert ( a.top() - b.top() == 2 );
   return true;
 }
 
@@ -387,9 +387,9 @@ static_assert (swap_test());
 struct S
 {
   int foo;
-  S(int i, int j) : foo{i + j} {}
+  constexpr S(int i, int j) : foo{i + j} {}
   friend bool operator< (S const& x, S const& y) { return x.foo < y.foo; }
-}
+};
 
 constexpr bool emplace_test()
 {
