@@ -172,7 +172,7 @@ struct S
 
 constexpr bool emplace_test()
 {
-  std::queue<s> a;
+  std::queue<S> a;
   const S& s = a.emplace(196883, 1);
   VERIFY (a.size() == 1);
   VERIFY (a.front().foo == 196884);
