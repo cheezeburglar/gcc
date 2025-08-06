@@ -347,7 +347,7 @@ constexpr bool top_test ()
   std::priority_queue<int> a;
   a.push(2);
   a.push(4);
-  VERIFY (a.top() == 4 && a.pop() == 4);
+  VERIFY (a.top() == 4);
 }
 
 static_assert( top_test() );
@@ -378,7 +378,8 @@ constexpr int swap_test()
   a.push(2);
   b.push(4);
   std::swap(a, b);
-  static_assert ( a.top() - b.top() == 2 );
+  static_assert ( a.top() == 4 );
+  static_assert ( b.top() == 2 );
   return true;
 }
 
@@ -388,7 +389,7 @@ struct S
 {
   int foo;
   constexpr S(int i, int j) : foo{i + j} {}
-  friend bool operator< (S const& x, S const& y) { return x.foo < y.foo; }
+  constexpr friend bool operator< (S const& x, S const& y) { return x.foo < y.foo; }
 };
 
 constexpr bool emplace_test()
