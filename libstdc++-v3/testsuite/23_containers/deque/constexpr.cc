@@ -116,7 +116,7 @@ constexpr bool insert_tests()
   const S& s2 = dq5.emplace_front(2, 1);
   VERIFY(dq5.front().foo == 3);
   VERIFY(dq5.back().foo == 2);
-  VERIFY(dq5[1].foo == 2);
+  VERIFY(dq5[1].foo == 1);
 
   std::deque<int> dq6 {2, 3};
   dq6.push_front(1);
