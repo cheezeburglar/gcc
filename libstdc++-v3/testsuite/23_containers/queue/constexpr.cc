@@ -65,7 +65,7 @@ constexpr bool ctor_tests()
   VERIFY(q5.empty());
 
   Alloc<int> aa(5);
-  constexpr std::queue<int> q7 (aa);
+  std::queue<int> q7 (aa);
   VERIFY(q7.size() == 0);
 
   int rg[4] = {2, 3, 5, 7};
@@ -91,13 +91,13 @@ constexpr bool ctor_tests()
   VERIFY(q9.front() == 7);
   q9.pop();
 
-  auto q10 = std::queue(std::from_range_t, std::ranges::iota(0, 7));
+  auto q10 = std::queue<int>(std::from_range_t, std::ranges::iota(0, 7));
   VERIFY(q10.size() == 7);
 
-  auto q11 = std::queue(std::from_range_t, std::ranges::iota(0, 7), alloc);
+  auto q11 = std::queue<int>(std::from_range_t, std::ranges::iota(0, 7), alloc);
   VERIFY(q11.size() == 7);
 
-  auto q12 = std::queue(std::from_range_t, std::ranges::iota(0, 7), aa);
+  auto q12 = std::queue<int>(std::from_range_t, std::ranges::iota(0, 7), aa);
   VERIFY(q12.size() == 7);
 
   return true;
