@@ -1014,10 +1014,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       { }
 
     private:
+      _GLIBCXX26_CONSTEXPR
       deque(deque&& __x, const allocator_type& __a, true_type)
       : _Base(std::move(__x), __a)
       { }
 
+      _GLIBCXX26_CONSTEXPR
       deque(deque&& __x, const allocator_type& __a, false_type)
       : _Base(std::move(__x), __a, __x.size())
       {
