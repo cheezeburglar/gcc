@@ -63,7 +63,7 @@
 
 #define __glibcxx_want_adaptor_iterator_pair_constructor
 #define __glibcxx_want_containers_ranges
-#define __glibcxx_want_containers_constexpr
+#define __glibcxx_want_constexpr_stack
 #include <bits/version.h>
 
 #include <deque>
