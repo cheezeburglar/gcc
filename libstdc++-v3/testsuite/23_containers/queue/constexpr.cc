@@ -122,6 +122,7 @@ constexpr bool front_and_back_test()
   a.push(2);
   a.push(4);
   static_assert ( a.front() == 2 && a.back() == 4);
+  return true;
 }
 
 static_assert( front_and_back_test() );
@@ -152,7 +153,8 @@ constexpr int swap_test()
   a.push(1);
   b.push(2);
   std::swap(a, b);
-  static_assert ( a.front() - b.front() == 1 );
+  VERIFY( a.front() == 2 );
+  VERIFY( b.front() == 1 );
   return true;
 }
 
@@ -202,7 +204,7 @@ namespace priority_queue_tests {
 
 constexpr bool ctor_tests()
 {
-  std::vector<int> v0 {0, 1, 2, 3};
+  constexpr std::vector<int> v0 {0, 1, 2, 3};
 
   constexpr std::priority_queue<int> pq1;
   VERIFY(pq1.size() == 0 && pq1.empty());
@@ -225,7 +227,7 @@ constexpr bool ctor_tests()
   VERIFY(pq6.size() == pq5.size());
 
   int rg[4] = {2, 3, 5, 7};
-  std::vector<int> v1 {};
+  constexpr std::vector<int> v1 {};
 
   std::priority_queue<int> pq10(std::begin(rg), std::end(rg),
 			       std::less<int>());
@@ -275,7 +277,7 @@ constexpr bool alloc_aware_ctor_tests()
 {
   std::allocator<int> alloc;
   auto rg = {0, 1};
-  std::vector<int> v0 {};
+  constexpr std::vector<int> v0 {};
   std::priority_queue<int> pq14 (alloc);
 
   std::priority_queue<int> pq15 (std::less<int>(), alloc);
@@ -301,7 +303,7 @@ constexpr bool alloc_aware_ctor_tests()
   VERIFY(pq19.size() == pq18.size());
   VERIFY(pq18.top() == 0);
 
-  std::vector<int> v1 {};
+  constexpr std::vector<int> v1 {};
 
   std::priority_queue<int> pq20(std::begin(rg), std::end(rg),
 			       std::less<int>(), alloc);
