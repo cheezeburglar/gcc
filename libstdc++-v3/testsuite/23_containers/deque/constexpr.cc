@@ -2,12 +2,6 @@
 
 #include <deque>
 
-#ifndef __cpp_lib_constexpr_containers
-# error "Feature test macro for constexpr_containers is missing in <deque>"
-#elif __cpp_lib_constexpr_containers != 202502L
-# error "Feature test macro for constexpr containers has wrong value in <deque>"
-#endif
-
 #ifndef __cpp_lib_constexpr_deque
 #error "Feature test macro for constexpr deque is missing in <deque>"
 #elif __cpp_lib_constexpr_deque != 202502L
@@ -114,7 +108,7 @@ constexpr bool insert_tests()
 
   struct S {
     int foo;
-    S (int i, int j) : foo{i + j} {}
+    constexpr S (int i, int j) : foo{i + j} {}
   };
   std::deque<S> dq5 {};
   dq5.emplace(dq5.end(), 0, 1);
