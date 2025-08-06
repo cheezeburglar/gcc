@@ -2055,6 +2055,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  pointed-to memory is not touched in any way.  Managing the pointer is
        *  the user's responsibility.
        */
+      _GLIBCXX26_CONSTEXPR
       void
       clear() _GLIBCXX_NOEXCEPT
       { _M_erase_at_end(begin()); }
