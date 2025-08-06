@@ -223,11 +223,11 @@ constexpr bool ctor_tests()
   VERIFY(pq4.size() == 4 && pq4.top() == 3);
 
   constexpr std::priority_queue<int> pq5 (pq3);
-  VERIFY(pq5 == pq3);
+  VERIFY(pq5.top() == pq3.top());
   VERIFY(pq5.size() == pq3.size());
 
   constexpr std::priority_queue<int> pq6 (std::move(pq3));
-  VERIFY(pq6 == pq5);
+  VERIFY(pq6.top() == pq5.top());
   VERIFY(pq6.size() == pq5.size());
 
   int rg[4] = {2, 3, 5, 7};
@@ -389,22 +389,22 @@ constexpr int swap_test()
 
 static_assert (swap_test());
 
-struct S
-{
-  int foo;
-  constexpr S(int i, int j) : foo{i + j} {}
-  constexpr friend bool operator< (S const& x, S const& y) { return x.foo < y.foo; }
-};
-
 constexpr bool emplace_test()
 {
-  std::priority_queue<S> a;
-  a.emplace(0, 0);
-  a.emplace(1, 0);
-  VERIFY (a.size() == 2);
-  VERIFY (a.top().foo == 1);
-  a.pop();
-  VERIFY (a.top().foo == 0);
+
+  struct S
+  {
+    int foo;
+    constexpr S(int i, int j) : foo{i + j} {}
+    constexpr friend bool operator< (S const& x, S const& y) { return x.foo < y.foo; }
+  };
+  std::priority_queue<S> pq;
+  pq.emplace(0, 0);
+  pq.emplace(1, 0);
+  VERIFY (pq.size() == 2);
+  VERIFY (pq.top().foo == 1);
+  pq.pop();
+  VERIFY (pq.top().foo == 0);
   return true;
 }
 
