@@ -387,15 +387,15 @@ constexpr int swap_test()
 
 static_assert (swap_test());
 
+struct S
+{
+  int foo;
+  constexpr S(int i, int j) : foo{i + j} {}
+  constexpr friend bool operator< (S const &x, S const &y) { return x.foo < y.foo; }
+};
+
 constexpr bool emplace_test()
 {
-
-  struct S
-  {
-    int foo;
-    constexpr S(int i, int j) : foo{i + j} {}
-    constexpr bool operator< (S const &x, S const &y) { return x.foo < y.foo; }
-  };
   std::priority_queue<S> pq;
   pq.emplace(0, 0);
   pq.emplace(1, 0);
