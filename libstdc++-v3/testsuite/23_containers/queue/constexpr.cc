@@ -204,7 +204,9 @@ namespace priority_queue_tests {
 
 constexpr bool ctor_tests()
 {
-  std::vector<int> v0 {0, 1, 2, 3};
+  int rg[4] = {2, 3, 5, 7};
+  constexpr std::vector<int> v0 {};
+  v0.insert_range(rg);
 
   constexpr std::priority_queue<int> pq1;
   VERIFY(pq1.size() == 0 && pq1.empty());
@@ -213,10 +215,10 @@ constexpr bool ctor_tests()
   VERIFY(pq2.size() == 0 && pq2.empty());
 
   constexpr std::priority_queue<int> pq3 {std::less<int>(), v0};
-  VERIFY(pq3.size() == 4 && pq3.top() == 3);
+  VERIFY(pq3.size() == 4 && pq3.top() == 7);
 
   constexpr std::priority_queue<int> pq4 {std::less<int>(), std::move(v0)};
-  VERIFY(pq4.size() == 4 && pq4.top() == 3);
+  VERIFY(pq4.size() == 4 && pq4.top() == 7);
 
   constexpr std::priority_queue<int> pq5 (pq3);
   VERIFY(pq5.top() == pq3.top());
@@ -226,7 +228,6 @@ constexpr bool ctor_tests()
   VERIFY(pq6.top() == pq5.top());
   VERIFY(pq6.size() == pq5.size());
 
-  int rg[4] = {2, 3, 5, 7};
   constexpr std::vector<int> v1 {};
 
   std::priority_queue<int> pq10(std::begin(rg), std::end(rg),
