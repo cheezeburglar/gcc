@@ -1216,6 +1216,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
     };
 
   template<typename _Tp, typename _Ref, typename _Ptr, typename _II>
+    _GLIBCXX26_CONSTEXPR
     typename __gnu_cxx::__enable_if<
       __is_random_access_iter<_II>::__value, bool>::__type
     __equal_aux1(_GLIBCXX_STD_C::_Deque_iterator<_Tp, _Ref, _Ptr>,
@@ -1224,12 +1225,14 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 
   template<typename _Tp1, typename _Ref1, typename _Ptr1,
 	   typename _Tp2, typename _Ref2, typename _Ptr2>
+    _GLIBCXX26_CONSTEXPR
     bool
     __equal_aux1(_GLIBCXX_STD_C::_Deque_iterator<_Tp1, _Ref1, _Ptr1>,
 		 _GLIBCXX_STD_C::_Deque_iterator<_Tp1, _Ref1, _Ptr1>,
 		 _GLIBCXX_STD_C::_Deque_iterator<_Tp2, _Ref2, _Ptr2>);
 
   template<typename _II, typename _Tp, typename _Ref, typename _Ptr>
+    _GLIBCXX26_CONSTEXPR
     typename __gnu_cxx::__enable_if<
       __is_random_access_iter<_II>::__value, bool>::__type
     __equal_aux1(_II, _II,
