@@ -2099,6 +2099,22 @@ ftms = {
   };
 };
 
+ftms = {
+  name = constexpr_queue;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
+  name = constexpr_deque;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
 // Standard test specifications.
 stds[97] = ">= 199711L";
 stds[03] = ">= 199711L";

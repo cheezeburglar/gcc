@@ -972,6 +972,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   // Fills [first, last) with value_types constructed by the allocator
   // alloc, with no arguments passed to the construct call.
   template<typename _ForwardIterator, typename _Allocator>
+    _GLIBCXX20_CONSTEXPR
     void
     __uninitialized_default_a(_ForwardIterator __first,
 			      _ForwardIterator __last,
@@ -987,6 +988,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
 #if _GLIBCXX_HOSTED
   template<typename _ForwardIterator, typename _Tp>
+    _GLIBCXX20_CONSTEXPR
     inline void
     __uninitialized_default_a(_ForwardIterator __first,
 			      _ForwardIterator __last,
