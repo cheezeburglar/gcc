@@ -308,19 +308,26 @@ namespace __detail
     {
       using value_type = _Value;
 
-      __gnu_cxx::__aligned_buffer<_Value> _M_storage;
+//      __gnu_cxx::__aligned_buffer<_Value> _M_storage;
+      union _Uninit_storage {
+	_Uninit_storage () noexcept {};
+	~_Uninit_storage () {};
+	alignas(__alignof__(_Value)) unsigned char _M_storage[sizeof(_Value)];
+	_Value _M_ptr;
+      };
 
+      _Uninit_storage _M_u;
       // These member functions must be always_inline, see PR 111050
 
       [[__gnu__::__always_inline__]]
       _Value*
       _M_valptr() noexcept
-      { return _M_storage._M_ptr(); }
+      { return std::__addressof(_M_u._M_ptr); }
 
       [[__gnu__::__always_inline__]]
       const _Value*
       _M_valptr() const noexcept
-      { return _M_storage._M_ptr(); }
+      { return std::__addressof(_M_u._M_ptr); }
 
       [[__gnu__::__always_inline__]]
       _Value&
