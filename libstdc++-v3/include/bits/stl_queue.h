@@ -760,6 +760,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       // 3522. Missing requirement on InputIterator template parameter
       template<typename _InputIterator,
 	       typename = std::_RequireInputIter<_InputIterator>>
+	_GLIBCXX26_CONSTEXPR
 	priority_queue(_InputIterator __first, _InputIterator __last,
 		       const _Compare& __x, const _Sequence& __s)
 	: c(__s), comp(__x)
@@ -786,6 +787,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       template<typename _InputIterator, typename _Alloc,
 	       typename = std::_RequireInputIter<_InputIterator>,
 	       typename _Requires = _Uses<_Alloc>>
+	_GLIBCXX26_CONSTEXPR
 	priority_queue(_InputIterator __first, _InputIterator __last,
 		       const _Alloc& __alloc)
 	: c(__first, __last, __alloc), comp()
