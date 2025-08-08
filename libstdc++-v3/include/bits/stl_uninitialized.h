@@ -987,6 +987,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
 #if _GLIBCXX_HOSTED
   template<typename _ForwardIterator, typename _Tp>
+    _GLIBCXX26_CONSTEXPR
     inline void
     __uninitialized_default_a(_ForwardIterator __first,
 			      _ForwardIterator __last,

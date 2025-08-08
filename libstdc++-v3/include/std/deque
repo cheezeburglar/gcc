@@ -75,6 +75,7 @@
 #define __glibcxx_want_containers_ranges
 #define __glibcxx_want_erase_if
 #define __glibcxx_want_nonmember_container_access
+#define __glibcxx_want_constexpr_deque
 #include <bits/version.h>
 
 #ifdef _GLIBCXX_DEBUG
