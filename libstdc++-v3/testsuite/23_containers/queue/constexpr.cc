@@ -121,7 +121,7 @@ constexpr bool front_and_back_test()
   std::queue<int> a;
   a.push(2);
   a.push(4);
-  static_assert ( a.front() == 2 && a.back() == 4);
+  VERIFY ( a.front() == 2 && a.back() == 4);
   return true;
 }
 
@@ -205,7 +205,7 @@ namespace priority_queue_tests {
 constexpr bool ctor_tests()
 {
   int rg[4] = {2, 3, 5, 7};
-  constexpr std::vector<int> v0 {};
+  std::vector<int> v0 {};
   v0.insert_range(v0.begin(), rg);
 
   constexpr std::priority_queue<int> pq1;
@@ -277,7 +277,7 @@ static_assert( ctor_tests() );
 constexpr bool alloc_aware_ctor_tests()
 {
   std::allocator<int> alloc;
-  auto rg = {0, 1};
+  auto rg = {1, 0};
   constexpr std::vector<int> v0 {};
   std::priority_queue<int> pq14 (alloc);
 
@@ -294,31 +294,31 @@ constexpr bool alloc_aware_ctor_tests()
   std::priority_queue<int> pq17 (std::less<int>(), std::move(v0), alloc);
   pq17.push(0);
   pq17.push(1);
-  VERIFY(pq17.top() == 0);
+  VERIFY(pq17.top() == 1);
 
   std::priority_queue<int> pq18 (pq17, alloc);
   VERIFY(pq18.size() == pq17.size());
-  VERIFY(pq18.top() == 0);
+  VERIFY(pq18.top() == 1);
 
   std::priority_queue<int> pq19 (std::move(pq17), alloc);
   VERIFY(pq19.size() == pq18.size());
-  VERIFY(pq18.top() == 0);
+  VERIFY(pq18.top() == 1);
 
   constexpr std::vector<int> v1 {};
 
   std::priority_queue<int> pq20(std::begin(rg), std::end(rg),
 			       std::less<int>(), alloc);
-  VERIFY(pq20.top() == 0);
+  VERIFY(pq20.top() == 1);
   VERIFY(pq20.size() == std::size(rg));
 
   std::priority_queue<int> pq21(std::begin(rg), std::end(rg),
 			       std::less<int>(), v1, alloc);
-  VERIFY(pq21.top() == 0);
+  VERIFY(pq21.top() == 1);
   VERIFY(pq21.size() == std::size(rg));
 
   std::priority_queue<int> pq22(std::begin(rg), std::end(rg),
 			       std::less<int>(), std::move(v1), alloc);
-  VERIFY(pq21.top() == 0);
+  VERIFY(pq21.top() == 1);
   VERIFY(pq22.size() == std::size(rg));
 
   auto pq23 = std::priority_queue<int>(std::from_range, std::ranges::views::iota(0, 7), alloc);
