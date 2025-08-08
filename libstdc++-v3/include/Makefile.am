@@ -1471,7 +1471,7 @@ ${host_builddir}/gthr-default.h: ${toplevel_srcdir}/libgcc/${thread_header} \
 # Build two precompiled C++ includes, stdc++.h.gch/*.gch
 ${pch1a_output}: ${allstamped} ${host_builddir}/c++config.h ${pch1_source}
 	-mkdir -p ${pch1_output_builddir}
-	$(CXX) $(PCHFLAGS) $(AM_CPPFLAGS) -O2 -g -std=gnu++0x ${pch1_source} \
+	$(CXX) $(PCHFLAGS) $(AM_CPPFLAGS) -O2 -g -std=gnu++2c ${pch1_source} \
 	-o $@
 
 ${pch1b_output}: ${allstamped} ${host_builddir}/c++config.h ${pch1_source}
