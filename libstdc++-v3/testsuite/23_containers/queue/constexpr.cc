@@ -255,7 +255,7 @@ constexpr bool ctor_tests()
 
   std::priority_queue<int> pq12(std::begin(rg), std::end(rg),
 			       std::less<int>(), std::move(v1));
-  VERIFY(pq11.size() == std::size(rg));
+  VERIFY(pq11.size() == 2 * std::size(rg));
   VERIFY(pq11.top() == 7);
   pq11.pop();
   VERIFY(pq11.top() == 5);
