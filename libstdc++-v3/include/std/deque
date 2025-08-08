@@ -75,6 +75,7 @@
 #define __glibcxx_want_containers_ranges
 #define __glibcxx_want_erase_if
 #define __glibcxx_want_nonmember_container_access
+#define __glibcxx_want_constexpr_deque
 #include <bits/version.h>
 
 #ifdef _GLIBCXX_DEBUG
@@ -101,6 +102,7 @@ namespace std _GLIBCXX_VISIBILITY(default)
 _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   template<typename _Tp, typename _Alloc, typename _Predicate>
+    _GLIBCXX26_CONSTEXPR
     inline typename deque<_Tp, _Alloc>::size_type
     erase_if(deque<_Tp, _Alloc>& __cont, _Predicate __pred)
     {
@@ -122,6 +124,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   template<typename _Tp, typename _Alloc,
 	   typename _Up _GLIBCXX26_DEF_VAL_T(_Tp)>
+    _GLIBCXX26_CONSTEXPR
     inline typename deque<_Tp, _Alloc>::size_type
     erase(deque<_Tp, _Alloc>& __cont, const _Up& __value)
     {
