@@ -206,7 +206,7 @@ constexpr bool ctor_tests()
 {
   int rg[4] = {2, 3, 5, 7};
   constexpr std::vector<int> v0 {};
-  v0.insert_range(rg);
+  v0.insert_range(v0.begin(), rg);
 
   constexpr std::priority_queue<int> pq1;
   VERIFY(pq1.size() == 0 && pq1.empty());
