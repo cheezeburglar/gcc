@@ -255,15 +255,15 @@ constexpr bool ctor_tests()
 
   std::priority_queue<int> pq12(std::begin(rg), std::end(rg),
 			       std::less<int>(), std::move(v1));
-  VERIFY(pq11.size() == 2 * std::size(rg));
-  VERIFY(pq11.top() == 7);
-  pq11.pop();
-  VERIFY(pq11.top() == 5);
-  pq11.pop();
-  VERIFY(pq11.top() == 3);
-  pq11.pop();
-  VERIFY(pq11.top() == 2);
-  pq11.pop();
+  VERIFY(pq12.size() == std::size(rg));
+  VERIFY(pq12.top() == 7);
+  pq12.pop();
+  VERIFY(pq12.top() == 5);
+  pq12.pop();
+  VERIFY(pq12.top() == 3);
+  pq12.pop();
+  VERIFY(pq12.top() == 2);
+  pq12.pop();
 
   auto pq13 = std::priority_queue<int>(std::from_range, std::ranges::views::iota(0, 7), std::less<int>());
   VERIFY(pq13.size() == 7);
