@@ -659,9 +659,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       : c(std::move(__s)), comp(__x)
       { std::make_heap(c.begin(), c.end(), comp); }
 
+      _GLIBCXX26_CONSTEXPR
       priority_queue(const priority_queue&) = default;
+      _GLIBCXX26_CONSTEXPR
       priority_queue& operator=(const priority_queue&) = default;
 
+      _GLIBCXX26_CONSTEXPR
       priority_queue(priority_queue&& __q)
       noexcept(__and_<is_nothrow_move_constructible<_Sequence>,
 		      is_nothrow_move_constructible<_Compare>>::value)
