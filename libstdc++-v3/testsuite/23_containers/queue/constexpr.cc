@@ -289,7 +289,7 @@ constexpr bool alloc_aware_ctor_tests()
   std::priority_queue<int> pq16 (std::less<int>(), v0, alloc);
   pq16.push(0);
   pq16.push(1);
-  VERIFY(pq16.top() == 0);
+  VERIFY(pq16.top() == 1);
 
   std::priority_queue<int> pq17 (std::less<int>(), std::move(v0), alloc);
   pq17.push(0);
@@ -381,8 +381,8 @@ constexpr int swap_test()
   a.push(2);
   b.push(4);
   std::swap(a, b);
-  static_assert ( a.top() == 4 );
-  static_assert ( b.top() == 2 );
+  VERIFY ( a.top() == 4 );
+  VERIFY ( b.top() == 2 );
   return true;
 }
 
