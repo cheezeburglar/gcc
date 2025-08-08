@@ -204,31 +204,30 @@ namespace priority_queue_tests {
 
 constexpr bool ctor_tests()
 {
-  int rg[4] = {2, 3, 5, 7};
-  std::vector<int> v0 {};
-  v0.insert_range(v0.begin(), rg);
+  auto rg = {2, 3, 5, 7};
+  std::vector<int> v0 {std::from_range, rg};
 
-  constexpr std::priority_queue<int> pq1;
+  std::priority_queue<int> pq1;
   VERIFY(pq1.size() == 0 && pq1.empty());
 
-  constexpr std::priority_queue<int> pq2 {std::less<int>()};
+  std::priority_queue<int> pq2 {std::less<int>()};
   VERIFY(pq2.size() == 0 && pq2.empty());
 
-  constexpr std::priority_queue<int> pq3 {std::less<int>(), v0};
+  std::priority_queue<int> pq3 {std::less<int>(), v0};
   VERIFY(pq3.size() == 4 && pq3.top() == 7);
 
-  constexpr std::priority_queue<int> pq4 {std::less<int>(), std::move(v0)};
+  std::priority_queue<int> pq4 {std::less<int>(), std::move(v0)};
   VERIFY(pq4.size() == 4 && pq4.top() == 7);
 
-  constexpr std::priority_queue<int> pq5 (pq3);
+  std::priority_queue<int> pq5 (pq3);
   VERIFY(pq5.top() == pq3.top());
   VERIFY(pq5.size() == pq3.size());
 
-  constexpr std::priority_queue<int> pq6 (std::move(pq3));
+  std::priority_queue<int> pq6 (std::move(pq3));
   VERIFY(pq6.top() == pq5.top());
   VERIFY(pq6.size() == pq5.size());
 
-  constexpr std::vector<int> v1 {};
+  std::vector<int> v1 {};
 
   std::priority_queue<int> pq10(std::begin(rg), std::end(rg),
 			       std::less<int>());
