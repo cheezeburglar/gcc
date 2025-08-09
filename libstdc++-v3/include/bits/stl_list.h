@@ -554,12 +554,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
 #if __cplusplus >= 201103L
       union _Uninit_storage {
+	alignas(_Tp)
 	_Uninit_storage () noexcept {};
 	~_Uninit_storage () {};
-	alignas(_Tp)
 	unsigned char _M_storage [sizeof(_Tp)];
 	_Tp  _M_ptr;
       };
+
       _Uninit_storage _M_u;
 //      __gnu_cxx::__aligned_membuf<_Tp> _M_storage;
       _Tp*       _M_valptr()       { return std::__addressof(_M_u._M_ptr); }

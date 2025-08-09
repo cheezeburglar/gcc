@@ -137,15 +137,23 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
       _Fwd_list_node() = default;
 
-      __gnu_cxx::__aligned_buffer<_Tp> _M_storage;
+//      __gnu_cxx::__aligned_buffer<_Tp> _M_storage;
+      union _Uninit_storage {
+	_Uninit_storage () noexcept {};
+	~_Uninit_storage () {};
+	alignas(__alignof__(_Tp)) unsigned char _M_storage[sizeof(_Value)];
+	_Tp _M_ptr;
+      };
+
+      _Uninit_storage _M_u;
 
       _Tp*
       _M_valptr() noexcept
-      { return _M_storage._M_ptr(); }
+      { return std::__addressof(_M_u._M_ptr); }
 
       const _Tp*
       _M_valptr() const noexcept
-      { return _M_storage._M_ptr(); }
+      { return std::__addressof(_M_u._M_ptr); }
 
       _Node_ptr
       _M_node_ptr()
