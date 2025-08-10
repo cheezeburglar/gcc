@@ -24,8 +24,6 @@ struct Alloc : std::allocator<T>
     constexpr Alloc(const Alloc<U>& a) : personality(a.personality) { }
 };
 
-namespace queue_tests {
-
 constexpr bool ctor_tests()
 {
   std::queue<int> q1;
