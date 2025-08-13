@@ -2338,4 +2338,94 @@
 #endif /* !defined(__cpp_lib_constexpr_deque) && defined(__glibcxx_want_constexpr_deque) */
 #undef __glibcxx_want_constexpr_deque
 
+#if !defined(__cpp_lib_constexpr_flat_map)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_flat_map 202502L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_flat_map)
+#   define __cpp_lib_constexpr_flat_map 202502L
+#  endif
+# endif
+#endif /* !defined(__cpp_lib_constexpr_flat_map) && defined(__glibcxx_want_constexpr_flat_map) */
+#undef __glibcxx_want_constexpr_flat_map
+
+#if !defined(__cpp_lib_constexpr_flat_set)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_flat_set 202502L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_flat_set)
+#   define __cpp_lib_constexpr_flat_set 202502L
+#  endif
+# endif
+#endif /* !defined(__cpp_lib_constexpr_flat_set) && defined(__glibcxx_want_constexpr_flat_set) */
+#undef __glibcxx_want_constexpr_flat_set
+
+#if !defined(__cpp_lib_constexpr_forward_list)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_forward_list 202502L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_forward_list)
+#   define __cpp_lib_constexpr_forward_list 202502L
+#  endif
+# endif
+#endif /* !defined(__cpp_lib_constexpr_forward_list) && defined(__glibcxx_want_constexpr_forward_list) */
+#undef __glibcxx_want_constexpr_forward_list
+
+#if !defined(__cpp_lib_constexpr_list)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_list 202502L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_list)
+#   define __cpp_lib_constexpr_list 202502L
+#  endif
+# endif
+#endif /* !defined(__cpp_lib_constexpr_list) && defined(__glibcxx_want_constexpr_list) */
+#undef __glibcxx_want_constexpr_list
+
+#if !defined(__cpp_lib_constexpr_map)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_map 202502L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_map)
+#   define __cpp_lib_constexpr_map 202502L
+#  endif
+# endif
+#endif /* !defined(__cpp_lib_constexpr_map) && defined(__glibcxx_want_constexpr_map) */
+#undef __glibcxx_want_constexpr_map
+
+#if !defined(__cpp_lib_constexpr_set)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_set 202502L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_set)
+#   define __cpp_lib_constexpr_set 202502L
+#  endif
+# endif
+#endif /* !defined(__cpp_lib_constexpr_set) && defined(__glibcxx_want_constexpr_set) */
+#undef __glibcxx_want_constexpr_set
+
+#if !defined(__cpp_lib_constexpr_stack)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_stack 202502L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_stack)
+#   define __cpp_lib_constexpr_stack 202502L
+#  endif
+# endif
+#endif /* !defined(__cpp_lib_constexpr_stack) && defined(__glibcxx_want_constexpr_stack) */
+#undef __glibcxx_want_constexpr_stack
+
+#if !defined(__cpp_lib_constexpr_unordered_map)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_unordered_map 202502L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_unordered_map)
+#   define __cpp_lib_constexpr_unordered_map 202502L
+#  endif
+# endif
+#endif /* !defined(__cpp_lib_constexpr_unordered_map) && defined(__glibcxx_want_constexpr_unordered_map) */
+#undef __glibcxx_want_constexpr_unordered_map
+
+#if !defined(__cpp_lib_constexpr_unordered_set)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_unordered_set 202502L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_unordered_set)
+#   define __cpp_lib_constexpr_unordered_set 202502L
+#  endif
+# endif
+#endif /* !defined(__cpp_lib_constexpr_unordered_set) && defined(__glibcxx_want_constexpr_unordered_set) */
+#undef __glibcxx_want_constexpr_unordered_set
+
 #undef __glibcxx_want_all

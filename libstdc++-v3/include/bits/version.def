@@ -2085,6 +2085,78 @@ ftms = {
   };
 };
 
+ftms = {
+  name = constexpr_flat_map;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
+  name = constexpr_flat_set;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
+  name = constexpr_forward_list;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
+  name = constexpr_list;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
+  name = constexpr_map;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
+  name = constexpr_set;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
+  name = constexpr_stack;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
+  name = constexpr_unordered_map;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
+  name = constexpr_unordered_set;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
 // Standard test specifications.
 stds[97] = ">= 199711L";
 stds[03] = ">= 199711L";
