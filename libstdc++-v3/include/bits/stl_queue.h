@@ -115,15 +115,18 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 #endif
 
       template<typename _Tp1, typename _Seq1>
+	_GLIBCXX26_CONSTEXPR
 	friend bool
 	operator==(const queue<_Tp1, _Seq1>&, const queue<_Tp1, _Seq1>&);
 
       template<typename _Tp1, typename _Seq1>
+	_GLIBCXX26_CONSTEXPR
 	friend bool
 	operator<(const queue<_Tp1, _Seq1>&, const queue<_Tp1, _Seq1>&);
 
 #if __cpp_lib_three_way_comparison
       template<typename _Tp1, three_way_comparable _Seq1>
+	_GLIBCXX26_CONSTEXPR
 	friend compare_three_way_result_t<_Seq1>
 	operator<=>(const queue<_Tp1, _Seq1>&, const queue<_Tp1, _Seq1>&);
 #endif
@@ -455,6 +458,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   */
   template<typename _Tp, typename _Seq>
     _GLIBCXX_NODISCARD
+    _GLIBCXX26_CONSTEXPR
     inline bool
     operator==(const queue<_Tp, _Seq>& __x, const queue<_Tp, _Seq>& __y)
     { return __x.c == __y.c; }
@@ -655,9 +659,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       : c(std::move(__s)), comp(__x)
       { std::make_heap(c.begin(), c.end(), comp); }
 
+      _GLIBCXX26_CONSTEXPR
       priority_queue(const priority_queue&) = default;
+      _GLIBCXX26_CONSTEXPR
       priority_queue& operator=(const priority_queue&) = default;
 
+      _GLIBCXX26_CONSTEXPR
       priority_queue(priority_queue&& __q)
       noexcept(__and_<is_nothrow_move_constructible<_Sequence>,
 		      is_nothrow_move_constructible<_Compare>>::value)
@@ -753,6 +760,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       // 3522. Missing requirement on InputIterator template parameter
       template<typename _InputIterator,
 	       typename = std::_RequireInputIter<_InputIterator>>
+	_GLIBCXX26_CONSTEXPR
 	priority_queue(_InputIterator __first, _InputIterator __last,
 		       const _Compare& __x, const _Sequence& __s)
 	: c(__s), comp(__x)
@@ -779,6 +787,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       template<typename _InputIterator, typename _Alloc,
 	       typename = std::_RequireInputIter<_InputIterator>,
 	       typename _Requires = _Uses<_Alloc>>
+	_GLIBCXX26_CONSTEXPR
 	priority_queue(_InputIterator __first, _InputIterator __last,
 		       const _Alloc& __alloc)
 	: c(__first, __last, __alloc), comp()
