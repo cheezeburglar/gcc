@@ -1606,8 +1606,9 @@ bool
 riscv_ext_is_subset (struct cl_target_option *opts,
 		     struct cl_target_option *subset)
 {
-  for (const auto &[ext_name, ext_info] : riscv_ext_infos)
+  for (const auto &riscv_ext_info : riscv_ext_infos)
     {
+      const auto &ext_info = riscv_ext_info.second;
       if (ext_info.check_opts (opts) && !ext_info.check_opts (subset))
 	return false;
     }
@@ -1757,6 +1758,11 @@ riscv_expand_arch (int argc,
 {
   gcc_assert (argc == 1);
   location_t loc = UNKNOWN_LOCATION;
+
+  /* Filter out -march=unset, it will expand from -mcpu later.  */
+  if (strcmp (argv[0], "unset") == 0)
+    return "";
+
   /* Try to interpret the arch as CPU first.  */
   const char *arch_str = riscv_expand_arch_from_cpu (argc, argv);
   if (!strlen (arch_str))

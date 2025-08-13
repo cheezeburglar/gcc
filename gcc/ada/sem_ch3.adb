@@ -3020,6 +3020,8 @@ package body Sem_Ch3 is
    -----------------------------------
 
    procedure Analyze_Full_Type_Declaration (N : Node_Id) is
+      use Deferred_Extra_Formals_Support;
+
       Def    : constant Node_Id   := Type_Definition (N);
       Def_Id : constant Entity_Id := Defining_Identifier (N);
       T      : Entity_Id;
@@ -3556,6 +3558,16 @@ package body Sem_Ch3 is
                end loop;
             end;
          end if;
+      end if;
+
+      --  If we have some subprogram, subprogram type, or entry, with deferred
+      --  addition of its extra formals (because the underlying type of this
+      --  type was not previously available), then try creating now its extra
+      --  formals. Create also the extra actuals of deferred calls to entities
+      --  with deferred extra formals.
+
+      if Has_Deferred_Extra_Formals (T) then
+         Add_Deferred_Extra_Params (T);
       end if;
 
       if Ekind (T) = E_Record_Type
@@ -4163,7 +4175,7 @@ package body Sem_Ch3 is
 
       procedure Check_Return_Subtype_Indication (Obj_Decl : Node_Id) is
          Obj_Id  : constant Entity_Id := Defining_Identifier (Obj_Decl);
-         Obj_Typ : constant Entity_Id := Etype (Obj_Id);
+         Obj_Typ : Entity_Id := Etype (Obj_Id);
          Func_Id : constant Entity_Id := Return_Applies_To (Scope (Obj_Id));
          R_Typ   : constant Entity_Id := Etype (Func_Id);
          Indic   : constant Node_Id   :=
@@ -4197,6 +4209,15 @@ package body Sem_Ch3 is
 
          if Error_Posted (Obj_Decl) or else Error_Posted (Indic) then
             return;
+         end if;
+
+         --  The return object type could have been rewritten into a
+         --  constrained type, so for the legality checks that follow we need
+         --  to recover the nominal unconstrained type.
+
+         if Is_Constr_Subt_For_U_Nominal (Obj_Typ) then
+            Obj_Typ := Entity (Original_Node (Object_Definition (Obj_Decl)));
+            pragma Assert (not Is_Constrained (Obj_Typ));
          end if;
 
          --  "return access T" case; check that the return statement also has
@@ -4267,7 +4288,7 @@ package body Sem_Ch3 is
 
             --  AI05-103: for elementary types, subtypes must statically match
 
-            if Is_Constrained (R_Typ) or else Is_Access_Type (R_Typ) then
+            if Is_Elementary_Type (R_Typ) then
                if not Subtypes_Statically_Match (Obj_Typ, R_Typ) then
                   Error_No_Match (Indic);
                end if;
@@ -4283,13 +4304,12 @@ package body Sem_Ch3 is
             --  code is expanded on the basis of the base type (see subprogram
             --  Stream_Base_Type).
 
-            elsif Nkind (Indic) = N_Subtype_Indication
-              and then not Subtypes_Statically_Compatible (Obj_Typ, R_Typ)
+            elsif not Subtypes_Statically_Compatible (Obj_Typ, R_Typ)
               and then not Is_TSS (Func_Id, TSS_Stream_Input)
             then
                Error_Msg_N
                  ("result subtype must be statically compatible with the " &
-                  "function result type", Indic);
+                  "function result subtype", Indic);
 
                if not Predicates_Compatible (Obj_Typ, R_Typ) then
                   Error_Msg_NE
@@ -4366,8 +4386,7 @@ package body Sem_Ch3 is
 
       --  Local variables
 
-      Saved_GM  : constant Ghost_Mode_Type := Ghost_Mode;
-      Saved_IGR : constant Node_Id         := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       --  Save the Ghost-related attributes to restore on exit
 
       Prev_Entity       : Entity_Id := Empty;
@@ -5455,7 +5474,7 @@ package body Sem_Ch3 is
          Check_No_Hidden_State (Id);
       end if;
 
-      Restore_Ghost_Region (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region (Saved_Ghost_Config);
    end Analyze_Object_Declaration;
 
    ---------------------------
@@ -6811,7 +6830,7 @@ package body Sem_Ch3 is
       --  that the element type is constrained.
 
       if Is_Mutably_Tagged_Type (Element_Type) then
-         Set_Component_Type (T,
+         Set_Component_Type (Base_Type (T),
            Class_Wide_Equivalent_Type (Element_Type));
 
       elsif not Is_Definite_Subtype (Element_Type) then
@@ -8432,15 +8451,17 @@ package body Sem_Ch3 is
          Set_Has_Private_Declaration (Full_Der);
          Set_Has_Private_Declaration (Derived_Type);
 
-         Set_Scope                (Full_Der, Scope (Derived_Type));
-         Set_Is_First_Subtype     (Full_Der, Is_First_Subtype (Derived_Type));
-         Set_Has_Size_Clause      (Full_Der, False);
-         Set_Has_Alignment_Clause (Full_Der, False);
-         Set_Has_Delayed_Freeze   (Full_Der);
-         Set_Is_Frozen            (Full_Der, False);
-         Set_Freeze_Node          (Full_Der, Empty);
-         Set_Depends_On_Private   (Full_Der, Has_Private_Component (Full_Der));
-         Set_Is_Public            (Full_Der, Is_Public (Derived_Type));
+         Set_Scope                 (Full_Der, Scope (Derived_Type));
+         Set_Is_First_Subtype      (Full_Der, Is_First_Subtype (Derived_Type));
+         Set_Has_Size_Clause       (Full_Der, False);
+         Set_Has_Alignment_Clause  (Full_Der, False);
+         Set_Has_Delayed_Freeze    (Full_Der);
+         Set_Is_Frozen             (Full_Der, False);
+         Set_Freeze_Node           (Full_Der, Empty);
+         Set_Depends_On_Private
+           (Full_Der, Has_Private_Component (Full_Der));
+         Set_Is_Public             (Full_Der, Is_Public (Derived_Type));
+         Set_Is_Implicit_Full_View (Full_Der);
 
          --  The convention on the base type may be set in the private part
          --  and not propagated to the subtype until later, so we obtain the
@@ -9637,6 +9658,8 @@ package body Sem_Ch3 is
          Build_Derived_Type
            (New_Decl, Parent_Base, New_Base,
             Is_Completion => False, Derive_Subps => False);
+
+         Set_Is_Implicit_Full_View (New_Base);
 
          --  ??? This needs re-examination to determine whether the
          --  following call can simply be replaced by a call to Analyze.
@@ -19159,8 +19182,7 @@ package body Sem_Ch3 is
       --  Otherwise we have a subtype mark without a constraint
 
       elsif Error_Posted (S) then
-         --  Don't rewrite if S is Empty or Error
-         if S > Empty_Or_Error then
+         if S not in Empty | Error then
             Rewrite (S, New_Occurrence_Of (Any_Id, Sloc (S)));
          end if;
          return Any_Type;
@@ -21094,7 +21116,7 @@ package body Sem_Ch3 is
 
       --  If no range was given, set a dummy range
 
-      if RRS <= Empty_Or_Error then
+      if RRS in Empty | Error then
          Low_Val  := -Small_Val;
          High_Val := Small_Val;
 
@@ -21272,8 +21294,8 @@ package body Sem_Ch3 is
       --  On entry, the current scope is the composite type.
 
       --  The discriminants are initially entered into the scope of the type
-      --  via Enter_Name with the default Ekind of E_Void to prevent premature
-      --  use, as explained at the end of this procedure.
+      --  via Enter_Name with Is_Not_Self_Hidden set to False to prevent
+      --  premature use, as explained at the end of this procedure.
 
       Discr := First (Discriminant_Specifications (N));
       while Present (Discr) loop
@@ -21546,12 +21568,12 @@ package body Sem_Ch3 is
       --  expressions of a discriminant part if the specification of the
       --  discriminant is itself given in the discriminant part. (RM 3.7.1)
 
-      --  To detect this, the discriminant names are entered initially with an
-      --  Ekind of E_Void (which is the default Ekind given by Enter_Name). Any
-      --  attempt to use a void entity (for example in an expression that is
-      --  type-checked) produces the error message: premature usage. Now after
-      --  completing the semantic analysis of the discriminant part, we can set
-      --  the Ekind of all the discriminants appropriately.
+      --  To detect this, the discriminant names are entered initially with
+      --  Is_Not_Self_Hidden set to False. Any attempt to use a self-hidden
+      --  entity (for example in an expression that is type-checked) produces
+      --  the error message: premature usage. Now after completing the semantic
+      --  analysis of the discriminant part, we can set Is_Not_Self_Hidden on
+      --  all the discriminants appropriately.
 
       Discr := First (Discriminant_Specifications (N));
       Discr_Number := Uint_1;
@@ -21684,8 +21706,7 @@ package body Sem_Ch3 is
 
       --  Local variables
 
-      Saved_GM  : constant Ghost_Mode_Type := Ghost_Mode;
-      Saved_IGR : constant Node_Id         := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       --  Save the Ghost-related attributes to restore on exit
 
       Full_Indic  : Node_Id;
@@ -22378,7 +22399,7 @@ package body Sem_Ch3 is
       end if;
 
    <<Leave>>
-      Restore_Ghost_Region (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region (Saved_Ghost_Config);
    end Process_Full_View;
 
    -----------------------------------

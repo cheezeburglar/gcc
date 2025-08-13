@@ -313,6 +313,7 @@ Some basic guidelines for editing this document:
 * @code{SIZEOF}:        SIZEOF,    Determine the size in bytes of an expression
 * @code{SLEEP}:         SLEEP,     Sleep for the specified number of seconds
 * @code{SPACING}:       SPACING,   Smallest distance between two numbers of a given type
+* @code{SPLIT}:         SPLIT,     Parse a string into tokens, one at a time.
 * @code{SPREAD}:        SPREAD,    Add a dimension to an array 
 * @code{SQRT}:          SQRT,      Square-root function
 * @code{SRAND}:         SRAND,     Reinitialize the random number generator
@@ -3367,11 +3368,13 @@ Fortran 2003 and later
 
 @table @asis
 @item @emph{Synopsis}:
-@code{CALL C_F_POINTER(CPTR, FPTR[, SHAPE])}
+@code{CALL C_F_POINTER(CPTR, FPTR[, SHAPE, LOWER])}
 
 @item @emph{Description}:
-@code{C_F_POINTER(CPTR, FPTR[, SHAPE])} assigns the target of the C pointer
-@var{CPTR} to the Fortran pointer @var{FPTR} and specifies its shape.
+@code{C_F_POINTER(CPTR, FPTR[, SHAPE, LOWER])} assigns the target of the C
+pointer @var{CPTR} to the Fortran pointer @var{FPTR} and specifies its shape.
+For an array @var{FPTR}, the lower bounds are specified by @var{LOWER} if
+present and otherwise equal to 1.
 
 @item @emph{Class}:
 Subroutine
@@ -3383,9 +3386,11 @@ Subroutine
 @item @var{FPTR}  @tab pointer interoperable with @var{cptr}. It is
 @code{INTENT(OUT)}.
 @item @var{SHAPE} @tab (Optional) Rank-one array of type @code{INTEGER}
-with @code{INTENT(IN)}. It shall be present
-if and only if @var{fptr} is an array. The size
-must be equal to the rank of @var{fptr}.
+with @code{INTENT(IN)}. It shall be present if and only if @var{FPTR} is an
+array. The size must be equal to the rank of @var{FPTR}.
+@item @var{LOWER} @tab (Optional) Rank-one array of type @code{INTEGER}
+with @code{INTENT(IN)}. It shall not be present if @var{SHAPE} is not present.
+The size must be equal to the rank of @var{FPTR}.
 @end multitable
 
 @item @emph{Example}:
@@ -3407,7 +3412,7 @@ end program main
 @end smallexample
 
 @item @emph{Standard}:
-Fortran 2003 and later
+Fortran 2003 and later, with @var{LOWER} argument Fortran 2023 and later
 
 @item @emph{See also}:
 @ref{C_LOC}, @*
@@ -14199,6 +14204,69 @@ Fortran 90 and later
 
 @item @emph{See also}:
 @ref{RRSPACING}
+@end table
+
+
+
+@node SPLIT
+@section @code{SPLIT} --- Parse a string into tokens, one at a time
+@fnindex SPLIT
+@cindex string, split
+
+@table @asis
+@item @emph{Synopsis}:
+@code{RESULT = SPLIT(STRING, SET, POS [, BACK])}
+
+@item @emph{Description}:
+Updates the integer @var{POS} to the position of the next (or previous)
+separator in @var{STRING}.
+
+If @var{BACK} is absent or is present with the value false, @var{POS} is
+assigned the position of the leftmost token delimiter in @var{STRING} whose
+position is greater than @var{POS}, or if there is no such character, it is
+assigned a value one greater than the length of @var{STRING}. This identifies
+a token with starting position one greater than the value of @var{POS} on
+invocation, and ending position one less than the value of @var{POS} on return.
+
+If @var{BACK} is present with the value true, @var{POS} is assigned the
+position of the rightmost token delimiter in @var{STRING} whose position is
+less than @var{POS}, or if there is no such character, it is assigned the value
+zero. This identifies a token with ending position one less than the value of
+@var{POS} on invocation, and starting position one greater than the value of
+@var{POS} on return.
+
+@item @emph{Class}:
+Subroutine
+
+@item @emph{Arguments}:
+@multitable @columnfractions .15 .70
+@item @var{STRING} @tab Shall be of type @code{CHARACTER}.
+@item @var{SET}    @tab Shall be of type @code{CHARACTER}.
+@item @var{POS}    @tab Shall be of type @code{INTEGER}.
+@item @var{BACK}   @tab (Optional) Shall be of type @code{LOGICAL}.
+@end multitable
+
+@item @emph{Example}:
+@smallexample
+character(len=:), allocatable :: input
+character(len=2) :: set = ', '
+integer :: p
+input = "one,last example"
+p = 0
+do
+  if (p > len(input)) exit
+  istart = p + 1
+  call split(input, set, p)
+  iend = p - 1
+  print '(t7, a)', input(istart:iend)
+end do
+@end smallexample
+
+@item @emph{Standard}:
+Fortran 2023
+
+@item @emph{See also}:
+@ref{SCAN}
 @end table
 
 

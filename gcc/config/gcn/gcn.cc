@@ -54,6 +54,7 @@
 #include "gimple.h"
 #include "cgraph.h"
 #include "case-cfn-macros.h"
+#include "opts.h"
 
 /* This file should be included last.  */
 #include "target-def.h"
@@ -183,6 +184,11 @@ gcn_option_override (void)
 
   if (flag_sram_ecc == HSACO_ATTR_DEFAULT)
     flag_sram_ecc = gcn_devices[gcn_arch].sramecc_default;
+
+  /* TODO: This seems to produce tighter loops, but the testsuites expects it
+     to be set to '2', so I'll leave it default for now.
+  SET_OPTION_IF_UNSET (&global_options, &global_options_set,
+		       param_vect_partial_vector_usage, 1);  */
 }
 
 /* }}}  */
@@ -1275,13 +1281,13 @@ gen_##PREFIX##vN##SUFFIX (PARAMS) \
 }
 
 #define GEN_VNM_NOEXEC(PREFIX, SUFFIX, PARAMS, ARGS) \
-GEN_VN_NOEXEC (PREFIX, qi##SUFFIX, A(PARAMS), A(ARGS)) \
-GEN_VN_NOEXEC (PREFIX, hi##SUFFIX, A(PARAMS), A(ARGS)) \
-GEN_VN_NOEXEC (PREFIX, hf##SUFFIX, A(PARAMS), A(ARGS)) \
+USE_QHF (GEN_VN_NOEXEC (PREFIX, qi##SUFFIX, A(PARAMS), A(ARGS))) \
+USE_QHF (GEN_VN_NOEXEC (PREFIX, hi##SUFFIX, A(PARAMS), A(ARGS))) \
+USE_QHF (GEN_VN_NOEXEC (PREFIX, hf##SUFFIX, A(PARAMS), A(ARGS))) \
 GEN_VN_NOEXEC (PREFIX, si##SUFFIX, A(PARAMS), A(ARGS)) \
-GEN_VN_NOEXEC (PREFIX, sf##SUFFIX, A(PARAMS), A(ARGS)) \
+USE_QHF (GEN_VN_NOEXEC (PREFIX, sf##SUFFIX, A(PARAMS), A(ARGS))) \
 GEN_VN_NOEXEC (PREFIX, di##SUFFIX, A(PARAMS), A(ARGS)) \
-GEN_VN_NOEXEC (PREFIX, df##SUFFIX, A(PARAMS), A(ARGS)) \
+USE_QHF (GEN_VN_NOEXEC (PREFIX, df##SUFFIX, A(PARAMS), A(ARGS))) \
 static rtx \
 gen_##PREFIX##vNm##SUFFIX (PARAMS) \
 { \
@@ -1289,13 +1295,13 @@ gen_##PREFIX##vNm##SUFFIX (PARAMS) \
   \
   switch (mode) \
     { \
-    case E_QImode: return gen_##PREFIX##vNqi##SUFFIX (ARGS); \
-    case E_HImode: return gen_##PREFIX##vNhi##SUFFIX (ARGS); \
-    case E_HFmode: return gen_##PREFIX##vNhf##SUFFIX (ARGS); \
+    USE_QHF (case E_QImode: return gen_##PREFIX##vNqi##SUFFIX (ARGS);) \
+    USE_QHF (case E_HImode: return gen_##PREFIX##vNhi##SUFFIX (ARGS);) \
+    USE_QHF (case E_HFmode: return gen_##PREFIX##vNhf##SUFFIX (ARGS);) \
     case E_SImode: return gen_##PREFIX##vNsi##SUFFIX (ARGS); \
-    case E_SFmode: return gen_##PREFIX##vNsf##SUFFIX (ARGS); \
+    USE_QHF (case E_SFmode: return gen_##PREFIX##vNsf##SUFFIX (ARGS);) \
     case E_DImode: return gen_##PREFIX##vNdi##SUFFIX (ARGS); \
-    case E_DFmode: return gen_##PREFIX##vNdf##SUFFIX (ARGS); \
+    USE_QHF (case E_DFmode: return gen_##PREFIX##vNdf##SUFFIX (ARGS);) \
     default: \
       break; \
     } \
@@ -1340,13 +1346,13 @@ gen_##PREFIX##vN##SUFFIX (PARAMS, rtx merge_src=NULL, rtx exec=NULL) \
 }
 
 #define GEN_VNM(PREFIX, SUFFIX, PARAMS, ARGS) \
-GEN_VN (PREFIX, qi##SUFFIX, A(PARAMS), A(ARGS)) \
-GEN_VN (PREFIX, hi##SUFFIX, A(PARAMS), A(ARGS)) \
-GEN_VN (PREFIX, hf##SUFFIX, A(PARAMS), A(ARGS)) \
+USE_QHF (GEN_VN (PREFIX, qi##SUFFIX, A(PARAMS), A(ARGS))) \
+USE_QHF (GEN_VN (PREFIX, hi##SUFFIX, A(PARAMS), A(ARGS))) \
+USE_QHF (GEN_VN (PREFIX, hf##SUFFIX, A(PARAMS), A(ARGS))) \
 GEN_VN (PREFIX, si##SUFFIX, A(PARAMS), A(ARGS)) \
-GEN_VN (PREFIX, sf##SUFFIX, A(PARAMS), A(ARGS)) \
+USE_QHF (GEN_VN (PREFIX, sf##SUFFIX, A(PARAMS), A(ARGS))) \
 GEN_VN (PREFIX, di##SUFFIX, A(PARAMS), A(ARGS)) \
-GEN_VN (PREFIX, df##SUFFIX, A(PARAMS), A(ARGS)) \
+USE_QHF (GEN_VN (PREFIX, df##SUFFIX, A(PARAMS), A(ARGS))) \
 USE_TI (GEN_VN (PREFIX, ti##SUFFIX, A(PARAMS), A(ARGS))) \
 static rtx \
 gen_##PREFIX##vNm##SUFFIX (PARAMS, rtx merge_src=NULL, rtx exec=NULL) \
@@ -1355,15 +1361,22 @@ gen_##PREFIX##vNm##SUFFIX (PARAMS, rtx merge_src=NULL, rtx exec=NULL) \
   \
   switch (mode) \
     { \
-    case E_QImode: return gen_##PREFIX##vNqi##SUFFIX (ARGS, merge_src, exec); \
-    case E_HImode: return gen_##PREFIX##vNhi##SUFFIX (ARGS, merge_src, exec); \
-    case E_HFmode: return gen_##PREFIX##vNhf##SUFFIX (ARGS, merge_src, exec); \
-    case E_SImode: return gen_##PREFIX##vNsi##SUFFIX (ARGS, merge_src, exec); \
-    case E_SFmode: return gen_##PREFIX##vNsf##SUFFIX (ARGS, merge_src, exec); \
-    case E_DImode: return gen_##PREFIX##vNdi##SUFFIX (ARGS, merge_src, exec); \
-    case E_DFmode: return gen_##PREFIX##vNdf##SUFFIX (ARGS, merge_src, exec); \
-    case E_TImode: \
-	USE_TI (return gen_##PREFIX##vNti##SUFFIX (ARGS, merge_src, exec);) \
+    USE_QHF (case E_QImode: \
+	return gen_##PREFIX##vNqi##SUFFIX (ARGS, merge_src, exec);) \
+    USE_QHF (case E_HImode: \
+	return gen_##PREFIX##vNhi##SUFFIX (ARGS, merge_src, exec);) \
+    USE_QHF (case E_HFmode: \
+	return gen_##PREFIX##vNhf##SUFFIX (ARGS, merge_src, exec);) \
+    case E_SImode: \
+	return gen_##PREFIX##vNsi##SUFFIX (ARGS, merge_src, exec); \
+    USE_QHF (case E_SFmode: \
+	return gen_##PREFIX##vNsf##SUFFIX (ARGS, merge_src, exec);) \
+    case E_DImode: \
+	return gen_##PREFIX##vNdi##SUFFIX (ARGS, merge_src, exec); \
+    USE_QHF (case E_DFmode: \
+	return gen_##PREFIX##vNdf##SUFFIX (ARGS, merge_src, exec);) \
+    USE_TI (case E_TImode: \
+	return gen_##PREFIX##vNti##SUFFIX (ARGS, merge_src, exec);) \
     default: \
       break; \
     } \
@@ -1372,7 +1385,8 @@ gen_##PREFIX##vNm##SUFFIX (PARAMS, rtx merge_src=NULL, rtx exec=NULL) \
   return NULL_RTX; \
 }
 
-/* These have TImode support.  */
+/* These support everything.  */
+#define USE_QHF(ARGS) ARGS
 #define USE_TI(ARGS) ARGS
 GEN_VNM (mov,, A(rtx dest, rtx src), A(dest, src))
 GEN_VNM (vec_duplicate,, A(rtx dest, rtx src), A(dest, src))
@@ -1382,6 +1396,7 @@ GEN_VNM (vec_duplicate,, A(rtx dest, rtx src), A(dest, src))
 #define USE_TI(ARGS)
 GEN_VNM (add,3, A(rtx dest, rtx src1, rtx src2), A(dest, src1, src2))
 GEN_VN (add,si3_dup, A(rtx dest, rtx src1, rtx src2), A(dest, src1, src2))
+GEN_VN (add,di3_dup, A(rtx dest, rtx src1, rtx src2), A(dest, src1, src2))
 GEN_VN (add,si3_vcc_dup, A(rtx dest, rtx src1, rtx src2, rtx vcc),
 	A(dest, src1, src2, vcc))
 GEN_VN (add,di3_sext_dup2, A(rtx dest, rtx src1, rtx src2), A(dest, src1, src2))
@@ -1393,15 +1408,20 @@ GEN_VN (add,di3_vcc_zext_dup2, A(rtx dest, rtx src1, rtx src2, rtx vcc),
 GEN_VN (addc,si3, A(rtx dest, rtx src1, rtx src2, rtx vccout, rtx vccin),
 	A(dest, src1, src2, vccout, vccin))
 GEN_VN (and,si3, A(rtx dest, rtx src1, rtx src2), A(dest, src1, src2))
-GEN_VN (ashl,si3, A(rtx dest, rtx src, rtx shift), A(dest, src, shift))
 GEN_VNM_NOEXEC (ds_bpermute,, A(rtx dest, rtx addr, rtx src, rtx exec),
 		A(dest, addr, src, exec))
 GEN_VNM (gather,_expr, A(rtx dest, rtx addr, rtx as, rtx vol),
 	 A(dest, addr, as, vol))
-GEN_VN (mul,si3_dup, A(rtx dest, rtx src1, rtx src2), A(dest, src1, src2))
 GEN_VN (sub,si3, A(rtx dest, rtx src1, rtx src2), A(dest, src1, src2))
 GEN_VN_NOEXEC (vec_series,si, A(rtx dest, rtx x, rtx c), A(dest, x, c))
 
+/* These do not have QI, HI, or any FP support.  */
+#undef USE_QHF
+#define USE_QHF(ARGS)
+GEN_VNM (ashl,3, A(rtx dest, rtx src, rtx shift), A(dest, src, shift))
+GEN_VNM (mul,3_dup, A(rtx dest, rtx src1, rtx src2), A(dest, src1, src2))
+
+#undef USE_QHF
 #undef USE_TI
 #undef GEN_VNM
 #undef GEN_VN
@@ -1995,8 +2015,8 @@ gcn_expand_vector_init (rtx op0, rtx vec)
   rtx addr = gen_reg_rtx (addrmode);
 
   int unit_size = GET_MODE_SIZE (GET_MODE_INNER (GET_MODE (op0)));
-  emit_insn (gen_mulvNsi3_dup (ramp, gen_rtx_REG (offsetmode, VGPR_REGNO (1)),
-			       GEN_INT (unit_size)));
+  emit_insn (gen_mulvNsi3_dup (ramp, GEN_INT (unit_size),
+			       gen_rtx_REG (offsetmode, VGPR_REGNO (1))));
 
   bool simple_repeat = true;
 
@@ -2293,36 +2313,46 @@ gcn_expand_scalar_to_vector_address (machine_mode mode, rtx exec, rtx mem,
 
    Return values.
      ADDR_SPACE_FLAT   - return VnDImode vector of absolute addresses.
-     ADDR_SPACE_GLOBAL - return VnSImode vector of offsets.  */
+     ADDR_SPACE_GLOBAL - return VnSImode vector of offsets.
+     64-bit offsets    - return VnDImode vector of absolute addresses. */
 
 rtx
 gcn_expand_scaled_offsets (addr_space_t as, rtx base, rtx offsets, rtx scale,
 			   bool unsigned_p, rtx exec)
 {
   int vf = GET_MODE_NUNITS (GET_MODE (offsets));
-  rtx tmpsi = gen_reg_rtx (VnMODE (vf, SImode));
-  rtx tmpdi = gen_reg_rtx (VnMODE (vf, DImode));
+  rtx scaled_offsets = gen_reg_rtx (GET_MODE (offsets));
+  rtx abs_addr = gen_reg_rtx (VnMODE (vf, DImode));
+  bool use_di = GET_MODE_INNER (GET_MODE (scaled_offsets)) == DImode;
 
   if (CONST_INT_P (scale)
       && INTVAL (scale) > 0
       && exact_log2 (INTVAL (scale)) >= 0)
-    emit_insn (gen_ashlvNsi3 (tmpsi, offsets,
-			      GEN_INT (exact_log2 (INTVAL (scale))),
-			      NULL, exec));
+    emit_insn (gen_ashlvNm3 (scaled_offsets, offsets,
+			     GEN_INT (exact_log2 (INTVAL (scale))),
+			     NULL, exec));
   else
-     emit_insn (gen_mulvNsi3_dup (tmpsi, offsets, scale, NULL, exec));
+     emit_insn (gen_mulvNm3_dup (scaled_offsets, scale, offsets, NULL, exec));
 
+  /* No instructions support DImode offsets.  */
+  if (use_di)
+    {
+      emit_insn (gen_addvNdi3_dup (abs_addr, base, scaled_offsets, NULL, exec));
+      return abs_addr;
+    }
   /* "Global" instructions do not support negative register offsets.  */
-  if (as == ADDR_SPACE_FLAT || !unsigned_p)
+  else if (as == ADDR_SPACE_FLAT || !unsigned_p)
     {
       if (unsigned_p)
-	 emit_insn (gen_addvNdi3_zext_dup2 (tmpdi, tmpsi, base, NULL, exec));
+	emit_insn (gen_addvNdi3_zext_dup2 (abs_addr, scaled_offsets, base,
+					   NULL, exec));
       else
-	 emit_insn (gen_addvNdi3_sext_dup2 (tmpdi, tmpsi, base, NULL, exec));
-      return tmpdi;
+	emit_insn (gen_addvNdi3_sext_dup2 (abs_addr, scaled_offsets, base,
+					   NULL, exec));
+      return abs_addr;
     }
   else if (as == ADDR_SPACE_GLOBAL)
-    return tmpsi;
+    return scaled_offsets;
 
   gcc_unreachable ();
 }
@@ -5315,8 +5345,12 @@ gcn_preferred_vector_alignment (const_tree type)
 static bool
 gcn_vectorize_support_vector_misalignment (machine_mode ARG_UNUSED (mode),
 					   const_tree type, int misalignment,
-					   bool is_packed)
+					   bool is_packed,
+					   bool is_gather_scatter)
 {
+  if (is_gather_scatter)
+    return true;
+
   if (is_packed)
     return false;
 
@@ -5761,6 +5795,16 @@ gcn_libc_has_function (enum function_class fn_class,
   return bsd_libc_has_function (fn_class, type);
 }
 
+/* Implement TARGET_VECTORIZE_PREFER_GATHER_SCATTER. */
+
+static bool
+gcn_prefer_gather_scatter (machine_mode ARG_UNUSED (mode),
+			   int ARG_UNUSED (scale),
+			   unsigned int ARG_UNUSED (group_size))
+{
+  return true;
+}
+
 /* }}}  */
 /* {{{ md_reorg pass.  */
 
@@ -6124,12 +6168,22 @@ gcn_md_reorg (void)
      detects the missed cases, and inserts the documented number of NOPs
      required for correct execution.  */
 
+  /* RDNA4 (not yet implemented) differs from RNDA 2/3/3.5 and requires some
+     s_nop, see 5.7 and esp. 5.7.2. in its ISA manual.
+     The assert here is a reminder to add those.  */
+  STATIC_ASSERT (ISA_CDNA1 - ISA_RDNA3 == 1);
+
+  if (TARGET_NO_MANUAL_NOPS)
+    return;
+
   const int max_waits = 5;
   struct ilist
   {
     rtx_insn *insn;
     attr_unit unit;
-    attr_delayeduse delayeduse;
+    attr_type type;
+    attr_flatmemaccess flatmemaccess;
+    bool delayeduse;
     HARD_REG_SET writes;
     HARD_REG_SET reads;
     int age;
@@ -6150,7 +6204,29 @@ gcn_md_reorg (void)
 
       attr_type itype = get_attr_type (insn);
       attr_unit iunit = get_attr_unit (insn);
-      attr_delayeduse idelayeduse = get_attr_delayeduse (insn);
+      attr_flatmemaccess iflatmemaccess = get_attr_flatmemaccess (insn);
+      bool delayeduse;
+      if (TARGET_CDNA3_NOPS)
+	switch (iflatmemaccess)
+	  {
+	  case FLATMEMACCESS_STORE:
+	  case FLATMEMACCESS_STOREX34:
+	  case FLATMEMACCESS_ATOMIC:
+	  case FLATMEMACCESS_CMPSWAPX2:
+	    delayeduse = true;
+	    break;
+	  case FLATMEMACCESS_LOAD:
+	  case FLATMEMACCESS_ATOMICWAIT:
+	  case FLATMEMACCESS_NO:
+	    delayeduse = false;
+	    break;
+	  default:
+	    gcc_unreachable ();
+	  }
+      else
+	delayeduse = (iflatmemaccess == FLATMEMACCESS_CMPSWAPX2
+		      || iflatmemaccess == FLATMEMACCESS_STOREX34);
+
       int ivccwait = get_attr_vccwait (insn);
       HARD_REG_SET ireads, iwrites;
       CLEAR_HARD_REG_SET (ireads);
@@ -6195,16 +6271,26 @@ gcn_md_reorg (void)
 		   && TEST_HARD_REG_BIT (ireads, VCCZ_REG))))
 	    nops_rqd = 5 - prev_insn->age;
 
-	  /* VALU writes SGPR/VCC followed by v_{read,write}lane using
-	     SGPR/VCC as lane select requires 4 wait states.  */
+	  /* VALU writes SGPR/VCC followed by
+	     - v_{read,write}lane using SGPR/VCC as lane select requires
+	       4 wait states
+	     - [CDNA3] VALU reads SGPR as constant requires 1 wait state
+	     - [CDNA3] VALU reads SGPR as carry-in requires no wait states  */
 	  if ((prev_insn->age + nops_rqd) < 4
 	      && prev_insn->unit == UNIT_VECTOR
-	      && get_attr_laneselect (insn) == LANESELECT_YES
+	      && get_attr_laneselect (insn) != LANESELECT_NO
 	      && (hard_reg_set_intersect_p
 		    (depregs, reg_class_contents[(int) SGPR_REGS])
 		  || hard_reg_set_intersect_p
 		       (depregs, reg_class_contents[(int) VCC_CONDITIONAL_REG])))
 	    nops_rqd = 4 - prev_insn->age;
+	  else if (TARGET_CDNA3_NOPS
+		   && (prev_insn->age + nops_rqd) < 1
+		   && prev_insn->unit == UNIT_VECTOR
+		   && iunit == UNIT_VECTOR
+		   && hard_reg_set_intersect_p
+			(depregs, reg_class_contents[(int) SGPR_REGS]))
+	    nops_rqd = 1 - prev_insn->age;
 
 	  /* VALU writes VGPR followed by VALU_DPP reading that VGPR
 	     requires 2 wait states.  */
@@ -6217,21 +6303,127 @@ gcn_md_reorg (void)
 		nops_rqd = 2 - prev_insn->age;
 	    }
 
+	  /* VALU writes EXEC followed by VALU DPP op requires 5 nop.  */
+	  if ((prev_insn->age + nops_rqd) < 5
+	      && itype == TYPE_VOP_DPP
+	      && prev_insn->unit == UNIT_VECTOR
+	      && TEST_HARD_REG_BIT (prev_insn->writes, EXECZ_REG))
+	    nops_rqd = 5 - prev_insn->age;
+
 	  /* Store that requires input registers are not overwritten by
-	     following instruction.  */
-	  if ((prev_insn->age + nops_rqd) < 1
-	      && prev_insn->delayeduse == DELAYEDUSE_YES
+	     following instruction.
+	     For CDNA3, only, VALU writes require 2 not 1 nop.
+	     CDNA3 additionally requires that 1 or 2 nop for global & scatch
+	     store/atomic.  */
+	  if (TARGET_CDNA3_NOPS
+	      && (prev_insn->age + nops_rqd) < 2
+	      && prev_insn->delayeduse
+	      && iunit == UNIT_VECTOR
+	      && ((hard_reg_set_intersect_p
+		   (prev_insn->reads, iwrites))))
+	    nops_rqd = 2 - prev_insn->age;
+	  else if ((prev_insn->age + nops_rqd) < 1
+	      && prev_insn->delayeduse
 	      && ((hard_reg_set_intersect_p
 		   (prev_insn->reads, iwrites))))
 	    nops_rqd = 1 - prev_insn->age;
 
-	  /* Instruction that requires VCC is not written too close before
-	     using it.  */
+	  /* Instruction (such as v_div_fmas) that requires VCC is not written
+	     too close before using it  */
 	  if (prev_insn->age < ivccwait
 	      && (hard_reg_set_intersect_p
 		  (prev_insn->writes,
 		   reg_class_contents[(int)VCC_CONDITIONAL_REG])))
 	    nops_rqd = ivccwait - prev_insn->age;
+
+	  /* NOTE: The following condition for adding wait state exists, but
+	     GCC does not access the special registers using their SGPR#.
+	     Thus, no action is required here.  The following wait-state
+	     condition exists at least for VEGA/gfx900+ to CDNA3:
+		Mixed use of VCC: alias vs. SGPR# - v_readlane,
+		v_readfirstlane, v_cmp, v_add_*i/u, v_sub_*i/u, v_div_*scale
+		followed by VALU reads VCC as constant requires 1 wait state.
+		(As carry-in, it requires none.)
+		[VCC can be accessed by name or logical SGPR that holds it.]  */
+
+	  /* Testing indicates that CDNA3 requires an s_nop between
+	     e.g. 'v_cmp_eq_u64 vcc, v[4:5], v[8:9]' and 'v_mov_b32 v0, vcc_lo'.
+	     Thus: add it between v_cmp writing VCC and VALU read of VCC.  */
+	  if (TARGET_CDNA3_NOPS
+	      && (prev_insn->age + nops_rqd) < 1
+	      && iunit == UNIT_VECTOR
+	      && (hard_reg_set_intersect_p
+		  (depregs, reg_class_contents[(int)VCC_CONDITIONAL_REG]))
+	      && get_attr_vcmp (prev_insn->insn) == VCMP_VCMP)
+	    nops_rqd = 1 - prev_insn->age;
+
+	  /* CDNA3: VALU writes SGPR/VCC: v_readlane, v_readfirstlane, v_cmp,
+	     v_add_*i/u, v_sub_*i/u, v_div_*scale - followed by:
+	     - VALU reads SGPR as constant requires 1 waite state
+	     - VALU reads SGPR as carry-in requires no waite state
+	     - v_readlane/v_writelane reads SGPR as lane select requires 4 wait
+	       states.  */
+	  if (TARGET_CDNA3_NOPS
+	      && (prev_insn->age + nops_rqd) < 4
+	      && iunit == UNIT_VECTOR
+	      && prev_insn->unit == UNIT_VECTOR
+	      && hard_reg_set_intersect_p
+		   (depregs, reg_class_contents[(int) SGPR_SRC_REGS]))
+	    {
+	      if (get_attr_laneselect (insn) != LANESELECT_NO)
+		nops_rqd = 4 - prev_insn->age;
+	      else if ((prev_insn->age + nops_rqd) < 1)
+		nops_rqd = 1 - prev_insn->age;
+	    }
+
+	  /* CDNA3: v_cmpx followed by
+	     - V_readlane, v_readfirstlane, v_writelane requires 4 wait states
+	     - VALU reads EXEC as constant requires 2 wait states
+	     - other VALU requires no wait state  */
+	  if (TARGET_CDNA3_NOPS
+	      && (prev_insn->age + nops_rqd) < 4
+	      && get_attr_vcmp (prev_insn->insn) == VCMP_VCMPX
+	      && get_attr_laneselect (insn) != LANESELECT_NO)
+	    nops_rqd = 4 - prev_insn->age;
+	  else if (TARGET_CDNA3_NOPS
+		   && (prev_insn->age + nops_rqd) < 2
+		   && iunit == UNIT_VECTOR
+		   && get_attr_vcmp (prev_insn->insn) == VCMP_VCMPX
+		   && TEST_HARD_REG_BIT (ireads, EXECZ_REG))
+	    nops_rqd = 2 - prev_insn->age;
+
+	  /* CDNA3: VALU writes VGPR followed by v_readlane vsrc0 reads VGPRn
+	     requires 1 wait state. */
+	  if (TARGET_CDNA3_NOPS
+	      && (prev_insn->age + nops_rqd) < 1
+	      && prev_insn->unit == UNIT_VECTOR
+	      && prev_insn->flatmemaccess != FLATMEMACCESS_LOAD
+	      && get_attr_laneselect (insn) == LANESELECT_READ
+	      && hard_reg_set_intersect_p
+		    (depregs, reg_class_contents[(int) VGPR_REGS]))
+	    nops_rqd = 1 - prev_insn->age;
+
+	  /* CDNA3: VALU op which uses OPSEL or SDWA with changes the result's
+	     bit position followed by VALU op consumes result of that op
+	     requires 1 wait state.
+	     FIXME: Handle OPSEL, once used.  */
+	  if (TARGET_CDNA3_NOPS
+	      && (prev_insn->age + nops_rqd) < 1
+	      && prev_insn->unit == UNIT_VECTOR
+	      && prev_insn->type == TYPE_VOP_SDWA
+	      && !hard_reg_set_empty_p (depregs))
+	    nops_rqd = 1 - prev_insn->age;
+
+	  /* CNDA3: VALU Trans Op (such as v_rcp_f64) followed by non-trans VALU
+	     op consumes result of that op requires 1 wait state.  */
+	  if (TARGET_CDNA3_NOPS
+	      && (prev_insn->age + nops_rqd) < 1
+	      && prev_insn->unit == UNIT_VECTOR
+	      && iunit == UNIT_VECTOR
+	      && get_attr_transop (prev_insn->insn) == TRANSOP_YES
+	      && get_attr_transop (insn) == TRANSOP_NO
+	      && !hard_reg_set_empty_p (depregs))
+	    nops_rqd = 1 - prev_insn->age;
 
 	  /* CDNA1: write VGPR before v_accvgpr_write reads it.  */
 	  if (TARGET_AVGPR_CDNA1_NOPS
@@ -6264,8 +6456,8 @@ gcn_md_reorg (void)
 	}
 
       /* Insert the required number of NOPs.  */
-      for (int i = nops_rqd; i > 0; i--)
-	emit_insn_after (gen_nop (), last_insn);
+      if (nops_rqd > 0)
+	emit_insn_after (gen_nops (GEN_INT (nops_rqd-1)), last_insn);
 
       /* Age the previous instructions.  We can also ignore writes to
          registers subsequently overwritten.  */
@@ -6288,7 +6480,9 @@ gcn_md_reorg (void)
       /* Track the current instruction as a previous instruction.  */
       back[oldest].insn = insn;
       back[oldest].unit = iunit;
-      back[oldest].delayeduse = idelayeduse;
+      back[oldest].type = itype;
+      back[oldest].flatmemaccess = iflatmemaccess;
+      back[oldest].delayeduse = delayeduse;
       back[oldest].writes = iwrites;
       back[oldest].reads = ireads;
       back[oldest].age = 0;
@@ -7109,6 +7303,11 @@ print_operand_address (FILE *file, rtx mem)
    H - print second part of a multi-reg value (high-part of 2-reg value)
    J - print third part of a multi-reg value
    K - print fourth part of a multi-reg value
+   R   Print a scalar register number as an integer.  Temporary hack.
+   V - Print a vector register number as an integer.  Temporary hack.
+
+   Additionally, the standard builtin c, n, a, and l exist; see gccint's
+   "Output Templates and Operand Substitution" for details.
  */
 
 void
@@ -7957,6 +8156,8 @@ gcn_dwarf_register_span (rtx rtl)
   gcn_vectorize_builtin_vectorized_function
 #undef  TARGET_VECTORIZE_GET_MASK_MODE
 #define TARGET_VECTORIZE_GET_MASK_MODE gcn_vectorize_get_mask_mode
+#undef  TARGET_VECTORIZE_PREFER_GATHER_SCATTER
+#define TARGET_VECTORIZE_PREFER_GATHER_SCATTER gcn_prefer_gather_scatter
 #undef  TARGET_VECTORIZE_PREFERRED_SIMD_MODE
 #define TARGET_VECTORIZE_PREFERRED_SIMD_MODE gcn_vectorize_preferred_simd_mode
 #undef  TARGET_VECTORIZE_PREFERRED_VECTOR_ALIGNMENT

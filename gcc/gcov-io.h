@@ -349,6 +349,11 @@ struct gcov_summary
 {
   gcov_unsigned_t runs;		/* Number of program runs.  */
   gcov_type sum_max;    	/* Sum of individual run max values.  */
+  gcov_type cutoff;		/* Values smaller than this value are not
+				   reliable (0 may mean non-zero).
+				   For read profile cutoff is typically 1
+				   however when we scale up or use auto-fdo
+				   it may become bigger value.  */
 };
 
 #if !defined(inhibit_libc)
@@ -382,6 +387,7 @@ char *mangle_path (char const *base);
 /* Available outside gcov */
 GCOV_LINKAGE void gcov_write (const void *, unsigned) ATTRIBUTE_HIDDEN;
 GCOV_LINKAGE void gcov_write_unsigned (gcov_unsigned_t) ATTRIBUTE_HIDDEN;
+GCOV_LINKAGE int gcov_is_error (void);
 #endif
 
 #if !IN_GCOV && !IN_LIBGCOV

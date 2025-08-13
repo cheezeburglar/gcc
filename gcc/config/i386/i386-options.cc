@@ -1362,7 +1362,9 @@ ix86_valid_target_attribute_inner_p (tree fndecl, tree args, char *p_strings[],
 	  arg_ok = opt_enum_arg_to_value (opt, p + opt_len, &value, CL_TARGET);
 	  if (arg_ok)
 	    set_option (opts, enum_opts_set, opt, value,
-			p + opt_len, DK_UNSPECIFIED, input_location,
+			p + opt_len,
+			static_cast<int> (diagnostics::kind::unspecified),
+			input_location,
 			global_dc);
 	  else
 	    {
@@ -2839,7 +2841,9 @@ ix86_option_override_internal (bool main_args_p,
 
   /* Set the default value for -mfentry.  */
   if (!opts_set->x_flag_fentry)
-    opts->x_flag_fentry = TARGET_SEH;
+    opts->x_flag_fentry = (TARGET_SEH
+			   || (TARGET_64BIT_P (opts->x_ix86_isa_flags)
+			       && ENABLE_X86_64_MFENTRY));
   else
     {
       if (!TARGET_64BIT_P (opts->x_ix86_isa_flags) && opts->x_flag_pic
@@ -2849,6 +2853,17 @@ ix86_option_override_internal (bool main_args_p,
       else if (TARGET_SEH && !opts->x_flag_fentry)
 	sorry ("%<-mno-fentry%> isn%'t compatible with SEH");
     }
+
+#ifdef OPTION_GLIBC_P
+  /* -mfentry is supported only on glibc targets.  */
+  if (!opts->x_flag_fentry
+      && OPTION_GLIBC_P (opts)
+      && (TARGET_64BIT_P (opts->x_ix86_isa_flags) || !opts->x_flag_pic)
+      && opts->x_flag_shrink_wrap
+      && opts->x_profile_flag)
+    warning (0, "%<-pg%> without %<-mfentry%> may be unreliable with "
+	     "shrink wrapping");
+#endif
 
   if (TARGET_SEH && TARGET_CALL_MS2SYSV_XLOGUES)
     sorry ("%<-mcall-ms2sysv-xlogues%> isn%'t currently supported with SEH");
@@ -3600,6 +3615,18 @@ ix86_handle_cconv_attribute (tree *node, tree name, tree args, int,
       return NULL_TREE;
     }
 
+  if (TARGET_64BIT)
+    {
+      /* Do not warn when emulating the MS ABI.  */
+      if ((TREE_CODE (*node) != FUNCTION_TYPE
+	   && TREE_CODE (*node) != METHOD_TYPE)
+	  || ix86_function_type_abi (*node) != MS_ABI)
+	warning (OPT_Wattributes, "%qE attribute ignored",
+		 name);
+      *no_add_attrs = true;
+      return NULL_TREE;
+    }
+
   /* Can combine regparm with all attributes but fastcall, and thiscall.  */
   if (is_attribute_p ("regparm", name))
     {
@@ -3612,7 +3639,7 @@ ix86_handle_cconv_attribute (tree *node, tree name, tree args, int,
 
       if (lookup_attribute ("thiscall", TYPE_ATTRIBUTES (*node)))
 	{
-	  error ("regparam and thiscall attributes are not compatible");
+	  error ("regparm and thiscall attributes are not compatible");
 	}
 
       cst = TREE_VALUE (args);
@@ -3633,19 +3660,7 @@ ix86_handle_cconv_attribute (tree *node, tree name, tree args, int,
       return NULL_TREE;
     }
 
-  if (TARGET_64BIT)
-    {
-      /* Do not warn when emulating the MS ABI.  */
-      if ((TREE_CODE (*node) != FUNCTION_TYPE
-	   && TREE_CODE (*node) != METHOD_TYPE)
-	  || ix86_function_type_abi (*node) != MS_ABI)
-	warning (OPT_Wattributes, "%qE attribute ignored",
-	         name);
-      *no_add_attrs = true;
-      return NULL_TREE;
-    }
-
-  /* Can combine fastcall with stdcall (redundant) and sseregparm.  */
+  /* Can combine fastcall with sseregparm.  */
   if (is_attribute_p ("fastcall", name))
     {
       if (lookup_attribute ("cdecl", TYPE_ATTRIBUTES (*node)))
@@ -3666,8 +3681,7 @@ ix86_handle_cconv_attribute (tree *node, tree name, tree args, int,
 	}
     }
 
-  /* Can combine stdcall with fastcall (redundant), regparm and
-     sseregparm.  */
+  /* Can combine stdcall with regparm and sseregparm.  */
   else if (is_attribute_p ("stdcall", name))
     {
       if (lookup_attribute ("cdecl", TYPE_ATTRIBUTES (*node)))
@@ -3716,6 +3730,10 @@ ix86_handle_cconv_attribute (tree *node, tree name, tree args, int,
       if (lookup_attribute ("cdecl", TYPE_ATTRIBUTES (*node)))
 	{
 	  error ("cdecl and thiscall attributes are not compatible");
+	}
+      if (lookup_attribute ("regparm", TYPE_ATTRIBUTES (*node)))
+	{
+	  error ("regparm and thiscall attributes are not compatible");
 	}
     }
 

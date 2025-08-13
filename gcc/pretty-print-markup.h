@@ -20,7 +20,7 @@ along with GCC; see the file COPYING3.  If not see
 #ifndef GCC_PRETTY_PRINT_MARKUP_H
 #define GCC_PRETTY_PRINT_MARKUP_H
 
-#include "diagnostic-color.h"
+#include "diagnostics/color.h"
 
 class pp_token_list;
 
@@ -44,6 +44,11 @@ public:
 
   void begin_highlight_color (const char *color_name);
   void end_highlight_color ();
+
+  void begin_url (const char *url);
+  void end_url ();
+
+  void add_event_id (diagnostic_event_id_t event_id);
 
   void push_back_any_text ();
 

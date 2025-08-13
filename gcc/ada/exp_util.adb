@@ -1903,7 +1903,7 @@ package body Exp_Util is
       begin
          --  The DIC pragma is ignored, nothing left to do
 
-         if Is_Ignored (DIC_Prag) then
+         if Is_Ignored_In_Codegen (DIC_Prag) then
             null;
 
          --  Otherwise the DIC expression must be checked at run time.
@@ -2311,8 +2311,7 @@ package body Exp_Util is
 
       Loc : constant Source_Ptr := Sloc (Typ);
 
-      Saved_GM  : constant Ghost_Mode_Type := Ghost_Mode;
-      Saved_IGR : constant Node_Id         := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       --  Save the Ghost-related attributes to restore on exit
 
       DIC_Prag     : Node_Id;
@@ -2558,7 +2557,7 @@ package body Exp_Util is
       end if;
 
    <<Leave>>
-      Restore_Ghost_Region (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region (Saved_Ghost_Config);
    end Build_DIC_Procedure_Body;
 
    -------------------------------------
@@ -2575,8 +2574,7 @@ package body Exp_Util is
    is
       Loc : constant Source_Ptr := Sloc (Typ);
 
-      Saved_GM  : constant Ghost_Mode_Type := Ghost_Mode;
-      Saved_IGR : constant Node_Id         := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       --  Save the Ghost-related attributes to restore on exit
 
       DIC_Prag  : Node_Id;
@@ -2783,7 +2781,7 @@ package body Exp_Util is
       end if;
 
    <<Leave>>
-      Restore_Ghost_Region (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region (Saved_Ghost_Config);
    end Build_DIC_Procedure_Declaration;
 
    ------------------------------------
@@ -3237,7 +3235,7 @@ package body Exp_Util is
       begin
          --  The invariant is ignored, nothing left to do
 
-         if Is_Ignored (Prag) then
+         if Is_Ignored_In_Codegen (Prag) then
             null;
 
          --  Otherwise the invariant is checked. Build a pragma Check to verify
@@ -3709,8 +3707,7 @@ package body Exp_Util is
 
       --  Local variables
 
-      Saved_GM  : constant Ghost_Mode_Type := Ghost_Mode;
-      Saved_IGR : constant Node_Id         := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       --  Save the Ghost-related attributes to restore on exit
 
       Dummy        : Entity_Id;
@@ -4058,7 +4055,7 @@ package body Exp_Util is
       end if;
 
    <<Leave>>
-      Restore_Ghost_Region (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region (Saved_Ghost_Config);
    end Build_Invariant_Procedure_Body;
 
    -------------------------------------------
@@ -4075,8 +4072,7 @@ package body Exp_Util is
    is
       Loc : constant Source_Ptr := Sloc (Typ);
 
-      Saved_GM  : constant Ghost_Mode_Type := Ghost_Mode;
-      Saved_IGR : constant Node_Id         := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       --  Save the Ghost-related attributes to restore on exit
 
       Proc_Decl : Node_Id;
@@ -4292,7 +4288,7 @@ package body Exp_Util is
       end if;
 
    <<Leave>>
-      Restore_Ghost_Region (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region (Saved_Ghost_Config);
    end Build_Invariant_Procedure_Declaration;
 
    ------------------------
@@ -6189,7 +6185,7 @@ package body Exp_Util is
          if Is_Protected_Type (Btyp) then
             Utyp := Corresponding_Record_Type (Root_Type (Btyp));
 
-         else
+         elsif Is_Implicit_Full_View (Utyp) then
             Utyp := Underlying_Type (Root_Type (Btyp));
 
             if Is_Protected_Type (Utyp) then
@@ -8167,20 +8163,20 @@ package body Exp_Util is
             --  never climb up as far as the N_Expression_With_Actions itself.
 
             when N_Expression_With_Actions =>
-               if N = Expression (P) then
-                  if Is_Empty_List (Actions (P)) then
-                     Append_List_To (Actions (P), Ins_Actions);
-                     Analyze_List (Actions (P));
-                  else
-                     Insert_List_After_And_Analyze
-                       (Last (Actions (P)), Ins_Actions);
-                  end if;
-
-                  return;
-
-               else
+               if Is_List_Member (N) and then List_Containing (N) = Actions (P)
+               then
                   raise Program_Error;
                end if;
+
+               if Is_Empty_List (Actions (P)) then
+                  Append_List_To (Actions (P), Ins_Actions);
+                  Analyze_List (Actions (P));
+               else
+                  Insert_List_After_And_Analyze
+                    (Last (Actions (P)), Ins_Actions);
+               end if;
+
+               return;
 
             --  Case of appearing in the condition of a while expression or
             --  elsif. We insert the actions into the Condition_Actions field.
@@ -10640,8 +10636,7 @@ package body Exp_Util is
    is
       Loc : constant Source_Ptr := Sloc (Expr);
 
-      Saved_GM  : constant Ghost_Mode_Type := Ghost_Mode;
-      Saved_IGR : constant Node_Id         := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       --  Save the Ghost-related attributes to restore on exit
 
       Call         : Node_Id;
@@ -10685,7 +10680,7 @@ package body Exp_Util is
           Name                   => New_Occurrence_Of (Func_Id, Loc),
           Parameter_Associations => Param_Assocs);
 
-      Restore_Ghost_Region (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region (Saved_Ghost_Config);
 
       return Call;
    end Make_Predicate_Call;
@@ -11729,34 +11724,6 @@ package body Exp_Util is
          return Small_Integer_Type_For (Siz, Is_Unsigned_Type (Typ));
       end if;
    end Matching_Standard_Type;
-
-   -----------------------------
-   -- May_Generate_Large_Temp --
-   -----------------------------
-
-   --  At the current time, the only types that we return False for (i.e. where
-   --  we decide we know they cannot generate large temps) are ones where we
-   --  know the size is 256 bits or less at compile time, and we are still not
-   --  doing a thorough job on arrays and records.
-
-   function May_Generate_Large_Temp (Typ : Entity_Id) return Boolean is
-   begin
-      if not Size_Known_At_Compile_Time (Typ) then
-         return False;
-      end if;
-
-      if Known_Esize (Typ) and then Esize (Typ) <= 256 then
-         return False;
-      end if;
-
-      if Is_Array_Type (Typ)
-        and then Present (Packed_Array_Impl_Type (Typ))
-      then
-         return May_Generate_Large_Temp (Packed_Array_Impl_Type (Typ));
-      end if;
-
-      return True;
-   end May_Generate_Large_Temp;
 
    ---------------------------------------
    -- Move_To_Initialization_Statements --
@@ -13760,11 +13727,12 @@ package body Exp_Util is
    --  The above requirements should be documented in Sinfo ???
 
    function Safe_Unchecked_Type_Conversion (Exp : Node_Id) return Boolean is
+      Pexp : constant Node_Id := Parent (Exp);
+
       Otyp   : Entity_Id;
       Ityp   : Entity_Id;
       Oalign : Uint;
       Ialign : Uint;
-      Pexp   : constant Node_Id := Parent (Exp);
 
    begin
       --  If the expression is the RHS of an assignment or object declaration
@@ -13782,18 +13750,12 @@ package body Exp_Util is
          return True;
 
       --  If the expression is the prefix of an N_Selected_Component we should
-      --  also be OK because GCC knows to look inside the conversion except if
-      --  the type is discriminated. We assume that we are OK anyway if the
-      --  type is not set yet or if it is controlled since we can't afford to
-      --  introduce a temporary in this case.
+      --  also be OK because GCC knows to look inside the conversion.
 
       elsif Nkind (Pexp) = N_Selected_Component
         and then Prefix (Pexp) = Exp
       then
-         return No (Etype (Pexp))
-           or else not Is_Type (Etype (Pexp))
-           or else not Has_Discriminants (Etype (Pexp))
-           or else Is_Constrained (Etype (Pexp));
+         return True;
       end if;
 
       --  Set the output type, this comes from Etype if it is set, otherwise we
@@ -13866,14 +13828,7 @@ package body Exp_Util is
       --  known size, but we can't consider them that way here, because we are
       --  talking about the actual size of the object.
 
-      --  We also make sure that in addition to the size being known, we do not
-      --  have a case which might generate an embarrassingly large temp in
-      --  stack checking mode.
-
       elsif Size_Known_At_Compile_Time (Otyp)
-        and then
-          (not Stack_Checking_Enabled
-            or else not May_Generate_Large_Temp (Otyp))
         and then not (Is_Record_Type (Otyp) and then not Is_Constrained (Otyp))
       then
          return True;

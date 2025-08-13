@@ -1460,10 +1460,7 @@ copy_tree_body_r (tree *tp, int *walk_subtrees, void *data)
 		   || OMP_CLAUSE_CODE (*tp) == OMP_CLAUSE_DEPEND))
 	{
 	  tree t = OMP_CLAUSE_DECL (*tp);
-	  if (t
-	      && TREE_CODE (t) == TREE_LIST
-	      && TREE_PURPOSE (t)
-	      && TREE_CODE (TREE_PURPOSE (t)) == TREE_VEC)
+	  if (t && OMP_ITERATOR_DECL_P (t))
 	    {
 	      *walk_subtrees = 0;
 	      OMP_CLAUSE_DECL (*tp) = copy_node (t);
@@ -2888,11 +2885,9 @@ initialize_cfun (tree new_fndecl, tree callee_fndecl, profile_count count)
   profile_count::adjust_for_ipa_scaling (&num, &den);
 
   ENTRY_BLOCK_PTR_FOR_FN (cfun)->count =
-    ENTRY_BLOCK_PTR_FOR_FN (src_cfun)->count.apply_scale (count,
-				ENTRY_BLOCK_PTR_FOR_FN (src_cfun)->count);
+    ENTRY_BLOCK_PTR_FOR_FN (src_cfun)->count.apply_scale (num, den);
   EXIT_BLOCK_PTR_FOR_FN (cfun)->count =
-    EXIT_BLOCK_PTR_FOR_FN (src_cfun)->count.apply_scale (count,
-				ENTRY_BLOCK_PTR_FOR_FN (src_cfun)->count);
+    EXIT_BLOCK_PTR_FOR_FN (src_cfun)->count.apply_scale (num, den);
   if (src_cfun->eh)
     init_eh_for_function ();
 

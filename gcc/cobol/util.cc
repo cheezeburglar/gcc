@@ -34,29 +34,24 @@
  * header files.
  */
 
-#include "cobol-system.h"
-#include "coretypes.h"
-#include "tree.h"
+#include <cobol-system.h>
+#include <coretypes.h>
+#include <tree.h>
 #undef yy_flex_debug
 
 #include <langinfo.h>
 
-#include "coretypes.h"
-#include "version.h"
-#include "demangle.h"
-#include "intl.h"
-#include "backtrace.h"
-#include "diagnostic.h"
-#include "diagnostic-color.h"
-#include "diagnostic-url.h"
-#include "diagnostic-metadata.h"
-#include "diagnostic-path.h"
-#include "edit-context.h"
-#include "selftest.h"
-#include "selftest-diagnostic.h"
-#include "opts.h"
+#include <coretypes.h>
+#include <version.h>
+#include <demangle.h>
+#include <intl.h>
+#include <backtrace.h>
+#include <diagnostic.h>
+#include <opts.h>
 #include "util.h"
+
 #include "cbldiag.h"
+#include "cdfval.h"
 #include "lexio.h"
 
 #include "../../libgcobol/ec.h"
@@ -90,7 +85,7 @@ static inline char *
 get_current_dir_name ()
 {
   /* Use libiberty's allocator here.  */
-  char *buf = (char *) xmalloc (PATH_MAX);
+  char *buf = static_cast<char *>(xmalloc (PATH_MAX));
   return getcwd (buf, PATH_MAX);
 }
 #endif
@@ -98,7 +93,7 @@ get_current_dir_name ()
 /*
  * For printing messages, usually the size of the thing is some kind of string
  * length, and doesn't really need a size_t.  For message formatting, use a
- * simple unsigned long, and warn if that's no good.  "gb4" here stands for 
+ * simple unsigned long, and warn if that's no good.  "gb4" here stands for
  * "4 Gigabytes".
  */
 unsigned long
@@ -110,7 +105,159 @@ gb4( size_t input ) {
   }
   return input;
 }
-  
+
+/*
+ * Most CDF Directives -- those that have state -- can be pushed and popped.
+ * This class maintains stacks of them, with each stack having a "default
+ * value" that may be updated, without push/pop, via a CDF directive or
+ * command-line option.  A push to a stack pushes the default value onto it; a
+ * pop copies the top of the stack to the default value.
+ *
+ * Supported:
+ *   CALL-CONVENTION
+ *   COBOL-WORDS
+ *   DEFINE
+ *   DISPLAY
+ *   IF
+ *   POP
+ *   PUSH
+ *   SOURCE FORMAT
+ *   TURN
+ * not supported
+ *   EVALUATE
+ *   FLAG-02
+ *   FLAG-14
+ *   LEAP-SECOND
+ *   LISTING
+ *   PAGE
+ *   PROPAGATE
+ *   REF-MOD-ZERO-LENGTH
+ *
+ * >>PUSH ALL calls the class's push() method.
+ * >>POP ALL calls the class's pop() method.
+ */
+class cdf_directives_t
+{
+  template <typename T>
+  class cdf_stack_t : private std::stack<T> { // cppcheck-suppress noConstructor
+    T default_value;
+    const T& top() const { return std::stack<T>::top(); }
+    bool empty() const { return std::stack<T>::empty(); }
+   public:
+    void value( const T& value ) {
+      T& output( empty()? default_value : std::stack<T>::top() ); // cppcheck-suppress constVariableReference
+      output = value;
+      dbgmsg("cdf_directives_t::%s: %s", __func__, str(output).c_str());
+    }
+    T& value() {
+      return empty()? default_value : std::stack<T>::top();
+    }
+    void push() {
+      std::stack<T>::push(value());
+      dbgmsg("cdf_directives_t::%s: %s", __func__, str(top()).c_str());
+    }
+    void pop() {
+      if( empty() ) {
+        error_msg(YYLTYPE(), "CDF stack empty"); // cppcheck-suppress syntaxError
+        return;
+      }
+      default_value = top();
+      std::stack<T>::pop();
+      dbgmsg("cdf_directives_t::%s: %s", __func__, str(default_value).c_str());
+    }
+  protected:
+    static std::string str(cbl_call_convention_t arg) {
+      char output[2] = { static_cast<char>(arg) };
+      return std::string("call-convention ") + output;
+    }
+    static std::string str(current_tokens_t) {
+      return "<cobol-words>";
+    }
+    static std::string str(cdf_values_t) {
+      return "<dictionary>";
+    }
+    static std::string str(source_format_t arg) {
+      return arg.description();
+    }
+    static std::string str(cbl_enabled_exceptions_t) {
+      return "<enabled_exceptions>";
+    }
+  };
+
+ public:
+  cdf_stack_t<cbl_call_convention_t> call_convention;
+  cdf_stack_t<current_tokens_t> cobol_words;
+  cdf_stack_t<cdf_values_t> dictionary;   // DEFINE
+  cdf_stack_t<source_format_t> source_format;
+  cdf_stack_t<cbl_enabled_exceptions_t> enabled_exceptions;
+
+  cdf_directives_t() {
+    call_convention.value() = cbl_call_cobol_e;
+  }
+
+  void push() {
+    call_convention.push();
+    cobol_words.push();
+    dictionary.push();
+    source_format.push();
+    enabled_exceptions.push();
+  }
+  void pop() {
+    call_convention.pop();
+    cobol_words.pop();
+    dictionary.pop();
+    source_format.pop();
+    enabled_exceptions.pop();
+  }
+};
+static cdf_directives_t cdf_directives;
+
+void
+current_call_convention( cbl_call_convention_t convention) {
+  cdf_directives.call_convention.value(convention);
+}
+cbl_call_convention_t
+current_call_convention() {
+  return cdf_directives.call_convention.value();
+}
+
+current_tokens_t&
+cdf_current_tokens() {
+  return cdf_directives.cobol_words.value();
+}
+
+cdf_values_t&
+cdf_dictionary() {
+  return cdf_directives.dictionary.value();
+}
+
+void
+cobol_set_indicator_column( int column ) {
+  cdf_directives.source_format.value().indicator_column_set(column);
+}
+source_format_t& cdf_source_format() {
+  return cdf_directives.source_format.value();
+}
+
+cbl_enabled_exceptions_t&
+cdf_enabled_exceptions() {
+  return cdf_directives.enabled_exceptions.value();
+}
+
+void cdf_push() { cdf_directives.push(); }
+void cdf_push_call_convention() { cdf_directives.call_convention.push(); }
+void cdf_push_current_tokens() { cdf_directives.cobol_words.push(); }
+void cdf_push_dictionary() { cdf_directives.dictionary.push(); }
+void cdf_push_enabled_exceptions() { cdf_directives.enabled_exceptions.push(); }
+void cdf_push_source_format() { cdf_directives.source_format.push(); }
+
+void cdf_pop() { cdf_directives.pop(); }
+void cdf_pop_call_convention() { cdf_directives.call_convention.pop(); }
+void cdf_pop_current_tokens() { cdf_directives.cobol_words.pop(); }
+void cdf_pop_dictionary() { cdf_directives.dictionary.pop(); }
+void cdf_pop_enabled_exceptions() { cdf_directives.enabled_exceptions.pop(); }
+void cdf_pop_source_format() { cdf_directives.source_format.pop(); }
+
 const char *
 symbol_type_str( enum symbol_type_t type )
 {
@@ -839,7 +986,7 @@ cbl_field_t::report_invalid_initial_value(const YYLTYPE& loc) const {
         // 8 or more, we need do no further testing because we assume
         // everything fits.
         if( data.capacity < 8 ) {
-          const auto p = strchr(data.initial, symbol_decimal_point());
+          const char *p = strchr(data.initial, symbol_decimal_point());
           if( p && atoll(p+1) != 0 ) {
             error_msg(loc, "integer type %s VALUE '%s' "
                      "requires integer VALUE",
@@ -902,8 +1049,8 @@ cbl_field_t::report_invalid_initial_value(const YYLTYPE& loc) const {
                                                  return TOUPPER(ch) == 'E';
                                                } );
               if( !has_exponent && data.precision() < pend - p ) {
-                error_msg(loc, "%s cannot represent VALUE %qs exactly (max %c%zu)",
-                          name, data.initial, '.', pend - p);
+                error_msg(loc, "%s cannot represent VALUE %qs exactly (max %c%ld)",
+                          name, data.initial, '.', (long)(pend - p));
               }
             }
           }
@@ -985,7 +1132,7 @@ literal_subscript_oob( const cbl_refer_t& r, size_t& isub /* output */)  {
                            pdim++;
                            return ! occurs.subscript_ok(r.field);
                          } );
-  isub = psub - r.subscripts.begin(); 
+  isub = psub - r.subscripts.begin();
   return psub == r.subscripts.end()? NULL : dims[isub];
 }
 
@@ -998,12 +1145,12 @@ cbl_refer_t::subscripts_set( const std::list<cbl_refer_t>& subs ) {
 
 const char *
 cbl_refer_t::str() const {
-  static char subscripts[64];
-  sprintf(subscripts, "(%u of " HOST_SIZE_T_PRINT_UNSIGNED " dimensions)",
+  static char subscripts_l[64];
+  sprintf(subscripts_l, "(%u of " HOST_SIZE_T_PRINT_UNSIGNED " dimensions)",
           nsubscript(), (fmt_size_t)dimensions(field));
   char *output = xasprintf("%s %s %s",
                            field? field_str(field) : "(none)",
-                           0 < dimensions(field)? subscripts : "",
+                           0 < dimensions(field)? subscripts_l : "",
                            is_refmod_reference()? "(refmod)" : "" );
   return output;
 }
@@ -1705,12 +1852,13 @@ date_time_fmt( const char input[] ) {
     { regex_t(), 'd', "^(" DATE_FMT_B "|" DATE_FMT_E ")$" },
     { regex_t(), 't', "^(" TIME_FMT_B "|" TIME_FMT_E ")$" },
   };
-  int erc, cflags = REG_EXTENDED | REG_ICASE, eflags=0;
+  int cflags = REG_EXTENDED | REG_ICASE, eflags=0;
   regmatch_t m[5];
   char result = 0;
 
   if( ! compiled ) {
     for( auto& fmt : fmts ) {
+      int erc;
       if( (erc = regcomp(&fmt.reg, fmt.pattern, cflags)) != 0 ) {
         char msg[80];
         regerror(erc, &fmt.reg, msg, sizeof(msg));
@@ -1768,7 +1916,7 @@ class unique_stack : public std::stack<input_file_t>
   friend void cobol_set_pp_option(int opt);
   bool option_m;
   std::set<std::string> all_names;
-  
+
   const char *
   no_wd( const char *wd, const char *name ) {
     int i;
@@ -1779,7 +1927,7 @@ class unique_stack : public std::stack<input_file_t>
 
  public:
   unique_stack() : option_m(false) {}
-  
+
   bool push( const value_type& value ) {
     auto ok = std::none_of( c.cbegin(), c.cend(),
                             [value]( const auto& that ) {
@@ -1813,8 +1961,8 @@ class unique_stack : public std::stack<input_file_t>
   const input_file_t& peek( size_t n ) const {
     gcc_assert( n < size() );
     return c.at(size() - ++n);
-  } 
-  
+  }
+
   void option( int opt ) { // capture other preprocessor options eventually
     assert(opt == 'M');
     option_m = true;
@@ -1827,7 +1975,7 @@ class unique_stack : public std::stack<input_file_t>
     std::string input( top().name );
     printf( "%s: ", input.c_str() );
     for( const auto& name : all_names ) {
-      if( name != input ) 
+      if( name != input )
 	printf( "\\\n\t%s ", name.c_str() );
     }
     printf("\n");
@@ -1844,7 +1992,7 @@ void cobol_set_pp_option(int opt) {
   assert(opt == 'M');
   input_filenames.option_m = true;
 }
-				  
+
 /*
  * Maintain a stack of input filenames.  Ensure the files are unique (by
  * inode), to prevent copybook cycles. Before pushing a new name, Record the
@@ -1855,7 +2003,7 @@ void cobol_set_pp_option(int opt) {
  * to enforce uniqueness, and the scanner to maintain line numbers.
  */
 bool cobol_filename( const char *name, ino_t inode ) {
-  const line_map *lines = NULL;
+  //const line_map *lines = NULL;
   if( inode == 0 ) {
     auto p = old_filenames.find(name);
     if( p == old_filenames.end() ) {
@@ -1865,8 +2013,10 @@ bool cobol_filename( const char *name, ino_t inode ) {
       }
       cbl_errx( "logic error: missing inode for %s", name);
     }
-    inode = p->second;
-    assert(inode != 0);
+    else {
+      inode = p->second;
+      assert(inode != 0);
+    }
   }
   linemap_add(line_table, LC_ENTER, sysp, name, 1);
   input_filename_vestige = name;
@@ -1915,20 +2065,50 @@ cobol_filename_restore() {
   input_filenames.pop();
   if( input_filenames.empty() ) return;
 
-  auto& input = input_filenames.top();
+  const auto& input = input_filenames.top();
 
   linemap_add(line_table, LC_LEAVE, sysp, NULL, 0);
 }
 
-static location_t token_location;
+static int first_line_minus_1 = 0;
+static location_t token_location_minus_1 = 0;
+static location_t token_location = 0;
 
-location_t location_from_lineno() { return token_location; }
+location_t current_token_location() { return token_location; }
+location_t current_location_minus_one() { return token_location_minus_1; }
+void current_location_minus_one_clear()
+  {
+  first_line_minus_1 = 0;
+  }
 
 template <typename LOC>
 static void
 gcc_location_set_impl( const LOC& loc ) {
-  token_location = linemap_line_start( line_table, loc.last_line, 80 );
+  // Set the position to the first line & column in the location.
+  if( getenv("KILROY") )
+    {
+    fprintf(stderr, "********** KILROY %d\n", loc.first_line);
+    }
+
+ static location_t loc_m_1 = 0;
+
+  token_location = linemap_line_start( line_table, loc.first_line, 80 );
   token_location = linemap_position_for_column( line_table, loc.first_column);
+
+  if( loc.first_line > first_line_minus_1 )
+    {
+    // In order for GDB-COBOL to be able to step through COBOL code properly,
+    // it is sometimes necessary for the code at the beginning of a COBOL
+    // line to be using the location_t of the previous line.  This is true, for
+    // example, when laying down the infrastructure code between the last
+    // statement of a paragraph and the code created at the beginning of the
+    // following paragragh.  This code assumes that token_location values of
+    // interest are monotonic, and stores that prior value.
+    first_line_minus_1 = loc.first_line;
+    token_location_minus_1 = loc_m_1;
+    loc_m_1 = token_location;
+    }
+
   location_dump(__func__, __LINE__, "parser", loc);
 }
 
@@ -1969,8 +2149,13 @@ verify_format( const char gmsgid[] ) {
 }
 #endif
 
-static const diagnostic_option_id option_zero;
+static const diagnostics::option_id option_zero;
 size_t parse_error_inc();
+
+void gcc_location_dump() {
+    linemap_dump_location( line_table, token_location, stderr );
+}
+
 
 void ydferror( const char gmsgid[], ... ) ATTRIBUTE_GCOBOL_DIAG(1, 2);
 
@@ -1982,8 +2167,9 @@ ydferror( const char gmsgid[], ... ) {
   va_list ap;
   va_start (ap, gmsgid);
   rich_location richloc (line_table, token_location);
-  bool ret = global_dc->diagnostic_impl (&richloc, nullptr, option_zero,
-                                         gmsgid, &ap, DK_ERROR);
+  /*bool ret =*/ global_dc->diagnostic_impl (&richloc, nullptr, option_zero,
+                                             gmsgid, &ap,
+                                             diagnostics::kind::error);
   va_end (ap);
 }
 
@@ -2008,10 +2194,7 @@ class temp_loc_t {
     gcc_location_set(loc);
   }
   explicit temp_loc_t( const YDFLTYPE& loc) : orig(token_location) {
-    YYLTYPE lloc = {
-      loc.first_line, loc.first_column,
-      loc.last_line,  loc.last_column };
-    gcc_location_set(lloc);
+    gcc_location_set(loc);
   }
   ~temp_loc_t() {
     if( orig != token_location ) {
@@ -2041,7 +2224,8 @@ class temp_loc_t {
   va_start (ap, gmsgid);                                                \
   rich_location richloc (line_table, token_location);                   \
   bool ret = global_dc->diagnostic_impl (&richloc, nullptr, option_zero,        \
-                                         gmsgid, &ap, DK_ERROR);        \
+                                         gmsgid, &ap,                   \
+                                         diagnostics::kind::error);     \
   va_end (ap);                                                          \
   global_dc->end_group();
 
@@ -2057,6 +2241,33 @@ void error_msg( const YDFLTYPE& loc, const char gmsgid[], ... ) {
   ERROR_MSG_BODY
 }
 
+bool
+warn_msg( const YYLTYPE& loc, const char gmsgid[], ... ) {
+  temp_loc_t looker(loc);
+  verify_format(gmsgid);
+  auto_diagnostic_group d;
+  va_list ap;
+  va_start (ap, gmsgid);
+  rich_location richloc (line_table, token_location);
+  auto ret = emit_diagnostic_valist( diagnostics::kind::warning,
+                                     token_location,
+                                     option_zero, gmsgid, &ap );
+  va_end (ap);
+  return ret;
+}
+
+void error_msg_direct( const char gmsgid[], ... ) {
+  verify_format(gmsgid);
+  parse_error_inc();
+  auto_diagnostic_group d;
+  va_list ap;
+  va_start (ap, gmsgid);
+  /*auto ret = */emit_diagnostic_valist( diagnostics::kind::error,
+                                         token_location,
+                                         option_zero, gmsgid, &ap );
+  va_end (ap);
+}
+
 void
 yyerror( const char gmsgid[], ... ) {
   temp_loc_t looker;
@@ -2066,8 +2277,11 @@ yyerror( const char gmsgid[], ... ) {
   va_list ap;
   va_start (ap, gmsgid);
   rich_location richloc (line_table, token_location);
-  bool ret = global_dc->diagnostic_impl (&richloc, nullptr, option_zero,
-                                         gmsgid, &ap, DK_ERROR);
+  /*bool ret =*/ global_dc->diagnostic_impl ( &richloc,
+                                              nullptr,
+                                              option_zero,
+                                              gmsgid,
+                                              &ap, diagnostics::kind::error);
   va_end (ap);
   global_dc->end_group();
 }
@@ -2078,7 +2292,7 @@ yywarn( const char gmsgid[], ... ) {
   auto_diagnostic_group d;
   va_list ap;
   va_start (ap, gmsgid);
-  auto ret = emit_diagnostic_valist( DK_WARNING, token_location,
+  auto ret = emit_diagnostic_valist( diagnostics::kind::warning, token_location,
                                      option_zero, gmsgid, &ap );
   va_end (ap);
   return ret;
@@ -2276,8 +2490,11 @@ cbl_internal_error(const char *gmsgid, ...) {
   auto_diagnostic_group d;
   va_list ap;
   va_start(ap, gmsgid);
-  emit_diagnostic_valist( DK_ICE, token_location, option_zero, gmsgid, &ap );
+  emit_diagnostic_valist( diagnostics::kind::ice,
+			  token_location, option_zero, gmsgid, &ap );
   va_end(ap);
+  abort();  // This unnecessary statement is needed so that [[noreturn]]
+  //        // doesn't cause a warning.
 }
 
 void
@@ -2286,7 +2503,8 @@ cbl_unimplementedw(const char *gmsgid, ...) {
   auto_diagnostic_group d;
   va_list ap;
   va_start(ap, gmsgid);
-  emit_diagnostic_valist( DK_SORRY, token_location, option_zero, gmsgid, &ap );
+  emit_diagnostic_valist( diagnostics::kind::sorry,
+			  token_location, option_zero, gmsgid, &ap );
   va_end(ap);
 }
 
@@ -2296,7 +2514,8 @@ cbl_unimplemented(const char *gmsgid, ...) {
   auto_diagnostic_group d;
   va_list ap;
   va_start(ap, gmsgid);
-  emit_diagnostic_valist( DK_SORRY, token_location, option_zero, gmsgid, &ap );
+  emit_diagnostic_valist( diagnostics::kind::sorry,
+			  token_location, option_zero, gmsgid, &ap );
   va_end(ap);
 }
 
@@ -2307,12 +2526,13 @@ cbl_unimplemented_at( const YYLTYPE& loc, const char *gmsgid, ... ) {
   auto_diagnostic_group d;
   va_list ap;
   va_start(ap, gmsgid);
-  emit_diagnostic_valist( DK_SORRY, token_location, option_zero, gmsgid, &ap );
+  emit_diagnostic_valist( diagnostics::kind::sorry,
+			  token_location, option_zero, gmsgid, &ap );
   va_end(ap);
 }
 
-/* 
- * analogs to err(3) and errx(3). 
+/*
+ * analogs to err(3) and errx(3).
  */
 
 #pragma GCC diagnostic push
@@ -2324,7 +2544,8 @@ cbl_err(const char *fmt, ...) {
   verify_format(gmsgid);
   va_list ap;
   va_start(ap, fmt);
-  emit_diagnostic_valist( DK_FATAL, token_location, option_zero, gmsgid, &ap );
+  emit_diagnostic_valist( diagnostics::kind::fatal,
+			  token_location, option_zero, gmsgid, &ap );
   va_end(ap);
 }
 #pragma GCC diagnostic pop
@@ -2335,7 +2556,8 @@ cbl_errx(const char *gmsgid, ...) {
   auto_diagnostic_group d;
   va_list ap;
   va_start(ap, gmsgid);
-  emit_diagnostic_valist( DK_FATAL, token_location, option_zero, gmsgid, &ap );
+  emit_diagnostic_valist( diagnostics::kind::fatal,
+			  token_location, option_zero, gmsgid, &ap );
   va_end(ap);
   }
 
@@ -2447,7 +2669,7 @@ static const std::set<std::string> reserved_words = {
   "VOLATILE",
   "XML",
   "END-START",
-  
+
   // ISO 2023 keywords
   "ACCEPT",
   "ACCESS",

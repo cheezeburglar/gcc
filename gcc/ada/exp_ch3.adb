@@ -342,9 +342,9 @@ package body Exp_Ch3 is
    --     typSO          provides result of 'Output attribute
    --     typPI          provides result of 'Put_Image attribute
    --
-   --  The following entries are additionally present for non-limited tagged
-   --  types, and implement additional dispatching operations for predefined
-   --  operations:
+   --  The following entries implement additional dispatching operations for
+   --  predefined operations. Deep finalization is present on all tagged types;
+   --  the others only on nonlimited tagged types:
    --
    --     _equality      implements "=" operator
    --     _assign        implements assignment operation
@@ -401,7 +401,7 @@ package body Exp_Ch3 is
      (Tag_Typ    : Entity_Id;
       Renamed_Eq : Entity_Id) return List_Id;
    --  Create the bodies of the predefined primitives that are described in
-   --  Predefined_Primitive_Specs. When not empty, Renamed_Eq must denote
+   --  Make_Predefined_Primitive_Specs. When not empty, Renamed_Eq must denote
    --  the defining unit name of the type's predefined equality as returned
    --  by Make_Predefined_Primitive_Specs.
 
@@ -942,10 +942,11 @@ package body Exp_Ch3 is
                Make_Handled_Sequence_Of_Statements (Loc,
                  Statements => Body_Stmts)));
 
-         Mutate_Ekind       (Proc_Id, E_Procedure);
-         Set_Is_Public      (Proc_Id, Is_Public (A_Type));
-         Set_Is_Internal    (Proc_Id);
-         Set_Has_Completion (Proc_Id);
+         Mutate_Ekind         (Proc_Id, E_Procedure);
+         Set_Is_Public        (Proc_Id, Is_Public (A_Type));
+         Set_Is_Internal      (Proc_Id);
+         Set_Has_Completion   (Proc_Id);
+         Freeze_Extra_Formals (Proc_Id);
 
          if not Debug_Generated_Code then
             Set_Debug_Info_Off (Proc_Id);
@@ -3204,6 +3205,7 @@ package body Exp_Ch3 is
          end if;
 
          Set_Parameter_Specifications (Proc_Spec_Node, Parameters);
+         Freeze_Extra_Formals (Proc_Id);
          Set_Specification (Body_Node, Proc_Spec_Node);
          Set_Declarations (Body_Node, Decls);
 
@@ -5956,7 +5958,7 @@ package body Exp_Ch3 is
 
    exception
       when RE_Not_Available =>
-         return;
+         null;
    end Expand_Freeze_Enumeration_Type;
 
    -------------------------------
@@ -6496,7 +6498,7 @@ package body Exp_Ch3 is
          end;
       end if;
 
-      if Has_Controlled_Component (Typ) then
+      if Has_Controlled_Component (Typ) or else Has_Destructor (Typ) then
          Build_Controlling_Procs (Typ);
       end if;
 
@@ -6570,17 +6572,16 @@ package body Exp_Ch3 is
       --  procedure, because a self-referential type might call one of these
       --  primitives in the body of the init_proc itself.
       --
-      --  This is not needed:
-      --    1) If expansion is disabled, because extra formals are only added
-      --       when we are generating code.
+      --  This is not needed when expansion is disabled, because extra formals
+      --  are only added when we are generating code.
       --
-      --    2) For types with foreign convention since primitives with foreign
-      --       convention don't have extra formals and AI95-117 requires that
-      --       all primitives of a tagged type inherit the convention.
+      --  Notice that for tagged types with foreign convention this is also
+      --  required because (although primitives with foreign convention don't
+      --  have extra formals), a tagged type with foreign convention may have
+      --  primitives with convention Ada.
 
       if Expander_Active
         and then Is_Tagged_Type (Typ)
-        and then not Has_Foreign_Convention (Typ)
       then
          declare
             Elmt : Elmt_Id;
@@ -6908,8 +6909,8 @@ package body Exp_Ch3 is
 
       procedure Count_Default_Sized_Task_Stacks
         (Typ         : Entity_Id;
-         Pri_Stacks  : out Int;
-         Sec_Stacks  : out Int);
+         Pri_Stacks  : out Nat;
+         Sec_Stacks  : out Nat);
       --  Count the number of default-sized primary and secondary task stacks
       --  required for task objects contained within type Typ. If the number of
       --  task objects contained within the type is not known at compile time
@@ -7186,8 +7187,8 @@ package body Exp_Ch3 is
 
       procedure Count_Default_Sized_Task_Stacks
         (Typ         : Entity_Id;
-         Pri_Stacks  : out Int;
-         Sec_Stacks  : out Int)
+         Pri_Stacks  : out Nat;
+         Sec_Stacks  : out Nat)
       is
          Component : Entity_Id;
 
@@ -7259,8 +7260,8 @@ package body Exp_Ch3 is
 
                while Present (Component) loop
                   declare
-                     P : Int;
-                     S : Int;
+                     P : Nat;
+                     S : Nat;
 
                   begin
                      Count_Default_Sized_Task_Stacks (Etype (Component), P, S);
@@ -7500,6 +7501,12 @@ package body Exp_Ch3 is
                Apply_CW_Accessibility_Check (Expr, Func_Id);
             end if;
 
+            if Has_Anonymous_Access_Discriminant (Etype (Expr)) then
+               --  Check that access discrims do not designate entities
+               --  that the function result could outlive.
+               Apply_Access_Discrims_Accessibility_Check (Expr, Func_Id);
+            end if;
+
             Alloc_Expr := New_Copy_Tree (Expr);
 
             if Etype (Alloc_Expr) /= Alloc_Typ then
@@ -7678,7 +7685,7 @@ package body Exp_Ch3 is
         and then not (Is_Array_Type (Typ) and then Has_Init_Expression (N))
       then
          declare
-            PS_Count, SS_Count : Int;
+            PS_Count, SS_Count : Nat;
          begin
             Count_Default_Sized_Task_Stacks (Typ, PS_Count, SS_Count);
             Increment_Primary_Stack_Count (PS_Count);
@@ -9058,6 +9065,10 @@ package body Exp_Ch3 is
                if Is_Class_Wide_Type (Etype (Func_Id)) then
                   Apply_CW_Accessibility_Check (Expr_Q, Func_Id);
                end if;
+
+               --  ??? Usually calls to Apply_CW_Accessibility_Check and to
+               --  Apply_Access_Discrims_Accessibility_Check come in pairs.
+               --  Do we need a (conditional) call here to A_A_D_A_C ?
             end;
          end if;
 
@@ -9239,7 +9250,7 @@ package body Exp_Ch3 is
 
    exception
       when RE_Not_Available =>
-         return;
+         null;
    end Expand_N_Object_Declaration;
 
    ---------------------------------
@@ -9501,7 +9512,7 @@ package body Exp_Ch3 is
 
    exception
       when RE_Not_Available =>
-         return;
+         null;
    end Expand_Tagged_Root;
 
    ------------------------------
@@ -9590,8 +9601,7 @@ package body Exp_Ch3 is
 
       Def_Id : constant Entity_Id := Entity (N);
 
-      Saved_GM  : constant Ghost_Mode_Type := Ghost_Mode;
-      Saved_IGR : constant Node_Id         := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       --  Save the Ghost-related attributes to restore on exit
 
       Result : Boolean := False;
@@ -9945,13 +9955,13 @@ package body Exp_Ch3 is
          end if;
       end if;
 
-      Restore_Ghost_Region (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region (Saved_Ghost_Config);
 
       return Result;
 
    exception
       when RE_Not_Available =>
-         Restore_Ghost_Region (Saved_GM, Saved_IGR);
+         Restore_Ghost_Region (Saved_Ghost_Config);
 
          return False;
    end Freeze_Type;
@@ -12845,25 +12855,27 @@ package body Exp_Ch3 is
             Append_To (Res, Decl);
          end if;
 
-         Fin_Call := Empty;
-         Decl     := Predef_Deep_Spec (Loc, Tag_Typ, TSS_Deep_Finalize, True);
+         if not Has_Destructor (Tag_Typ) then
+            Fin_Call := Empty;
+            Decl := Predef_Deep_Spec (Loc, Tag_Typ, TSS_Deep_Finalize, True);
 
-         if Is_Controlled (Tag_Typ) then
-            Fin_Call :=
-              Make_Final_Call
-                (Obj_Ref => Make_Identifier (Loc, Name_V),
-                 Typ     => Tag_Typ);
+            if Is_Controlled (Tag_Typ) then
+               Fin_Call :=
+                 Make_Final_Call
+                   (Obj_Ref => Make_Identifier (Loc, Name_V), Typ => Tag_Typ);
+            end if;
+
+            if No (Fin_Call) then
+               Fin_Call := Make_Null_Statement (Loc);
+            end if;
+
+            Set_Handled_Statement_Sequence
+              (Decl,
+               Make_Handled_Sequence_Of_Statements
+                 (Loc, Statements => New_List (Fin_Call)));
+
+            Append_To (Res, Decl);
          end if;
-
-         if No (Fin_Call) then
-            Fin_Call := Make_Null_Statement (Loc);
-         end if;
-
-         Set_Handled_Statement_Sequence (Decl,
-           Make_Handled_Sequence_Of_Statements (Loc,
-             Statements => New_List (Fin_Call)));
-
-         Append_To (Res, Decl);
       end if;
 
       return Res;

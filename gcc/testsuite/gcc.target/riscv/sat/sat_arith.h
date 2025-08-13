@@ -4,6 +4,10 @@
 #include <stdint-gcc.h>
 #include <stdbool.h>
 
+#if __riscv_xlen == 64
+typedef unsigned __int128 uint128_t;
+#endif
+
 /******************************************************************************/
 /* Saturation Add (unsigned and signed)                                       */
 /******************************************************************************/
@@ -69,6 +73,22 @@ sat_u_add_##WT##_##T##_fmt_7(T x, T y) \
 }
 #define DEF_SAT_U_ADD_FMT_7_WRAP(WT, T) DEF_SAT_U_ADD_FMT_7(WT, T)
 
+#define DEF_SAT_U_ADD_FMT_8(T)                \
+T __attribute__((noinline))                   \
+sat_u_add_##T##_fmt_8(T x, T y)               \
+{                                             \
+  return x <= (T)(x + y) ? (x + y) : -1;      \
+}
+#define DEF_SAT_U_ADD_FMT_8_WRAP(T) DEF_SAT_U_ADD_FMT_8(T)
+
+#define DEF_SAT_U_ADD_FMT_9(T)               \
+T __attribute__((noinline))                  \
+sat_u_add_##T##_fmt_9(T x, T y)              \
+{                                            \
+  return x > (T)(x + y) ? -1 : (x + y);      \
+}
+#define DEF_SAT_U_ADD_FMT_9_WRAP(T) DEF_SAT_U_ADD_FMT_9(T)
+
 #define RUN_SAT_U_ADD_FMT_1(T, x, y) sat_u_add_##T##_fmt_1(x, y)
 #define RUN_SAT_U_ADD_FMT_1_WRAP(T, x, y) RUN_SAT_U_ADD_FMT_1(T, x, y)
 #define RUN_SAT_U_ADD_FMT_2(T, x, y) sat_u_add_##T##_fmt_2(x, y)
@@ -93,6 +113,10 @@ sat_u_add_##WT##_##T##_fmt_7(T x, T y) \
   sat_u_add_uint64_t_##T##_fmt_7(x, y)
 #define RUN_SAT_U_ADD_FMT_7_FROM_U64_WRAP(T, x, y) \
   RUN_SAT_U_ADD_FMT_7_FROM_U64(T, x, y)
+#define RUN_SAT_U_ADD_FMT_8(T, x, y) sat_u_add_##T##_fmt_8(x, y)
+#define RUN_SAT_U_ADD_FMT_8_WRAP(T, x, y) RUN_SAT_U_ADD_FMT_8(T, x, y)
+#define RUN_SAT_U_ADD_FMT_9(T, x, y) sat_u_add_##T##_fmt_9(x, y)
+#define RUN_SAT_U_ADD_FMT_9_WRAP(T, x, y) RUN_SAT_U_ADD_FMT_9(T, x, y)
 
 #define DEF_SAT_U_ADD_IMM_FMT_1(T, IMM)      \
 T __attribute__((noinline))                  \
@@ -226,6 +250,18 @@ sat_s_add_imm_##T##_fmt_1##_##INDEX (T x)             \
 
 #define RUN_SAT_S_ADD_IMM_FMT_1(INDEX, T, x, expect) \
   if (sat_s_add_imm##_##T##_fmt_1##_##INDEX(x) != expect) __builtin_abort ()
+
+#define DEF_SAT_S_ADD_IMM_FMT_2(INDEX, T, UT, IMM, MIN, MAX) \
+T __attribute__((noinline))                                  \
+sat_s_add_imm_##T##_fmt_2##_##INDEX (T x)                    \
+{                                                            \
+  T sum = (T)((UT)x + (UT)IMM);                                   \
+  return ((x ^ sum) < 0 && (x ^ IMM) >= 0) ?                 \
+    (-(T)(x < 0) ^ MAX) : sum;                         \
+}
+
+#define RUN_SAT_S_ADD_IMM_FMT_2(INDEX, T, x, expect) \
+  if (sat_s_add_imm##_##T##_fmt_2##_##INDEX(x) != expect) __builtin_abort ()
 
 /******************************************************************************/
 /* Saturation Sub (Unsigned and Signed)                                       */
@@ -635,5 +671,41 @@ sat_s_trunc_##WT##_to_##NT##_fmt_8 (WT x)             \
 
 #define RUN_SAT_S_TRUNC_FMT_8(NT, WT, x) sat_s_trunc_##WT##_to_##NT##_fmt_8 (x)
 #define RUN_SAT_S_TRUNC_FMT_8_WRAP(NT, WT, x) RUN_SAT_S_TRUNC_FMT_8(NT, WT, x)
+
+/******************************************************************************/
+/* Saturation Mult (unsigned and signed)                                  */
+/******************************************************************************/
+
+#define DEF_SAT_U_MUL_FMT_1(NT, WT)             \
+NT __attribute__((noinline))                    \
+sat_u_mul_##NT##_from_##WT##_fmt_1 (NT a, NT b) \
+{                                               \
+  WT x = (WT)a * (WT)b;                         \
+  NT max = -1;                                  \
+  if (x > (WT)(max))                            \
+    return max;                                 \
+  else                                          \
+    return (NT)x;                               \
+}
+
+#define DEF_SAT_U_MUL_FMT_1_WRAP(NT, WT) DEF_SAT_U_MUL_FMT_1(NT, WT)
+#define RUN_SAT_U_MUL_FMT_1(NT, WT, a, b) \
+  sat_u_mul_##NT##_from_##WT##_fmt_1 (a, b)
+#define RUN_SAT_U_MUL_FMT_1_WRAP(NT, WT, a, b) RUN_SAT_U_MUL_FMT_1(NT, WT, a, b)
+
+#define DEF_SAT_U_MUL_FMT_2(T)               \
+T __attribute__((noinline))                  \
+sat_u_mul_##T##_fmt_2 (T a, T b)             \
+{                                            \
+  T result;                                  \
+  if (__builtin_mul_overflow(a, b, &result)) \
+    return -1;                               \
+  else                                       \
+    return result;                           \
+}
+
+#define DEF_SAT_U_MUL_FMT_2_WRAP(T) DEF_SAT_U_MUL_FMT_2(T)
+#define RUN_SAT_U_MUL_FMT_2(T, a, b) sat_u_mul_##T##_fmt_2 (a, b)
+#define RUN_SAT_U_MUL_FMT_2_WRAP(T, a, b) RUN_SAT_U_MUL_FMT_2(T, a, b)
 
 #endif

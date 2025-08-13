@@ -872,7 +872,6 @@ c_strict_warn
 strict_warn
 c_loose_warn
 loose_warn
-aliasing_flags
 CPP
 EGREP
 GREP
@@ -1064,6 +1063,7 @@ enable_versioned_jit
 enable_default_pie
 enable_cet
 enable_s390_excess_float_precision
+enable_x86_64_mfentry
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1842,6 +1842,7 @@ Optional Features:
   --enable-s390-excess-float-precision
                           on s390 targets, evaluate float with double
                           precision when in standards-conforming mode
+  --enable-x86-64-mfentry enable -mfentry by default on x86-64 targets
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -7124,45 +7125,6 @@ $as_echo "#define HAVE_SWAP_IN_UTILITY 1" >>confdefs.h
 
 fi
 
-# Check whether compiler is affected by placement new aliasing bug (PR 29286).
-# If the host compiler is affected by the bug, and we build with optimization
-# enabled (which happens e.g. when cross-compiling), the pool allocator may
-# get miscompiled.  Use -fno-strict-aliasing to work around this problem.
-# Since there is no reliable feature check for the presence of this bug,
-# we simply use a GCC version number check.  (This should never trigger for
-# stages 2 or 3 of a native bootstrap.)
-aliasing_flags=
-if test "$GCC" = yes; then
-  saved_CXXFLAGS="$CXXFLAGS"
-
-  # The following test compilation will succeed if and only if $CXX accepts
-  # -fno-strict-aliasing *and* is older than GCC 4.3.
-  CXXFLAGS="$CXXFLAGS -fno-strict-aliasing"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CXX is affected by placement new aliasing bug" >&5
-$as_echo_n "checking whether $CXX is affected by placement new aliasing bug... " >&6; }
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)
-#error compiler not affected by placement new aliasing bug
-#endif
-
-_ACEOF
-if ac_fn_cxx_try_compile "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }; aliasing_flags='-fno-strict-aliasing'
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-
-  CXXFLAGS="$saved_CXXFLAGS"
-fi
-
-
-
-
 # ---------------------
 # Warnings and checking
 # ---------------------
@@ -11306,6 +11268,7 @@ fi
 
 
 
+
     use_additional=yes
 
   acl_save_prefix="$prefix"
@@ -14228,6 +14191,7 @@ $as_echo "$LIBICONV" >&6; }
     LIBICONV=
     LTLIBICONV=
   fi
+
 
 
 
@@ -21520,7 +21484,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 21523 "configure"
+#line 21487 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -21626,7 +21590,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 21629 "configure"
+#line 21593 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -32758,6 +32722,7 @@ if test x"$ld64_flag" = x"yes"; then
   gcc_cv_ld64_platform_version=0
   gcc_cv_ld64_macos_version_min=0
   gcc_cv_ld64_demangle=0
+  gcc_cv_ld64_no_deduplicate=0
 
   if test "$build" = "$host"; then
     darwin_try_test=1
@@ -32786,6 +32751,9 @@ $as_echo "$gcc_cv_ld64_major" >&6; }
     fi
     if test "$gcc_cv_ld64_major" -ge 236; then
       gcc_cv_ld64_export_dynamic=1
+    fi
+    if test "$gcc_cv_ld64_major" -ge 262; then
+      gcc_cv_ld64_no_deduplicate=1
     fi
     if test "$gcc_cv_ld64_major" -ge 512; then
       gcc_cv_ld64_platform_version=1
@@ -32820,6 +32788,15 @@ $as_echo_n "checking linker for -export_dynamic support... " >&6; }
     fi
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gcc_cv_ld64_export_dynamic" >&5
 $as_echo "$gcc_cv_ld64_export_dynamic" >&6; }
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking linker for -no_deduplicate support" >&5
+$as_echo_n "checking linker for -no_deduplicate support... " >&6; }
+    gcc_cv_ld64_no_deduplicate=1
+    if $gcc_cv_ld -no_deduplicate < /dev/null 2>&1 | grep 'unknown option' > /dev/null; then
+      gcc_cv_ld64_no_deduplicate=0
+    fi
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $gcc_cv_ld64_no_deduplicate" >&5
+$as_echo "$gcc_cv_ld64_no_deduplicate" >&6; }
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking linker for -platform_version support" >&5
 $as_echo_n "checking linker for -platform_version support... " >&6; }
@@ -32857,6 +32834,12 @@ _ACEOF
 
 cat >>confdefs.h <<_ACEOF
 #define LD64_HAS_EXPORT_DYNAMIC $gcc_cv_ld64_export_dynamic
+_ACEOF
+
+
+
+cat >>confdefs.h <<_ACEOF
+#define LD64_HAS_NO_DEDUPLICATE $gcc_cv_ld64_no_deduplicate
 _ACEOF
 
 
@@ -35022,6 +35005,46 @@ $as_echo "#define ENABLE_S390_EXCESS_FLOAT_PRECISION 1" >>confdefs.h
   ;;
 esac
 
+# On x86-64, when profiling is enabled with shrink wrapping, the mcount
+# call may not be placed at the function entry after
+#	pushq %rbp
+#	movq %rsp,%rbp
+# As the result, the profile data may be skewed which makes PGO less
+# effective:
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120881
+# Enable -mfentry by default on x86-64 to put the profiling counter call
+# before the prologue.
+# Check whether --enable-x86-64-mfentry was given.
+if test "${enable_x86_64_mfentry+set}" = set; then :
+  enableval=$enable_x86_64_mfentry; case "${enableval}" in
+   yes | no | auto)
+     enable_x86_64_mfentry=$enableval
+     ;;
+   *)
+     as_fn_error $? "'$enable_x86_64_mfentry' is an invalid value for --enable-x86-64-mfentry.  Valid choices are 'yes', 'no' and 'auto'." "$LINENO" 5
+     ;;
+   esac
+else
+  enable_x86_64_mfentry=auto
+fi
+
+
+if test x"$enable_x86_64_mfentry" = xauto; then
+  case "${target}" in
+  i?86-*-*gnu* | x86_64-*-*gnu*)
+    # Enable -mfentry by default with glibc on x86.
+    enable_x86_64_mfentry=yes
+    ;;
+  esac
+fi
+
+gif=`if test x$enable_x86_64_mfentry = xyes; then echo 1; else echo 0; fi`
+
+cat >>confdefs.h <<_ACEOF
+#define ENABLE_X86_64_MFENTRY $gif
+_ACEOF
+
+
 # Check if the linker supports '-z now'
 ld_now_support=no
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking linker -z now option" >&5
@@ -36456,7 +36479,7 @@ $as_echo "$as_me: executing $ac_file commands" >&6;}
     "depdir":C) $SHELL $ac_aux_dir/mkinstalldirs $DEPDIR ;;
     "gccdepdir":C)
   ${CONFIG_SHELL-/bin/sh} $ac_aux_dir/mkinstalldirs build/$DEPDIR
-  for lang in $subdirs c-family common analyzer text-art rtl-ssa sym-exec
+  for lang in $subdirs c-family common analyzer diagnostics text-art rtl-ssa sym-exec
   do
       ${CONFIG_SHELL-/bin/sh} $ac_aux_dir/mkinstalldirs $lang/$DEPDIR
   done ;;

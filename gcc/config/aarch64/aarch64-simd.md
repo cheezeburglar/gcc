@@ -1190,13 +1190,16 @@
   [(set_attr "type" "neon_ins<q>, neon_from_gp<q>, neon_load1_one_lane<q>")]
 )
 
+;; Inserting from the zero register into a vector lane is treated as an
+;; expensive GP->FP move on all CPUs.  Avoid it when optimizing for speed.
 (define_insn "aarch64_simd_vec_set_zero<mode>"
   [(set (match_operand:VALL_F16 0 "register_operand" "=w")
 	(vec_merge:VALL_F16
 	    (match_operand:VALL_F16 1 "register_operand" "0")
 	    (match_operand:VALL_F16 3 "aarch64_simd_imm_zero" "")
 	    (match_operand:SI 2 "immediate_operand" "i")))]
-  "TARGET_SIMD && aarch64_exact_log2_inverse (<nunits>, operands[2]) >= 0"
+  "TARGET_SIMD && aarch64_exact_log2_inverse (<nunits>, operands[2]) >= 0
+   && optimize_function_for_size_p (cfun)"
   {
     int elt = ENDIAN_LANE_N (<nunits>,
 			     aarch64_exact_log2_inverse (<nunits>,
@@ -3966,7 +3969,7 @@
 
   rtx cc_reg = aarch64_gen_compare_reg (code, val, const0_rtx);
   rtx cmp_rtx = gen_rtx_fmt_ee (code, DImode, cc_reg, const0_rtx);
-  emit_jump_insn (gen_condjump (cmp_rtx, cc_reg, operands[3]));
+  emit_jump_insn (gen_aarch64_bcond (cmp_rtx, cc_reg, operands[3]));
   DONE;
 })
 
@@ -9180,12 +9183,12 @@
 ;; sha3
 
 (define_insn "eor3q<mode>4"
-  [(set (match_operand:VQ_I 0 "register_operand" "=w")
-	(xor:VQ_I
-	 (xor:VQ_I
-	  (match_operand:VQ_I 2 "register_operand" "w")
-	  (match_operand:VQ_I 3 "register_operand" "w"))
-	 (match_operand:VQ_I 1 "register_operand" "w")))]
+  [(set (match_operand:VDQ_I 0 "register_operand" "=w")
+	(xor:VDQ_I
+	 (xor:VDQ_I
+	  (match_operand:VDQ_I 2 "register_operand" "w")
+	  (match_operand:VDQ_I 3 "register_operand" "w"))
+	 (match_operand:VDQ_I 1 "register_operand" "w")))]
   "TARGET_SHA3"
   "eor3\\t%0.16b, %1.16b, %2.16b, %3.16b"
   [(set_attr "type" "crypto_sha3")]
@@ -9241,15 +9244,44 @@
 )
 
 (define_insn "bcaxq<mode>4"
-  [(set (match_operand:VQ_I 0 "register_operand" "=w")
-	(xor:VQ_I
-	 (and:VQ_I
-	  (not:VQ_I (match_operand:VQ_I 3 "register_operand" "w"))
-	  (match_operand:VQ_I 2 "register_operand" "w"))
-	 (match_operand:VQ_I 1 "register_operand" "w")))]
+  [(set (match_operand:VDQ_I 0 "register_operand" "=w")
+	(xor:VDQ_I
+	 (and:VDQ_I
+	  (not:VDQ_I (match_operand:VDQ_I 3 "register_operand" "w"))
+	  (match_operand:VDQ_I 2 "register_operand" "w"))
+	 (match_operand:VDQ_I 1 "register_operand" "w")))]
   "TARGET_SHA3"
   "bcax\\t%0.16b, %1.16b, %2.16b, %3.16b"
   [(set_attr "type" "crypto_sha3")]
+)
+
+(define_insn_and_split "*bcaxqdi4"
+  [(set (match_operand:DI 0 "register_operand")
+	(xor:DI
+	  (and:DI
+	    (not:DI (match_operand:DI 3 "register_operand"))
+	    (match_operand:DI 2 "register_operand"))
+	  (match_operand:DI 1 "register_operand")))]
+  "TARGET_SHA3"
+  {@ [ cons: =0, 1, 2 , 3  ; attrs: type ]
+     [ w       , w, w , w  ; crypto_sha3 ] bcax\t%0.16b, %1.16b, %2.16b, %3.16b
+     [ &r      , r, r0, r0 ; multiple    ] #
+  }
+  "&& REG_P (operands[0]) && GP_REGNUM_P (REGNO (operands[0]))"
+  [(set (match_dup 4)
+	(and:DI (not:DI (match_dup 3))
+		(match_dup 2)))
+   (set (match_dup 0)
+	(xor:DI (match_dup 4)
+		(match_dup 1)))]
+  {
+    if (reload_completed)
+      operands[4] = operands[0];
+    else if (can_create_pseudo_p ())
+      operands[4] = gen_reg_rtx (DImode);
+    else
+      FAIL;
+  }
 )
 
 ;; SM3

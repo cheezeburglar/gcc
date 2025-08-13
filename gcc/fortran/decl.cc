@@ -1723,13 +1723,17 @@ build_sym (const char *name, int elem, gfc_charlen *cl, bool cl_deferred,
   symbol_attribute attr;
   gfc_symbol *sym;
   int upper;
-  gfc_symtree *st;
+  gfc_symtree *st, *host_st = NULL;
 
   /* Symbols in a submodule are host associated from the parent module or
      submodules. Therefore, they can be overridden by declarations in the
      submodule scope. Deal with this by attaching the existing symbol to
      a new symtree and recycling the old symtree with a new symbol...  */
   st = gfc_find_symtree (gfc_current_ns->sym_root, name);
+  if (((st && st->import_only) || (gfc_current_ns->import_state == IMPORT_ALL))
+      && gfc_current_ns->parent)
+    host_st = gfc_find_symtree (gfc_current_ns->parent->sym_root, name);
+
   if (st != NULL && gfc_state_stack->state == COMP_SUBMODULE
       && st->n.sym != NULL
       && st->n.sym->attr.host_assoc && st->n.sym->attr.used_in_submodule)
@@ -1741,6 +1745,20 @@ build_sym (const char *name, int elem, gfc_charlen *cl, bool cl_deferred,
       st->n.sym = sym;
       sym->refs++;
       gfc_set_sym_referenced (sym);
+    }
+  /* ...Check that F2018 IMPORT, ONLY and IMPORT, ALL statements, within the
+     current scope are not violated by local redeclarations. Note that there is
+     no need to guard for std >= F2018 because import_only and IMPORT_ALL are
+     only set for these standards.  */
+  else if (host_st && host_st->n.sym
+	   && host_st->n.sym != gfc_current_ns->proc_name
+	   && !(st && st->n.sym
+		&& (st->n.sym->attr.dummy || st->n.sym->attr.result)))
+    {
+      gfc_error ("F2018: C8102 %s at %L is already imported by an %s "
+		 "statement and must not be re-declared", name, var_locus,
+		 (st && st->import_only) ? "IMPORT, ONLY" : "IMPORT, ALL");
+      return false;
     }
   /* ...Otherwise generate a new symtree and new symbol.  */
   else if (gfc_get_symbol (name, NULL, &sym, var_locus))
@@ -5100,6 +5118,54 @@ error:
 }
 
 
+/* Match the IMPORT statement.  IMPORT was added to F2003 as
+
+   R1209 import-stmt  is IMPORT [[ :: ] import-name-list ]
+
+   C1210 (R1209) The IMPORT statement is allowed only in an interface-body.
+
+   C1211 (R1209) Each import-name shall be the name of an entity in the
+		 host scoping unit.
+
+   under the description of an interface block. Under F2008, IMPORT was
+   split out of the interface block description to 12.4.3.3 and C1210
+   became
+
+   C1210 (R1209) The IMPORT statement is allowed only in an interface-body
+		 that is not a module procedure interface body.
+
+   Finally, F2018, section 8.8, has changed the IMPORT statement to
+
+   R867 import-stmt  is IMPORT [[ :: ] import-name-list ]
+		     or IMPORT, ONLY : import-name-list
+		     or IMPORT, NONE
+		     or IMPORT, ALL
+
+   C896 (R867) An IMPORT statement shall not appear in the scoping unit of
+		a main-program, external-subprogram, module, or block-data.
+
+   C897 (R867) Each import-name shall be the name of an entity in the host
+		scoping unit.
+
+   C898  If any IMPORT statement in a scoping unit has an ONLY specifier,
+	 all IMPORT statements in that scoping unit shall have an ONLY
+	 specifier.
+
+   C899  IMPORT, NONE shall not appear in the scoping unit of a submodule.
+
+   C8100 If an IMPORT, NONE or IMPORT, ALL statement appears in a scoping
+	 unit, no other IMPORT statement shall appear in that scoping unit.
+
+   C8101 Within an interface body, an entity that is accessed by host
+	 association shall be accessible by host or use association within
+	 the host scoping unit, or explicitly declared prior to the interface
+	 body.
+
+   C8102 An entity whose name appears as an import-name or which is made
+	 accessible by an IMPORT, ALL statement shall not appear in any
+	 context described in 19.5.1.4 that would cause the host entity
+	 of that name to be inaccessible.  */
+
 match
 gfc_match_import (void)
 {
@@ -5107,16 +5173,28 @@ gfc_match_import (void)
   match m;
   gfc_symbol *sym;
   gfc_symtree *st;
+  bool f2018_allowed = gfc_option.allow_std & ~GFC_STD_OPT_F08;;
+  importstate current_import_state = gfc_current_ns->import_state;
 
-  if (gfc_current_ns->proc_name == NULL
-      || gfc_current_ns->proc_name->attr.if_source != IFSRC_IFBODY)
+  if (!f2018_allowed
+      && (gfc_current_ns->proc_name == NULL
+	  || gfc_current_ns->proc_name->attr.if_source != IFSRC_IFBODY))
     {
       gfc_error ("IMPORT statement at %C only permitted in "
 		 "an INTERFACE body");
       return MATCH_ERROR;
     }
+  else if (f2018_allowed
+	   && (!gfc_current_ns->parent || gfc_current_ns->is_block_data))
+    goto C897;
 
-  if (gfc_current_ns->proc_name->attr.module_procedure)
+  if (f2018_allowed
+      && (current_import_state == IMPORT_ALL
+	  || current_import_state == IMPORT_NONE))
+    goto C8100;
+
+  if (gfc_current_ns->proc_name
+      && gfc_current_ns->proc_name->attr.module_procedure)
     {
       gfc_error ("F2008: C1210 IMPORT statement at %C is not permitted "
 		 "in a module procedure interface body");
@@ -5126,20 +5204,65 @@ gfc_match_import (void)
   if (!gfc_notify_std (GFC_STD_F2003, "IMPORT statement at %C"))
     return MATCH_ERROR;
 
+  gfc_current_ns->import_state = IMPORT_NOT_SET;
+  if (f2018_allowed)
+    {
+      if (gfc_match (" , none") == MATCH_YES)
+	{
+	  if (current_import_state == IMPORT_ONLY)
+	    goto C898;
+	  if (gfc_current_state () == COMP_SUBMODULE)
+	    goto C899;
+	  gfc_current_ns->import_state = IMPORT_NONE;
+	}
+      else if (gfc_match (" , only :") == MATCH_YES)
+	{
+	  if (current_import_state != IMPORT_NOT_SET
+	      && current_import_state != IMPORT_ONLY)
+	    goto C898;
+	  gfc_current_ns->import_state = IMPORT_ONLY;
+	}
+      else if (gfc_match (" , all") == MATCH_YES)
+	{
+	  if (current_import_state == IMPORT_ONLY)
+	    goto C898;
+	  gfc_current_ns->import_state = IMPORT_ALL;
+	}
+
+      if (current_import_state != IMPORT_NOT_SET
+	  && (gfc_current_ns->import_state == IMPORT_NONE
+	      || gfc_current_ns->import_state == IMPORT_ALL))
+	goto C8100;
+    }
+
+  /* F2008 IMPORT<eos> is distinct from F2018 IMPORT, ALL.  */
   if (gfc_match_eos () == MATCH_YES)
     {
-      /* All host variables should be imported.  */
-      gfc_current_ns->has_import_set = 1;
+      /* This is the F2008 variant.  */
+      if (gfc_current_ns->import_state == IMPORT_NOT_SET)
+	{
+	  if (current_import_state == IMPORT_ONLY)
+	    goto C898;
+	  gfc_current_ns->import_state = IMPORT_F2008;
+	}
+
+      /* Host variables should be imported.  */
+      if (gfc_current_ns->import_state != IMPORT_NONE)
+	gfc_current_ns->has_import_set = 1;
       return MATCH_YES;
     }
 
-  if (gfc_match (" ::") == MATCH_YES)
+  if (gfc_match (" ::") == MATCH_YES
+      && gfc_current_ns->import_state != IMPORT_ONLY)
     {
       if (gfc_match_eos () == MATCH_YES)
-	{
-	   gfc_error ("Expecting list of named entities at %C");
-	   return MATCH_ERROR;
-	}
+	goto expecting_list;
+      gfc_current_ns->import_state = IMPORT_F2008;
+    }
+  else if (gfc_current_ns->import_state == IMPORT_ONLY)
+    {
+      if (gfc_match_eos () == MATCH_YES)
+	goto expecting_list;
     }
 
   for(;;)
@@ -5149,13 +5272,15 @@ gfc_match_import (void)
       switch (m)
 	{
 	case MATCH_YES:
-	  if (gfc_current_ns->parent !=  NULL
+	  if (gfc_current_ns->parent != NULL
 	      && gfc_find_symbol (name, gfc_current_ns->parent, 1, &sym))
 	    {
 	       gfc_error ("Type name %qs at %C is ambiguous", name);
 	       return MATCH_ERROR;
 	    }
-	  else if (!sym && gfc_current_ns->proc_name->ns->parent !=  NULL
+	  else if (!sym
+		   && gfc_current_ns->proc_name
+		   && gfc_current_ns->proc_name->ns->parent
 		   && gfc_find_symbol (name,
 				       gfc_current_ns->proc_name->ns->parent,
 				       1, &sym))
@@ -5166,12 +5291,29 @@ gfc_match_import (void)
 
 	  if (sym == NULL)
 	    {
-	      gfc_error ("Cannot IMPORT %qs from host scoping unit "
-			 "at %C - does not exist.", name);
-	      return MATCH_ERROR;
+	      if (gfc_current_ns->proc_name
+		  && gfc_current_ns->proc_name->attr.if_source == IFSRC_IFBODY)
+		{
+		  gfc_error ("Cannot IMPORT %qs from host scoping unit "
+			     "at %C - does not exist.", name);
+		  return MATCH_ERROR;
+		}
+	      else
+		{
+		  /* This might be a procedure that has not yet been parsed. If
+		     so gfc_fixup_sibling_symbols will replace this symbol with
+		     that of the procedure.  */
+		  gfc_get_sym_tree (name, gfc_current_ns, &st, false,
+				    &gfc_current_locus);
+		  st->n.sym->refs++;
+		  st->n.sym->attr.imported = 1;
+		  st->import_only = 1;
+		  goto next_item;
+		}
 	    }
 
-	  if (gfc_find_symtree (gfc_current_ns->sym_root, name))
+	  st = gfc_find_symtree (gfc_current_ns->sym_root, name);
+	  if (st && st->n.sym && st->n.sym->attr.imported)
 	    {
 	      gfc_warning (0, "%qs is already IMPORTed from host scoping unit "
 			   "at %C", name);
@@ -5182,6 +5324,7 @@ gfc_match_import (void)
 	  st->n.sym = sym;
 	  sym->refs++;
 	  sym->attr.imported = 1;
+	  st->import_only = 1;
 
 	  if (sym->attr.generic && (sym = gfc_find_dt_in_generic (sym)))
 	    {
@@ -5193,6 +5336,7 @@ gfc_match_import (void)
 	      st->n.sym = sym;
 	      sym->refs++;
 	      sym->attr.imported = 1;
+	      st->import_only = 1;
 	    }
 
 	  goto next_item;
@@ -5215,6 +5359,34 @@ gfc_match_import (void)
 
 syntax:
   gfc_error ("Syntax error in IMPORT statement at %C");
+  return MATCH_ERROR;
+
+C897:
+  gfc_error ("F2018: C897 IMPORT statement at %C cannot appear in a main "
+	     "program, an external subprogram, a module or block data");
+  return MATCH_ERROR;
+
+C898:
+  gfc_error ("F2018: C898 IMPORT statement at %C is not permitted because "
+	     "a scoping unit has an ONLY specifier, can only have IMPORT "
+	     "with an ONLY specifier");
+  return MATCH_ERROR;
+
+C899:
+  gfc_error ("F2018: C899 IMPORT, NONE shall not appear in the scoping unit"
+	     " of a submodule as at %C");
+  return MATCH_ERROR;
+
+C8100:
+  gfc_error ("F2018: C8100 IMPORT statement at %C is not permitted because "
+	     "%s has already been declared, which must be unique in the "
+	     "scoping unit",
+	     gfc_current_ns->import_state == IMPORT_ALL ? "IMPORT, ALL" :
+							  "IMPORT, NONE");
+  return MATCH_ERROR;
+
+expecting_list:
+  gfc_error ("Expecting list of named entities at %C");
   return MATCH_ERROR;
 }
 
@@ -11538,10 +11710,308 @@ syntax:
 }
 
 
+/* Match a GENERIC statement.
+F2018 15.4.3.3 GENERIC statement
+
+A GENERIC statement specifies a generic identifier for one or more specific
+procedures, in the same way as a generic interface block that does not contain
+interface bodies.
+
+R1510 generic-stmt is:
+GENERIC [ , access-spec ] :: generic-spec => specific-procedure-list
+
+C1510 (R1510) A specific-procedure in a GENERIC statement shall not specify a
+procedure that was specified previously in any accessible interface with the
+same generic identifier.
+
+If access-spec appears, it specifies the accessibility (8.5.2) of generic-spec.
+
+For GENERIC statements outside of a derived type, use is made of the existing,
+typebound matching functions to obtain access-spec and generic-spec.  After
+this the standard INTERFACE machinery is used. */
+
+static match
+match_generic_stmt (void)
+{
+  char name[GFC_MAX_SYMBOL_LEN + 1];
+  /* Allow space for OPERATOR(...).  */
+  char generic_spec_name[GFC_MAX_SYMBOL_LEN + 16];
+  /* Generics other than uops  */
+  gfc_symbol* generic_spec = NULL;
+  /* Generic uops  */
+  gfc_user_op *generic_uop = NULL;
+  /* For the matching calls  */
+  gfc_typebound_proc tbattr;
+  gfc_namespace* ns = gfc_current_ns;
+  interface_type op_type;
+  gfc_intrinsic_op op;
+  match m;
+  gfc_symtree* st;
+  /* The specific-procedure-list  */
+  gfc_interface *generic = NULL;
+  /* The head of the specific-procedure-list  */
+  gfc_interface **generic_tail = NULL;
+
+  memset (&tbattr, 0, sizeof (tbattr));
+  tbattr.where = gfc_current_locus;
+
+  /* See if we get an access-specifier.  */
+  m = match_binding_attributes (&tbattr, true, false);
+  tbattr.where = gfc_current_locus;
+  if (m == MATCH_ERROR)
+    goto error;
+
+  /* Now the colons, those are required.  */
+  if (gfc_match (" ::") != MATCH_YES)
+    {
+      gfc_error ("Expected %<::%> at %C");
+      goto error;
+    }
+
+  /* Match the generic-spec name; depending on type (operator / generic) format
+     it for future error messages in 'generic_spec_name'.  */
+  m = gfc_match_generic_spec (&op_type, name, &op);
+  if (m == MATCH_ERROR)
+    return MATCH_ERROR;
+  if (m == MATCH_NO)
+    {
+      gfc_error ("Expected generic name or operator descriptor at %C");
+      goto error;
+    }
+
+  switch (op_type)
+    {
+    case INTERFACE_GENERIC:
+    case INTERFACE_DTIO:
+      snprintf (generic_spec_name, sizeof (generic_spec_name), "%s", name);
+      break;
+
+    case INTERFACE_USER_OP:
+      snprintf (generic_spec_name, sizeof (generic_spec_name), "OPERATOR(.%s.)", name);
+      break;
+
+    case INTERFACE_INTRINSIC_OP:
+      snprintf (generic_spec_name, sizeof (generic_spec_name), "OPERATOR(%s)",
+		gfc_op2string (op));
+      break;
+
+    case INTERFACE_NAMELESS:
+      gfc_error ("Malformed GENERIC statement at %C");
+      goto error;
+      break;
+
+    default:
+      gcc_unreachable ();
+    }
+
+  /* Match the required =>.  */
+  if (gfc_match (" =>") != MATCH_YES)
+    {
+      gfc_error ("Expected %<=>%> at %C");
+      goto error;
+    }
+
+
+  if (gfc_current_state () != COMP_MODULE && tbattr.access != ACCESS_UNKNOWN)
+    {
+      gfc_error ("The access specification at %L not in a module",
+		 &tbattr.where);
+      goto error;
+    }
+
+  /* Try to find existing generic-spec with this name for this operator;
+     if there is something, check that it is another generic-spec and then
+     extend it rather than building a new symbol. Otherwise, create a new
+     one with the right attributes.  */
+
+  switch (op_type)
+    {
+    case INTERFACE_DTIO:
+    case INTERFACE_GENERIC:
+      st = gfc_find_symtree (ns->sym_root, name);
+      generic_spec = st ? st->n.sym : NULL;
+      if (generic_spec)
+	{
+	  if (generic_spec->attr.flavor != FL_PROCEDURE
+	       && generic_spec->attr.flavor != FL_UNKNOWN)
+	    {
+	      gfc_error ("The generic-spec name %qs at %C clashes with the "
+			 "name of an entity declared at %L that is not a "
+			 "procedure", name, &generic_spec->declared_at);
+	      goto error;
+	    }
+
+	  if (op_type == INTERFACE_GENERIC && !generic_spec->attr.generic
+	       && generic_spec->attr.flavor != FL_UNKNOWN)
+	    {
+	      gfc_error ("There's already a non-generic procedure with "
+			 "name %qs at %C", generic_spec->name);
+	      goto error;
+	    }
+
+	  if (tbattr.access != ACCESS_UNKNOWN)
+	    {
+	      if (generic_spec->attr.access != tbattr.access)
+		{
+		  gfc_error ("The access specification at %L conflicts with "
+			     "that already given to %qs", &tbattr.where,
+			     generic_spec->name);
+		  goto error;
+		}
+	      else
+		{
+		  gfc_error ("The access specification at %L repeats that "
+			     "already given to %qs", &tbattr.where,
+			     generic_spec->name);
+		  goto error;
+		}
+	    }
+
+	  if (generic_spec->ts.type != BT_UNKNOWN)
+	    {
+	      gfc_error ("The generic-spec in the generic statement at %C "
+			 "has a type from the declaration at %L",
+			 &generic_spec->declared_at);
+	      goto error;
+	    }
+	}
+
+      /* Now create the generic_spec if it doesn't already exist and provide
+	 is with the appropriate attributes.  */
+      if (!generic_spec || generic_spec->attr.flavor != FL_PROCEDURE)
+	{
+	  if (!generic_spec)
+	    {
+	      gfc_get_symbol (name, ns, &generic_spec, &gfc_current_locus);
+	      gfc_set_sym_referenced (generic_spec);
+	      generic_spec->attr.access = tbattr.access;
+	    }
+	  else if (generic_spec->attr.access == ACCESS_UNKNOWN)
+	    generic_spec->attr.access = tbattr.access;
+	  generic_spec->refs++;
+	  generic_spec->attr.generic = 1;
+	  generic_spec->attr.flavor = FL_PROCEDURE;
+
+	  generic_spec->declared_at = gfc_current_locus;
+	}
+
+      /* Prepare to add the specific procedures.  */
+      generic = generic_spec->generic;
+      generic_tail = &generic_spec->generic;
+      break;
+
+    case INTERFACE_USER_OP:
+      st = gfc_find_symtree (ns->uop_root, name);
+      generic_uop = st ? st->n.uop : NULL;
+      if (generic_uop)
+	{
+	  if (generic_uop->access != ACCESS_UNKNOWN
+	      && tbattr.access != ACCESS_UNKNOWN)
+	    {
+	      if (generic_uop->access != tbattr.access)
+		{
+		  gfc_error ("The user operator at %L must have the same "
+			     "access specification as already defined user "
+			     "operator %qs", &tbattr.where, generic_spec_name);
+		  goto error;
+		}
+	      else
+		{
+		  gfc_error ("The user operator at %L repeats the access "
+			     "specification of already defined user operator " 				   "%qs", &tbattr.where, generic_spec_name);
+		  goto error;
+		}
+	    }
+	  else if (generic_uop->access == ACCESS_UNKNOWN)
+	    generic_uop->access = tbattr.access;
+	}
+      else
+	{
+	  generic_uop = gfc_get_uop (name);
+	  generic_uop->access = tbattr.access;
+	}
+
+      /* Prepare to add the specific procedures.  */
+      generic = generic_uop->op;
+      generic_tail = &generic_uop->op;
+      break;
+
+    case INTERFACE_INTRINSIC_OP:
+      generic = ns->op[op];
+      generic_tail = &ns->op[op];
+      break;
+
+    default:
+      gcc_unreachable ();
+    }
+
+  /* Now, match all following names in the specific-procedure-list.  */
+  do
+    {
+      m = gfc_match_name (name);
+      if (m == MATCH_ERROR)
+	goto error;
+      if (m == MATCH_NO)
+	{
+	  gfc_error ("Expected specific procedure name at %C");
+	  goto error;
+	}
+
+      if (op_type == INTERFACE_GENERIC
+	  && !strcmp (generic_spec->name, name))
+	{
+	  gfc_error ("The name %qs of the specific procedure at %C conflicts "
+		     "with that of the generic-spec", name);
+	  goto error;
+	}
+
+      generic = *generic_tail;
+      for (; generic; generic = generic->next)
+	{
+	  if (!strcmp (generic->sym->name, name))
+	    {
+	      gfc_error ("%qs already defined as a specific procedure for the"
+			 " generic %qs at %C", name, generic_spec->name);
+	      goto error;
+	    }
+	}
+
+      gfc_find_sym_tree (name, ns, 1, &st);
+      if (!st)
+	{
+	  /* This might be a procedure that has not yet been parsed. If
+	     so gfc_fixup_sibling_symbols will replace this symbol with
+	     that of the procedure.  */
+	  gfc_get_sym_tree (name, ns, &st, false);
+	  st->n.sym->refs++;
+	}
+
+      generic = gfc_get_interface();
+      generic->next = *generic_tail;
+      *generic_tail = generic;
+      generic->where = gfc_current_locus;
+      generic->sym = st->n.sym;
+    }
+  while (gfc_match (" ,") == MATCH_YES);
+
+  if (gfc_match_eos () != MATCH_YES)
+    {
+      gfc_error ("Junk after GENERIC statement at %C");
+      goto error;
+    }
+
+  gfc_commit_symbols ();
+  return MATCH_YES;
+
+error:
+  return MATCH_ERROR;
+}
+
+
 /* Match a GENERIC procedure binding inside a derived type.  */
 
-match
-gfc_match_generic (void)
+static match
+match_typebound_generic (void)
 {
   char name[GFC_MAX_SYMBOL_LEN + 1];
   char bind_name[GFC_MAX_SYMBOL_LEN + 16]; /* Allow space for OPERATOR(...).  */
@@ -11748,6 +12218,17 @@ gfc_match_generic (void)
 
 error:
   return MATCH_ERROR;
+}
+
+
+match
+gfc_match_generic ()
+{
+  if (gfc_option.allow_std & ~GFC_STD_OPT_F08
+      && gfc_current_state () != COMP_DERIVED_CONTAINS)
+    return match_generic_stmt ();
+  else
+    return match_typebound_generic ();
 }
 
 

@@ -3883,9 +3883,9 @@ class GTY((chain_next ("%h.parent"), for_user)) module_state {
   void write_macro_maps (elf_out *to, range_t &, unsigned *crc_ptr);
   bool read_macro_maps (line_map_uint_t);
 
-  void write_diagnostic_classification (elf_out *, diagnostic_context *,
+  void write_diagnostic_classification (elf_out *, diagnostics::context *,
 					unsigned *);
-  bool read_diagnostic_classification (diagnostic_context *);
+  bool read_diagnostic_classification (diagnostics::context *);
 
  private:
   void write_define (bytes_out &, const cpp_macro *);
@@ -4822,7 +4822,8 @@ noisy_p ()
     return false;
 
   pp_needs_newline (global_dc->get_reference_printer ()) = true;
-  diagnostic_set_last_function (global_dc, (diagnostic_info *) NULL);
+  diagnostic_set_last_function (global_dc,
+				(diagnostics::diagnostic_info *) nullptr);
 
   return true;
 }
@@ -6157,7 +6158,7 @@ trees_out::lang_type_bools (tree t, bits_out& bits)
   WB (lang->declared_class);
   WB (lang->diamond_shaped);
   WB (lang->repeated_base);
-  gcc_assert (!lang->being_defined);
+  gcc_checking_assert (!lang->being_defined);
   // lang->debug_requested
   WB (lang->fields_readonly);
   WB (lang->ptrmemfunc_flag);
@@ -6183,6 +6184,14 @@ trees_out::lang_type_bools (tree t, bits_out& bits)
   WB (lang->has_constexpr_ctor);
   WB (lang->unique_obj_representations);
   WB (lang->unique_obj_representations_set);
+  gcc_checking_assert (!lang->erroneous);
+  WB (lang->non_pod_aggregate);
+  WB (lang->non_aggregate_pod);
+  WB (lang->trivially_relocatable);
+  WB (lang->trivially_relocatable_computed);
+
+  WB (lang->replaceable);
+  WB (lang->replaceable_computed);
 #undef WB
 }
 
@@ -6227,8 +6236,8 @@ trees_in::lang_type_bools (tree t, bits_in& bits)
   RB (lang->declared_class);
   RB (lang->diamond_shaped);
   RB (lang->repeated_base);
-  gcc_assert (!lang->being_defined);
-  gcc_assert (!lang->debug_requested);
+  gcc_checking_assert (!lang->being_defined);
+  gcc_checking_assert (!lang->debug_requested);
   RB (lang->fields_readonly);
   RB (lang->ptrmemfunc_flag);
 
@@ -6253,6 +6262,14 @@ trees_in::lang_type_bools (tree t, bits_in& bits)
   RB (lang->has_constexpr_ctor);
   RB (lang->unique_obj_representations);
   RB (lang->unique_obj_representations_set);
+  gcc_checking_assert (!lang->erroneous);
+  RB (lang->non_pod_aggregate);
+  RB (lang->non_aggregate_pod);
+  RB (lang->trivially_relocatable);
+  RB (lang->trivially_relocatable_computed);
+
+  RB (lang->replaceable);
+  RB (lang->replaceable_computed);
 #undef RB
   return !get_overrun ();
 }
@@ -6543,8 +6560,14 @@ trees_out::core_vals (tree t)
 	}
 
       WT (t->function_decl.personality);
-      WT (t->function_decl.function_specific_target);
-      WT (t->function_decl.function_specific_optimization);
+      /* Rather than streaming target/optimize nodes, we should reconstruct
+	 them on stream-in from any attributes applied to the function.  */
+      if (streaming_p () && t->function_decl.function_specific_target)
+	warning_at (DECL_SOURCE_LOCATION (t), 0,
+		    "%<target%> attribute currently unsupported in modules");
+      if (streaming_p () && t->function_decl.function_specific_optimization)
+	warning_at (DECL_SOURCE_LOCATION (t), 0,
+		    "%<optimize%> attribute currently unsupported in modules");
       WT (t->function_decl.vindex);
 
       if (DECL_HAS_DEPENDENT_EXPLICIT_SPEC_P (t))
@@ -6634,11 +6657,12 @@ trees_out::core_vals (tree t)
     case TARGET_OPTION_NODE:
       // FIXME: Our representation for these two nodes is a cache of
       // the resulting set of options.  Not a record of the options
-      // that got changed by a particular attribute or pragma.  Should
-      // we record that, or should we record the diff from the command
-      // line options?  The latter seems the right behaviour, but is
-      // (a) harder, and I guess could introduce strangeness if the
-      // importer has set some incompatible set of optimization flags?
+      // that got changed by a particular attribute or pragma.  Instead
+      // of recording that, we probably should just rebuild the options
+      // on stream-in from the function attributes.  This could introduce
+      // strangeness if the importer has some incompatible set of flags
+      // but we currently assume users "know what they're doing" in such
+      // a case anyway.
       gcc_unreachable ();
       break;
 
@@ -6784,6 +6808,13 @@ trees_out::core_vals (tree t)
       WT (((lang_tree_node *)t)->trait_expression.type2);
       if (streaming_p ())
 	WU (((lang_tree_node *)t)->trait_expression.kind);
+      break;
+
+    case TU_LOCAL_ENTITY:
+      WT (((lang_tree_node *)t)->tu_local_entity.name);
+      if (state)
+	state->write_location
+	  (*this, ((lang_tree_node *)t)->tu_local_entity.loc);
       break;
     }
 
@@ -7090,8 +7121,10 @@ trees_in::core_vals (tree t)
 	  }
 
 	RT (t->function_decl.personality);
-	RT (t->function_decl.function_specific_target);
-	RT (t->function_decl.function_specific_optimization);
+	/* These properties are not streamed, and should be reconstructed
+	   from any function attributes.  */
+	// t->function_decl.function_specific_target);
+	// t->function_decl.function_specific_optimization);
 	RT (t->function_decl.vindex);
 
 	if (DECL_HAS_DEPENDENT_EXPLICIT_SPEC_P (t))
@@ -7197,7 +7230,7 @@ trees_in::core_vals (tree t)
 
     case OPTIMIZATION_NODE:
     case TARGET_OPTION_NODE:
-      /* Not yet implemented, see trees_out::core_vals.  */
+      /* Not implemented, see trees_out::core_vals.  */
       gcc_unreachable ();
       break;
 
@@ -7328,6 +7361,11 @@ trees_in::core_vals (tree t)
       RT (((lang_tree_node *)t)->trait_expression.type2);
       RUC (cp_trait_kind, ((lang_tree_node *)t)->trait_expression.kind);
       break;
+
+    case TU_LOCAL_ENTITY:
+      RT (((lang_tree_node *)t)->tu_local_entity.name);
+      ((lang_tree_node *)t)->tu_local_entity.loc
+	= state->read_location (*this);
     }
 
   if (CODE_CONTAINS_STRUCT (code, TS_TYPED))
@@ -9619,6 +9657,8 @@ trees_out::type_node (tree type)
 	      tag_type = enum_type;
 	    else if (TYPENAME_IS_CLASS_P (type))
 	      tag_type = class_type;
+	    else if (TYPENAME_IS_UNION_P (type))
+	      tag_type = union_type;
 	    u (int (tag_type));
 	  }
 	}
@@ -10266,7 +10306,8 @@ trees_in::tree_node (bool is_use)
 	    && dump ("Read %stypedef %C:%N",
 		     DECL_IMPLICIT_TYPEDEF_P (res) ? "implicit " : "",
 		     TREE_CODE (res), res);
-	  res = TREE_TYPE (res);
+	  if (TREE_CODE (res) != TU_LOCAL_ENTITY)
+	    res = TREE_TYPE (res);
 	}
       break;
 
@@ -11122,8 +11163,7 @@ trees_in::fn_parms_fini (int tag, tree fn, tree existing, bool is_defn)
 {
   tree existing_parm = existing ? DECL_ARGUMENTS (existing) : NULL_TREE;
   tree parms = DECL_ARGUMENTS (fn);
-  unsigned ix = 0;
-  for (tree parm = parms; parm; parm = DECL_CHAIN (parm), ix++)
+  for (tree parm = parms; parm; parm = DECL_CHAIN (parm))
     {
       if (existing_parm)
 	{
@@ -11133,6 +11173,20 @@ trees_in::fn_parms_fini (int tag, tree fn, tree existing, bool is_defn)
 		 names of the parms from us.  */
 	      DECL_NAME (existing_parm) = DECL_NAME (parm);
 	      DECL_SOURCE_LOCATION (existing_parm) = DECL_SOURCE_LOCATION (parm);
+
+	      /* And some other flags important for codegen are only set
+		 by the definition.  */
+	      TREE_ADDRESSABLE (existing_parm) = TREE_ADDRESSABLE (parm);
+	      DECL_BY_REFERENCE (existing_parm) = DECL_BY_REFERENCE (parm);
+	      DECL_NONLOCAL (existing_parm) = DECL_NONLOCAL (parm);
+	      DECL_ARG_TYPE (existing_parm) = DECL_ARG_TYPE (parm);
+
+	      /* Invisiref parms had their types adjusted by cp_genericize. */
+	      if (DECL_BY_REFERENCE (parm))
+		{
+		  TREE_TYPE (existing_parm) = TREE_TYPE (parm);
+		  relayout_decl (existing_parm);
+		}
 	    }
 
 	  back_refs[~tag] = existing_parm;
@@ -13391,13 +13445,19 @@ trees_in::read_class_def (tree defn, tree maybe_template)
 
       if (TYPE_LANG_SPECIFIC (type))
 	{
-	  CLASSTYPE_LAMBDA_EXPR (type) = lambda;
+	  if (!TYPE_POLYMORPHIC_P (type))
+	    SET_CLASSTYPE_LAMBDA_EXPR (type, lambda);
+	  else
+	    gcc_checking_assert (lambda == NULL_TREE);
 
 	  CLASSTYPE_MEMBER_VEC (type) = member_vec;
 	  CLASSTYPE_PURE_VIRTUALS (type) = pure_virts;
 	  CLASSTYPE_VCALL_INDICES (type) = vcall_indices;
 
-	  CLASSTYPE_KEY_METHOD (type) = key_method;
+	  if (TYPE_POLYMORPHIC_P (type))
+	    SET_CLASSTYPE_KEY_METHOD (type, key_method);
+	  else
+	    gcc_checking_assert (key_method == NULL_TREE);
 
 	  CLASSTYPE_VBASECLASSES (type) = vbase_vec;
 
@@ -18318,22 +18378,23 @@ module_state::write_ordinary_maps (elf_out *to, range_t &info,
 /* Return the prefix to use for dumping a #pragma diagnostic change to DK.  */
 
 static const char *
-dk_string (diagnostic_t dk)
+dk_string (enum diagnostics::kind dk)
 {
-  gcc_assert (dk > DK_UNSPECIFIED && dk < DK_LAST_DIAGNOSTIC_KIND);
-  if (dk == DK_IGNORED)
-    /* diagnostic.def has an empty string for ignored.  */
+  gcc_assert (dk > diagnostics::kind::unspecified
+	      && dk < diagnostics::kind::last_diagnostic_kind);
+  if (dk == diagnostics::kind::ignored)
+    /* diagnostics/kinds.def has an empty string for ignored.  */
     return "ignored: ";
   else
-    return get_diagnostic_kind_text (dk);
+    return diagnostics::get_text_for_kind (dk);
 }
 
 /* Dump one #pragma GCC diagnostic entry.  */
 
 static bool
-dump_dc_change (unsigned index, unsigned opt, diagnostic_t dk)
+dump_dc_change (unsigned index, unsigned opt, enum diagnostics::kind dk)
 {
-  if (dk == DK_POP)
+  if (dk == diagnostics::kind::pop)
     return dump (" Index %u: pop from %d", index, opt);
   else
     return dump (" Index %u: %s%s", index, dk_string (dk),
@@ -18344,7 +18405,7 @@ dump_dc_change (unsigned index, unsigned opt, diagnostic_t dk)
 
 void
 module_state::write_diagnostic_classification (elf_out *to,
-					       diagnostic_context *dc,
+					       diagnostics::context *dc,
 					       unsigned *crc_p)
 {
   auto &changes = dc->get_classification_history ();
@@ -18360,9 +18421,10 @@ module_state::write_diagnostic_classification (elf_out *to,
   unsigned len = changes.length ();
 
   /* We don't want to write out any entries that came from one of our imports.
-     But then we need to adjust the total, and change DK_POP targets to match
-     the index in our actual output.  So remember how many lines we had skipped
-     at each step, where -1 means this line itself is skipped.  */
+     But then we need to adjust the total, and change diagnostics::kind::pop
+     targets to match the index in our actual output.  So remember how many
+     lines we had skipped at each step, where -1 means this line itself
+     is skipped.  */
   int skips = 0;
   auto_vec<int> skips_at (len);
   skips_at.safe_grow (len);
@@ -18395,10 +18457,10 @@ module_state::write_diagnostic_classification (elf_out *to,
       if (sec.streaming_p ())
 	{
 	  unsigned opt = c.option;
-	  if (c.kind == DK_POP)
+	  if (c.kind == diagnostics::kind::pop)
 	    opt -= skips_at[opt];
 	  sec.u (opt);
-	  sec.u (c.kind);
+	  sec.u (static_cast<unsigned> (c.kind));
 	  dump () && dump_dc_change (i - skips_at[i], opt, c.kind);
 	}
     }
@@ -18413,7 +18475,7 @@ module_state::write_diagnostic_classification (elf_out *to,
 /* Read any #pragma GCC diagnostic info from the .dgc section.  */
 
 bool
-module_state::read_diagnostic_classification (diagnostic_context *dc)
+module_state::read_diagnostic_classification (diagnostics::context *dc)
 {
   bytes_in sec;
 
@@ -18433,8 +18495,8 @@ module_state::read_diagnostic_classification (diagnostic_context *dc)
     {
       location_t loc = read_location (sec);
       int opt = sec.u ();
-      diagnostic_t kind = (diagnostic_t) sec.u ();
-      if (kind == DK_POP)
+      enum diagnostics::kind kind = (enum diagnostics::kind) sec.u ();
+      if (kind == diagnostics::kind::pop)
 	/* For a pop, opt is the 'changes' index to return to.  */
 	opt += offset;
       changes.quick_push ({ loc, opt, kind });
@@ -18449,7 +18511,7 @@ module_state::read_diagnostic_classification (diagnostic_context *dc)
 	gcc_checking_assert (i >= offset);
 
 	const auto &c = changes[i];
-	if (c.kind != DK_POP)
+	if (c.kind != diagnostics::kind::pop)
 	  break;
 	else if (c.option == offset)
 	  {
@@ -18466,7 +18528,7 @@ module_state::read_diagnostic_classification (diagnostic_context *dc)
       /* It didn't, so add a pop at its last location to avoid affecting later
 	 imports.  */
       location_t last_loc = ordinary_locs.first + ordinary_locs.second - 1;
-      changes.quick_push ({ last_loc, offset, DK_POP });
+      changes.quick_push ({ last_loc, offset, diagnostics::kind::pop });
       dump () && dump (" Adding final pop from index %d", offset);
     }
 

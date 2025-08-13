@@ -690,6 +690,7 @@ cp_gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
 		    && (REFERENCE_CLASS_P (op1) || DECL_P (op1)))
 		  op1 = build_fold_addr_expr (op1);
 
+		suppress_warning (op1, OPT_Wunused_result);
 		gimplify_and_add (op1, pre_p);
 	      }
 	    gimplify_expr (&TREE_OPERAND (*expr_p, 0), pre_p, post_p,
@@ -888,6 +889,12 @@ cp_gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
 		  = fold_builtin_is_pointer_inverconvertible_with_class
 			(EXPR_LOCATION (*expr_p), call_expr_nargs (*expr_p),
 			 &CALL_EXPR_ARG (*expr_p, 0));
+		break;
+	      case CP_BUILT_IN_EH_PTR_ADJUST_REF:
+		error_at (EXPR_LOCATION (*expr_p),
+			  "%qs used outside of constant expressions",
+			  "__builtin_eh_ptr_adjust_ref");
+		*expr_p = void_node;
 		break;
 	      default:
 		break;
@@ -3022,7 +3029,7 @@ cp_fold (tree x, fold_flags_t flags)
     case CLEANUP_POINT_EXPR:
       /* Strip CLEANUP_POINT_EXPR if the expression doesn't have side
 	 effects.  */
-      r = cp_fold_rvalue (TREE_OPERAND (x, 0), flags);
+      r = cp_fold (TREE_OPERAND (x, 0), flags);
       if (!TREE_SIDE_EFFECTS (r))
 	x = r;
       break;
@@ -3211,7 +3218,16 @@ cp_fold (tree x, fold_flags_t flags)
 
       loc = EXPR_LOCATION (x);
       op0 = cp_fold_maybe_rvalue (TREE_OPERAND (x, 0), rval_ops, flags);
-      op1 = cp_fold_rvalue (TREE_OPERAND (x, 1), flags);
+      bool clear_decl_read;
+      clear_decl_read = false;
+      if (code == MODIFY_EXPR
+	  && (VAR_P (op0) || TREE_CODE (op0) == PARM_DECL)
+	  && !DECL_READ_P (op0))
+	clear_decl_read = true;
+      op1 = cp_fold_maybe_rvalue (TREE_OPERAND (x, 1),
+				  code != COMPOUND_EXPR, flags);
+      if (clear_decl_read)
+	DECL_READ_P (op0) = 0;
 
       /* decltype(nullptr) has only one value, so optimize away all comparisons
 	 with that type right away, keeping them in the IL causes troubles for

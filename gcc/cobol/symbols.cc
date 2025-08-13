@@ -28,6 +28,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// cppcheck-suppress-file duplicateBreak
+
 #include "config.h"
 #include <fstream> // Before cobol-system because it uses poisoned functions
 #include "cobol-system.h"
@@ -672,7 +674,7 @@ symbol_special( size_t program, const char name[] )
 struct symbol_elem_t *
 symbol_alphabet( size_t program, const char name[] )
 {
-  cbl_alphabet_t alphabet(YYLTYPE(), custom_encoding_e);
+  cbl_alphabet_t alphabet(YYLTYPE(), custom_encoding_e); // cppcheck-suppress syntaxError
   assert(strlen(name) < sizeof alphabet.name);
   strcpy(alphabet.name, name);
 
@@ -931,7 +933,7 @@ end_of_group( size_t igroup ) {
       if( e->program != group->program ) return isym;
       if( e->type == SymLabel ) return isym; // end of data division
       if( e->type == SymField ) {
-        const auto f = cbl_field_of(e);
+        const cbl_field_t * f = cbl_field_of(e);
         if( f->level == LEVEL77 || f->level == 66 ) return isym;
         if( f->level == 1 && f->parent != igroup ) {
           return isym;
@@ -1174,7 +1176,7 @@ static struct symbol_elem_t *
         // If an 01 record exists for the FD/SD, use its capacity as the
         // default_record capacity.
         if( p != symbols_end() ) {
-          const auto record = cbl_field_of(p);
+          const cbl_field_t * record = cbl_field_of(p);
           assert(record->level == 1);
           e = calculate_capacity(p);
           auto record_size = std::max(record->data.memsize,
@@ -1262,7 +1264,7 @@ static struct symbol_elem_t *
 
     // If group has a parent that is a record area, expand it, too.
     if( 0 < group->parent ) {
-      auto redefined = symbol_redefines(group);
+      redefined = symbol_redefines(group);
       if( redefined && is_record_area(redefined) ) {
         if( redefined->data.capacity < group->data.memsize ) {
           redefined->data.capacity = group->data.memsize;
@@ -1434,11 +1436,11 @@ cbl_field_t::attr_str( const std::vector<cbl_field_attr_t>& attrs ) const
   const char *sep = "";
   char *out = NULL;
 
-  for( auto attr : attrs ) {
+  for( auto attr_l : attrs ) {
     char *part = out;
-    if( has_attr(attr) ) {
+    if( has_attr(attr_l) ) {
       int erc = asprintf(&out, "%s%s%s",
-                         part? part : "", sep, cbl_field_attr_str(attr));
+                         part? part : "", sep, cbl_field_attr_str(attr_l));
       if( -1 == erc ) return part;
       free(part);
       sep = ", ";
@@ -1745,7 +1747,7 @@ symbols_update( size_t first, bool parsed_ok ) {
 
     bool size_invalid = field->data.memsize > 0 && symbol_redefines(field);
     if( size_invalid ) { // redefine of record area is ok
-      const auto redefined = symbol_redefines(field);
+      const cbl_field_t * redefined = symbol_redefines(field);
       size_invalid = ! is_record_area(redefined);
     }
     if( !field->is_valid() || size_invalid )
@@ -1768,8 +1770,8 @@ symbols_update( size_t first, bool parsed_ok ) {
         if( e == symbols_end() ) {
           // no field redefines the file's default record
           auto file = cbl_file_of(symbol_at(field->parent));
-          ERROR_FIELD(field, "line %d: %s lacks a file description",
-                      file->line, file->name);
+          ERROR_FIELD(field, "%s lacks a file description",
+                      file->name);
           return 0;
         }
       }
@@ -1828,7 +1830,7 @@ symbols_update( size_t first, bool parsed_ok ) {
     }
 
     // Verify REDEFINing field has no ODO components
-    const auto parent = symbol_redefines(field);
+    const cbl_field_t * parent = symbol_redefines(field);
     if( parent && !is_record_area(parent) && is_variable_length(field) ) {
       ERROR_FIELD(field, "line %d: REDEFINES field %s cannot be variable length",
                field->line, field->name);
@@ -2180,14 +2182,22 @@ symbol_table_init(void) {
   }
 
   static symbol_elem_t environs[] = {
+    { symbol_elem_t{ 0, cbl_special_name_t{0, CONSOLE_e, "CONSOLE", 0, "/dev/stdout"}} }, // stdout in DISPLAY; stdin in ACCEPT
+
+    { symbol_elem_t{ 0, cbl_special_name_t{0, STDIN_e, "STDIN", 0, "/dev/stdin"}} },
     { symbol_elem_t{ 0, cbl_special_name_t{0, SYSIN_e, "SYSIN", 0, "/dev/stdin"}} },
-    { symbol_elem_t{ 0, cbl_special_name_t{0, SYSIPT_e, "SYSIPT", 0, "/dev/stdout"}} },
+    { symbol_elem_t{ 0, cbl_special_name_t{0, SYSIPT_e, "SYSIPT", 0, "/dev/stdin"}} },
+
+    { symbol_elem_t{ 0, cbl_special_name_t{0, STDOUT_e, "STDOUT", 0, "/dev/stdout"}} },
     { symbol_elem_t{ 0, cbl_special_name_t{0, SYSOUT_e, "SYSOUT", 0, "/dev/stdout"}} },
     { symbol_elem_t{ 0, cbl_special_name_t{0, SYSLIST_e, "SYSLIST", 0, "/dev/stdout"}} },
     { symbol_elem_t{ 0, cbl_special_name_t{0, SYSLST_e, "SYSLST", 0, "/dev/stdout"}} },
+
     { symbol_elem_t{ 0, cbl_special_name_t{0, SYSPUNCH_e, "SYSPUNCH", 0, "/dev/stderr"}} },
     { symbol_elem_t{ 0, cbl_special_name_t{0, SYSPCH_e, "SYSPCH", 0, "/dev/stderr"}} },
-    { symbol_elem_t{ 0, cbl_special_name_t{0, CONSOLE_e, "CONSOLE", 0, "/dev/stdout"}} },
+    { symbol_elem_t{ 0, cbl_special_name_t{0, STDERR_e, "STDERR", 0, "/dev/stderr"}} },
+    { symbol_elem_t{ 0, cbl_special_name_t{0, SYSERR_e, "SYSERR", 0, "/dev/stderr"}} },
+
     { symbol_elem_t{ 0, cbl_special_name_t{0, C01_e, "C01", 0, "/dev/null"}} },
     { symbol_elem_t{ 0, cbl_special_name_t{0, C02_e, "C02", 0, "/dev/null"}} },
     { symbol_elem_t{ 0, cbl_special_name_t{0, C03_e, "C03", 0, "/dev/null"}} },
@@ -2207,10 +2217,6 @@ symbol_table_init(void) {
     { symbol_elem_t{ 0, cbl_special_name_t{0, S04_e, "S04", 0, "/dev/null"}} },
     { symbol_elem_t{ 0, cbl_special_name_t{0, S05_e, "S05", 0, "/dev/null"}} },
     { symbol_elem_t{ 0, cbl_special_name_t{0, AFP_5A_e, "AFP-5A", 0, "/dev/null"}} },
-    { symbol_elem_t{ 0, cbl_special_name_t{0, STDIN_e, "STDIN", 0, "/dev/stdin"}} },
-    { symbol_elem_t{ 0, cbl_special_name_t{0, STDOUT_e, "STDOUT", 0, "/dev/stdout"}} },
-    { symbol_elem_t{ 0, cbl_special_name_t{0, STDERR_e, "STDERR", 0, "/dev/stderr"}} },
-    { symbol_elem_t{ 0, cbl_special_name_t{0, SYSERR_e, "SYSERR", 0, "/dev/stderr"}} },
   };
 
   struct symbol_elem_t *p = table.elems + table.nelem;
@@ -2466,7 +2472,7 @@ symbol_typedef_add( size_t program, struct cbl_field_t *field ) {
   auto e = symbols_end() - 1;
   assert( symbols_begin() < e );
   if( e->type == SymField ) {
-    const auto f = cbl_field_of(e);
+    const cbl_field_t * f = cbl_field_of(e);
     if( f == field ) return e;
   }
 
@@ -2516,7 +2522,8 @@ symbol_field_add( size_t program, struct cbl_field_t *field )
     if( is_numeric(parent->usage) && parent->data.capacity > 0 ) {
       field->type = parent->usage;
       field->data = parent->data;
-      field->data = 0;
+      field->data = 0;  // cppcheck-suppress redundantAssignment
+      //                // cppcheck doesn't understand multiple overloaded operator=
       field->data.initial = NULL;
     }
   }
@@ -3140,7 +3147,6 @@ static cbl_field_t *
 new_temporary_impl( enum cbl_field_type_t type, const cbl_name_t name = nullptr )
 {
   extern int yylineno;
-  static int nstack, nliteral;
   static const struct cbl_field_t empty_alpha = {
                                 0, FldAlphanumeric, FldInvalid,
                                 intermediate_e, 0, 0, 0, nonarray, 0, "",
@@ -3209,8 +3215,10 @@ new_temporary_impl( enum cbl_field_type_t type, const cbl_name_t name = nullptr 
 
   f->line = yylineno;
   if( is_literal(type) ) {
+    static int nliteral = 0;
     snprintf(f->name, sizeof(f->name), "_literal%d",++nliteral);
   } else {
+    static int nstack = 0;
     snprintf(f->name, sizeof(f->name), "_stack%d",++nstack);
   }
 
@@ -3724,6 +3732,12 @@ symbol_label_add( size_t program, cbl_label_t *input )
 bool
 symbol_label_section_exists( size_t eval_label_index ) {
   auto eval = symbols_begin(eval_label_index);
+  /*  cppcheck warns that the following statement depends on the order of
+      evaluation of side effects.  Since this isn't my code, and since I don't
+      think the warning can be eliminated without rewriting it, I am just
+      supprressing it.
+      -- Bob Dubner, 2025-07-14 */
+  // cppcheck-suppress unknownEvaluationOrder
   bool has_section = std::any_of( ++eval, symbols_end(),
                                [program = eval->program]( const auto& sym ) {
                                  if( program == sym.program && sym.type == SymLabel ) {
@@ -4183,7 +4197,7 @@ symbol_program_callables( size_t program ) {
     if( e->type != SymLabel ) continue;
     if( e->elem.label.type != LblProgram ) continue;
 
-    const auto prog = cbl_label_of(e);
+    const cbl_label_t * prog = cbl_label_of(e);
     if( program == symbol_index(e) && !prog->recursive ) continue;
 
     if( (self->parent == prog->parent && prog->common) ||
@@ -4236,6 +4250,11 @@ symbol_currency( char sign ) {
   // We need a default of '$'
   if( currencies.size() == 0 ) {
     currencies['$'] = "$";
+  }
+  if( sign == '\0' ) { // default
+    auto result = currencies.begin();
+    gcc_assert(result != currencies.end());
+    return result->second;
   }
   auto result = currencies.find(sign);
   return result == currencies.end()? NULL : result->second;
@@ -4343,6 +4362,26 @@ cbl_occurs_t::subscript_ok( const cbl_field_t *subscript ) const {
     return (size_t)sub <= bounds.upper;
   }
   return bounds.lower <= (size_t)sub && (size_t)sub <= bounds.upper;
+}
+
+const cbl_field_t * 
+symbol_unresolved_file_key( const cbl_file_t * file,
+                            const cbl_name_t key_field_name ) {
+  const symbol_elem_t *file_sym = symbol_elem_of(file);
+  size_t program = file_sym->program;
+  for( const symbol_elem_t *e = file_sym - 1; e->program == program; e-- ) {
+    if( e->type == SymFile ) break;
+    if( e->type == SymField ) {
+      auto f = cbl_field_of(e);
+      if( f->type == FldLiteralA ) break;
+      if( f->type == FldForward ) {
+        if( 0 == strcmp(key_field_name, f->name) ) {
+          return f;
+        }
+      }
+    }
+  }
+  return nullptr;
 }
 
 cbl_file_key_t::
@@ -4486,7 +4525,7 @@ cbl_file_key_t::deforward( size_t ifile ) {
                     if( ifield == fwd ) {
                       ERROR_FIELD(field, "line %d: %s of %s "
                                "is not defined",
-                               file->line, field->name, file->name);
+                               field->line, field->name, file->name);
                       return ifield;
                     }
 
@@ -4515,9 +4554,13 @@ cbl_file_key_t::deforward( size_t ifile ) {
                     // looked-up field must have same file as parent
                     if( ! (parent != NULL &&
                            symbol_index(symbol_elem_of(parent)) == ifile) ) {
-                      ERROR_FIELD(field, "line %d: %s of %s "
-                               "is not defined in file description",
-                               file->line, field->name, file->name);
+                      const cbl_field_t *undefined =
+                        symbol_unresolved_file_key(file, field->name);
+                      int lineno = undefined? undefined->line : file->line;
+                      ERROR_FIELD(undefined? undefined : field,
+                                  "line %d: %s of %s "
+                                  "is not defined in file description",
+                                  lineno, field->name, file->name);
                     }
                     return ifield;
                   } );
@@ -4630,9 +4673,11 @@ file_status_status_of( file_status_t status ) {
   size_t n = COUNT_OF(file_status_fields);
   const file_status_field_t *fs, key { status };
 
-  fs = (file_status_field_t*)lfind( &key, file_status_fields,
-                                    &n, sizeof(*fs), cbl_file_status_cmp );
-
+  fs = static_cast<file_status_field_t*>(lfind( &key,
+                                                file_status_fields,
+                                                &n,
+                                                sizeof(*fs),
+                                                cbl_file_status_cmp ));
   return fs? (long)fs->status : -1;
 }
 

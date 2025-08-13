@@ -92,6 +92,7 @@ package Aspects is
       Aspect_Default_Value,
       Aspect_Depends,                       -- GNAT
       Aspect_Designated_Storage_Model,      -- GNAT
+      Aspect_Destructor,                    -- GNAT
       Aspect_Dimension,                     -- GNAT
       Aspect_Dimension_System,              -- GNAT
       Aspect_Dispatching_Domain,
@@ -127,6 +128,7 @@ package Aspects is
       Aspect_Part_Of,                       -- GNAT
       Aspect_Post,
       Aspect_Postcondition,
+      Aspect_Potentially_Invalid,           -- GNAT
       Aspect_Pre,
       Aspect_Precondition,
       Aspect_Predicate,                     -- GNAT
@@ -258,6 +260,7 @@ package Aspects is
                                  | Aspect_Iterator_Element
                                  | Aspect_Max_Entry_Queue_Length
                                  | Aspect_No_Controlled_Parts
+                                 | Aspect_No_Task_Parts
                                  | Aspect_Real_Literal
                                  | Aspect_String_Literal
                                  | Aspect_Variable_Indexing;
@@ -292,6 +295,7 @@ package Aspects is
       Aspect_CUDA_Global                => True,
       Aspect_Depends                    => True,
       Aspect_Designated_Storage_Model   => True,
+      Aspect_Destructor                 => True,
       Aspect_Dimension                  => True,
       Aspect_Dimension_System           => True,
       Aspect_Disable_Controlled         => True,
@@ -327,6 +331,7 @@ package Aspects is
       Aspect_Obsolescent                => True,
       Aspect_Part_Of                    => True,
       Aspect_Persistent_BSS             => True,
+      Aspect_Potentially_Invalid        => True,
       Aspect_Predicate                  => True,
       Aspect_Pure_Function              => True,
       Aspect_Refined_Depends            => True,
@@ -407,8 +412,11 @@ package Aspects is
    subtype Boolean_Aspects is
      Aspect_Id range Aspect_Always_Terminates .. Aspect_Id'Last;
 
-   subtype Pre_Post_Aspects is
-     Aspect_Id range Aspect_Post .. Aspect_Precondition;
+   subtype Pre_Post_Aspects is Aspect_Id
+   with Static_Predicate => Pre_Post_Aspects in Aspect_Post
+                                              | Aspect_Postcondition
+                                              | Aspect_Pre
+                                              | Aspect_Precondition;
 
    --  The following type is used for indicating allowed expression forms
 
@@ -442,6 +450,7 @@ package Aspects is
       Aspect_Default_Value              => Expression,
       Aspect_Depends                    => Expression,
       Aspect_Designated_Storage_Model   => Name,
+      Aspect_Destructor                 => Name,
       Aspect_Dimension                  => Expression,
       Aspect_Dimension_System           => Expression,
       Aspect_Dispatching_Domain         => Expression,
@@ -477,6 +486,7 @@ package Aspects is
       Aspect_Part_Of                    => Expression,
       Aspect_Post                       => Expression,
       Aspect_Postcondition              => Expression,
+      Aspect_Potentially_Invalid        => Optional_Expression,
       Aspect_Pre                        => Expression,
       Aspect_Precondition               => Expression,
       Aspect_Predicate                  => Expression,
@@ -545,6 +555,7 @@ package Aspects is
       Aspect_Default_Value                => True,
       Aspect_Depends                      => False,
       Aspect_Designated_Storage_Model     => True,
+      Aspect_Destructor                   => False,
       Aspect_Dimension                    => False,
       Aspect_Dimension_System             => False,
       Aspect_Dispatching_Domain           => False,
@@ -583,6 +594,7 @@ package Aspects is
       Aspect_Part_Of                      => False,
       Aspect_Post                         => False,
       Aspect_Postcondition                => False,
+      Aspect_Potentially_Invalid          => False,
       Aspect_Pre                          => False,
       Aspect_Precondition                 => False,
       Aspect_Predicate                    => False,
@@ -719,6 +731,7 @@ package Aspects is
       Aspect_Default_Value                => Name_Default_Value,
       Aspect_Depends                      => Name_Depends,
       Aspect_Designated_Storage_Model     => Name_Designated_Storage_Model,
+      Aspect_Destructor                   => Name_Destructor,
       Aspect_Dimension                    => Name_Dimension,
       Aspect_Dimension_System             => Name_Dimension_System,
       Aspect_Disable_Controlled           => Name_Disable_Controlled,
@@ -784,6 +797,7 @@ package Aspects is
       Aspect_Persistent_BSS               => Name_Persistent_BSS,
       Aspect_Post                         => Name_Post,
       Aspect_Postcondition                => Name_Postcondition,
+      Aspect_Potentially_Invalid          => Name_Potentially_Invalid,
       Aspect_Pre                          => Name_Pre,
       Aspect_Precondition                 => Name_Precondition,
       Aspect_Predicate                    => Name_Predicate,
@@ -986,6 +1000,7 @@ package Aspects is
       Aspect_Default_Value                => Always_Delay,
       Aspect_Default_Component_Value      => Always_Delay,
       Aspect_Designated_Storage_Model     => Always_Delay,
+      Aspect_Destructor                   => Always_Delay,
       Aspect_Discard_Names                => Always_Delay,
       Aspect_Dispatching_Domain           => Always_Delay,
       Aspect_Dynamic_Predicate            => Always_Delay,
@@ -1095,6 +1110,7 @@ package Aspects is
       Aspect_No_Tagged_Streams            => Never_Delay,
       Aspect_Obsolescent                  => Never_Delay,
       Aspect_Part_Of                      => Never_Delay,
+      Aspect_Potentially_Invalid          => Never_Delay,
       Aspect_Refined_Depends              => Never_Delay,
       Aspect_Refined_Global               => Never_Delay,
       Aspect_Refined_Post                 => Never_Delay,

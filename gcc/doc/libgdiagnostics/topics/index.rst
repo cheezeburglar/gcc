@@ -28,6 +28,7 @@ Topic reference
    diagnostic-manager.rst
    diagnostics.rst
    message-formatting.rst
+   message-buffers.rst
    physical-locations.rst
    logical-locations.rst
    metadata.rst
@@ -35,5 +36,6 @@ Topic reference
    execution-paths.rst
    text-output.rst
    sarif.rst
+   graphs.rst
    ux.rst
    compatibility.rst

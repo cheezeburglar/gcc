@@ -110,7 +110,7 @@ static void initialize_local_var (tree, tree, bool);
 static void expand_static_init (tree, tree);
 static location_t smallest_type_location (const cp_decl_specifier_seq*);
 static bool identify_goto (tree, location_t, const location_t *,
-			   diagnostic_t, bool);
+			   enum diagnostics::kind, bool);
 
 /* The following symbols are subsumed in the cp_global_trees array, and
    listed here individually for documentation purposes.
@@ -572,9 +572,9 @@ poplevel_named_label_1 (named_label_entry **slot, cp_binding_level *bl)
 	  ent->in_stmt_expr = true;
 	  break;
 	case sk_block:
-	  if (level_for_constexpr_if (bl->level_chain))
+	  if (level_for_constexpr_if (obl))
 	    ent->in_constexpr_if = true;
-	  else if (level_for_consteval_if (bl->level_chain))
+	  else if (level_for_consteval_if (obl))
 	    ent->in_consteval_if = true;
 	  break;
 	default:
@@ -747,11 +747,11 @@ poplevel (int keep, int reverse, int functionbody)
 	      {
 		if (!DECL_NAME (decl) && DECL_DECOMPOSITION_P (decl))
 		  warning_at (DECL_SOURCE_LOCATION (decl),
-			      OPT_Wunused_but_set_variable, "structured "
+			      OPT_Wunused_but_set_variable_, "structured "
 			      "binding declaration set but not used");
 		else
 		  warning_at (DECL_SOURCE_LOCATION (decl),
-			      OPT_Wunused_but_set_variable,
+			      OPT_Wunused_but_set_variable_,
 			      "variable %qD set but not used", decl);
 		unused_but_set_errorcount = errorcount;
 	      }
@@ -1214,9 +1214,7 @@ decls_match (tree newdecl, tree olddecl, bool record_versions /* = true */)
 	  && targetm.target_option.function_versions (newdecl, olddecl))
 	{
 	  if (record_versions)
-	    maybe_version_functions (newdecl, olddecl,
-				     (!DECL_FUNCTION_VERSIONED (newdecl)
-				      || !DECL_FUNCTION_VERSIONED (olddecl)));
+	    maybe_version_functions (newdecl, olddecl);
 	  return 0;
 	}
     }
@@ -1283,11 +1281,11 @@ maybe_mark_function_versioned (tree decl)
 }
 
 /* NEWDECL and OLDDECL have identical signatures.  If they are
-   different versions adjust them and return true.
-   If RECORD is set to true, record function versions.  */
+   different versions adjust them, record function versions, and return
+   true.  */
 
 bool
-maybe_version_functions (tree newdecl, tree olddecl, bool record)
+maybe_version_functions (tree newdecl, tree olddecl)
 {
   if (!targetm.target_option.function_versions (newdecl, olddecl))
     return false;
@@ -1310,16 +1308,13 @@ maybe_version_functions (tree newdecl, tree olddecl, bool record)
       maybe_mark_function_versioned (newdecl);
     }
 
-  if (record)
-    {
-      /* Add the new version to the function version structure.  */
-      cgraph_node *fn_node = cgraph_node::get_create (olddecl);
-      cgraph_function_version_info *fn_v = fn_node->function_version ();
-      if (!fn_v)
-	fn_v = fn_node->insert_new_function_version ();
+  /* Add the new version to the function version structure.  */
+  cgraph_node *fn_node = cgraph_node::get_create (olddecl);
+  cgraph_function_version_info *fn_v = fn_node->function_version ();
+  if (!fn_v)
+    fn_v = fn_node->insert_new_function_version ();
 
-      cgraph_node::add_function_version (fn_v, newdecl);
-    }
+  cgraph_node::add_function_version (fn_v, newdecl);
 
   return true;
 }
@@ -2014,8 +2009,10 @@ duplicate_decls (tree newdecl, tree olddecl, bool hiding, bool was_hidden)
 	    }
 	  /* For function versions, params and types match, but they
 	     are not ambiguous.  */
-	  else if ((!DECL_FUNCTION_VERSIONED (newdecl)
-		    && !DECL_FUNCTION_VERSIONED (olddecl))
+	  else if (((!DECL_FUNCTION_VERSIONED (newdecl)
+		     && !DECL_FUNCTION_VERSIONED (olddecl))
+		    || !same_type_p (fndecl_declared_return_type (newdecl),
+				     fndecl_declared_return_type (olddecl)))
 		   /* Let constrained hidden friends coexist for now, we'll
 		      check satisfaction later.  */
 		   && !member_like_constrained_friend_p (newdecl)
@@ -3740,10 +3737,10 @@ decl_jump_unsafe (tree decl)
 
 static bool
 identify_goto (tree decl, location_t loc, const location_t *locus,
-	       diagnostic_t diag_kind, bool computed)
+	       enum diagnostics::kind diag_kind, bool computed)
 {
   if (computed)
-    diag_kind = DK_WARNING;
+    diag_kind = diagnostics::kind::warning;
   bool complained
     = emit_diagnostic (diag_kind, loc, 0,
 		       decl ? G_("jump to label %qD")
@@ -3779,7 +3776,8 @@ check_previous_goto_1 (tree decl, cp_binding_level* level, tree names,
 
   if (exited_omp)
     {
-      complained = identify_goto (decl, input_location, locus, DK_ERROR,
+      complained = identify_goto (decl, input_location, locus,
+				  diagnostics::kind::error,
 				  computed);
       if (complained)
 	inform (input_location, "  exits OpenMP structured block");
@@ -3801,7 +3799,8 @@ check_previous_goto_1 (tree decl, cp_binding_level* level, tree names,
 
 	  if (!identified)
 	    {
-	      complained = identify_goto (decl, input_location, locus, DK_ERROR,
+	      complained = identify_goto (decl, input_location, locus,
+					  diagnostics::kind::error,
 					  computed);
 	      identified = 2;
 	    }
@@ -3869,7 +3868,8 @@ check_previous_goto_1 (tree decl, cp_binding_level* level, tree names,
       if (inf)
 	{
 	  if (identified < 2)
-	    complained = identify_goto (decl, input_location, locus, DK_ERROR,
+	    complained = identify_goto (decl, input_location, locus,
+					diagnostics::kind::error,
 					computed);
 	  identified = 2;
 	  if (complained)
@@ -3880,7 +3880,8 @@ check_previous_goto_1 (tree decl, cp_binding_level* level, tree names,
   if (!vec_safe_is_empty (computed))
     {
       if (!identified)
-	complained = identify_goto (decl, input_location, locus, DK_ERROR,
+	complained = identify_goto (decl, input_location, locus,
+				    diagnostics::kind::error,
 				    computed);
       identified = 2;
       if (complained)
@@ -3952,14 +3953,14 @@ check_goto_1 (named_label_entry *ent, bool computed)
       || ent->in_omp_scope || ent->in_stmt_expr
       || !vec_safe_is_empty (ent->bad_decls))
     {
-      diagnostic_t diag_kind = DK_PERMERROR;
+      enum diagnostics::kind diag_kind = diagnostics::kind::permerror;
       if (ent->in_try_scope || ent->in_catch_scope || ent->in_constexpr_if
 	  || ent->in_consteval_if || ent->in_transaction_scope
 	  || ent->in_omp_scope || ent->in_stmt_expr)
-	diag_kind = DK_ERROR;
+	diag_kind = diagnostics::kind::error;
       complained = identify_goto (decl, DECL_SOURCE_LOCATION (decl),
 				  &input_location, diag_kind, computed);
-      identified = 1 + (diag_kind == DK_ERROR);
+      identified = 1 + (diag_kind == diagnostics::kind::error);
     }
 
   FOR_EACH_VEC_SAFE_ELT (ent->bad_decls, ix, bad)
@@ -3972,7 +3973,9 @@ check_goto_1 (named_label_entry *ent, bool computed)
 	  if (identified == 1)
 	    {
 	      complained = identify_goto (decl, DECL_SOURCE_LOCATION (decl),
-					  &input_location, DK_ERROR, computed);
+					  &input_location,
+					  diagnostics::kind::error,
+					  computed);
 	      identified = 2;
 	    }
 	  if (complained)
@@ -4016,7 +4019,8 @@ check_goto_1 (named_label_entry *ent, bool computed)
 	      {
 		complained = identify_goto (decl,
 					    DECL_SOURCE_LOCATION (decl),
-					    &input_location, DK_ERROR,
+					    &input_location,
+					    diagnostics::kind::error,
 					    computed);
 		identified = 2;
 	      }
@@ -4040,7 +4044,8 @@ check_goto_1 (named_label_entry *ent, bool computed)
 		{
 		  complained
 		    = identify_goto (decl, DECL_SOURCE_LOCATION (decl),
-				     &input_location, DK_ERROR, computed);
+				     &input_location, diagnostics::kind::error,
+				     computed);
 		  identified = 2;
 		}
 	      if (complained)
@@ -4056,7 +4061,8 @@ check_goto_1 (named_label_entry *ent, bool computed)
 		    {
 		      complained
 			= identify_goto (decl, DECL_SOURCE_LOCATION (decl),
-					 &input_location, DK_ERROR, computed);
+					 &input_location, diagnostics::kind::error,
+					 computed);
 		      identified = 2;
 		    }
 		  if (complained)
@@ -4330,7 +4336,19 @@ finish_case_label (location_t loc, tree low_value, tree high_value)
       tree label;
 
       /* For templates, just add the case label; we'll do semantic
-	 analysis at instantiation-time.  */
+	 analysis at instantiation-time.  But diagnose case labels
+	 in expansion statements with switch outside of it here.  */
+      if (in_expansion_stmt)
+	for (cp_binding_level *b = current_binding_level;
+	     b != switch_stack->level; b = b->level_chain)
+	  if (b->kind == sk_template_for && b->this_entity)
+	    {
+	      auto_diagnostic_group d;
+	      error ("jump to case label");
+	      inform (EXPR_LOCATION (b->this_entity),
+		      "  enters %<template for%> statement");
+	      return error_mark_node;
+	    }
       label = build_decl (loc, LABEL_DECL, NULL_TREE, void_type_node);
       return add_stmt (build_case_label (low_value, high_value, label));
     }
@@ -4368,6 +4386,7 @@ struct typename_info {
   tree template_id;
   bool enum_p;
   bool class_p;
+  bool union_p;
 };
 
 struct typename_hasher : ggc_ptr_hash<tree_node>
@@ -4406,7 +4425,8 @@ struct typename_hasher : ggc_ptr_hash<tree_node>
 	    && TYPE_CONTEXT (t1) == t2->scope
 	    && TYPENAME_TYPE_FULLNAME (t1) == t2->template_id
 	    && TYPENAME_IS_ENUM_P (t1) == t2->enum_p
-	    && TYPENAME_IS_CLASS_P (t1) == t2->class_p);
+	    && TYPENAME_IS_CLASS_P (t1) == t2->class_p
+	    && TYPENAME_IS_UNION_P (t1) == t2->union_p);
   }
 };
 
@@ -4430,9 +4450,8 @@ build_typename_type (tree context, tree name, tree fullname,
   ti.name = name;
   ti.template_id = fullname;
   ti.enum_p = tag_type == enum_type;
-  ti.class_p = (tag_type == class_type
-		|| tag_type == record_type
-		|| tag_type == union_type);
+  ti.class_p = (tag_type == class_type || tag_type == record_type);
+  ti.union_p = tag_type == union_type;
   hashval_t hash = typename_hasher::hash (&ti);
 
   /* See if we already have this type.  */
@@ -4448,6 +4467,7 @@ build_typename_type (tree context, tree name, tree fullname,
       TYPENAME_TYPE_FULLNAME (t) = ti.template_id;
       TYPENAME_IS_ENUM_P (t) = ti.enum_p;
       TYPENAME_IS_CLASS_P (t) = ti.class_p;
+      TYPENAME_IS_UNION_P (t) = ti.union_p;
 
       /* Build the corresponding TYPE_DECL.  */
       tree d = build_decl (input_location, TYPE_DECL, name, t);
@@ -5077,6 +5097,18 @@ cxx_init_decl_processing (void)
 			    CP_BUILT_IN_IS_POINTER_INTERCONVERTIBLE_WITH_CLASS,
 			    BUILT_IN_FRONTEND, NULL, NULL_TREE);
   set_call_expr_flags (decl, ECF_CONST | ECF_NOTHROW | ECF_LEAF);
+
+  if (cxx_dialect >= cxx26)
+    {
+      tree void_ptrintftype
+	= build_function_type_list (void_type_node, ptr_type_node,
+				    integer_type_node, NULL_TREE);
+      decl = add_builtin_function ("__builtin_eh_ptr_adjust_ref",
+				   void_ptrintftype,
+				   CP_BUILT_IN_EH_PTR_ADJUST_REF,
+				   BUILT_IN_FRONTEND, NULL, NULL_TREE);
+      set_call_expr_flags (decl, ECF_NOTHROW | ECF_LEAF);
+    }
 
   integer_two_node = build_int_cst (NULL_TREE, 2);
 
@@ -9172,6 +9204,10 @@ cp_finish_decl (tree decl, tree init, bool init_const_expr_p,
 
       if (decomp)
 	{
+	  if (DECL_DECLARED_CONSTINIT_P (decl) && cxx_dialect < cxx26)
+	    pedwarn (DECL_SOURCE_LOCATION (decl), OPT_Wc__26_extensions,
+		     "%<constinit%> can be applied to structured binding "
+		     "only with %<-std=c++2c%> or %<-std=gnu++2c%>");
 	  cp_maybe_mangle_decomp (decl, decomp);
 	  if (TREE_STATIC (decl) && !DECL_FUNCTION_SCOPE_P (decl))
 	    {
@@ -9609,13 +9645,17 @@ cp_finish_decl (tree decl, tree init, bool init_const_expr_p,
    error has been diagnosed.  */
 
 static tree
-find_decomp_class_base (location_t loc, tree type, tree ret)
+find_decomp_class_base (location_t loc, tree type, tree ret,
+			tsubst_flags_t complain)
 {
   if (LAMBDA_TYPE_P (type))
     {
-      auto_diagnostic_group d;
-      error_at (loc, "cannot decompose lambda closure type %qT", type);
-      inform (location_of (type), "lambda declared here");
+      if (complain & tf_error)
+	{
+	  auto_diagnostic_group d;
+	  error_at (loc, "cannot decompose lambda closure type %qT", type);
+	  inform (location_of (type), "lambda declared here");
+	}
       return error_mark_node;
     }
 
@@ -9629,6 +9669,8 @@ find_decomp_class_base (location_t loc, tree type, tree ret)
       return type;
     else if (ANON_AGGR_TYPE_P (TREE_TYPE (field)))
       {
+	if ((complain & tf_error) == 0)
+	  return error_mark_node;
 	auto_diagnostic_group d;
 	if (TREE_CODE (TREE_TYPE (field)) == RECORD_TYPE)
 	  error_at (loc, "cannot decompose class type %qT because it has an "
@@ -9641,6 +9683,8 @@ find_decomp_class_base (location_t loc, tree type, tree ret)
       }
     else if (!accessible_p (type, field, true))
       {
+	if ((complain & tf_error) == 0)
+	  return error_mark_node;
 	auto_diagnostic_group d;
 	error_at (loc, "cannot decompose inaccessible member %qD of %qT",
 		  field, type);
@@ -9662,28 +9706,32 @@ find_decomp_class_base (location_t loc, tree type, tree ret)
        BINFO_BASE_ITERATE (binfo, i, base_binfo); i++)
     {
       auto_diagnostic_group d;
-      tree t = find_decomp_class_base (loc, TREE_TYPE (base_binfo), ret);
+      tree t = find_decomp_class_base (loc, TREE_TYPE (base_binfo), ret,
+				       complain);
       if (t == error_mark_node)
 	{
-	  inform (location_of (type), "in base class of %qT", type);
+	  if (complain & tf_error)
+	    inform (location_of (type), "in base class of %qT", type);
 	  return error_mark_node;
 	}
       if (t != NULL_TREE && t != ret)
 	{
 	  if (ret == type)
 	    {
-	      error_at (loc, "cannot decompose class type %qT: both it and "
-			     "its base class %qT have non-static data members",
-			type, t);
+	      if (complain & tf_error)
+		error_at (loc, "cannot decompose class type %qT: both it and "
+			       "its base class %qT have non-static data "
+			       "members", type, t);
 	      return error_mark_node;
 	    }
 	  else if (orig_ret != NULL_TREE)
 	    return t;
 	  else if (ret != NULL_TREE)
 	    {
-	      error_at (loc, "cannot decompose class type %qT: its base "
-			     "classes %qT and %qT have non-static data "
-			     "members", type, ret, t);
+	      if (complain & tf_error)
+		error_at (loc, "cannot decompose class type %qT: its base "
+			       "classes %qT and %qT have non-static data "
+			       "members", type, ret, t);
 	      return error_mark_node;
 	    }
 	  else
@@ -9724,7 +9772,7 @@ get_tuple_size (tree type)
 /* Return std::tuple_element<I,TYPE>::type.  */
 
 static tree
-get_tuple_element_type (tree type, unsigned i)
+get_tuple_element_type (tree type, unsigned HOST_WIDE_INT i)
 {
   tree args = make_tree_vec (2);
   TREE_VEC_ELT (args, 0) = build_int_cst (integer_type_node, i);
@@ -9740,7 +9788,7 @@ get_tuple_element_type (tree type, unsigned i)
 /* Return e.get<i>() or get<i>(e).  */
 
 static tree
-get_tuple_decomp_init (tree decl, unsigned i)
+get_tuple_decomp_init (tree decl, unsigned HOST_WIDE_INT i)
 {
   tree targs = make_tree_vec (1);
   TREE_VEC_ELT (targs, 0) = build_int_cst (integer_type_node, i);
@@ -9846,6 +9894,139 @@ cp_maybe_mangle_decomp (tree decl, cp_decomp *decomp)
     }
 }
 
+/* Append #i to DECL_NAME (decl) or for name independent decls
+   clear DECL_NAME (decl).  */
+
+static void
+set_sb_pack_name (tree decl, unsigned HOST_WIDE_INT i)
+{
+  if (name_independent_decl_p (decl))
+    /* Only "_" names are treated as name independent, "_#0" etc. is not and
+       because we pushdecl the individual decl elements of structured binding
+       pack, we could get redeclaration errors if there are 2 or more name
+       independent structured binding packs in the same scope.  */
+    DECL_NAME (decl) = NULL_TREE;
+  else
+    {
+      tree name = DECL_NAME (decl);
+      size_t len = IDENTIFIER_LENGTH (name) + 22;
+      char *n = XALLOCAVEC (char, len);
+      snprintf (n, len, "%s#" HOST_WIDE_INT_PRINT_UNSIGNED,
+		IDENTIFIER_POINTER (name), i);
+      DECL_NAME (decl) = get_identifier (n);
+    }
+}
+
+/* Return structured binding size of TYPE or -1 if erroneous.  */
+
+HOST_WIDE_INT
+cp_decomp_size (location_t loc, tree type, tsubst_flags_t complain)
+{
+  if (TYPE_REF_P (type))
+    {
+      type = complete_type (TREE_TYPE (type));
+      if (type == error_mark_node)
+	return -1;
+      if (!COMPLETE_TYPE_P (type))
+	{
+	  if (complain & tf_error)
+	    error_at (loc, "structured binding refers to incomplete type %qT",
+		      type);
+	  return -1;
+	}
+    }
+
+  unsigned HOST_WIDE_INT eltscnt = 0;
+  if (TREE_CODE (type) == ARRAY_TYPE)
+    {
+      if (TYPE_DOMAIN (type) == NULL_TREE)
+	{
+	  if (complain & tf_error)
+	    error_at (loc, "cannot decompose array of unknown bound %qT",
+		      type);
+	  return -1;
+	}
+      tree nelts = array_type_nelts_top (type);
+      if (nelts == error_mark_node)
+	return -1;
+      if (!tree_fits_shwi_p (nelts))
+	{
+	  if (complain & tf_error)
+	    error_at (loc, "cannot decompose variable length array %qT", type);
+	  return -1;
+	}
+      return tree_to_shwi (nelts);
+    }
+  /* 2 GNU extensions.  */
+  else if (TREE_CODE (type) == COMPLEX_TYPE)
+    return 2;
+  else if (TREE_CODE (type) == VECTOR_TYPE)
+    {
+      if (!TYPE_VECTOR_SUBPARTS (type).is_constant (&eltscnt))
+	{
+	  if (complain & tf_error)
+	    error_at (loc, "cannot decompose variable length vector %qT", type);
+	  return -1;
+	}
+      return eltscnt;
+    }
+  else if (tree tsize = get_tuple_size (type))
+    {
+      if (tsize == error_mark_node
+	  || !tree_fits_shwi_p (tsize)
+	  || tree_int_cst_sgn (tsize) < 0)
+	{
+	  if (complain & tf_error)
+	    error_at (loc, "%<std::tuple_size<%T>::value%> is not an integral "
+			   "constant expression", type);
+	  return -1;
+	}
+      return tree_to_shwi (tsize);
+    }
+  else if (TREE_CODE (type) == UNION_TYPE)
+    {
+      if (complain & tf_error)
+	error_at (loc, "cannot decompose union type %qT", type);
+      return -1;
+    }
+  else if (!CLASS_TYPE_P (type))
+    {
+      if (complain & tf_error)
+	error_at (loc, "cannot decompose non-array non-class type %qT", type);
+      return -1;
+    }
+  else if (processing_template_decl && complete_type (type) == error_mark_node)
+    return -1;
+  else if (processing_template_decl && !COMPLETE_TYPE_P (type))
+    {
+      if (complain & tf_error)
+	pedwarn (loc, 0, "structured binding refers to incomplete class type "
+			 "%qT", type);
+      return -1;
+    }
+  else
+    {
+      tree btype = find_decomp_class_base (loc, type, NULL_TREE, complain);
+      if (btype == error_mark_node)
+	return -1;
+      else if (btype == NULL_TREE)
+	{
+	  if (complain & tf_error)
+	    error_at (loc, "cannot decompose class type %qT without non-static "
+			   "data members", type);
+	  return -1;
+	}
+      for (tree field = TYPE_FIELDS (btype); field; field = TREE_CHAIN (field))
+	if (TREE_CODE (field) != FIELD_DECL
+	    || DECL_ARTIFICIAL (field)
+	    || DECL_UNNAMED_BIT_FIELD (field))
+	  continue;
+	else
+	  eltscnt++;
+      return eltscnt;
+    }
+}
+
 /* Finish a decomposition declaration.  DECL is the underlying declaration
    "e", FIRST is the head of a chain of decls for the individual identifiers
    chained through DECL_CHAIN in reverse order and COUNT is the number of
@@ -9902,10 +10083,13 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
   auto_vec<tree, 16> v;
   v.safe_grow (count, true);
   tree d = first;
+  int pack = -1;
   for (unsigned int i = 0; i < count; i++, d = DECL_CHAIN (d))
     {
       v[count - i - 1] = d;
       fit_decomposition_lang_decl (d, decl);
+      if (DECL_PACK_P (d))
+	pack = count - i - 1;
     }
 
   tree type = TREE_TYPE (decl);
@@ -9927,6 +10111,14 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
 
   tree eltype = NULL_TREE;
   unsigned HOST_WIDE_INT eltscnt = 0;
+  /* Structured binding packs when initializer is non-dependent should
+     have their DECL_VALUE_EXPR set to a TREE_VEC.  First two elements
+     of that TREE_VEC are the base and index, what is normally represented
+     as DECL_VALUE_EXPR ARRAY_REF <base, index> where index is the index
+     of the pack first element.  The remaining elements of the TREE_VEC
+     are VAR_DECLs for the pack elements.  */
+  tree packv = NULL_TREE;
+
   if (TREE_CODE (type) == ARRAY_TYPE)
     {
       tree nelts;
@@ -9945,7 +10137,7 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
 	  goto error_out;
 	}
       eltscnt = tree_to_uhwi (nelts);
-      if (count != eltscnt)
+      if (pack != -1 ? count - 1 > eltscnt : count != eltscnt)
 	{
        cnt_mismatch:
 	  auto_diagnostic_group d;
@@ -9966,12 +10158,37 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
       eltype = TREE_TYPE (type);
       for (unsigned int i = 0; i < count; i++)
 	{
+	  if ((unsigned) pack == i)
+	    {
+	      packv = make_tree_vec (eltscnt - count + 3);
+	      for (unsigned HOST_WIDE_INT j = 0; j < eltscnt - count + 1; ++j)
+		{
+		  tree t;
+		  TREE_VEC_ELT (packv, j + 2) = t = copy_node (v[pack]);
+		  set_sb_pack_name (t, j);
+		  maybe_push_decl (t);
+		  TREE_TYPE (t) = eltype;
+		  layout_decl (t, 0);
+		  if (!processing_template_decl)
+		    {
+		      tree a = unshare_expr (dexp);
+		      a = build4 (ARRAY_REF, eltype, a, size_int (j + pack),
+				  NULL_TREE, NULL_TREE);
+		      SET_DECL_VALUE_EXPR (t, a);
+		      DECL_HAS_VALUE_EXPR_P (t) = 1;
+		    }
+		}
+	      continue;
+	    }
 	  TREE_TYPE (v[i]) = eltype;
 	  layout_decl (v[i], 0);
 	  if (processing_template_decl)
 	    continue;
 	  tree t = unshare_expr (dexp);
-	  t = build4 (ARRAY_REF, eltype, t, size_int (i), NULL_TREE, NULL_TREE);
+	  unsigned HOST_WIDE_INT j = i;
+	  if (pack != -1 && (unsigned) pack < i)
+	    j = i + eltscnt - count;
+	  t = build4 (ARRAY_REF, eltype, t, size_int (j), NULL_TREE, NULL_TREE);
 	  SET_DECL_VALUE_EXPR (v[i], t);
 	  DECL_HAS_VALUE_EXPR_P (v[i]) = 1;
 	}
@@ -9980,17 +10197,41 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
   else if (TREE_CODE (type) == COMPLEX_TYPE)
     {
       eltscnt = 2;
-      if (count != eltscnt)
+      if (pack != -1 ? count - 1 > eltscnt : count != eltscnt)
 	goto cnt_mismatch;
       eltype = cp_build_qualified_type (TREE_TYPE (type), TYPE_QUALS (type));
       for (unsigned int i = 0; i < count; i++)
 	{
+	  if ((unsigned) pack == i)
+	    {
+	      packv = make_tree_vec (eltscnt - count + 3);
+	      for (unsigned HOST_WIDE_INT j = 0; j < eltscnt - count + 1; ++j)
+		{
+		  tree t;
+		  TREE_VEC_ELT (packv, j + 2) = t = copy_node (v[pack]);
+		  set_sb_pack_name (t, j);
+		  maybe_push_decl (t);
+		  TREE_TYPE (t) = eltype;
+		  layout_decl (t, 0);
+		  if (!processing_template_decl)
+		    {
+		      tree a = build1 (pack + j ? IMAGPART_EXPR : REALPART_EXPR, eltype,
+				       unshare_expr (dexp));
+		      SET_DECL_VALUE_EXPR (t, a);
+		      DECL_HAS_VALUE_EXPR_P (t) = 1;
+		    }
+		}
+	      continue;
+	    }
 	  TREE_TYPE (v[i]) = eltype;
 	  layout_decl (v[i], 0);
 	  if (processing_template_decl)
 	    continue;
 	  tree t = unshare_expr (dexp);
-	  t = build1 (i ? IMAGPART_EXPR : REALPART_EXPR, eltype, t);
+	  unsigned HOST_WIDE_INT j = i;
+	  if (pack != -1 && (unsigned) pack < i)
+	    j = i + eltscnt - count;
+	  t = build1 (j ? IMAGPART_EXPR : REALPART_EXPR, eltype, t);
 	  SET_DECL_VALUE_EXPR (v[i], t);
 	  DECL_HAS_VALUE_EXPR_P (v[i]) = 1;
 	}
@@ -10002,19 +10243,47 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
 	  error_at (loc, "cannot decompose variable length vector %qT", type);
 	  goto error_out;
 	}
-      if (count != eltscnt)
+      if (pack != -1 ? count - 1 > eltscnt : count != eltscnt)
 	goto cnt_mismatch;
       eltype = cp_build_qualified_type (TREE_TYPE (type), TYPE_QUALS (type));
       for (unsigned int i = 0; i < count; i++)
 	{
+	  if ((unsigned) pack == i)
+	    {
+	      packv = make_tree_vec (eltscnt - count + 3);
+	      for (unsigned HOST_WIDE_INT j = 0; j < eltscnt - count + 1; ++j)
+		{
+		  tree t;
+		  TREE_VEC_ELT (packv, j + 2) = t = copy_node (v[pack]);
+		  set_sb_pack_name (t, j);
+		  maybe_push_decl (t);
+		  TREE_TYPE (t) = eltype;
+		  layout_decl (t, 0);
+		  if (!processing_template_decl)
+		    {
+		      tree a = unshare_expr (dexp);
+		      location_t loc = DECL_SOURCE_LOCATION (t);
+		      tree s = size_int (j + pack);
+		      convert_vector_to_array_for_subscript (loc, &a, s);
+		      a = build4 (ARRAY_REF, eltype, a, s,
+				  NULL_TREE, NULL_TREE);
+		      SET_DECL_VALUE_EXPR (t, a);
+		      DECL_HAS_VALUE_EXPR_P (t) = 1;
+		    }
+		}
+	      continue;
+	    }
 	  TREE_TYPE (v[i]) = eltype;
 	  layout_decl (v[i], 0);
 	  if (processing_template_decl)
 	    continue;
 	  tree t = unshare_expr (dexp);
+	  unsigned HOST_WIDE_INT j = i;
+	  if (pack != -1 && (unsigned) pack < i)
+	    j = i + eltscnt - count;
 	  convert_vector_to_array_for_subscript (DECL_SOURCE_LOCATION (v[i]),
-						 &t, size_int (i));
-	  t = build4 (ARRAY_REF, eltype, t, size_int (i), NULL_TREE, NULL_TREE);
+						 &t, size_int (j));
+	  t = build4 (ARRAY_REF, eltype, t, size_int (j), NULL_TREE, NULL_TREE);
 	  SET_DECL_VALUE_EXPR (v[i], t);
 	  DECL_HAS_VALUE_EXPR_P (v[i]) = 1;
 	}
@@ -10038,11 +10307,11 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
 	  goto error_out;
 	}
       eltscnt = tree_to_uhwi (tsize);
-      if (count != eltscnt)
+      if (pack != -1 ? count - 1 > eltscnt : count != eltscnt)
 	goto cnt_mismatch;
-      if (test_p)
+      if (test_p && eltscnt)
 	return true;
-      if (!processing_template_decl && DECL_DECOMP_BASE (decl))
+      if (!processing_template_decl && DECL_DECOMP_BASE (decl) && eltscnt)
 	{
 	  /* For structured bindings used in conditions we need to evaluate
 	     the conversion of decl (aka e in the standard) to bool or
@@ -10072,16 +10341,70 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
 	  location_t sloc = input_location;
 	  location_t dloc = DECL_SOURCE_LOCATION (v[i]);
 
+	  if ((unsigned) pack == i)
+	    {
+	      packv = make_tree_vec (eltscnt - count + 3);
+	      for (unsigned HOST_WIDE_INT j = 0; j < eltscnt - count + 1; ++j)
+		{
+		  tree t;
+		  TREE_VEC_ELT (packv, j + 2) = t = copy_node (v[pack]);
+		  set_sb_pack_name (t, j);
+		  input_location = dloc;
+		  tree init = get_tuple_decomp_init (decl, j + pack);
+		  tree eltype = (init == error_mark_node ? error_mark_node
+				 : get_tuple_element_type (type, j + pack));
+		  input_location = sloc;
+
+		  if (VOID_TYPE_P (eltype))
+		    {
+		      error ("%<std::tuple_element<%wu, %T>::type%> is "
+			     "%<void%>", j + pack, type);
+		      eltype = error_mark_node;
+		    }
+		  if (init == error_mark_node || eltype == error_mark_node)
+		    {
+		      inform (dloc, "in initialization of structured binding "
+			      "pack %qD", v[pack]);
+		      goto error_out;
+		    }
+		  maybe_push_decl (t);
+		  /* Save the decltype away before reference collapse.  */
+		  hash_map_safe_put<hm_ggc> (decomp_type_table, t, eltype);
+		  eltype = cp_build_reference_type (eltype, !lvalue_p (init));
+		  TREE_TYPE (t) = eltype;
+		  layout_decl (t, 0);
+		  DECL_HAS_VALUE_EXPR_P (t) = 0;
+		  if (!processing_template_decl)
+		    {
+		      copy_linkage (t, decl);
+		      tree name = DECL_NAME (t);
+		      if (TREE_STATIC (decl))
+			DECL_NAME (t) = DECL_NAME (v[pack]);
+		      cp_finish_decl (t, init, /*constexpr*/false,
+				      /*asm*/NULL_TREE, LOOKUP_NORMAL);
+		      if (TREE_STATIC (decl))
+			{
+			  DECL_ASSEMBLER_NAME (t);
+			  DECL_NAME (t) = name;
+			}
+		    }
+		}
+	      continue;
+	    }
+
+	  unsigned HOST_WIDE_INT j = i;
+	  if (pack != -1 && (unsigned) pack < i)
+	    j = i + eltscnt - count;
 	  input_location = dloc;
-	  tree init = get_tuple_decomp_init (decl, i);
+	  tree init = get_tuple_decomp_init (decl, j);
 	  tree eltype = (init == error_mark_node ? error_mark_node
-			 : get_tuple_element_type (type, i));
+			 : get_tuple_element_type (type, j));
 	  input_location = sloc;
 
 	  if (VOID_TYPE_P (eltype))
 	    {
-	      error ("%<std::tuple_element<%u, %T>::type%> is %<void%>",
-		     i, type);
+	      error ("%<std::tuple_element<%wu, %T>::type%> is %<void%>",
+		     j, type);
 	      eltype = error_mark_node;
 	    }
 	  if (init == error_mark_node || eltype == error_mark_node)
@@ -10130,11 +10453,18 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
 	     type);
   else
     {
-      tree btype = find_decomp_class_base (loc, type, NULL_TREE);
+      tree btype = find_decomp_class_base (loc, type, NULL_TREE,
+					   tf_warning_or_error);
       if (btype == error_mark_node)
 	goto error_out;
       else if (btype == NULL_TREE)
 	{
+	  if (pack == 0 && count == 1)
+	    {
+	      eltscnt = 0;
+	      packv = make_tree_vec (2);
+	      goto done;
+	    }
 	  error_at (loc, "cannot decompose class type %qT without non-static "
 			 "data members", type);
 	  goto error_out;
@@ -10146,7 +10476,7 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
 	  continue;
 	else
 	  eltscnt++;
-      if (count != eltscnt)
+      if (pack != -1 ? count - 1 > eltscnt : count != eltscnt)
 	goto cnt_mismatch;
       tree t = dexp;
       if (type != btype)
@@ -10155,6 +10485,7 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
 			       /*nonnull*/false, tf_warning_or_error);
 	  type = btype;
 	}
+      unsigned HOST_WIDE_INT j = 0;
       unsigned int i = 0;
       for (tree field = TYPE_FIELDS (btype); field; field = TREE_CHAIN (field))
 	if (TREE_CODE (field) != FIELD_DECL
@@ -10167,6 +10498,32 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
 						     NULL_TREE);
 	    if (REFERENCE_REF_P (tt))
 	      tt = TREE_OPERAND (tt, 0);
+	    if (pack != -1 && j >= (unsigned) pack)
+	      {
+		if (j == (unsigned) pack)
+		  {
+		    packv = make_tree_vec (eltscnt - count + 3);
+		    i++;
+		  }
+		if (j < (unsigned) pack + eltscnt - (count - 1))
+		  {
+		    tree t;
+		    TREE_VEC_ELT (packv, j + 3 - i) = t = copy_node (v[pack]);
+		    set_sb_pack_name (t, j + 1 - i);
+		    maybe_push_decl (t);
+		    TREE_TYPE (t) = TREE_TYPE (tt);
+		    layout_decl (t, 0);
+		    if (!processing_template_decl)
+		      {
+			SET_DECL_VALUE_EXPR (t, tt);
+			DECL_HAS_VALUE_EXPR_P (t) = 1;
+		      }
+		    else
+		      DECL_HAS_VALUE_EXPR_P (t) = 0;
+		    j++;
+		    continue;
+		  }
+	      }
 	    TREE_TYPE (v[i]) = TREE_TYPE (tt);
 	    layout_decl (v[i], 0);
 	    if (!processing_template_decl)
@@ -10175,7 +10532,26 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
 		DECL_HAS_VALUE_EXPR_P (v[i]) = 1;
 	      }
 	    i++;
+	    j++;
 	  }
+      if (pack != -1 && j == (unsigned) pack)
+	{
+	  gcc_checking_assert (eltscnt == count - 1);
+	  packv = make_tree_vec (2);
+	}
+    }
+ done:
+  if (packv)
+    {
+      gcc_checking_assert (pack != -1);
+      TREE_VEC_ELT (packv, 0) = decl;
+      TREE_VEC_ELT (packv, 1) = size_int (pack);
+      SET_DECL_VALUE_EXPR (v[pack], packv);
+      DECL_HAS_VALUE_EXPR_P (v[pack]) = 1;
+      DECL_IGNORED_P (v[pack]) = 1;
+      if (!processing_template_decl)
+	for (unsigned int i = 0; i < TREE_VEC_LENGTH (packv) - 2U; ++i)
+	  pushdecl (TREE_VEC_ELT (packv, 2 + i));
     }
   if (processing_template_decl)
     {
@@ -11260,12 +11636,12 @@ grokfndecl (tree ctype,
 	   t && t != void_list_node; t = TREE_CHAIN (t))
 	if (TREE_PURPOSE (t))
 	  {
-	    diagnostic_t diag_kind = DK_PERMERROR;
+	    enum diagnostics::kind diag_kind = diagnostics::kind::permerror;
 	    /* For templates, mark the default argument as erroneous and give a
 	       hard error.  */
 	    if (processing_template_decl)
 	      {
-		diag_kind = DK_ERROR;
+		diag_kind = diagnostics::kind::error;
 		TREE_PURPOSE (t) = error_mark_node;
 	      }
 	    if (!has_errored)
@@ -11273,7 +11649,7 @@ grokfndecl (tree ctype,
 		has_errored = true;
 		emit_diagnostic (diag_kind,
 				 DECL_SOURCE_LOCATION (decl),
-				 /*diagnostic_option_id=*/0,
+				 /*diagnostics::option_id=*/0,
 				 "friend declaration of %qD specifies default "
 				 "arguments and isn%'t a definition", decl);
 	      }
@@ -13619,9 +13995,10 @@ grokdeclarator (const cp_declarator *declarator,
       if (typedef_p)
 	error_at (declspecs->locations[ds_typedef],
 		  "structured binding declaration cannot be %qs", "typedef");
-      if (constexpr_p && !concept_p)
-	error_at (declspecs->locations[ds_constexpr], "structured "
-		  "binding declaration cannot be %qs", "constexpr");
+      if (constexpr_p && !concept_p && cxx_dialect < cxx26)
+	pedwarn (declspecs->locations[ds_constexpr], OPT_Wc__26_extensions,
+		 "structured binding declaration can be %qs only with "
+		 "%<-std=c++2c%> or %<-std=gnu++2c%>", "constexpr");
       if (consteval_p)
 	error_at (declspecs->locations[ds_consteval], "structured "
 		  "binding declaration cannot be %qs", "consteval");
@@ -13632,8 +14009,11 @@ grokdeclarator (const cp_declarator *declarator,
 		 declspecs->gnu_thread_keyword_p
 		 ? "__thread" : "thread_local");
       if (concept_p)
-	error_at (declspecs->locations[ds_concept],
-		  "structured binding declaration cannot be %qs", "concept");
+	{
+	  error_at (declspecs->locations[ds_concept],
+		    "structured binding declaration cannot be %qs", "concept");
+	  constexpr_p = 0;
+	}
       /* [dcl.struct.bind] "A cv that includes volatile is deprecated."  */
       if (type_quals & TYPE_QUAL_VOLATILE)
 	warning_at (declspecs->locations[ds_volatile], OPT_Wvolatile,
@@ -13688,7 +14068,6 @@ grokdeclarator (const cp_declarator *declarator,
 		 "%<auto%> type %qT", type);
       inlinep = 0;
       typedef_p = 0;
-      constexpr_p = 0;
       consteval_p = 0;
       concept_p = 0;
       if (storage_class != sc_static)
@@ -17266,7 +17645,7 @@ xref_tag (enum tag_types tag_code, tree name,
       if (IDENTIFIER_LAMBDA_P (name))
 	/* Mark it as a lambda type right now.  Our caller will
 	   correct the value.  */
-	CLASSTYPE_LAMBDA_EXPR (t) = error_mark_node;
+	SET_CLASSTYPE_LAMBDA_EXPR (t, error_mark_node);
       t = pushtag (name, t, how);
     }
   else
@@ -17379,7 +17758,8 @@ xref_basetypes (tree ref, tree base_list)
 	 compatibility.  */
       if (processing_template_decl
 	  && CLASS_TYPE_P (basetype) && TYPE_BEING_DEFINED (basetype))
-	cxx_incomplete_type_diagnostic (NULL_TREE, basetype, DK_PEDWARN);
+	cxx_incomplete_type_diagnostic (NULL_TREE, basetype,
+					diagnostics::kind::pedwarn);
       if (!dependent_type_p (basetype)
 	  && !complete_type_or_else (basetype, NULL))
 	/* An incomplete type.  Remove it from the list.  */
@@ -18412,6 +18792,8 @@ build_clobber_this (clobber_kind kind)
     }
 
   tree exprstmt = build2 (MODIFY_EXPR, void_type_node, thisref, clobber);
+  if (kind == CLOBBER_OBJECT_BEGIN)
+    TREE_SET_CODE (exprstmt, INIT_EXPR);
   if (vbases)
     exprstmt = build_if_in_charge (exprstmt);
 
@@ -19473,14 +19855,14 @@ finish_function (bool inline_p)
 	    && !DECL_READ_P (decl)
 	    && DECL_NAME (decl)
 	    && !DECL_ARTIFICIAL (decl)
-	    && !warning_suppressed_p (decl,OPT_Wunused_but_set_parameter)
+	    && !warning_suppressed_p (decl, OPT_Wunused_but_set_parameter_)
 	    && !DECL_IN_SYSTEM_HEADER (decl)
 	    && TREE_TYPE (decl) != error_mark_node
 	    && !TYPE_REF_P (TREE_TYPE (decl))
 	    && (!CLASS_TYPE_P (TREE_TYPE (decl))
 	        || !TYPE_HAS_NONTRIVIAL_DESTRUCTOR (TREE_TYPE (decl))))
 	  warning_at (DECL_SOURCE_LOCATION (decl),
-		      OPT_Wunused_but_set_parameter,
+		      OPT_Wunused_but_set_parameter_,
 		      "parameter %qD set but not used", decl);
       unused_but_set_errorcount = errorcount;
     }

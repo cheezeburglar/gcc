@@ -1128,11 +1128,16 @@ handle_hardbool_attribute (tree *node, tree name, tree args,
     }
 
   tree orig = *node;
-  *node = build_duplicate_type (orig);
+  /* Drop qualifiers from the base type.  Keep attributes, so that, in the odd
+     chance attributes are applicable and relevant to the base type, if they
+     are specified first, or through a typedef, they wouldn't be dropped on the
+     floor here.  */
+  tree unqual = build_qualified_type (orig, TYPE_UNQUALIFIED);
+  *node = build_distinct_type_copy (unqual);
 
   TREE_SET_CODE (*node, ENUMERAL_TYPE);
-  ENUM_UNDERLYING_TYPE (*node) = orig;
-  TYPE_CANONICAL (*node) = TYPE_CANONICAL (orig);
+  ENUM_UNDERLYING_TYPE (*node) = unqual;
+  SET_TYPE_STRUCTURAL_EQUALITY (*node);
 
   tree false_value;
   if (args)
@@ -1191,7 +1196,13 @@ handle_hardbool_attribute (tree *node, tree name, tree args,
 
   gcc_checking_assert (!TYPE_CACHED_VALUES_P (*node));
   TYPE_VALUES (*node) = values;
-  TYPE_NAME (*node) = orig;
+  TYPE_NAME (*node) = unqual;
+
+  if (TYPE_QUALS (orig) != TYPE_QUALS (*node))
+    {
+      *node = build_qualified_type (*node, TYPE_QUALS (orig));
+      TYPE_NAME (*node) = orig;
+    }
 
   return NULL_TREE;
 }
@@ -4120,10 +4131,11 @@ handle_argspec_attribute (tree *, tree, tree args, int, bool *)
 {
   /* Verify the attribute has one or two arguments and their kind.  */
   gcc_assert (args && TREE_CODE (TREE_VALUE (args)) == STRING_CST);
-  for (tree next = TREE_CHAIN (args); next; next = TREE_CHAIN (next))
+  if (TREE_CHAIN (args))
     {
-      tree val = TREE_VALUE (next);
-      gcc_assert (DECL_P (val) || EXPR_P (val));
+      tree val = TREE_VALUE (TREE_CHAIN (args));
+      gcc_assert (!TREE_CHAIN (TREE_CHAIN (args)));
+      gcc_assert (TYPE_P (val));
     }
   return NULL_TREE;
 }
@@ -5736,6 +5748,71 @@ handle_access_attribute (tree node[3], tree name, tree args, int flags,
   return NULL_TREE;
 }
 
+
+/* This function builds a string which is concatenated to SPEC and returns
+   list of variably bounds corresponding to an array/VLA parameter with
+   type TYPE.  The string consists of one dollar symbol for each specified
+   variable bound, one asterisk for each unspecified variable bound,
+   a space for an array of unknown size (only possibly for the outermost),
+   and a zero for a zero-sized array.
+
+   The chainof variable bounds starts with the most significant bound.
+   For example, the TYPE T[2][m][3][n] will produce "$$" and (m, (n, nil)).  */
+
+static tree
+build_arg_spec (tree type, std::string *spec)
+{
+  while (POINTER_TYPE_P (type))
+    type = TREE_TYPE (type);
+
+  if (TREE_CODE (type) != ARRAY_TYPE)
+    return NULL_TREE;
+
+  tree list = build_arg_spec (TREE_TYPE (type), spec);
+
+  if (!COMPLETE_TYPE_P (type))
+    {
+      (*spec) += ' ';
+      return list;
+    }
+
+  tree mval = TYPE_MAX_VALUE (TYPE_DOMAIN (type));
+
+  if (!mval)
+    {
+     (*spec) += '0';
+     return list;
+    }
+
+  if (TREE_CODE (mval) == COMPOUND_EXPR
+      && integer_zerop (TREE_OPERAND (mval, 0))
+      && integer_zerop (TREE_OPERAND (mval, 1)))
+    {
+      (*spec) += '*';
+      return list;
+    }
+
+  if (TREE_CODE (mval) == INTEGER_CST)
+    return list;
+
+  /* A variable bound.  */
+  (*spec) += '$';
+
+  mval = array_type_nelts_top (type);
+
+  /* Remove NOP_EXPR and SAVE_EXPR to uncover possible PARM_DECLS.  */
+  if (TREE_CODE (mval) == NOP_EXPR)
+    mval = TREE_OPERAND (mval, 0);
+   if (TREE_CODE (mval) == SAVE_EXPR)
+    {
+      mval = TREE_OPERAND (mval, 0);
+      if (TREE_CODE (mval) == NOP_EXPR)
+	mval = TREE_OPERAND (mval, 0);
+    }
+
+  return tree_cons (NULL_TREE, mval, list);
+}
+
 /* Extract attribute "arg spec" from each FNDECL argument that has it,
    build a single attribute access corresponding to all the arguments,
    and return the result.  SKIP_VOIDPTR set to ignore void* parameters
@@ -5812,15 +5889,16 @@ build_attr_access_from_parms (tree parms, bool skip_voidptr)
       argspec = TREE_VALUE (argspec);
 
       /* The attribute arg spec string.  */
-      tree str = TREE_VALUE (argspec);
-      const char *s = TREE_STRING_POINTER (str);
+      const char *s = TREE_STRING_POINTER (TREE_VALUE (argspec));
+      bool static_p = s && (0 == strcmp("static", s));
 
       /* Collect the list of nonnull arguments which use "[static ..]".  */
-      if (s != NULL && s[0] == '[' && s[1] == 's')
+      if (static_p)
 	nnlist = tree_cons (NULL_TREE, build_int_cst (integer_type_node,
 						      argpos + 1), nnlist);
 
-      /* Create the attribute access string from the arg spec string,
+      tree argvbs;
+      /* Create the attribute access string from the arg spec data,
 	 optionally followed by position of the VLA bound argument if
 	 it is one.  */
       {
@@ -5831,21 +5909,52 @@ build_attr_access_from_parms (tree parms, bool skip_voidptr)
 	    specend = 1;
 	  }
 
-	/* Format the access string in place.  */
-	int len = snprintf (NULL, 0, "%c%u%s",
-			    attr_access::mode_chars[access_deferred],
-			    argpos, s);
-	spec.resize (specend + len + 1);
-	sprintf (&spec[specend], "%c%u%s",
-		 attr_access::mode_chars[access_deferred],
-		 argpos, s);
+	spec += attr_access::mode_chars[access_deferred];
+	spec += std::to_string (argpos);
+	spec += '[';
+	tree type = TREE_VALUE (TREE_CHAIN (argspec));
+	argvbs = build_arg_spec (type, &spec);
+
+	/* Postprocess the string to bring it in the format expected
+	   by the code handling the access attribute.  First, we
+	   add 's' if the array was declared as [static ...].  */
+	if (static_p)
+	  {
+	    size_t send = spec.length();
+
+	    if (spec[send - 1] == '[')
+	      {
+		spec += 's';
+	      }
+	    else
+	      {
+		/* If there is a symbol, we need to swap the order.  */
+		spec += spec[send - 1];
+		spec[send - 1] = 's';
+	      }
+	  }
+
+	/* If the outermost bound is an integer constant, we need to write
+	   the size  if it is constant.  */
+	if (type && TYPE_DOMAIN (type))
+	  {
+	    tree mval = TYPE_MAX_VALUE (TYPE_DOMAIN (type));
+	    if (mval && TREE_CODE (mval) == INTEGER_CST)
+	      {
+		char buf[40];
+		unsigned HOST_WIDE_INT n = tree_to_uhwi (mval) + 1;
+		sprintf (buf, HOST_WIDE_INT_PRINT_UNSIGNED, n);
+		spec += buf;
+	      }
+	  }
+	spec += ']';
+
 	/* Trim the trailing NUL.  */
-	spec.resize (specend + len);
+	spec.resize (spec.length ());
       }
 
       /* The (optional) list of expressions denoting the VLA bounds
 	 N in ARGTYPE <arg>[Ni]...[Nj]...[Nk].  */
-      tree argvbs = TREE_CHAIN (argspec);
       if (argvbs)
 	{
 	  spec += ',';
@@ -5858,8 +5967,7 @@ build_attr_access_from_parms (tree parms, bool skip_voidptr)
 	     order.  */
 	  vblist = tree_cons (NULL_TREE, argvbs, vblist);
 
-	  unsigned nelts = 0;
-	  for (tree vb = argvbs; vb; vb = TREE_CHAIN (vb), ++nelts)
+	  for (tree vb = argvbs; vb; vb = TREE_CHAIN (vb))
 	    {
 	      tree bound = TREE_VALUE (vb);
 	      if (const unsigned *psizpos = arg2pos.get (bound))
@@ -6141,7 +6249,9 @@ handle_target_clones_attribute (tree *node, tree name, tree ARG_UNUSED (args),
 	    }
 	}
 
-      if (get_target_clone_attr_len (args) == -1)
+      auto_vec<string_slice> versions = get_clone_attr_versions (args, NULL);
+
+      if (versions.length () == 1)
 	{
 	  warning (OPT_Wattributes,
 		   "single %<target_clones%> attribute is ignored");

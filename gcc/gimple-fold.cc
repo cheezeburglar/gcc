@@ -6762,10 +6762,10 @@ fold_stmt (gimple_stmt_iterator *gsi, tree (*valueize) (tree), bitmap dce_bitmap
    which can produce *&x = 0.  */
 
 bool
-fold_stmt_inplace (gimple_stmt_iterator *gsi)
+fold_stmt_inplace (gimple_stmt_iterator *gsi, tree (*valueize) (tree))
 {
   gimple *stmt = gsi_stmt (*gsi);
-  bool changed = fold_stmt_1 (gsi, true, no_follow_ssa_edges);
+  bool changed = fold_stmt_1 (gsi, true, valueize);
   gcc_assert (gsi_stmt (*gsi) == stmt);
   return changed;
 }
@@ -9916,10 +9916,17 @@ fold_nonarray_ctor_reference (tree type, tree ctor,
 	    {
 	      if (BYTES_BIG_ENDIAN != WORDS_BIG_ENDIAN)
 		return NULL_TREE;
-	      const unsigned int encoding_size
-		= GET_MODE_BITSIZE (SCALAR_INT_TYPE_MODE (TREE_TYPE (cfield)));
 	      if (BYTES_BIG_ENDIAN)
-		inner_offset += encoding_size - wi::to_offset (field_size);
+		{
+		  tree ctype = TREE_TYPE (cfield);
+		  unsigned int encoding_size;
+		  if (TYPE_MODE (ctype) != BLKmode)
+		    encoding_size
+		      = GET_MODE_BITSIZE (SCALAR_INT_TYPE_MODE (ctype));
+		  else
+		    encoding_size = TREE_INT_CST_LOW (TYPE_SIZE (ctype));
+		  inner_offset += encoding_size - wi::to_offset (field_size);
+		}
 	    }
 
 	  return fold_ctor_reference (type, cval,

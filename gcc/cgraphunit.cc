@@ -63,7 +63,7 @@ along with GCC; see the file COPYING3.  If not see
       final assembler is generated.  This is done in the following way. Note
       that with link time optimization the process is split into three
       stages (compile time, linktime analysis and parallel linktime as
-      indicated bellow).
+      indicated below).
 
       Compile time:
 
@@ -2400,9 +2400,10 @@ symbol_table::compile (void)
     if (node->alias
 	&& lookup_attribute ("weakref", DECL_ATTRIBUTES (node->decl)))
       {
-	IDENTIFIER_TRANSPARENT_ALIAS
-	   (DECL_ASSEMBLER_NAME (node->decl)) = 1;
-	TREE_CHAIN (DECL_ASSEMBLER_NAME (node->decl))
+	tree id = DECL_ASSEMBLER_NAME (node->decl);
+	gcc_assert (!IDENTIFIER_INTERNAL_P (id));
+	IDENTIFIER_TRANSPARENT_ALIAS (id) = 1;
+	TREE_CHAIN (id)
 	   = (node->alias_target ? node->alias_target
 	      : DECL_ASSEMBLER_NAME (node->get_alias_target ()->decl));
       }

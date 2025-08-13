@@ -545,6 +545,10 @@ Warray-bounds=
 Common Joined RejectNegative UInteger Var(warn_array_bounds) Warning IntegerRange(0, 2)
 Warn if an array is accessed out of bounds.
 
+Wauto-profile
+Common Var(warn_auto_profile) Warning
+Warn about problems with auto-profile data.
+
 Wuse-after-free
 Common Var(warn_use_after_free) Warning
 Warn for uses of pointers to deallocated storage.
@@ -847,11 +851,17 @@ Common Var(warn_unused) Init(0) Warning
 Enable all -Wunused- warnings.
 
 Wunused-but-set-parameter
-Common Var(warn_unused_but_set_parameter) Warning EnabledBy(Wunused && Wextra)
+Common Alias(Wunused-but-set-parameter=,3,0) Warning
+
+Wunused-but-set-parameter=
+Common Var(warn_unused_but_set_parameter) RejectNegative Joined UInteger Warning IntegerRange(0, 3) EnabledBy(Wunused && Wextra)
 Warn when a function parameter is only set, otherwise unused.
 
 Wunused-but-set-variable
-Common Var(warn_unused_but_set_variable) Warning EnabledBy(Wunused)
+Common Alias(Wunused-but-set-variable=,3,0) Warning
+
+Wunused-but-set-variable=
+Common Var(warn_unused_but_set_variable) RejectNegative Joined UInteger Warning IntegerRange(0, 3) EnabledBy(Wunused)
 Warn when a variable is only set, otherwise unused.
 
 Wunused-function
@@ -1057,6 +1067,8 @@ Driver Undocumented
 ;
 ; 21: Fix noexcept lambda capture pruning.
 ;     Fix C++20 layout of base with all explicitly defaulted constructors.
+;     Fix mangling of class and array objects with implicitly
+;     zero-initialized non-trailing subojects.
 ;     Default in G++ 16.
 ;
 ; Additional positive integers will be assigned as new versions of
@@ -1437,7 +1449,7 @@ Driver Common Joined RejectNegative Var(flag_diagnostics_show_color) Enum(diagno
 
 ; Required for these enum values.
 SourceInclude
-diagnostic-color.h
+diagnostics/color.h
 
 Enum
 Name(diagnostic_color_rule) Type(int)
@@ -1461,7 +1473,7 @@ Driver Common Joined RejectNegative Var(flag_diagnostics_show_urls) Enum(diagnos
 
 ; Required for these enum values.
 SourceInclude
-diagnostic-url.h
+diagnostics/url.h
 
 Enum
 Name(diagnostic_url_rule) Type(int)
@@ -1607,6 +1619,18 @@ Enum(diagnostic_text_art_charset) String(emoji) Value(DIAGNOSTICS_TEXT_ART_CHARS
 fdiagnostics-minimum-margin-width=
 Common Joined UInteger Var(diagnostics_minimum_margin_width) Init(6)
 Set minimum width of left margin of source code when showing source.
+
+fdiagnostics-show-nesting
+Common Var(flag_diagnostics_show_nesting) Init(1)
+Use indentation to show nesting of diagnostics in text output.
+
+fdiagnostics-show-nesting-locations
+Common Var(flag_diagnostics_show_nesting_locations) Init(1)
+Show location information when showing nested diagnostics.
+
+fdiagnostics-show-nesting-levels
+Common Var(flag_diagnostics_show_nesting_levels) Init(0)
+Show nesting levels as numbers when showing nested diagnostics.
 
 fdisable-
 Common Joined RejectNegative Var(common_deferred_options) Defer

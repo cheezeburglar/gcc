@@ -32,6 +32,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "backend.h"
 #include "target.h"
+#include "memmodel.h"
+#include "tm_p.h"
 #include "tree.h"
 #include "gimple.h"
 #include "tree-pass.h"
@@ -321,9 +323,9 @@ unsigned const char omp_clause_num_ops[] =
   1, /* OMP_CLAUSE_IS_DEVICE_PTR  */
   1, /* OMP_CLAUSE_INCLUSIVE  */
   1, /* OMP_CLAUSE_EXCLUSIVE  */
-  2, /* OMP_CLAUSE_FROM  */
-  2, /* OMP_CLAUSE_TO  */
-  2, /* OMP_CLAUSE_MAP  */
+  3, /* OMP_CLAUSE_FROM  */
+  3, /* OMP_CLAUSE_TO  */
+  3, /* OMP_CLAUSE_MAP (update walk_tree_1 if this is changed)  */
   1, /* OMP_CLAUSE_HAS_DEVICE_ADDR  */
   1, /* OMP_CLAUSE_DOACROSS  */
   3, /* OMP_CLAUSE__MAPPER_BINDING_  */
@@ -11767,6 +11769,9 @@ walk_tree_1 (tree *tp, walk_tree_fn func, void *data,
     case OMP_CLAUSE:
       {
 	int len = omp_clause_num_ops[OMP_CLAUSE_CODE (t)];
+	/* Do not walk the iterator operand of OpenMP MAP clauses.  */
+	if (OMP_CLAUSE_HAS_ITERATORS (t))
+	  len--;
 	for (int i = 0; i < len; i++)
 	  WALK_SUBTREE (OMP_CLAUSE_OPERAND (t, i));
 	WALK_SUBTREE_TAIL (OMP_CLAUSE_CHAIN (t));
@@ -15416,6 +15421,65 @@ get_target_clone_attr_len (tree arglist)
   if (argnum <= 1)
     return -1;
   return str_len_sum;
+}
+
+/* Returns an auto_vec of string_slices containing the version strings from
+   ARGLIST.  DEFAULT_COUNT is incremented for each default version found.  */
+
+auto_vec<string_slice>
+get_clone_attr_versions (const tree arglist, int *default_count)
+{
+  gcc_assert (TREE_CODE (arglist) == TREE_LIST);
+  auto_vec<string_slice> versions;
+
+  static const char separator_str[] = {TARGET_CLONES_ATTR_SEPARATOR, 0};
+  string_slice separators = string_slice (separator_str);
+
+  for (tree arg = arglist; arg; arg = TREE_CHAIN (arg))
+    {
+      string_slice str = string_slice (TREE_STRING_POINTER (TREE_VALUE (arg)));
+      while (str.is_valid ())
+	{
+	  string_slice attr = string_slice::tokenize (&str, separators);
+	  attr = attr.strip ();
+
+	  if (attr == "default" && default_count)
+	    (*default_count)++;
+	  versions.safe_push (attr);
+	}
+    }
+  return versions;
+}
+
+/* Returns an auto_vec of string_slices containing the version strings from
+   the target_clone attribute from DECL.  DEFAULT_COUNT is incremented for each
+   default version found.  */
+auto_vec<string_slice>
+get_clone_versions (const tree decl, int *default_count)
+{
+  tree attr = lookup_attribute ("target_clones", DECL_ATTRIBUTES (decl));
+  if (!attr)
+    return auto_vec<string_slice> ();
+  tree arglist = TREE_VALUE (attr);
+  return get_clone_attr_versions (arglist, default_count);
+}
+
+/* If DECL has a target_version attribute, returns a string_slice containing the
+   attribute value.  Otherwise, returns string_slice::invalid.
+   Only works for target_version due to target attributes allowing multiple
+   string arguments to specify one target.  */
+string_slice
+get_target_version (const tree decl)
+{
+  gcc_assert (!TARGET_HAS_FMV_TARGET_ATTRIBUTE);
+
+  tree attr = lookup_attribute ("target_version", DECL_ATTRIBUTES (decl));
+
+  if (!attr)
+    return string_slice::invalid ();
+
+  return string_slice (TREE_STRING_POINTER (TREE_VALUE (TREE_VALUE (attr))))
+	   .strip ();
 }
 
 void

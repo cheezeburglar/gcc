@@ -1448,9 +1448,10 @@ package body Sem_Attr is
                null;
 
             --  Attribute 'Result is allowed to appear in aspect
-            --  Relaxed_Initialization (SPARK RM 6.10).
+            --  Relaxed_Initialization (SPARK RM 6.10) and Potentially_Invalid.
 
-            elsif Prag_Nam = Name_Relaxed_Initialization
+            elsif (Prag_Nam = Name_Relaxed_Initialization
+                     or else Prag_Nam = Name_Potentially_Invalid)
               and then Aname = Name_Result
             then
                null;
@@ -5091,7 +5092,7 @@ package body Sem_Attr is
          --  early transformation also avoids the generation of a useless loop
          --  entry constant.
 
-         if Present (Encl_Prag) and then Is_Ignored (Encl_Prag) then
+         if Present (Encl_Prag) and then Is_Ignored_In_Codegen (Encl_Prag) then
             Rewrite (N, Relocate_Node (P));
             Preanalyze_And_Resolve (N);
 
@@ -7766,7 +7767,6 @@ package body Sem_Attr is
       when Bad_Attribute =>
          Set_Analyzed (N);
          Set_Etype (N, Any_Type);
-         return;
    end Analyze_Attribute;
 
    --------------------
@@ -9359,6 +9359,20 @@ package body Sem_Attr is
       when Attribute_First =>
          Set_Bounds;
 
+         --  In GNATprove mode we only fold array attributes when prefix is
+         --  static (because that's required by the Ada rules) or at least can
+         --  be evaluated without checks (because GNATprove would miss them).
+
+         if GNATprove_Mode
+            and then
+              not (Static
+                   or else (Is_Entity_Name (P) and then Is_Type (Entity (P)))
+                   or else Statically_Names_Object (P)
+                   or else Ekind (P_Type) = E_String_Literal_Subtype)
+         then
+            return;
+         end if;
+
          if Compile_Time_Known_Value (Lo_Bound) then
             if Is_Real_Type (P_Type) then
                Fold_Ureal (N, Expr_Value_R (Lo_Bound), Static);
@@ -9572,6 +9586,20 @@ package body Sem_Attr is
       when Attribute_Last =>
          Set_Bounds;
 
+         --  In GNATprove mode we only fold array attributes when prefix is
+         --  static (because that's required by the Ada rules) or at least can
+         --  be evaluated without checks (because GNATprove would miss them).
+
+         if GNATprove_Mode
+            and then
+              not (Static
+                   or else (Is_Entity_Name (P) and then Is_Type (Entity (P)))
+                   or else Statically_Names_Object (P)
+                   or else Ekind (P_Type) = E_String_Literal_Subtype)
+         then
+            return;
+         end if;
+
          if Compile_Time_Known_Value (Hi_Bound) then
             if Is_Real_Type (P_Type) then
                Fold_Ureal (N, Expr_Value_R (Hi_Bound), Static);
@@ -9654,6 +9682,20 @@ package body Sem_Attr is
          end loop;
 
          Set_Bounds;
+
+         --  In GNATprove mode we only fold array attributes when prefix is
+         --  static (because that's required by the Ada rules) or at least can
+         --  be evaluated without checks (because GNATprove would miss them).
+
+         if GNATprove_Mode
+            and then
+              not (Static
+                   or else (Is_Entity_Name (P) and then Is_Type (Entity (P)))
+                   or else Statically_Names_Object (P)
+                   or else Ekind (P_Type) = E_String_Literal_Subtype)
+         then
+            return;
+         end if;
 
          --  For two compile time values, we can compute length
 

@@ -1,4 +1,4 @@
-@c Copyright (C) 2002-2025 Free Software Foundation, Inc.
+cc Copyright (C) 2002-2025 Free Software Foundation, Inc.
 @c This is part of the GCC manual.
 @c For copying conditions, see the file gcc.texi.
 
@@ -2373,6 +2373,15 @@ whether it does so by default).
 @itemx aarch64_sve1024_hw
 @itemx aarch64_sve2048_hw
 Like @code{aarch64_sve_hw}, but also test for an exact hardware vector length.
+@item aarch64_sve2_hw
+AArch64 target that is able to generate and execute SVE2 code (regardless of
+whether it does so by default).
+@item aarch64_sve2p1_hw
+AArch64 target that is able to generate and execute SVE2.1 code (regardless of
+whether it does so by default).
+@item aarch64_sme_hw
+AArch64 target that is able to generate and execute SME code (regardless of
+whether it does so by default).
 
 @item aarch64_fjcvtzs_hw
 AArch64 target that is able to generate and execute armv8.3-a FJCVTZS
@@ -2553,6 +2562,12 @@ Test system has an integer register width of 64 bits.
 
 @item riscv_a
 Test target architecture has support for the A extension.
+
+@item riscv_b_ok
+Test target architecture can execute code with B extension enabled.
+
+@item riscv_v_ok
+Test target architecture can execute code with V extension enabled.
 
 @item riscv_zaamo
 Test target architecture has support for the zaamo extension.

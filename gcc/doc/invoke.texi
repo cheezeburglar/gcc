@@ -322,6 +322,9 @@ Objective-C and Objective-C++ Dialects}.
 -fno-diagnostics-show-cwe
 -fno-diagnostics-show-rules
 -fno-diagnostics-show-highlight-colors
+-fno-diagnostics-show-nesting
+-fno-diagnostics-show-nesting-locations
+-fdiagnostics-show-nesting-levels
 -fdiagnostics-minimum-margin-width=@var{width}
 -fdiagnostics-parseable-fixits  -fdiagnostics-generate-patch
 -fdiagnostics-show-template-tree  -fno-elide-type
@@ -340,7 +343,7 @@ Objective-C and Objective-C++ Dialects}.
 -w  -Wextra  -Wall  -Wabi=@var{n}
 -Waddress  -Wno-address-of-packed-member  -Waggregate-return
 -Walloc-size  -Walloc-size-larger-than=@var{byte-size}  -Walloc-zero
--Walloca  -Walloca-larger-than=@var{byte-size}
+-Walloca  -Walloca-larger-than=@var{byte-size}  -Wauto-profile
 -Wno-aggressive-loop-optimizations
 -Warith-conversion
 -Warray-bounds  -Warray-bounds=@var{n}  -Warray-compare
@@ -353,7 +356,7 @@ Objective-C and Objective-C++ Dialects}.
 -Wno-builtin-macro-redefined  -Wc90-c99-compat  -Wc99-c11-compat
 -Wc11-c23-compat  -Wc23-c2y-compat
 -Wc++-compat  -Wc++11-compat  -Wc++14-compat  -Wc++17-compat
--Wc++20-compat
+-Wc++20-compat  -Wc++26-compat
 -Wno-c++11-extensions  -Wno-c++14-extensions -Wno-c++17-extensions
 -Wno-c++20-extensions  -Wno-c++23-extensions
 -Wcalloc-transposed-args
@@ -388,6 +391,7 @@ Objective-C and Objective-C++ Dialects}.
 -Winit-self  -Winline  -Wno-int-conversion  -Wint-in-bool-context
 -Wno-int-to-pointer-cast  -Wno-invalid-memory-model
 -Winvalid-pch  -Winvalid-utf8  -Wno-unicode  -Wjump-misses-init
+-Wkeyword-macro
 -Wlarger-than=@var{byte-size}  -Wleading-whitespace=@var{kind}
 -Wlogical-not-parentheses  -Wlogical-op
 -Wlong-long  -Wno-lto-type-mismatch -Wmain  -Wmaybe-uninitialized
@@ -433,7 +437,8 @@ Objective-C and Objective-C++ Dialects}.
 -Wunsuffixed-float-constants
 -Wunterminated-string-initialization
 -Wunused
--Wunused-but-set-parameter  -Wunused-but-set-variable
+-Wunused-but-set-parameter  -Wunused-but-set-parameter=@var{n}
+-Wunused-but-set-variable  -Wunused-but-set-variable=@var{n}
 -Wunused-const-variable  -Wunused-const-variable=@var{n}
 -Wunused-function  -Wunused-label  -Wunused-local-typedefs
 -Wunused-macros
@@ -914,7 +919,7 @@ Objective-C and Objective-C++ Dialects}.
 @emph{AVR Options} (@ref{AVR Options})
 @gccoptlist{-mmcu=@var{mcu}  -mabsdata  -maccumulate-args  -mcvt
 -mbranch-cost=@var{cost}  -mfuse-add=@var{level}  -mfuse-move=@var{level}
--mcall-prologues  -mgas-isr-prologues  -mint8  -mflmap
+-mfuse-move2  -mcall-prologues  -mgas-isr-prologues  -mint8  -mflmap
 -mdouble=@var{bits}  -mlong-double=@var{bits}  -mno-call-main
 -mn_flash=@var{size}  -mfract-convert-truncate  -mno-interrupts
 -mmain-is-OS_task  -mrelax  -mrmw  -mstrict-X  -mtiny-stack
@@ -3015,8 +3020,9 @@ Version 20, which first appeared in G++ 15, fixes manglings of lambdas
 in static data member initializers.
 
 Version 21, which first appeared in G++ 16, fixes unnecessary captures
-in noexcept lambdas (c++/119764) and layout of a base class
-with all explicitly defaulted constructors (c++/120012).
+in noexcept lambdas (c++/119764), layout of a base class with all explicitly
+defaulted constructors (c++/120012), and mangling of class and array
+objects with implicitly zero-initialized non-trailing subobjects (c++/121231).
 
 See also @option{-Wabi}.
 
@@ -3815,6 +3821,23 @@ In addition, these warning options have meanings only for C++ programs:
 Warn when a type with an ABI tag is used in a context that does not
 have that ABI tag.  See @ref{C++ Attributes} for more information
 about ABI tags.
+
+@opindex Wabbreviated-auto-in-template-arg
+@opindex Wno-abbreviated-auto-in-template-arg
+@item -Wno-abbreviated-auto-in-template-arg
+Disable the error for an @code{auto} placeholder type used within a
+template argument list to declare a C++20 abbreviated function
+template, e.g.
+
+@smallexample
+void f(S<auto>);
+@end smallexample
+
+This feature was proposed in the Concepts TS, but was not adopted into
+C++20; in the standard, a placeholder in a parameter declaration must
+appear as a decl-specifier.  The error can also be reduced to a
+warning by @option{-fpermissive} or
+@option{-Wno-error=abbreviated-auto-in-template-arg}.
 
 @opindex Wcomma-subscript
 @opindex Wno-comma-subscript
@@ -5409,7 +5432,8 @@ options:
 -fdiagnostics-urls=never
 -fdiagnostics-path-format=separate-events
 -fdiagnostics-text-art-charset=none
--fno-diagnostics-show-event-links}
+-fno-diagnostics-show-event-links
+-fno-diagnostics-show-nesting}
 In the future, if GCC changes the default appearance of its diagnostics, the
 corresponding option to disable the new behavior will be added to this list.
 
@@ -6031,6 +6055,40 @@ emoji variant of the character).
 The default is @samp{emoji}, except when the environment variable @env{LANG}
 is set to @samp{C}, in which case the default is @samp{ascii}.
 
+@opindex fno-diagnostics-show-nesting
+@opindex fdiagnostics-show-nesting
+@item -fno-diagnostics-show-nesting
+Some GCC diagnostics have an internal tree-like structure of nested
+sub-diagnostics, such as for problems when instantiating C++ templates.
+
+By default GCC uses indentation and bullet points in its text output to
+show the nesting structure of these diagnostics, moves location
+information to separate lines to make the structure clearer, and
+eliminates redundant repeated information.
+
+Selecting @option{-fno-diagnostics-show-nesting} suppresses this
+indentation, reformatting, and elision, restoring an older `look'' for the
+diagnostics.
+
+@opindex fno-diagnostics-show-nesting-locations
+@opindex fdiagnostics-show-nesting-locations
+@item -fno-diagnostics-show-nesting-locations
+
+When @option{fdiagnostics-show-nesting} is enabled, file names and
+line- and column- numbers are displayed on separate lines from the
+messages.  This location information can be disabled altogether with
+@option{-fno-diagnostics-show-nesting-locations}.
+This option exists for use by GCC developers, for writing DejaGnu test cases.
+
+@opindex fdiagnostics-show-nesting-levels
+@opindex fno-diagnostics-show-nesting-levels
+@item -fdiagnostics-show-nesting-levels
+When @option{fdiagnostics-show-nesting} is enabled, use
+@option{fdiagnostics-show-nesting-levels} to also display numbers
+showing the depth of the nesting.
+This option exists for use by GCC developers for debugging nested
+diagnostics, but may be of use to plugin authors.
+
 @opindex fdiagnostics-format
 @item -fdiagnostics-format=@var{FORMAT}
 Select a different format for printing diagnostics.
@@ -6079,18 +6137,18 @@ Supported keys are:
 Override colorization settings from @option{-fdiagnostics-color} for this
 text output.
 
-@item experimental-nesting=@r{[}yes@r{|}no@r{]}
-Enable an experimental mode that emphasizes hierarchical relationships
-within diagnostics messages, displaying location information on separate
-lines.
+@item show-nesting=@r{[}yes@r{|}no@r{]}
+Enable a mode that emphasizes hierarchical relationships
+within diagnostics messages, as per @option{-fdiagnostics-show-nesting}.
+Defaults to @code{yes}.
 
-@item experimental-nesting-show-locations=@r{[}yes@r{|}no@r{]}
-If @code{experimental-nesting=yes}, then by default locations are
+@item show-nesting-locations=@r{[}yes@r{|}no@r{]}
+If @code{show-nesting=yes}, then by default locations are
 shown; set this key to @code{no} to disable printing such locations.
 This exists for use by GCC developers, for writing DejaGnu test cases.
 
-@item experimental-nesting-show-levels=@r{[}yes@r{|}no@r{]}
-This is a debugging option for use with @code{experimental-nesting=yes}.
+@item show-nesting-levels=@r{[}yes@r{|}no@r{]}
+This is a debugging option for use with @code{show-nesting=yes}.
 Set this key to @code{yes} to print explicit nesting levels in the output.
 This exists for use by GCC developers.
 
@@ -6126,10 +6184,10 @@ end-users, and subject to change or removal without notice:
 
 @table @gcctabopt
 
-@item xml-state=@r{[}yes@r{|}no@r{]}
+@item state-graphs=@r{[}yes@r{|}no@r{]}
 This is a debugging feature and defaults to @code{no}.
-If @code{xml-state=yes}, then attempt to capture detailed state information
-from @option{-fanalyzer} in the generated SARIF.
+If @code{state-graphs=yes}, then attempt to capture detailed state
+information from @option{-fanalyzer} in the generated SARIF.
 
 @end table
 
@@ -6177,11 +6235,11 @@ then if @code{show-state-diagrams=yes},
 the generated state diagrams will also show the .dot source input to
 GraphViz used for the diagram.
 
-@item show-state-diagrams-xml=@r{[}yes@r{|}no@r{]}
+@item show-state-diagrams-sarif=@r{[}yes@r{|}no@r{]}
 This is a debugging feature and defaults to @code{no}.
-If @code{show-state-diagrams-xml=yes}
+If @code{show-state-diagrams-sarif=yes}
 then if @code{show-state-diagrams=yes}, the generated state diagrams will
-also show an XML representation of the state.
+also show a SARIF representation of the state.
 
 @end table
 
@@ -6443,6 +6501,7 @@ only by this flag, but it also downgrades some C and C++ diagnostics
 that have their own flag:
 
 @gccoptlist{
+-Wabbreviated-auto-in-template-arg @r{(C++ and Objective-C++ only)}
 -Wdeclaration-missing-parameter-type @r{(C and Objective-C only)}
 -Wimplicit-function-declaration @r{(C and Objective-C only)}
 -Wimplicit-int @r{(C and Objective-C only)}
@@ -7903,27 +7962,89 @@ statement.
 @opindex Wunused-but-set-parameter
 @opindex Wno-unused-but-set-parameter
 @item -Wunused-but-set-parameter
+@option{-Wunused-but-set-parameter} is the same as
+@option{-Wunused-but-set-parameter=3} and
+@option{-Wno-unused-but-set-parameter} is the same as
+@option{-Wunused-but-set-parameter=0}.
+
+@opindex Wunused-but-set-parameter=
+@item -Wunused-but-set-parameter=@var{n}
 Warn whenever a function parameter is assigned to, but otherwise unused
 (aside from its declaration).
 
 To suppress this warning use the @code{unused} attribute
 (@pxref{Variable Attributes}).
 
-This warning is also enabled by @option{-Wunused} together with
-@option{-Wextra}.
+@option{-Wunused-but-set-parameter=0} disables the warning.
+With @option{-Wunused-but-set-parameter=1} all uses except initialization
+and left hand side of assignment which is not further used disable the
+warning.
+With @option{-Wunused-but-set-parameter=2} additionally uses of parameter
+in @code{++} and @code{--} operators don't count as uses.
+And finally with @option{-Wunused-but-set-parameter=3} additionally
+uses in @var{parm} @code{@var{@@}=} @var{rhs} outside of @var{rhs} don't
+count as uses.  See @option{-Wunused-but-set-variable=@var{n}} option for
+examples.
+
+This @option{-Wunused-but-set-parameter=3} warning is also enabled by
+@option{-Wunused} together with @option{-Wextra}.
 
 @opindex Wunused-but-set-variable
 @opindex Wno-unused-but-set-variable
 @item -Wunused-but-set-variable
+@option{-Wunused-but-set-variable} is the same as
+@option{-Wunused-but-set-variable=3} and
+@option{-Wno-unused-but-set-variable} is the same as
+@option{-Wunused-but-set-variable=0}.
+
+@opindex Wunused-but-set-variable=
+@item -Wunused-but-set-variable=@var{n}
 Warn whenever a local variable is assigned to, but otherwise unused
 (aside from its declaration).
-This warning is enabled by @option{-Wall}.
+This @option{-Wunused-but-set-variable=3} warning is enabled by @option{-Wall}.
 
 To suppress this warning use the @code{unused} attribute
 (@pxref{Variable Attributes}).
 
-This warning is also enabled by @option{-Wunused}, which is enabled
-by @option{-Wall}.
+@option{-Wunused-but-set-variable=0} disables the warning.
+With @option{-Wunused-but-set-variable=1} all uses except initialization
+and left hand side of assignment which is not further used disable the
+warning.
+With @option{-Wunused-but-set-variable=2} additionally uses of variable
+in @code{++} and @code{--} operators don't count as uses.
+And finally with @option{-Wunused-but-set-variable=3} additionally
+uses in @var{parm} @code{@var{@@}=} @var{rhs} outside of @var{rhs} don't
+count as uses.
+
+This @option{-Wunused-but-set-variable=3} warning is also enabled by
+@option{-Wunused}, which is enabled by @option{-Wall}.
+
+@smallexample
+void foo (void)
+@{
+  int a = 1; // @option{-Wunused-variable} warning
+  int b = 0; // Warning for @var{n} >= 1
+  b = 1; b = 2;
+  int c = 0; // Warning for @var{n} >= 2
+  ++c; c--; --c; c++;
+  int d = 0; // Warning for @var{n} >= 3
+  d += 4;
+  int e = 0; // No warning, cast to void
+  (void) e;
+  int f = 0; // No warning, f used
+  int g = f = 5;
+  (void) g;
+  int h = 0; // No warning, preincrement used
+  int i = ++h;
+  (void) i;
+  int j = 0; // No warning, postdecrement used
+  int k = j--;
+  (void) k;
+  int l = 0; // No warning, l used
+  int m = l |= 2;
+  (void) m;
+@}
+@end smallexample
 
 @opindex Wunused-function
 @opindex Wno-unused-function
@@ -8714,6 +8835,11 @@ larger.
 @opindex Walloca
 @item -Walloca
 This option warns on all uses of @code{alloca} in the source.
+
+@opindex Wno-auto-profile
+@opindex Wauto-profile
+@item -Wauto-profile
+Output warnings about auto-profile inconsistencies.
 
 @opindex Walloca-larger-than=
 @opindex Wno-alloca-larger-than
@@ -9667,6 +9793,12 @@ and ISO C++ 2017.  This warning is enabled by @option{-Wall}.
 Warn about C++ constructs whose meaning differs between ISO C++ 2017
 and ISO C++ 2020.  This warning is enabled by @option{-Wall}.
 
+@opindex Wc++26-compat
+@opindex Wno-c++26-compat
+@item -Wc++26-compat @r{(C++ and Objective-C++ only)}
+Warn about C++ constructs whose meaning differs between ISO C++ 2023
+and upcoming ISO C++ 2026.  This warning is enabled by @option{-Wall}.
+
 @opindex Wc++11-extensions
 @opindex Wno-c++11-extensions
 @item -Wno-c++11-extensions @r{(C++ and Objective-C++ only)}
@@ -10305,6 +10437,14 @@ void f (void *d)
 Do not warn if certain built-in macros are redefined.  This suppresses
 warnings for redefinition of @code{__TIMESTAMP__}, @code{__TIME__},
 @code{__DATE__}, @code{__FILE__}, and @code{__BASE_FILE__}.
+
+@opindex Wkeyword-macro
+@opindex Wno-keyword-macro
+@item -Wkeyword-macro
+Warn if a keyword is defined as a macro or undefined.
+For C++ identifiers with special meaning or standard attribute identifiers
+are diagnosed as well.  This warning is enabled by default for C++26
+if @code{-Wpedantic} and emits a pedwarn in that case.
 
 @opindex Wfree-labels
 @opindex Wno-free-labels
@@ -20520,18 +20660,22 @@ LTO output files.
 @opindex fdump-rtl-@var{pass}
 @item -d@var{letters}
 @itemx -fdump-rtl-@var{pass}
-@itemx -fdump-rtl-@var{pass}=@var{filename}
+@itemx -fdump-rtl-@var{pass}-@var{options}
+@itemx -fdump-rtl-@var{pass}-@var{options}=@var{filename}
 Says to make debugging dumps during compilation at times specified by
-@var{letters}.  This is used for debugging the RTL-based passes of the
+@var{letters} when using @option{-d} or by @var{pass} when using
+@option{-fdump-rtl}.  This is used for debugging the RTL-based passes of the
 compiler.
 
 Some @option{-d@var{letters}} switches have different meaning when
 @option{-E} is used for preprocessing.  @xref{Preprocessor Options},
 for information about preprocessor-specific dump options.
 
-Debug dumps can be enabled with a @option{-fdump-rtl} switch or some
-@option{-d} option @var{letters}.  Here are the possible
-letters for use in @var{pass} and @var{letters}, and their meanings:
+The @samp{-@var{options}} form allows greater control over the details of the
+dump. See @option{-fdump-tree}.
+
+Here are actual instances of command-line options following these patterns and
+their meanings:
 
 @table @gcctabopt
 
@@ -21058,8 +21202,7 @@ GraphViz to @file{@var{file}.@var{passid}.@var{pass}.dot}.  Each function in
 the file is pretty-printed as a subgraph, so that GraphViz can render them
 all in a single plot.
 
-This option currently only works for RTL dumps, and the RTL is always
-dumped in slim form.
+RTL is always dumped in slim form.
 @item vops
 Enable showing virtual operands for every statement.
 @item lineno
@@ -22461,6 +22604,9 @@ Enable the FlagM2 flag conversion instructions.
 Enable the Pointer Authentication Extension.
 @item cssc
 Enable the Common Short Sequence Compression instructions.
+@item cmpbr
+Enable the shorter compare and branch instructions, @code{cbb}, @code{cbh} and
+@code{cb}.
 @item sme
 Enable the Scalable Matrix Extension.  This is only supported when SVE2 is also
 enabled.
@@ -25014,6 +25160,10 @@ and @code{@var{level}=23} for higher optimizations.
 Valid values for @var{level} are in the range @code{0} @dots{} @code{23}
 which is a 3:2:2:2 mixed radix value.  Each digit controls some
 aspect of the optimization.
+
+@opindex mfuse-move2
+@item -mfuse-move2
+Run a post combine optimization pass that tries to fuse move instructions.
 
 @opindex mstrict-X
 @item -mstrict-X
@@ -31234,7 +31384,7 @@ The default is @option{-misa-spec=20191213} unless GCC has been configured
 with @option{--with-isa-spec=} specifying a different default version.
 
 @opindex march
-@item -march=@var{ISA-string|Profiles|Profile_ISA-string}
+@item -march=@var{ISA-string|Profiles|Profile_ISA-string|help|unset}
 Generate code for given RISC-V ISA or Profiles or a combination of them
 (e.g.@: @samp{rv64im} @samp{rvi20u64} @samp{rvi20u64_zbb}).  ISA strings and
 Profiles must be lower-case.  Examples include @samp{rv64i}, @samp{rv32g},
@@ -31244,6 +31394,12 @@ at the beginning of the option, then use underline connect ISA-string (e.g.@:
 @samp{rvi20u64_zca_zcb} @samp{rva23u64_zacas}).  Additionally, a special value
 @option{help} (@option{-march=help}) is accepted to list all supported
 extensions.
+
+@samp{-march=unset} causes the compiler to ignore any @samp{-march=@dots{}} options
+that appear earlier on the command line, behaving as if the option was never
+passed. This is useful for ensuring that the architecture is taken from the
+@samp{-mcpu} option, and it will result in an error if no @samp{-mcpu} option
+is given when @samp{-march=unset} is used.
 
 The syntax of the ISA string is defined as follows:
 
@@ -31275,31 +31431,14 @@ When the RISC-V specifications define an extension as depending on other
 extensions, GCC will implicitly add the dependent extensions to the enabled
 extension set if they weren't added explicitly.
 
-@opindex mcpu
-@item -mcpu=@var{processor-string}
-Use architecture of and optimize the output for the given processor, specified
-by particular CPU name.
-Permissible values for this option are: @samp{mips-p8700}, @samp{sifive-e20},
-@samp{sifive-e21}, @samp{sifive-e24}, @samp{sifive-e31}, @samp{sifive-e34},
-@samp{sifive-e76}, @samp{sifive-s21}, @samp{sifive-s51}, @samp{sifive-s54},
-@samp{sifive-s76}, @samp{sifive-u54}, @samp{sifive-u74}, @samp{sifive-x280},
-@samp{sifive-xp450}, @samp{sifive-x670}, @samp{thead-c906}, @samp{tt-ascalon-d8},
-@samp{xiangshan-nanhu}, @samp{xiangshan-kunminghu}, @samp{xt-c908}, @samp{xt-c908v},
-@samp{xt-c910}, @samp{xt-c910v2}, @samp{xt-c920}, @samp{xt-c920v2}.
+@include riscv-mcpu.texi
 
 Note that @option{-mcpu} does not override @option{-march} or @option{-mtune}.
 
-@opindex mtune
-@item -mtune=@var{processor-string}
-Optimize the output for the given processor, specified by microarchitecture or
-particular CPU name.  Permissible values for this option are:
-@samp{generic-ooo}, @samp{mips-p8700}, @samp{rocket}, @samp{sifive-3-series},
-@samp{sifive-5-series}, @samp{sifive-7-series}, @samp{size},
-@samp{sifive-p400-series}, @samp{sifive-p600-series}, and all valid options for
-@option{-mcpu=}.
+@include riscv-mtune.texi
 
 When @option{-mtune=} is not specified, use the setting from @option{-mcpu},
-the default is @samp{rocket} if both are not specified.
+the default is @samp{generic} if both are not specified.
 
 The @samp{size} choice is not intended for use by end-users.  This is used
 when @option{-Os} is specified.  It overrides the instruction cost info
@@ -34860,9 +34999,9 @@ Intel Panther Lake CPU with 64-bit extensions, MOVBE, MMX, SSE, SSE2, SSE3,
 SSSE3, SSE4.1, SSE4.2, POPCNT, AES, PREFETCHW, PCLMUL, RDRND, XSAVE, XSAVEC,
 XSAVES, XSAVEOPT, FSGSBASE, PTWRITE, RDPID, SGX, GFNI-SSE, CLWB, MOVDIRI,
 MOVDIR64B, WAITPKG, ADCX, AVX, AVX2, BMI, BMI2, F16C, FMA, LZCNT, PCONFIG, PKU,
-VAES, VPCLMULQDQ, SERIALIZE, HRESET, KL, WIDEKL, AVX-VNNI, UINTR, AVXIFMA,
-AVXVNNIINT8, AVXNECONVERT, CMPCCXADD, AVXVNNIINT16, SHA512, SM3, SM4 and
-PREFETCHI instruction set support.
+VAES, VPCLMULQDQ, SERIALIZE, HRESET, AVX-VNNI, UINTR, AVXIFMA, AVXVNNIINT8,
+AVXNECONVERT, CMPCCXADD, AVXVNNIINT16, SHA512, SM3, SM4 and PREFETCHI
+instruction set support.
 
 @item sapphirerapids
 @itemx emeraldrapids
@@ -34965,9 +35104,9 @@ Intel Clearwater Forest CPU with 64-bit extensions, MOVBE, MMX, SSE, SSE2,
 SSE3, SSSE3, SSE4.1, SSE4.2, POPCNT, AES, PREFETCHW, PCLMUL, RDRND, XSAVE,
 XSAVEC, XSAVES, XSAVEOPT, FSGSBASE, PTWRITE, RDPID, SGX, GFNI-SSE, CLWB,
 MOVDIRI, MOVDIR64B, CLDEMOTE, WAITPKG, ADCX, AVX, AVX2, BMI, BMI2, F16C, FMA,
-LZCNT, PCONFIG, PKU, VAES, VPCLMULQDQ, SERIALIZE, HRESET, KL, WIDEKL, AVX-VNNI,
-ENQCMD, UINTR, AVXIFMA, AVXVNNIINT8, AVXNECONVERT, CMPCCXADD, AVXVNNIINT16,
-SHA512, SM3, SM4, USER_MSR and PREFETCHI instruction set support.
+LZCNT, PCONFIG, PKU, VAES, VPCLMULQDQ, SERIALIZE, HRESET, AVX-VNNI, ENQCMD,
+UINTR, AVXIFMA, AVXVNNIINT8, AVXNECONVERT, CMPCCXADD, AVXVNNIINT16, SHA512,
+SM3, SM4, USER_MSR and PREFETCHI instruction set support.
 
 @item k6
 AMD K6 CPU with MMX instruction set support.

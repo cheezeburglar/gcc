@@ -1,3 +1,58 @@
+2025-08-07  Tobias Burnus  <tburnus@baylibre.com>
+
+	PR other/120237
+	* download_prerequisites: Update to download GMP 6.3.0 (before 6.2.1),
+	MPFR 4.2.2 (before 4.1.0), and MPC 1.3.1 (before 1.2.1).
+	* prerequisites.md5: Update hash.
+	* prerequisites.sha512: Likewise.
+
+2025-07-28  David Malcolm  <dmalcolm@redhat.com>
+
+	* gcc-changelog/git_commit.py: Add "diagnostics" to bug
+	components.
+
+2025-07-25  David Malcolm  <dmalcolm@redhat.com>
+
+	* filter-clang-warnings.py: Update for move of
+	diagnostic-path-output.cc to diagnostics/paths-output.cc.
+
+2025-07-25  David Malcolm  <dmalcolm@redhat.com>
+
+	* gcc.doxy (INPUT): Add gcc/diagnostics subdir.
+
+2025-07-23  Sam James  <sam@gentoo.org>
+
+	PR other/105404
+	* gcc-changelog/git_commit.py (ignored_prefixes): Add zlib/.
+
+2025-07-16  David Malcolm  <dmalcolm@redhat.com>
+
+	* gcc.doxy (INPUT): Add directory "gcc/text-art".
+
+2025-07-11  Richard Biener  <rguenther@suse.de>
+
+	* gcc-changelog/git_update_version.py: Stop updating gcc-12
+	branch.
+
+2025-07-08  Pierre-Emmanuel Patry  <pierre-emmanuel.patry@embecosm.com>
+
+	* prepare-commit-msg: Force default git prefixes.
+
+2025-07-07  Martin Jambor  <mjambor@suse.cz>
+
+	* filter-clang-warnings.py (skip_warning): Also ignore
+	-Woverloaded-shift-op-parentheses, -Wunused-function,
+	-Wunneeded-internal-declaration, -Wvla-cxx-extension', and
+	-Wunused-command-line-argument everywhere and a warning about
+	m_logical_loc_mgr in diagnostic-path-output.cc.  Adjust gimple-match
+	and generic-match "filenames."  Ignore -Wnontrivial-memcall warnings
+	in wide-int.h, all warnings about unused stuff in files under
+	m2/gm2-compiler-boot, all -Wunused-private-field in rust FE, in
+	analyzer/ana-state-to-diagnostic-state.h and c-family/c-format.cc, all
+	Warnings in avr-mmcu.texi, install.texi and libgccjit.texi and all
+	-Wc23-extensions warnings in libiberty/sha1.c. Ignore
+	-Wunused-parameter in analyzer/sm.cc.  Reorder entries.
+
 2025-06-29  Filip Kastl  <fkastl@suse.cz>
 
 	* mklog.py: In 'main()', specify variable 'root' as global.

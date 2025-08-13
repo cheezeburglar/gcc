@@ -3171,7 +3171,7 @@ package body Sem_Ch12 is
          end if;
       end if;
 
-      if Subtype_Mark (Def) <= Empty_Or_Error then
+      if Subtype_Mark (Def) in Empty | Error then
          pragma Assert (Serious_Errors_Detected > 0);
          --  avoid passing bad argument to Entity
          return;
@@ -4900,8 +4900,7 @@ package body Sem_Ch12 is
       Loc        : constant Source_Ptr := Sloc (N);
       Is_Abbrev  : constant Boolean    :=
                      Is_Abbreviated_Instance (Defining_Entity (N));
-      Saved_GM   : constant Ghost_Mode_Type := Ghost_Mode;
-      Saved_IGR  : constant Node_Id         := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       Saved_ISMP : constant Boolean         :=
                      Ignore_SPARK_Mode_Pragmas_In_Instance;
       Saved_SM   : constant SPARK_Mode_Type := SPARK_Mode;
@@ -5680,7 +5679,7 @@ package body Sem_Ch12 is
       end if;
 
       Ignore_SPARK_Mode_Pragmas_In_Instance := Saved_ISMP;
-      Restore_Ghost_Region (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region (Saved_Ghost_Config);
       Restore_SPARK_Mode   (Saved_SM, Saved_SMP);
       Style_Check := Saved_Style_Check;
 
@@ -5695,7 +5694,7 @@ package body Sem_Ch12 is
          end if;
 
          Ignore_SPARK_Mode_Pragmas_In_Instance := Saved_ISMP;
-         Restore_Ghost_Region (Saved_GM, Saved_IGR);
+         Restore_Ghost_Region (Saved_Ghost_Config);
          Restore_SPARK_Mode   (Saved_SM, Saved_SMP);
          Style_Check := Saved_Style_Check;
    end Analyze_Package_Instantiation;
@@ -6340,8 +6339,7 @@ package body Sem_Ch12 is
 
       --  Local variables
 
-      Saved_GM   : constant Ghost_Mode_Type := Ghost_Mode;
-      Saved_IGR  : constant Node_Id         := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       Saved_ISMP : constant Boolean         :=
                      Ignore_SPARK_Mode_Pragmas_In_Instance;
       Saved_SM   : constant SPARK_Mode_Type := SPARK_Mode;
@@ -6736,7 +6734,7 @@ package body Sem_Ch12 is
       end if;
 
       Ignore_SPARK_Mode_Pragmas_In_Instance := Saved_ISMP;
-      Restore_Ghost_Region (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region (Saved_Ghost_Config);
       Restore_SPARK_Mode   (Saved_SM, Saved_SMP);
 
    exception
@@ -6750,7 +6748,7 @@ package body Sem_Ch12 is
          end if;
 
          Ignore_SPARK_Mode_Pragmas_In_Instance := Saved_ISMP;
-         Restore_Ghost_Region (Saved_GM, Saved_IGR);
+         Restore_Ghost_Region (Saved_Ghost_Config);
          Restore_SPARK_Mode   (Saved_SM, Saved_SMP);
    end Analyze_Subprogram_Instantiation;
 
@@ -7573,6 +7571,12 @@ package body Sem_Ch12 is
                  (Ekind (E2) /= Ekind (E1)
                     or else not Same_Instantiated_Function (E1, E2));
             end if;
+
+         --  No check is needed if this is the body of a subprogram that is
+         --  implicitly created in the case of class-wide predefined functions.
+
+         elsif Ekind (E1) = E_Subprogram_Body then
+            null;
 
          else
             raise Program_Error;
@@ -11131,13 +11135,9 @@ package body Sem_Ch12 is
       begin
          --  If this parent of the child instance is a top-level unit,
          --  then record the unit and its visibility for later resetting in
-         --  Remove_Parent. We exclude units that are generic instances, as we
-         --  only want to record this information for the ultimate top-level
-         --  noninstance parent (is that always correct???).
+         --  Remove_Parent.
 
-         if Scope (Par) = Standard_Standard
-           and then not Is_Generic_Instance (Par)
-         then
+         if Scope (Par) = Standard_Standard then
             Parent_Unit_Visible := Is_Immediately_Visible (Par);
             Instance_Parent_Unit := Par;
          end if;
@@ -12872,8 +12872,7 @@ package body Sem_Ch12 is
       --  the package body.
 
       Saved_CS   : constant Config_Switches_Type     := Save_Config_Switches;
-      Saved_GM   : constant Ghost_Mode_Type          := Ghost_Mode;
-      Saved_IGR  : constant Node_Id                  := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       Saved_ISMP : constant Boolean                  :=
                      Ignore_SPARK_Mode_Pragmas_In_Instance;
       Saved_LSST : constant Suppress_Stack_Entry_Ptr :=
@@ -13403,7 +13402,7 @@ package body Sem_Ch12 is
 
       Expander_Mode_Restore;
       Restore_Config_Switches (Saved_CS);
-      Restore_Ghost_Region    (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region    (Saved_Ghost_Config);
       Restore_SPARK_Mode      (Saved_SM, Saved_SMP);
       Restore_Warnings        (Saved_Warn);
    end Instantiate_Package_Body;
@@ -13434,8 +13433,7 @@ package body Sem_Ch12 is
       --  the subprogram body.
 
       Saved_CS   : constant Config_Switches_Type     := Save_Config_Switches;
-      Saved_GM   : constant Ghost_Mode_Type          := Ghost_Mode;
-      Saved_IGR  : constant Node_Id                  := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       Saved_ISMP : constant Boolean                  :=
                      Ignore_SPARK_Mode_Pragmas_In_Instance;
       Saved_LSST : constant Suppress_Stack_Entry_Ptr :=
@@ -13738,7 +13736,7 @@ package body Sem_Ch12 is
 
       Expander_Mode_Restore;
       Restore_Config_Switches (Saved_CS);
-      Restore_Ghost_Region    (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region    (Saved_Ghost_Config);
       Restore_SPARK_Mode      (Saved_SM, Saved_SMP);
       Restore_Warnings        (Saved_Warn);
    end Instantiate_Subprogram_Body;
@@ -14375,8 +14373,21 @@ package body Sem_Ch12 is
          elsif
            Scope (Scope (Base_Type (Etype (A_Gen_T)))) = Scope (A_Gen_T)
          then
-            Ancestor :=
-              Get_Instance_Of (Base_Type (Etype (A_Gen_T)));
+            declare
+               Formal_Ancestor : constant Entity_Id :=
+                 Base_Type (Etype (A_Gen_T));
+            begin
+               Ancestor := Get_Instance_Of (Formal_Ancestor);
+
+               --  Handle (rare) case where Get_Instance_Of found nothing in
+               --  the map.
+
+               if Ancestor = Formal_Ancestor then
+                  Ancestor :=
+                    Get_Instance_Of
+                      (Base_Type (Etype (Get_Instance_Of (A_Gen_T))));
+               end if;
+            end;
 
          --  The type may be a local derivation, or a type extension of a
          --  previous formal, or of a formal of a parent package.
@@ -16338,39 +16349,43 @@ package body Sem_Ch12 is
                   Install_Private_Declarations (P);
                end if;
 
-            --  If the ultimate parent is a top-level unit recorded in
-            --  Instance_Parent_Unit, then reset its visibility to what it was
-            --  before instantiation. (It's not clear what the purpose is of
-            --  testing whether Scope (P) is In_Open_Scopes, but that test was
-            --  present before the ultimate parent test was added.???)
+            else
+               --  If the ultimate parent is a top-level unit recorded in
+               --  Instance_Parent_Unit, then reset its visibility to what
+               --  it was before instantiation. (It's not clear what the
+               --  purpose is of testing whether Scope (P) is In_Open_Scopes,
+               --  but that test was present before the ultimate parent test
+               --  was added.???)
 
-            elsif not In_Open_Scopes (Scope (P))
-              or else (P = Instance_Parent_Unit
-                        and then not Parent_Unit_Visible)
-            then
-               Set_Is_Immediately_Visible (P, False);
+               if not In_Open_Scopes (Scope (P))
+                 or else (P = Instance_Parent_Unit
+                           and then not Parent_Unit_Visible)
+               then
+                  Set_Is_Immediately_Visible (P, False);
+               end if;
 
-            --  If the current scope is itself an instantiation of a generic
-            --  nested within P, and we are in the private part of body of this
-            --  instantiation, restore the full views of P, that were removed
-            --  in End_Package_Scope above. This obscure case can occur when a
-            --  subunit of a generic contains an instance of a child unit of
-            --  its generic parent unit.
+               --  If the current scope is itself an instantiation of a generic
+               --  nested within P, and we are in the private part of body of
+               --  the instantiation, restore the full views of P, which were
+               --  removed in End_Package_Scope above. This obscure case can
+               --  occur when a subunit of a generic contains an instance of
+               --  a child unit of its generic parent unit.
 
-            elsif S = Current_Scope and then Is_Generic_Instance (S)
-              and then (In_Package_Body (S) or else In_Private_Part (S))
-            then
-               declare
-                  Par : constant Entity_Id :=
-                          Generic_Parent (Package_Specification (S));
-               begin
-                  if Present (Par)
-                    and then P = Scope (Par)
-                  then
-                     Set_In_Private_Part (P);
-                     Install_Private_Declarations (P);
-                  end if;
-               end;
+               if S = Current_Scope and then Is_Generic_Instance (S)
+                 and then (In_Package_Body (S) or else In_Private_Part (S))
+               then
+                  declare
+                     Par : constant Entity_Id :=
+                             Generic_Parent (Package_Specification (S));
+                  begin
+                     if Present (Par)
+                       and then P = Scope (Par)
+                     then
+                        Set_In_Private_Part (P);
+                        Install_Private_Declarations (P);
+                     end if;
+                  end;
+               end if;
             end if;
          end loop;
 

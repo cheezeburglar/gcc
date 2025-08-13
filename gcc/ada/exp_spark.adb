@@ -73,6 +73,10 @@ package body Exp_SPARK is
    procedure Expand_SPARK_N_Attribute_Reference (N : Node_Id);
    --  Perform attribute-reference-specific expansion
 
+   procedure Expand_SPARK_N_Continue_Statement (N : Node_Id);
+   --  Expand continue statements which are resolved as procedure calls, into
+   --  said procedure calls. Real continue statements are left as-is.
+
    procedure Expand_SPARK_N_Delta_Aggregate (N : Node_Id);
    --  Perform delta-aggregate-specific expansion
 
@@ -190,6 +194,9 @@ package body Exp_SPARK is
             end if;
 
          --  In SPARK mode, no other constructs require expansion
+
+         when N_Continue_Statement =>
+            Expand_SPARK_N_Continue_Statement (N);
 
          when others =>
             null;
@@ -434,6 +441,23 @@ package body Exp_SPARK is
          end loop;
       end if;
    end Expand_SPARK_Delta_Or_Update;
+
+   ---------------------------------------
+   -- Expand_SPARK_N_Continue_Statement --
+   ---------------------------------------
+
+   procedure Expand_SPARK_N_Continue_Statement (N : Node_Id) is
+      X : constant Node_Id := Call_Or_Target_Loop (N);
+   begin
+      if No (X) then
+         return;
+      end if;
+
+      if Nkind (X) = N_Procedure_Call_Statement then
+         Replace (N, X);
+         Analyze (N);
+      end if;
+   end Expand_SPARK_N_Continue_Statement;
 
    ------------------------------
    -- Expand_SPARK_N_Aggregate --
@@ -1104,8 +1128,7 @@ package body Exp_SPARK is
       Wrapper_Decl_List : List_Id;
       Wrapper_Body_List : List_Id := No_List;
 
-      Saved_GM  : constant Ghost_Mode_Type := Ghost_Mode;
-      Saved_IGR : constant Node_Id         := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       --  Save the Ghost-related attributes to restore on exit
 
    begin
@@ -1229,7 +1252,7 @@ package body Exp_SPARK is
          end if;
       end if;
 
-      Restore_Ghost_Region (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region (Saved_Ghost_Config);
    end SPARK_Freeze_Type;
 
 end Exp_SPARK;

@@ -142,9 +142,6 @@ lang_specific_driver (struct cl_decoded_option **in_decoded_options,
   int n_infiles = 0;
   int n_outfiles = 0;
 
-  // The number of input files when the language is "none" or "cobol"
-  int n_cobol_files = 0;
-
   // saw_OPT_no_main means "don't expect -main"
   bool saw_OPT_no_main = false;
 
@@ -234,11 +231,6 @@ lang_specific_driver (struct cl_decoded_option **in_decoded_options,
       case OPT_SPECIAL_input_file:
         no_files_error = false;
         n_infiles += 1;
-        if(    strcmp(language, "none")  == 0
-            || strcmp(language, "cobol") == 0 )
-          {
-          n_cobol_files += 1;
-          }
         if( strstr(decoded_options[i].orig_option_with_args_text, "libgcobol.a") )
           {
           // We have been given an explicit libgcobol.a.  We need to note that.
@@ -478,7 +470,10 @@ lang_specific_driver (struct cl_decoded_option **in_decoded_options,
 ////        break;
 ////#endif
       case OPT_static:
+#if defined (HAVE_LD_STATIC_DYNAMIC)
+        append_arg(decoded_options[i]);
         static_in_general = true;
+#endif        
         break;
 
       default:
@@ -506,17 +501,23 @@ lang_specific_driver (struct cl_decoded_option **in_decoded_options,
     need_libgcobol = false;
     }
 
+  if( static_in_general )
+    {
+    // These two options interfere with each other.
+    static_libgcobol = false;
+    }
+
   if( need_libgcobol )
     {
     add_arg_lib(COBOL_LIBRARY, static_libgcobol);
     }
   if( need_libdl )
     {
-    add_arg_lib(DL_LIBRARY, static_in_general);
+    add_arg_lib(DL_LIBRARY, false);
     }
   if( need_libstdc )
     {
-    add_arg_lib(STDCPP_LIBRARY, static_in_general);
+    add_arg_lib(STDCPP_LIBRARY, false);
     }
 
   if( prior_main )
@@ -529,7 +530,8 @@ lang_specific_driver (struct cl_decoded_option **in_decoded_options,
   // cl_decoded_option
 
   size_t new_option_count = new_opt.size();
-  struct cl_decoded_option *new_options = XNEWVEC (struct cl_decoded_option, new_option_count);
+  struct cl_decoded_option *new_options = XNEWVEC (struct cl_decoded_option,
+                                                    new_option_count);
 
   for(size_t i=0; i<new_option_count; i++)
     {
@@ -539,7 +541,7 @@ lang_specific_driver (struct cl_decoded_option **in_decoded_options,
 #ifdef NOISY
   verbose = true;
 #endif
-  if( verbose && new_options != original_options )
+  if( verbose && new_options != original_options ) // cppcheck-suppress knownConditionTrueFalse
     {
     fprintf(stderr, _("Driving: (" HOST_SIZE_T_PRINT_DEC ")\n"),
             (fmt_size_t)new_option_count);

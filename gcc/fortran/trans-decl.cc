@@ -197,6 +197,7 @@ tree gfor_fndecl_string_scan;
 tree gfor_fndecl_string_verify;
 tree gfor_fndecl_string_trim;
 tree gfor_fndecl_string_minmax;
+tree gfor_fndecl_string_split;
 tree gfor_fndecl_adjustl;
 tree gfor_fndecl_adjustr;
 tree gfor_fndecl_select_string;
@@ -208,6 +209,7 @@ tree gfor_fndecl_string_scan_char4;
 tree gfor_fndecl_string_verify_char4;
 tree gfor_fndecl_string_trim_char4;
 tree gfor_fndecl_string_minmax_char4;
+tree gfor_fndecl_string_split_char4;
 tree gfor_fndecl_adjustl_char4;
 tree gfor_fndecl_adjustr_char4;
 tree gfor_fndecl_select_string_char4;
@@ -3569,6 +3571,12 @@ gfc_build_intrinsic_function_decls (void)
 	build_pointer_type (pchar1_type_node), integer_type_node,
 	integer_type_node);
 
+  gfor_fndecl_string_split = gfc_build_library_function_decl_with_spec (
+    get_identifier (PREFIX ("string_split")), ". . R . R . . ",
+    gfc_charlen_type_node, 6, gfc_charlen_type_node, pchar1_type_node,
+    gfc_charlen_type_node, pchar1_type_node, gfc_charlen_type_node,
+    gfc_logical4_type_node);
+
   gfor_fndecl_adjustl = gfc_build_library_function_decl_with_spec (
 	get_identifier (PREFIX("adjustl")), ". W . R ",
 	void_type_node, 3, pchar1_type_node, gfc_charlen_type_node,
@@ -3640,6 +3648,12 @@ gfc_build_intrinsic_function_decls (void)
 	void_type_node, -4, build_pointer_type (gfc_charlen_type_node),
 	build_pointer_type (pchar4_type_node), integer_type_node,
 	integer_type_node);
+
+  gfor_fndecl_string_split_char4 = gfc_build_library_function_decl_with_spec (
+    get_identifier (PREFIX ("string_split_char4")), ". . R . R . . ",
+    gfc_charlen_type_node, 6, gfc_charlen_type_node, pchar4_type_node,
+    gfc_charlen_type_node, pchar4_type_node, gfc_charlen_type_node,
+    gfc_logical4_type_node);
 
   gfor_fndecl_adjustl_char4 = gfc_build_library_function_decl_with_spec (
 	get_identifier (PREFIX("adjustl_char4")), ". W . R ",
@@ -4773,14 +4787,14 @@ gfc_trans_deferred_vars (gfc_symbol * proc_sym, gfc_wrapped_block * block)
       /* Nullify explicit return class arrays on entry.  */
       tree type;
       tmp = get_proc_result (proc_sym);
-	if (tmp && GFC_CLASS_TYPE_P (TREE_TYPE (tmp)))
-	  {
-	    gfc_start_block (&init);
-	    tmp = gfc_class_data_get (tmp);
-	    type = TREE_TYPE (gfc_conv_descriptor_data_get (tmp));
-	    gfc_conv_descriptor_data_set (&init, tmp, build_int_cst (type, 0));
-	    gfc_add_init_cleanup (block, gfc_finish_block (&init), NULL_TREE);
-	  }
+      if (tmp && GFC_CLASS_TYPE_P (TREE_TYPE (tmp)))
+	{
+	  gfc_start_block (&init);
+	  tmp = gfc_class_data_get (tmp);
+	  type = TREE_TYPE (gfc_conv_descriptor_data_get (tmp));
+	  gfc_conv_descriptor_data_set (&init, tmp, build_int_cst (type, 0));
+	  gfc_add_init_cleanup (block, gfc_finish_block (&init), NULL_TREE);
+	}
     }
 
 
@@ -4920,20 +4934,6 @@ gfc_trans_deferred_vars (gfc_symbol * proc_sym, gfc_wrapped_block * block)
 	      gfc_add_expr_to_block (&tmpblock, tmp);
 	      gfc_add_init_cleanup (block, gfc_finish_block (&tmpblock), NULL);
 	    }
-	}
-
-      if (sym->attr.pointer && sym->attr.dimension
-	  && sym->attr.save == SAVE_NONE
-	  && !sym->attr.use_assoc
-	  && !sym->attr.host_assoc
-	  && !sym->attr.dummy
-	  && GFC_DESCRIPTOR_TYPE_P (TREE_TYPE (sym->backend_decl)))
-	{
-	  gfc_init_block (&tmpblock);
-	  gfc_conv_descriptor_span_set (&tmpblock, sym->backend_decl,
-				build_int_cst (gfc_array_index_type, 0));
-	  gfc_add_init_cleanup (block, gfc_finish_block (&tmpblock),
-				NULL_TREE);
 	}
 
       if (sym->ts.type == BT_CLASS
@@ -5134,18 +5134,31 @@ gfc_trans_deferred_vars (gfc_symbol * proc_sym, gfc_wrapped_block * block)
 		      se.descriptor_only = 1;
 		      gfc_conv_expr (&se, e);
 		      descriptor = se.expr;
-		      se.expr = gfc_conv_descriptor_data_addr (se.expr);
-		      se.expr = build_fold_indirect_ref_loc (input_location, se.expr);
+		      se.expr = gfc_conv_descriptor_data_get (se.expr);
 		    }
 		  gfc_free_expr (e);
 
 		  if (!sym->attr.dummy || sym->attr.intent == INTENT_OUT)
 		    {
 		      /* Nullify when entering the scope.  */
-		      tmp = fold_build2_loc (input_location, MODIFY_EXPR,
-					     TREE_TYPE (se.expr), se.expr,
-					     fold_convert (TREE_TYPE (se.expr),
-							   null_pointer_node));
+		      if (sym->ts.type == BT_CLASS
+			  && (CLASS_DATA (sym)->attr.dimension
+			      || CLASS_DATA (sym)->attr.codimension))
+			{
+			  stmtblock_t nullify;
+			  gfc_init_block (&nullify);
+			  gfc_conv_descriptor_data_set (&nullify, descriptor,
+							null_pointer_node);
+			  tmp = gfc_finish_block (&nullify);
+			}
+		      else
+			{
+			  tree typed_null = fold_convert (TREE_TYPE (se.expr),
+							  null_pointer_node);
+			  tmp = fold_build2_loc (input_location, MODIFY_EXPR,
+						 TREE_TYPE (se.expr), se.expr,
+						 typed_null);
+			}
 		      if (sym->attr.optional)
 			{
 			  tree present = gfc_conv_expr_present (sym);
@@ -5326,7 +5339,7 @@ gfc_trans_deferred_vars (gfc_symbol * proc_sym, gfc_wrapped_block * block)
 	continue;
       /* 'omp allocate( {purpose: allocator, value: align},
 			{purpose: init-stmtlist, value: cleanup-stmtlist},
-			{purpose: size-var, value: last-size-expr}}
+			{purpose: size-var, value: last-size-expr} )
 	  where init-stmt/cleanup-stmt is the STATEMENT list to find the
 	  try-final block; last-size-expr is to find the location after
 	  which to add the code and 'size-var' is for the proper size, cf.

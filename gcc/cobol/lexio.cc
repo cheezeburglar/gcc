@@ -38,29 +38,24 @@
 
 extern int yy_flex_debug;
 
-static struct {
-  bool first_file, explicitly;
-  int column, right_margin;
-  bool inference_pending() {
-    bool tf = first_file && !explicitly;
-    first_file = false;
-    return tf;
+source_format_t& cdf_source_format();
+
+void
+source_format_t::infer( const char *bol, bool want_reference_format ) {
+  if( bol ) {
+    left = 7;
+    if( want_reference_format ) {
+      right = 73;
+    }
   }
-  inline bool is_fixed() const { return column == 7; }
-  inline bool is_reffmt() const { return is_fixed() && right_margin == 73; }
-  inline bool is_free() const { return ! is_fixed(); }
-  
-  const char * description() const {
-    if( is_reffmt() ) return "REFERENCE";
-    if( is_fixed() ) return "FIXED";
-    if( is_free() ) return "FREE";
-    gcc_unreachable();
-  }    
-} indicator = { true, false, 0, 0 };
+  dbgmsg("%s:%d: %s format detected", __func__, __LINE__,
+         description());
+}
+
 
 // public source format test functions
-bool is_fixed_format() { return indicator.is_fixed(); }
-bool is_reference_format() { return indicator.is_reffmt(); }
+bool is_fixed_format() { return cdf_source_format().is_fixed(); }
+bool is_reference_format() { return cdf_source_format().is_reffmt(); }
 
 static bool debug_mode = false;
 
@@ -76,11 +71,10 @@ static bool debug_mode = false;
 */
 
 static inline int left_margin() {
-  return indicator.column == 0? indicator.column : indicator.column - 1;
+  return cdf_source_format().left_margin();
 }
 static inline int right_margin() {
-  return indicator.right_margin == 0?
-    indicator.right_margin : indicator.right_margin - 1;
+  return cdf_source_format().right_margin();
 }
 
 /*
@@ -89,18 +83,9 @@ static inline int right_margin() {
  *   When setting back to 0 (free), the right margin is also reset to 0.
  */
 void
-cobol_set_indicator_column( int column )
-{
-  indicator.explicitly = true;
-  if( column == 0 ) indicator.right_margin = 0;
-  if( column < 0 ) {
-    column = -column;
-    indicator.right_margin = 73;
-  }
-  indicator.column = column;
-}
+cobol_set_indicator_column( int column );
 
-bool include_debug()      { return indicator.column == 7 && debug_mode; }
+bool include_debug()      { return is_fixed_format() && debug_mode; }
 bool set_debug( bool tf ) { return debug_mode = tf && is_fixed_format(); }
 
 static bool nonblank( const char ch ) { return !isblank(ch); }
@@ -114,7 +99,7 @@ start_of_line( char *bol, char *eol ) {
 
 static inline char *
 continues_at( char *bol, char *eol ) {
-  if( indicator.column == 0 ) return NULL;  // cannot continue in free format
+  if( cdf_source_format().is_free() ) return NULL;  // cannot continue in free format
   bol += left_margin();
   if( *bol != '-' ) return NULL; // not a continuation line
   return start_of_line(++bol, eol);
@@ -124,7 +109,7 @@ continues_at( char *bol, char *eol ) {
 // NULL means no indicator column or tested value not present.
 static inline char *
 indicated( char *bol, const char *eol, char ch = '\0' ) {
-  if( indicator.column == 0 && *bol != '*' ) {
+  if( cdf_source_format().left_margin() == 0 && *bol != '*' ) {
     return NULL;  // no indicator column in free format, except for comments
   }
   gcc_assert(bol != NULL);
@@ -336,7 +321,69 @@ recognize_replacements( filespan_t mfile, std::list<replace_t>& pending_replacem
 }
 
 static void
+check_push_pop_directive( filespan_t& mfile ) {
+  char eol = '\0';
+  const char *p = std::find(mfile.cur, mfile.eol, '>');
+  if( ! (p < mfile.eol && p[1] == *p ) ) return;
+
+  const char pattern[] =
+    ">>[[:blank:]]*(push|pop)[[:blank:]]+"
+    "("
+      "all|"
+      "call-convention|"
+      "cobol-words|"
+      "define|"
+      "source[[:blank:]]+format|"
+      "turn"
+    ")";
+  static regex re(pattern, extended_icase);
+
+  // show contents of marked subexpressions within each match
+  cmatch cm;
+
+  std::swap(*mfile.eol, eol); // see implementation for excuses
+  bool ok = regex_search(p, const_cast<const char *>(mfile.eol), cm, re);
+  std::swap(*mfile.eol, eol);
+
+  if( ok ) {
+    gcc_assert(cm.size() > 1);
+    bool push = TOUPPER(cm[1].first[1]) == 'U';
+    switch( TOUPPER(cm[2].first[0]) ) {
+    case 'A': // ALL
+      push? cdf_push() : cdf_pop();
+      break;
+    case 'C':
+      switch( TOUPPER(cm[2].first[1]) ) {
+      case 'A': // CALL-CONVENTION
+        push? cdf_push_call_convention() : cdf_pop_call_convention();
+        break;
+      case 'O': // COBOL-WORDS
+        push? cdf_push_current_tokens() : cdf_pop_current_tokens();
+        break;
+      default:
+        gcc_unreachable();
+      }
+      break;
+    case 'D': // DEFINE
+      push? cdf_push_dictionary() : cdf_pop_dictionary();
+      break;
+    case 'S': // SOURCE FORMAT
+      push? cdf_push_source_format() : cdf_pop_source_format();
+      break;
+    case 'T': // TURN
+      push? cdf_push_enabled_exceptions() : cdf_pop_enabled_exceptions();
+      break;
+    default:
+      gcc_unreachable();
+    }
+    erase_line(const_cast<char*>(cm[0].first),
+               const_cast<char*>(cm[0].second));
+  }
+}
+
+static void
 check_source_format_directive( filespan_t& mfile ) {
+  char eol = '\0';
   const char *p = std::find(mfile.cur, mfile.eol, '>');
   if( ! (p < mfile.eol && p[1] == *p ) ) return;
 
@@ -349,7 +396,12 @@ check_source_format_directive( filespan_t& mfile ) {
 
   // show contents of marked subexpressions within each match
   cmatch cm;
-  if( regex_search(p, const_cast<const char *>(mfile.eol), cm, re) ) {
+
+  std::swap(*mfile.eol, eol); // see implementation for excuses
+  bool ok = regex_search(p, const_cast<const char *>(mfile.eol), cm, re);
+  std::swap(*mfile.eol, eol);
+
+  if( ok ) {
     gcc_assert(cm.size() > 1);
     switch( cm[3].length() ) {
     case 4:
@@ -365,11 +417,11 @@ check_source_format_directive( filespan_t& mfile ) {
 
     dbgmsg( "%s:%d: %s format set, on line " HOST_SIZE_T_PRINT_UNSIGNED,
             __func__, __LINE__,
-            indicator.column == 7? "FIXED" : "FREE",
+            cdf_source_format().description(),
             (fmt_size_t)mfile.lineno() );
-    char *bol = indicator.is_fixed()? mfile.cur : const_cast<char*>(cm[0].first);
+    char *bol = cdf_source_format().is_fixed()? mfile.cur : const_cast<char*>(cm[0].first);
+    gcc_assert(cm[0].second <= mfile.eol);
     erase_line(bol, const_cast<char*>(cm[0].second));
-    mfile.cur = const_cast<char*>(cm[0].second);
   }
 }
 
@@ -889,7 +941,7 @@ location_in( const filespan_t& mfile, const csub_match& cm ) {
   gcc_assert(mfile.cur <= cm.first && cm.second <= mfile.eodata);
   auto nline = std::count(cm.first, cm.second, '\n');
   if( nline ) {
-    gcc_assert(loc.first_line < nline);
+    gcc_assert(nline < loc.first_line);
     loc.first_line -= nline;
     auto p = static_cast<const char*>(memrchr(cm.first, '\n', cm.length()));
     loc.last_column = (cm.second) - p;
@@ -1327,13 +1379,13 @@ lexer_input( char buf[], int max_size, FILE *input ) {
   for( auto p = mfile.cur; p < next; *output.pos++ = *p++ ) {
     static bool at_bol = false;
     if( at_bol ) {
-      auto nonblank = std::find_if( p, next,
+      auto nonblank_l = std::find_if( p, next,
                                     []( char ch ) {
                                       return !isblank(ch); } );
-      if( nonblank + 1 < next ) {
-        if( *nonblank == '\r' ) nonblank++; // Windows
-        if( *nonblank == '\n' ) {
-          p = nonblank;
+      if( nonblank_l + 1 < next ) {
+        if( *nonblank_l == '\r' ) nonblank_l++; // Windows
+        if( *nonblank_l == '\n' ) {
+          p = nonblank_l;
           continue;
         }
       }
@@ -1461,7 +1513,6 @@ cdftext::lex_open( const char filename[] ) {
 
   // Process any files supplied by the -include command-line option.
   for( auto name : included_files ) {
-    int input;
     if( -1 == (input = open(name, O_RDONLY)) ) {
       yyerrorvl(1, "", "cannot open -include file %s", name);
       continue;
@@ -1634,7 +1685,7 @@ bool lexio_dialect_mf();
  */
 static const char *
 valid_sequence_area( const char *data, const char *eodata ) {
-  
+
   for( const char *p = data;
        (p = std::find_if(p, eodata, is_p)) != eodata;
        p++ )
@@ -1657,7 +1708,7 @@ valid_sequence_area( const char *data, const char *eodata ) {
       }
     }
   }
-  return nullptr;  
+  return nullptr;
 }
 
 /*
@@ -1693,22 +1744,17 @@ cdftext::free_form_reference_format( int input ) {
   } current( mfile.data );
 
   /*
-   * Infer source code format. 
+   * Infer source code format.
    */
-  if( indicator.inference_pending()  ) {
+  if( cdf_source_format().inference_pending()  ) {
     const char *bol = valid_sequence_area(mfile.data, mfile.eodata);
     if( bol ) {
-      indicator.column = 7;
-      if( infer_reference_format(bol, mfile.eodata) ) {
-	indicator.right_margin = 73;
-      }
+      cdf_source_format().infer( bol, infer_reference_format(bol, mfile.eodata) );
     }
-
-    dbgmsg("%s:%d: %s format detected", __func__, __LINE__,
-           indicator.description());
   }
 
   while( mfile.next_line() ) {
+    check_push_pop_directive(mfile);
     check_source_format_directive(mfile);
     remove_inline_comment(mfile.cur, mfile.eol);
 
@@ -1857,7 +1903,7 @@ cdftext::process_file( filespan_t mfile, int output, bool second_pass ) {
                    []( char ch ) { return ch == '\n'; } );
       struct { int in, out; filespan_t mfile; } copy;
       dbgmsg("%s:%d: line " HOST_SIZE_T_PRINT_UNSIGNED ", opening %s on fd %d",
-             __func__, __LINE__,mfile.lineno(),
+             __func__, __LINE__, (fmt_size_t)mfile.lineno(),
              copybook.source(), copybook.current()->fd);
       copy.in = copybook.current()->fd;
       copy.mfile = free_form_reference_format( copy.in );
@@ -1936,15 +1982,15 @@ cdftext::segment_line( filespan_t& mfile ) {
     struct { unsigned long ante, post; } lineno = {
       gb4(mfile.lineno()), gb4(mfile.lineno() + segment.after.nlines())
     };
-    char *directive = lineno.ante == lineno.post?
+    const char *directive = lineno.ante == lineno.post?
       nullptr : xasprintf("\n#line %lu \"%s\"\n",
                           lineno.ante, cobol_filename());
 
-    if( directive ) 
+    if( directive )
       output.push_back( span_t(strlen(directive), directive) );
     output.push_back( span_t(mfile.cur, segment.before.p) );
     output.push_back( span_t(segment.after.p, segment.after.pend ) );
-    if( directive ) 
+    if( directive )
       output.push_back( span_t(strlen(directive), directive) );
 
     mfile.cur = const_cast<char*>(segment.before.pend);

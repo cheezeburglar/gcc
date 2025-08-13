@@ -118,7 +118,7 @@ void      set_exception_code_func(ec_type_t ec,
                                   int line,
                                   int from_raise_statement=0);
 #define set_exception_code(ec) set_exception_code_func(ec, __LINE__)
-bool      process_this_exception(ec_type_t ec);
+bool      process_this_exception(const ec_type_t ec);
 #define   CHECK_FOR_FRACTIONAL_DIGITS true
 void      get_integer_value(tree value,  // This is always a LONG
                             cbl_field_t *field,
@@ -130,7 +130,7 @@ void      copy_little_endian_into_place(cbl_field_t *dest,
                                         tree value,
                                         int rhs_rdigits,
                                         bool check_for_error,
-                                        tree &size_error);
+                                  const tree &size_error);
 tree      build_array_of_size_t( size_t  N,
                                  const size_t *values);
 void      parser_display_internal_field(tree file_descriptor,
@@ -138,14 +138,14 @@ void      parser_display_internal_field(tree file_descriptor,
                                         bool advance=DISPLAY_NO_ADVANCE);
 char     *get_literal_string(cbl_field_t *field);
 
-bool      refer_is_clean(cbl_refer_t &refer);
+bool      refer_is_clean(const cbl_refer_t &refer);
 
-tree      refer_offset(cbl_refer_t &refer,
+tree      refer_offset(const cbl_refer_t &refer,
                        int *pflags=NULL);
-tree      refer_size_source(cbl_refer_t &refer);
-tree      refer_size_dest(cbl_refer_t &refer);
+tree      refer_size_source(const cbl_refer_t &refer);
+tree      refer_size_dest(const cbl_refer_t &refer);
 
-tree      qualified_data_location(cbl_refer_t &refer);
+tree      qualified_data_location(const cbl_refer_t &refer);
 
 void      build_array_of_treeplets( int ngroup,
                                     size_t N,

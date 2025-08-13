@@ -302,7 +302,7 @@ released on 2017-05-06.
 The gcobol documentation is maintained as manpages using troff
 mdoc. GNU groff is required to convert them to PDF format.  Conversion
 to HTML is done with mandoc, available at
-@uref{http://mdocml.bsd.lv/}.
+@uref{https://mandoc.bsd.lv}.
 
 Because ISO COBOL defines strict requirements for numerical precision,
 gcobol requires hardware with 128-bit computation instructions.  This
@@ -393,7 +393,7 @@ Note binutils 2.35 or newer is required for LTO to work correctly
 with GNU libtool that includes doing a bootstrap with LTO enabled.
 
 @item gzip version 1.2.4 (or later) or
-@itemx bzip2 version 1.0.2 (or later)
+@itemx xz version 5.0 (or later)
 
 Necessary to uncompress GCC @command{tar} files when source code is
 obtained via HTTPS mirror sites.
@@ -1887,8 +1887,8 @@ Produce code conforming to version 20191213.
 In the absence of this configuration option the default version is 20191213.
 
 @item --enable-__cxa_atexit
-Define if you want to use @code{__cxa_atexit}, rather than atexit, to
-register C++ destructors for local statics and global objects.
+Define if you want to use @code{__cxa_atexit}, rather than @code{atexit},
+to register C++ destructors for local statics and global objects.
 This is essential for fully standards-compliant handling of
 destructors, but requires @code{__cxa_atexit} in libc.  This option is
 currently only available on systems with GNU libc.  When enabled, this
@@ -2666,6 +2666,17 @@ specific options to a set of building options.
 target binutils supports @code{Intel CET} instructions and disabled
 otherwise.  In this case, the target libraries are configured to get
 additional @option{-fcf-protection} option.
+
+@item --enable-x86-64-mfentry
+@itemx --disable-x86-64-mfentry
+Enable @option {-mfentry} by default on x86-64 to put the profiling
+counter call, @code{__fentry__}, before the prologue so that @option{-pg}
+can be used with @option{-fshrink-wrap} which is enabled at @option{-O1}.
+This configure option is 64-bit only because @code{__fentry__} doesn't
+support PIC in 32-bit mode.
+
+@option{--enable-x86-64-mfentry=auto} is default.  @option{-mfentry} is
+enabled on Linux/x86-64 by default.
 
 @item --with-riscv-attribute=@samp{yes}, @samp{no} or @samp{default}
 Generate RISC-V attribute by default, in order to record extra build
@@ -5152,13 +5163,6 @@ respects, this target is the same as the
 @end html
 @anchor{windows}
 @heading Microsoft Windows
-
-@subheading Intel 16-bit versions
-The 16-bit versions of Microsoft Windows, such as Windows 3.1, are not
-supported.
-
-However, the 32-bit port has limited support for Microsoft
-Windows 3.11 in the Win32s environment, as a target only.  See below.
 
 @subheading Intel 32-bit versions
 The 32-bit versions of Windows, including Windows 95, Windows NT, Windows

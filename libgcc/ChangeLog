@@ -1,3 +1,65 @@
+2025-08-08  Christophe Lyon  <christophe.lyon@linaro.org>
+
+	PR libgcc/117600
+	* Makefile.in (WERROR): New.
+	* config/aarch64/t-aarch64: Handle WERROR.
+	* configure: Regenerate.
+	* configure.ac: Add support for --enable-werror.
+
+2025-08-07  Stefan Schulze Frielinghaus  <stefansf@gcc.gnu.org>
+
+	* config/s390/libgcc-glibc.ver: Export _BitInt support
+	functions.
+	* config/s390/t-softfp (softfp_extras): Add fixtfbitint
+	floatbitinttf.
+
+2025-08-07  Stefan Schulze Frielinghaus  <stefansf@gcc.gnu.org>
+
+	* config.host: Include makefiles t-softfp for -m64.
+	* config/s390/sfp-exceptions.c: New file.
+	* config/s390/sfp-machine.h: New file.
+	* config/s390/t-softfp: New file.
+
+2025-08-06  Jakub Jelinek  <jakub@redhat.com>
+
+	PR libgcc/121397
+	* enable-execute-stack-mprotect.c (check_enabling): Remove useless
+	forward declaration.
+
+2025-07-31  Wilco Dijkstra  <wilco.dijkstra@arm.com>
+
+	* config/aarch64/cpuinfo.c (__init_cpu_features_constructor):
+	Remove unused features, add support for CSSC and MOPS.
+
+2025-07-31  Wilco Dijkstra  <wilco.dijkstra@arm.com>
+
+	* config/aarch64/cpuinfo.c: Cleanup HWCAP defines.
+
+2025-07-31  Yury Khrustalev  <yury.khrustalev@arm.com>
+
+	* config/aarch64/cpuinfo.c (__ifunc_arg_t): Likewise.
+	(__init_cpu_features): obtain and assign values for the
+	fields _hwcap3 and _hwcap4.
+	(__init_cpu_features_constructor): check _size in the
+	arg argument.
+
+2025-07-17  Richard Sandiford  <richard.sandiford@arm.com>
+	    Yury Khrustalev  <yury.khrustalev@arm.com>
+
+	* config/aarch64/linux-unwind.h (aarch64_fallback_frame_state):
+	If a signal was raised while there was an uncommitted lazy save,
+	commit the save as part of the unwind process.
+
+2025-07-16  John Ericson  <git@JohnEricson.me>
+
+	* Makefile.in:  Delete dead `MACHMODE_H` variable
+
+2025-07-10  Jan Dubiec  <jdx@o2.pl>
+
+	PR target/116363
+	* libgcc2.c (__fixunssfDI): Fix SFtype to UDWtype conversion for targets
+	without LIBGCC2_HAS_DF_MODE defined
+
 2025-05-27  Jakub Jelinek  <jakub@redhat.com>
 
 	* config/t-softfp (softfp_bid_list): Don't guard with

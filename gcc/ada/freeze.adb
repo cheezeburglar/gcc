@@ -765,6 +765,9 @@ package body Freeze is
       --  in fact constrained by non-static discriminant values. Could be made
       --  more precise ???
 
+      function Value_Known (Exp : Node_Id) return Boolean;
+      --  Return True if the value of expression Exp is known at compile time
+
       --------------------
       -- Set_Small_Size --
       --------------------
@@ -880,13 +883,13 @@ package body Freeze is
                      High := Type_High_Bound (Etype (Index));
                   end if;
 
-                  if not Compile_Time_Known_Value (Low)
-                    or else not Compile_Time_Known_Value (High)
-                    or else Etype (Index) = Any_Type
-                  then
+                  if Etype (Index) = Any_Type then
                      return False;
 
-                  else
+                  elsif Compile_Time_Known_Value (Low)
+                    and then Compile_Time_Known_Value (High)
+                  then
+
                      Dim := Expr_Value (High) - Expr_Value (Low) + 1;
 
                      if Dim > Uint_0 then
@@ -894,6 +897,12 @@ package body Freeze is
                      else
                         Size := Uint_0;
                      end if;
+
+                  elsif Value_Known (Low) and then Value_Known (High) then
+                     Size := Uint_0;
+
+                  else
+                     return False;
                   end if;
 
                   Next_Index (Index);
@@ -1159,6 +1168,70 @@ package body Freeze is
 
          return True;
       end Static_Discriminated_Components;
+
+      -----------------
+      -- Value_Known --
+      -----------------
+
+      function Value_Known (Exp : Node_Id) return Boolean is
+      begin
+         --  This is the immediate case
+
+         if Compile_Time_Known_Value (Exp) then
+            return True;
+         end if;
+
+         --  The value may be known only to the back end, the typical example
+         --  being the alignment or the various sizes of composite types; in
+         --  the latter case, we may mutually recurse with Size_Known.
+
+         case Nkind (Exp) is
+            when N_Attribute_Reference =>
+               declare
+                  P : constant Node_Id := Prefix (Exp);
+
+               begin
+                  if not Is_Entity_Name (P)
+                    or else not Is_Type (Entity (P))
+                  then
+                     return False;
+                  end if;
+
+                  case Get_Attribute_Id (Attribute_Name (Exp)) is
+                     when Attribute_Alignment =>
+                        return True;
+
+                     when Attribute_Component_Size =>
+                        return Size_Known (Component_Type (Entity (P)));
+
+                     when Attribute_Object_Size
+                        | Attribute_Size
+                        | Attribute_Value_Size
+                     =>
+                        return Size_Known (Entity (P));
+
+                     when others =>
+                        return False;
+                  end case;
+               end;
+
+            when N_Binary_Op =>
+               return Value_Known (Left_Opnd (Exp))
+                 and then Value_Known (Right_Opnd (Exp));
+
+            when N_Qualified_Expression
+               | N_Type_Conversion
+               | N_Unchecked_Type_Conversion
+            =>
+               return Value_Known (Expression (Exp));
+
+            when N_Unary_Op =>
+               return Value_Known (Right_Opnd (Exp));
+
+            when others =>
+               return False;
+         end case;
+      end Value_Known;
 
    --  Start of processing for Check_Compile_Time_Size
 
@@ -2805,8 +2878,7 @@ package body Freeze is
    is
       Loc : constant Source_Ptr := Sloc (N);
 
-      Saved_GM  : constant Ghost_Mode_Type := Ghost_Mode;
-      Saved_IGR : constant Node_Id         := Ignored_Ghost_Region;
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
       --  Save the Ghost-related attributes to restore on exit
 
       Atype  : Entity_Id;
@@ -4740,6 +4812,8 @@ package body Freeze is
                  and then Convention (F_Type) = Convention_Ada
                  and then not Has_Warnings_Off (F_Type)
                  and then not Has_Size_Clause (F_Type)
+                 and then Present (Esize (F_Type))
+                 and then Esize (F_Type) = 8
                then
                   Error_Msg_N
                     ("& is an 8-bit Ada Boolean?x?", Formal);
@@ -7158,6 +7232,35 @@ package body Freeze is
             end if;
 
             Inherit_Aspects_At_Freeze_Point (E);
+
+            --  Destructor legality check
+
+            if Present (Primitive_Operations (E)) then
+               declare
+                  Subp             : Entity_Id;
+                  Parent_Operation : Entity_Id;
+
+                  Elmt : Elmt_Id := First_Elmt (Primitive_Operations (E));
+
+               begin
+                  while Present (Elmt) loop
+                     Subp := Node (Elmt);
+
+                     if Present (Overridden_Operation (Subp)) then
+                        Parent_Operation := Overridden_Operation (Subp);
+
+                        if Ekind (Parent_Operation) = E_Procedure
+                          and then Is_Destructor (Parent_Operation)
+                        then
+                           Error_Msg_N ("cannot override destructor", Subp);
+                        end if;
+                     end if;
+
+                     Next_Elmt (Elmt);
+                  end loop;
+               end;
+            end if;
+
          end if;
 
          --  Case of array type
@@ -8057,6 +8160,7 @@ package body Freeze is
          if Ekind (E) = E_Anonymous_Access_Subprogram_Type
            and then Ekind (Designated_Type (E)) = E_Subprogram_Type
          then
+            Create_Extra_Formals (Designated_Type (E));
             Layout_Type (Etype (Designated_Type (E)));
          end if;
 
@@ -8255,12 +8359,12 @@ package body Freeze is
       --  and Per-Object Expressions" will suppress the insertion, and the
       --  freeze node will be dropped on the floor.
 
-      if Saved_GM = Ignore
-        and then Ghost_Mode /= Ignore
-        and then Present (Ignored_Ghost_Region)
+      if Saved_Ghost_Config.Ghost_Mode = Ignore
+        and then Ghost_Config.Ghost_Mode /= Ignore
+        and then Present (Ghost_Config.Ignored_Ghost_Region)
       then
          Insert_Actions
-           (Assoc_Node   => Ignored_Ghost_Region,
+           (Assoc_Node   => Ghost_Config.Ignored_Ghost_Region,
             Ins_Actions  => Result,
             Spec_Expr_OK => True);
 
@@ -8268,7 +8372,7 @@ package body Freeze is
       end if;
 
    <<Leave>>
-      Restore_Ghost_Region (Saved_GM, Saved_IGR);
+      Restore_Ghost_Region (Saved_Ghost_Config);
 
       return Result;
    end Freeze_Entity;
@@ -10320,6 +10424,8 @@ package body Freeze is
 
       --  Local variables
 
+      use Deferred_Extra_Formals_Support;
+
       F      : Entity_Id;
       Retype : Entity_Id;
 
@@ -10420,8 +10526,11 @@ package body Freeze is
             Create_Extra_Formals (E);
 
             pragma Assert
-              ((Ekind (E) = E_Subprogram_Type
-                  and then Extra_Formals_OK (E))
+              ((Extra_Formals_Known (E)
+                 or else Is_Deferred_Extra_Formals_Entity (E))
+               or else
+                 (Ekind (E) = E_Subprogram_Type
+                   and then Extra_Formals_OK (E))
                or else
                  (Is_Subprogram (E)
                    and then Extra_Formals_OK (E)
@@ -10449,6 +10558,10 @@ package body Freeze is
 
       else
          Set_Mechanisms (E);
+
+         if not Extra_Formals_Known (E) then
+            Freeze_Extra_Formals (E);
+         end if;
 
          --  For foreign conventions, warn about return of unconstrained array
 
@@ -10504,6 +10617,11 @@ package body Freeze is
             end loop;
          end if;
       end if;
+
+      --  Check formals matching in thunks
+
+      pragma Assert (not Is_Thunk (E)
+        or else Extra_Formals_Match_OK (Thunk_Entity (E), E));
 
       --  Pragma Inline_Always is disallowed for dispatching subprograms
       --  because the address of such subprograms is saved in the dispatch

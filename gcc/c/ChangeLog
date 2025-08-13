@@ -1,3 +1,159 @@
+2025-08-07  Jakub Jelinek  <jakub@redhat.com>
+
+	PR preprocessor/120778
+	* c-decl.cc (c_init_decl_processing): Mark cpp nodes corresponding
+	to keywords as NODE_WARN if warn_keyword_macro.
+
+2025-08-06  Alexandre Oliva  <oliva@adacore.com>
+
+	* c-tree.h (C_BOOLEAN_TYPE_P): Cover hardbools as well.
+	* c-typeck.cc (convert_lvalue_to_rvalue): New overload and
+	wrapper.
+	(build_atomic_assign, build_modify_expr): Use it.
+	(build_asm_expr, handle_omp-array_sections_1): Simplify with
+	it.
+	(build_unary_op): Handle hardbools.
+
+2025-08-06  Martin Uecker  <uecker@tugraz.at>
+
+	PR c/108931
+	* c-typeck.cc (composite_type_cond): Renamed from
+	composite_type with argument for condition
+	(composite_type): New function.
+	(composite_type_internal): Implement new logic.
+	(build_conditional_expr): Pass condition.
+	(common_pointer_type): Adapt.
+	(pointer_diff): Adapt.
+	(build_binary_op): Adapt.
+
+2025-08-06  Martin Uecker  <uecker@tugraz.at>
+
+	PR c/121217
+	* c-typeck.cc (tagged_types_tu_compatible_p): Add check.
+
+2025-08-06  Kwok Cheung Yeung  <kcyeung@baylibre.com>
+
+	* c-parser.cc (c_parser_omp_clause_from_to): Parse 'iterator' modifier.
+	* c-typeck.cc (c_finish_omp_clauses): Finish iterators for to/from
+	clauses.
+
+2025-08-06  Kwok Cheung Yeung  <kcyeung@baylibre.com>
+	    Andrew Stubbs  <ams@baylibre.com>
+
+	* c-parser.cc (c_parser_omp_variable_list): Use location of the
+	map expression as the clause location.
+	(c_parser_omp_clause_map): Parse 'iterator' modifier.
+	* c-typeck.cc (c_finish_omp_clauses): Finish iterators.  Apply
+	iterators to generated clauses.
+
+2025-08-02  Martin Uecker  <uecker@tugraz.at>
+
+	* c-decl.cc (get_parm_array_spec): Remove.
+	(push_parm_decl): Do not add `arg spec` attribute.
+	(build_arg_spec_attribute): New function.
+	(grokdeklarator): Add `arg spec` attribute.
+
+2025-07-25  David Malcolm  <dmalcolm@redhat.com>
+
+	* c-errors.cc: Update usage of "diagnostic_info" to explicitly
+	refer to "diagnostics::diagnostic_info".
+
+2025-07-25  David Malcolm  <dmalcolm@redhat.com>
+
+	* c-errors.cc: Update for diagnostic_t becoming
+	enum class diagnostics::kind.
+	* c-parser.cc: Likewise.
+	* c-typeck.cc: Likewise.
+
+2025-07-25  David Malcolm  <dmalcolm@redhat.com>
+
+	* c-decl.cc: Update for renaming of diagnostic_option_id to
+	diagnostics::option_id.
+	* c-errors.cc: Likewise.
+	* c-tree.h: Likewise.
+
+2025-07-25  David Malcolm  <dmalcolm@redhat.com>
+
+	* c-objc-common.cc: Update for diagnostic_context becoming
+	diagnostics::context.
+	* c-tree.h: Likewise.
+
+2025-07-25  David Malcolm  <dmalcolm@redhat.com>
+
+	* c-errors.cc: Update to add "m_" prefix to fields of
+	diagnostic_info throughout.
+
+2025-07-21  Stefan Schulze Frielinghaus  <stefansf@gcc.gnu.org>
+
+	* c-typeck.cc (build_asm_expr): Pass null pointer to
+	parse_{input,output}_constraint().
+
+2025-07-16  Kwok Cheung Yeung  <kcyeung@baylibre.com>
+
+	* c-typeck.cc (handle_omp_array_sections): Use OMP_ITERATOR_DECL_P.
+	(c_finish_omp_clauses): Likewise.
+
+2025-07-15  Jakub Jelinek  <jakub@redhat.com>
+	    Jason Merrill  <jason@redhat.com>
+
+	PR c/44677
+	* c-parser.cc (c_parser_unary_expression): Clear DECL_READ_P
+	after default_function_array_read_conversion for
+	-Wunused-but-set-{parameter,variable}={2,3} on
+	PRE{IN,DE}CREMENT_EXPR argument.
+	(c_parser_postfix_expression_after_primary): Similarly for
+	POST{IN,DE}CREMENT_EXPR.
+	* c-decl.cc (pop_scope): Use OPT_Wunused_but_set_variable_
+	instead of OPT_Wunused_but_set_variable.
+	(finish_function): Use OPT_Wunused_but_set_parameter_
+	instead of OPT_Wunused_but_set_parameter.
+	* c-typeck.cc (mark_exp_read): Handle {PRE,POST}{IN,DE}CREMENT_EXPR
+	and don't handle it when cast to void.
+	(build_modify_expr): Clear DECL_READ_P after build_binary_op
+	for -Wunused-but-set-{parameter,variable}=3.
+
+2025-07-10  Qing Zhao  <qing.zhao@oracle.com>
+
+	* c-typeck.cc (build_access_with_size_for_counted_by): Update comments.
+	Adjust the arguments per the new design.
+
+2025-07-10  Qing Zhao  <qing.zhao@oracle.com>
+
+	PR middle-end/121000
+	* c-typeck.cc (build_access_with_size_for_counted_by): Update comments.
+	Pass TYPE_SIZE_UNIT of the element as the 6th argument.
+
+2025-07-07  Qing Zhao  <qing.zhao@oracle.com>
+
+	Revert:
+	2025-07-07  Qing Zhao  <qing.zhao@oracle.com>
+
+	* c-decl.cc (verify_counted_by_attribute): Change the 2nd argument
+	to a vector of fields with counted_by attribute. Verify all fields
+	in this vector.
+	(finish_struct): Collect all the fields with counted_by attribute
+	to a vector and pass this vector to verify_counted_by_attribute.
+	* c-typeck.cc (build_counted_by_ref): Handle pointers with counted_by.
+	Add one more argument, issue error when the pointee type is a structure
+	or union including a flexible array member.
+	(build_access_with_size_for_counted_by): Handle pointers with counted_by.
+	(handle_counted_by_for_component_ref): Call build_counted_by_ref
+	with the new prototype.
+
+2025-07-01  Qing Zhao  <qing.zhao@oracle.com>
+
+	* c-decl.cc (verify_counted_by_attribute): Change the 2nd argument
+	to a vector of fields with counted_by attribute. Verify all fields
+	in this vector.
+	(finish_struct): Collect all the fields with counted_by attribute
+	to a vector and pass this vector to verify_counted_by_attribute.
+	* c-typeck.cc (build_counted_by_ref): Handle pointers with counted_by.
+	Add one more argument, issue error when the pointee type is a structure
+	or union including a flexible array member.
+	(build_access_with_size_for_counted_by): Handle pointers with counted_by.
+	(handle_counted_by_for_component_ref): Call build_counted_by_ref
+	with the new prototype.
+
 2025-06-23  Tobias Burnus  <tburnus@baylibre.com>
 
 	* c-parser.cc (OACC_WAIT_CLAUSE_MASK): Add if clause.

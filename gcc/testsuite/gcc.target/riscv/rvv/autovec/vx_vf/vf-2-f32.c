@@ -11,3 +11,9 @@
 /* { dg-final { scan-assembler-not {vfmsac.vf} } } */
 /* { dg-final { scan-assembler-not {vfnmacc.vf} } } */
 /* { dg-final { scan-assembler-not {vfnmsac.vf} } } */
+/* { dg-final { scan-assembler-not {vfwmacc.vf} } } */
+/* { dg-final { scan-assembler-not {vfwmsac.vf} } } */
+/* { dg-final { scan-assembler-not {vfwnmacc.vf} } } */
+/* { dg-final { scan-assembler-not {vfwnmsac.vf} } } */
+/* { dg-final { scan-assembler-times {fcvt.d.s} 4 } } */
+/* { dg-final { scan-assembler-times {vfmv.v.f} 12 } } */

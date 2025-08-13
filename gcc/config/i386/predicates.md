@@ -573,8 +573,8 @@
 
     case CONST:
       op = XEXP (op, 0);
-      if (GET_CODE (op) == SYMBOL_REF
-	  || GET_CODE (op) == LABEL_REF
+      if (SYMBOL_REF_P (op)
+	  || LABEL_REF_P (op)
 	  || (GET_CODE (op) == UNSPEC
 	      && (XINT (op, 1) == UNSPEC_GOT
 		  || XINT (op, 1) == UNSPEC_GOTOFF
@@ -586,8 +586,8 @@
 	return false;
 
       op = XEXP (op, 0);
-      if (GET_CODE (op) == SYMBOL_REF
-	  || GET_CODE (op) == LABEL_REF)
+      if (SYMBOL_REF_P (op)
+	  || LABEL_REF_P (op))
 	return true;
       /* Only @GOTOFF gets offsets.  */
       if (GET_CODE (op) != UNSPEC
@@ -595,8 +595,8 @@
 	return false;
 
       op = XVECEXP (op, 0, 0);
-      if (GET_CODE (op) == SYMBOL_REF
-	  || GET_CODE (op) == LABEL_REF)
+      if (SYMBOL_REF_P (op)
+	  || LABEL_REF_P (op))
 	return true;
       return false;
 
@@ -614,10 +614,10 @@
       && CONST_INT_P (XEXP (XEXP (op, 0), 1)))
     op = XEXP (XEXP (op, 0), 0);
 
-  if (GET_CODE (op) == LABEL_REF)
+  if (LABEL_REF_P (op))
     return true;
 
-  if (GET_CODE (op) != SYMBOL_REF)
+  if (!SYMBOL_REF_P (op))
     return false;
 
   if (SYMBOL_REF_TLS_MODEL (op))
@@ -649,7 +649,7 @@
       && CONST_INT_P (XEXP (XEXP (op, 0), 1)))
     op = XEXP (XEXP (op, 0), 0);
 
-  if (GET_CODE (op) == SYMBOL_REF
+  if (SYMBOL_REF_P (op)
       && !SYMBOL_REF_FUNCTION_P (op))
     return false;
 
@@ -664,8 +664,9 @@
 ;; same segment as the GOT.  Unfortunately, the flexibility of linker
 ;; scripts means that we can't be sure of that in general, so assume
 ;; @GOTOFF is not valid on VxWorks, except with the large code model.
+;; The comments above seem to apply only to VxWorks releases before 7.
 (define_predicate "gotoff_operand"
-  (and (ior (not (match_test "TARGET_VXWORKS_RTP"))
+  (and (ior (not (match_test "TARGET_VXWORKS_VAROFF"))
             (match_test "ix86_cmodel == CM_LARGE")
             (match_test "ix86_cmodel == CM_LARGE_PIC"))
        (match_operand 0 "local_symbolic_operand")))
@@ -1144,7 +1145,7 @@
   unsigned n_elts;
   op = avoid_constant_pool_reference (op);
 
-  if (GET_CODE (op) != CONST_VECTOR)
+  if (!CONST_VECTOR_P (op))
     return false;
 
   n_elts = CONST_VECTOR_NUNITS (op);
@@ -1172,7 +1173,7 @@
   if (MEM_P (op))
     {
       op = get_pool_constant (XEXP (op, 0));
-      if (GET_CODE (op) != CONST_VECTOR)
+      if (!CONST_VECTOR_P (op))
 	return false;
 
       if (GET_MODE (op) != mode
@@ -1421,8 +1422,8 @@
 	}
       if (TARGET_64BIT
 	  && flag_pic
-	  && (GET_CODE (disp) == SYMBOL_REF
-	      || GET_CODE (disp) == LABEL_REF))
+	  && (SYMBOL_REF_P (disp)
+	      || LABEL_REF_P (disp)))
 	return false;
     }
 
@@ -1713,9 +1714,13 @@
 (define_predicate "div_operator"
   (match_code "div"))
 
-;; Return true if this is a and, ior or xor operation.
+;; Return true if this is an and, ior or xor operation.
 (define_predicate "logic_operator"
   (match_code "and,ior,xor"))
+
+;; Return true if this is an and operation.
+(define_predicate "and_operator"
+  (match_code "and"))
 
 ;; Return true if this is a plus, minus, and, ior or xor operation.
 (define_predicate "plusminuslogic_operator"
@@ -1739,8 +1744,12 @@
 (define_predicate "compare_operator"
   (match_code "compare"))
 
-(define_predicate "extract_operator"
-  (match_code "zero_extract,sign_extract"))
+(define_predicate "extract_high_operator"
+  (match_code "zero_extract,sign_extract,ashiftrt,lshiftrt")
+{
+  return (const8_operand (XEXP (op, 1), VOIDmode)
+	  && (BINARY_P (op) || const8_operand (XEXP (op, 2), VOIDmode)));
+})
 
 ;; Return true if OP is a memory operand, aligned to
 ;; less than its natural alignment.

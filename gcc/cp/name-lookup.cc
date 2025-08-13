@@ -3408,7 +3408,9 @@ check_local_shadow (tree decl)
 	 detected elsewhere.  */
       else if (VAR_P (old)
 	       && old_scope == current_binding_level->level_chain
-	       && (old_scope->kind == sk_cond || old_scope->kind == sk_for))
+	       && (old_scope->kind == sk_cond
+		   || old_scope->kind == sk_for
+		   || old_scope->kind == sk_template_for))
 	{
 	  if (name_independent_decl_p (decl))
 	    return old;
@@ -4626,6 +4628,7 @@ cp_binding_level_descriptor (cp_binding_level *scope)
     "try-scope",
     "catch-scope",
     "for-scope",
+    "template-for-scope",
     "cond-init-scope",
     "stmt-expr-scope",
     "function-parameter-scope",
@@ -4720,6 +4723,7 @@ begin_scope (scope_kind kind, tree entity)
     case sk_try:
     case sk_catch:
     case sk_for:
+    case sk_template_for:
     case sk_cond:
     case sk_class:
     case sk_scoped_enum:
@@ -7195,7 +7199,7 @@ suggest_alternatives_for_1 (location_t location, tree name,
   /* Look for exact matches for builtin defines that would have been
      defined if the user had passed a command-line option (e.g. -fopenmp
      for "_OPENMP").  */
-  diagnostic_option_id option_id
+  diagnostics::option_id option_id
     = get_option_for_builtin_define (IDENTIFIER_POINTER (name));
   if (option_id.m_idx > 0)
     return name_hint

@@ -150,7 +150,7 @@ begin_lambda_type (tree lambda)
 
   /* Cross-reference the expression and the type.  */
   LAMBDA_EXPR_CLOSURE (lambda) = type;
-  CLASSTYPE_LAMBDA_EXPR (type) = lambda;
+  SET_CLASSTYPE_LAMBDA_EXPR (type, lambda);
 
   /* In C++17, assume the closure is literal; we'll clear the flag later if
      necessary.  */
@@ -823,6 +823,14 @@ lambda_expr_this_capture (tree lambda, int add_capture_p)
   if (cp_unevaluated_operand)
     add_capture_p = false;
 
+  /* If we captured 'this' but don't have a capture proxy yet, look up the
+     captured 'this' again.  */
+  if (this_capture && TREE_CODE (this_capture) == FIELD_DECL)
+    {
+      gcc_assert (!add_capture_p);
+      this_capture = NULL_TREE;
+    }
+
   /* Try to default capture 'this' if we can.  */
   if (!this_capture)
     {
@@ -940,6 +948,9 @@ lambda_expr_this_capture (tree lambda, int add_capture_p)
       result = rvalue (result);
     }
 
+  gcc_checking_assert (!result || result == error_mark_node
+		       || TYPE_PTR_P (TREE_TYPE (result)));
+
   return result;
 }
 
@@ -1027,13 +1038,19 @@ maybe_generic_this_capture (tree object, tree fns)
       }
 }
 
-/* Returns the innermost non-lambda function.  */
+/* Returns the innermost non-lambda function.  If ONLY_SKIP_CONSTEVAL_BLOCK_P,
+   we only skip lambda functions that represent consteval blocks.  */
 
 tree
-current_nonlambda_function (void)
+current_nonlambda_function (bool only_skip_consteval_block_p/*=false*/)
 {
   tree fn = current_function_decl;
-  while (fn && LAMBDA_FUNCTION_P (fn))
+  tree lam;
+  while (fn && LAMBDA_FUNCTION_P (fn)
+	 && (!only_skip_consteval_block_p
+	     /* Only keep going if FN represents a consteval block.  */
+	     || ((lam = CLASSTYPE_LAMBDA_EXPR (CP_DECL_CONTEXT (fn)))
+		 && LAMBDA_EXPR_CONSTEVAL_BLOCK_P (lam))))
     fn = decl_function_context (fn);
   return fn;
 }
@@ -1132,7 +1149,9 @@ maybe_add_lambda_conv_op (tree type)
   tree lam = CLASSTYPE_LAMBDA_EXPR (type);
 
   if (LAMBDA_EXPR_CAPTURE_LIST (lam) != NULL_TREE
-      || LAMBDA_EXPR_DEFAULT_CAPTURE_MODE (lam) != CPLD_NONE)
+      || LAMBDA_EXPR_DEFAULT_CAPTURE_MODE (lam) != CPLD_NONE
+      /* CWG2561 ...and no explicit object parameter.  */
+      || DECL_XOBJ_MEMBER_FUNCTION_P (callop))
     return;
 
   if (processing_template_decl)
@@ -1939,7 +1958,7 @@ finish_lambda_function (tree body)
 {
   finish_function_body (body);
 
-  prune_lambda_captures (body);
+  prune_lambda_captures (cur_stmt_list);
 
   /* Finish the function and generate code for it if necessary.  */
   tree fn = finish_function (/*inline_p=*/true);

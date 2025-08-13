@@ -27,6 +27,9 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+// cppcheck-suppress-file duplicateBreak
+
 #include "cobol-system.h"
 #include "coretypes.h"
 #include "tree.h"
@@ -305,8 +308,11 @@ static
 void
 get_and_check_refstart_and_reflen(  tree         refstart,// LONG returned value
                                     tree         reflen,  // LONG returned value
-                                    cbl_refer_t &refer)
+                              const cbl_refer_t &refer)
   {
+  const cbl_enabled_exceptions_t&
+                                enabled_exceptions( cdf_enabled_exceptions() );
+
   if( !enabled_exceptions.match(ec_bound_ref_mod_e) )
     {
     // This is normal operation -- no exception checking.  Thus, we won't
@@ -458,6 +464,8 @@ get_depending_on_value_from_odo(tree retval, cbl_field_t *odo)
       declarative with a RESUME NEXT STATEMENT, or before the default_condition
       processing can do a controlled exit.
       */
+  const cbl_enabled_exceptions_t&
+                                enabled_exceptions( cdf_enabled_exceptions() );
   cbl_field_t *depending_on;
   depending_on = cbl_field_of(symbol_at(odo->occurs.depending_on));
 
@@ -471,8 +479,8 @@ get_depending_on_value_from_odo(tree retval, cbl_field_t *odo)
     return;
     }
 
-  // Bounds checking is enabled, so we test the DEPENDING ON value to be between
-  // the lower and upper OCCURS limits:
+  // Bounds checking is enabled, so we test the DEPENDING ON value to be
+  // between the lower and upper OCCURS limits:
   get_integer_value(retval,
                     depending_on,
                     NULL,
@@ -482,23 +490,28 @@ get_depending_on_value_from_odo(tree retval, cbl_field_t *odo)
     {
     // This needs to evaluate to an integer
     set_exception_code(ec_bound_odo_e);
-    gg_assign(retval, build_int_cst_type(TREE_TYPE(retval), odo->occurs.bounds.lower));
+    gg_assign(retval, build_int_cst_type( TREE_TYPE(retval),
+                                          odo->occurs.bounds.lower));
     gg_assign(var_decl_rdigits, integer_zero_node);
     }
   ELSE
     ENDIF
 
-  IF( retval, gt_op, build_int_cst_type(TREE_TYPE(retval), odo->occurs.bounds.upper) )
+  IF( retval, gt_op, build_int_cst_type(TREE_TYPE(retval),
+                                        odo->occurs.bounds.upper) )
     {
     set_exception_code(ec_bound_odo_e);
-    gg_assign(retval, build_int_cst_type(TREE_TYPE(retval), odo->occurs.bounds.lower));
+    gg_assign(retval, build_int_cst_type( TREE_TYPE(retval),
+                                          odo->occurs.bounds.lower));
     }
   ELSE
     {
-    IF( retval, lt_op, build_int_cst_type(TREE_TYPE(retval), odo->occurs.bounds.lower) )
+    IF( retval, lt_op, build_int_cst_type(TREE_TYPE(retval),
+                                          odo->occurs.bounds.lower) )
       {
       set_exception_code(ec_bound_odo_e);
-      gg_assign(retval, build_int_cst_type(TREE_TYPE(retval), odo->occurs.bounds.lower));
+      gg_assign(retval, build_int_cst_type( TREE_TYPE(retval),
+                                            odo->occurs.bounds.lower));
       }
     ELSE
       ENDIF
@@ -532,8 +545,8 @@ get_depending_on_value(tree retval, const cbl_refer_t &refer)
 
 static
 tree
-get_data_offset(cbl_refer_t &refer,
-                int *pflags = NULL)
+get_data_offset(const cbl_refer_t &refer,
+                      int *pflags = NULL)
   {
   Analyze();
   // This routine returns a tree which is the size_t offset to the data in the
@@ -548,7 +561,6 @@ get_data_offset(cbl_refer_t &refer,
   // We have a refer.
   // At the very least, we have an constant offset
   int all_flags = 0;
-  int all_flag_bit = 1;
 
   if( refer.nsubscript() )
     {
@@ -568,6 +580,7 @@ get_data_offset(cbl_refer_t &refer,
     // Establish the field_t pointer for walking up through our ancestors:
     cbl_field_t *parent = refer.field;
 
+    int all_flag_bit = 1;
     // Note the backwards test, because refer->nsubscript is an unsigned value
     for(size_t i=refer.nsubscript()-1; i<refer.nsubscript(); i-- )
       {
@@ -601,6 +614,8 @@ get_data_offset(cbl_refer_t &refer,
         }
       else
         {
+        const cbl_enabled_exceptions_t&
+                                enabled_exceptions( cdf_enabled_exceptions() );
         if( !enabled_exceptions.match(ec_bound_subscript_e) )
           {
           // With no exception testing, just pick up the value
@@ -625,21 +640,25 @@ get_data_offset(cbl_refer_t &refer,
             }
           ELSE
             {
-            IF( subscript, lt_op, gg_cast(TREE_TYPE(subscript), integer_one_node) )
+            IF( subscript, lt_op, gg_cast(TREE_TYPE(subscript),
+                                          integer_one_node) )
               {
               // The subscript is too small
               set_exception_code(ec_bound_subscript_e);
-              gg_assign(subscript, build_int_cst_type(TREE_TYPE(subscript), 1));
+              gg_assign(subscript, build_int_cst_type(TREE_TYPE(subscript),
+                                                      1));
               }
             ELSE
               {
               IF( subscript,
                   ge_op,
-                  build_int_cst_type(TREE_TYPE(subscript), parent->occurs.ntimes()) )
+                  build_int_cst_type( TREE_TYPE(subscript),
+                                      parent->occurs.ntimes()) )
                 {
                 // The subscript is too large
                 set_exception_code(ec_bound_subscript_e);
-                gg_assign(subscript, build_int_cst_type(TREE_TYPE(subscript), 1));
+                gg_assign(subscript, build_int_cst_type(TREE_TYPE(subscript),
+                                                        1));
                 }
               ELSE
                 {
@@ -654,14 +673,19 @@ get_data_offset(cbl_refer_t &refer,
 
       all_flag_bit <<= 1;
 
-      // Although we strictly don't need to look at the ODO value at this point,
-      // we do want it checked for the purposes of ec-bound-odo
+      // Although we strictly don't need to look at the ODO value at this
+      // point, we do want it checked for the purposes of ec-bound-odo
+
+      const cbl_enabled_exceptions_t&
+                                enabled_exceptions( cdf_enabled_exceptions() );
 
       if( enabled_exceptions.match(ec_bound_odo_e) )
         {
         if( parent->occurs.depending_on )
           {
-          static tree value64 = gg_define_variable(LONG, ".._gdos_value64", vs_file_static);
+          static tree value64 = gg_define_variable( LONG,
+                                                    ".._gdos_value64",
+                                                    vs_file_static);
           cbl_field_t *odo = symbol_find_odo(parent);
           get_depending_on_value_from_odo(value64, odo);
           }
@@ -728,9 +752,9 @@ get_binary_value( tree value,
     return;
     }
 
-  static tree pointer = gg_define_variable(UCHAR_P, "..gbv_pointer", vs_file_static);
-  static tree pend = gg_define_variable(UCHAR_P, "..gbv_pend", vs_file_static);
-
+  static tree pointer = gg_define_variable( UCHAR_P,
+                                            "..gbv_pointer",
+                                            vs_file_static);
   switch(field->type)
     {
     case FldLiteralN:
@@ -767,8 +791,9 @@ get_binary_value( tree value,
       // We need to check early on for HIGH-VALUE and LOW-VALUE
       // Pick up the byte
       tree digit = gg_get_indirect_reference(source_address, NULL_TREE);
-      IF( digit, eq_op, build_int_cst(UCHAR, 0xFF) )
+      IF( digit, eq_op, build_int_cst(UCHAR, DEGENERATE_HIGH_VALUE) )
         {
+        // We are dealing with HIGH-VALUE
         if( hilo )
           {
           gg_assign(hilo, integer_one_node);
@@ -779,12 +804,14 @@ get_binary_value( tree value,
                     build_int_cst_type( TREE_TYPE(rdigits),
                                         get_scaled_rdigits(field)));
           }
-        gg_assign(value, build_int_cst_type(TREE_TYPE(value), 0xFFFFFFFFFFFFFFFUL));
+        gg_assign(value, build_int_cst_type(TREE_TYPE(value),
+                                            0x7FFFFFFFFFFFFFFFUL));
         }
       ELSE
         {
-        IF( digit, eq_op, build_int_cst(UCHAR, 0x00) )
+        IF( digit, eq_op, build_int_cst(UCHAR, DEGENERATE_LOW_VALUE) )
           {
+          // We are dealing with LOW-VALUE 
           if( hilo )
             {
             gg_assign(hilo, integer_minus_one_node);
@@ -792,26 +819,25 @@ get_binary_value( tree value,
           }
         ELSE
           {
-          // Establish rdigits:
+          // We are dealing with an ordinary NumericEdited value
+          gg_assign(pointer, source_address);
+
           if( rdigits )
             {
             gg_assign(rdigits,
-                    build_int_cst_type( TREE_TYPE(rdigits),
-                                        get_scaled_rdigits(field)));
+                      build_int_cst_type(TREE_TYPE(rdigits),
+                                         get_scaled_rdigits(field)));
             }
-          // Zero out the destination
-          gg_assign(value, gg_cast(TREE_TYPE(value), integer_zero_node));
-          // Pick up a pointer to the source bytes:
-
-          gg_assign(pointer, source_address);
-
-          // This is the we-are-done pointer
-          gg_assign(pend, gg_add( pointer,
-                                  get_any_capacity(field)));
-
-          static tree signbyte = gg_define_variable(UCHAR, "..gbv_signbyte", vs_file_static);
-
-          // The big decision is whether or not the variable is signed:
+          // This will be the 128-bit value of the character sequence
+          static tree val128 = gg_define_variable(INT128,
+                                                  "..gbv_val128",
+                                                  vs_file_static);
+          // This is a pointer to the sign byte
+          static tree signp = gg_define_variable(UCHAR_P,
+                                                  "..gbv_signp",
+                                                  vs_file_static);
+          // We need to figure out where the sign information, if any is to be
+          // found:
           if( field->attr & signable_e )
             {
             // The variable is signed
@@ -821,12 +847,17 @@ get_binary_value( tree value,
               if( field->attr & leading_e)
                 {
                 // The first byte is '+' or '-'
+                gg_assign(signp, source_address);
+                // Increment pointer to point to the first actual digit
                 gg_increment(pointer);
                 }
               else
                 {
                 // The final byte is '+' or '-'
-                gg_decrement(pend);
+                gg_assign(signp,
+                          gg_add(source_address,
+                                build_int_cst_type( SIZE_T,
+                                                    field->data.digits)));
                 }
               }
             else
@@ -834,219 +865,34 @@ get_binary_value( tree value,
               // The sign byte is internal
               if( field->attr & leading_e)
                 {
-                // The first byte has the sign bit:
-                gg_assign(signbyte,
-                          gg_get_indirect_reference(source_address, NULL_TREE));
-                if( internal_codeset_is_ebcdic() )
-                  {
-                  // We need to make sure the EBCDIC sign bit is ON, for positive
-                  gg_assign(gg_get_indirect_reference(source_address, NULL_TREE),
-                            gg_bitwise_or(signbyte,
-                                          build_int_cst_type( UCHAR,
-                                                              NUMERIC_DISPLAY_SIGN_BIT)));
-                  }
-                else
-                  {
-                  // We need to make sure the ascii sign bit is Off, for positive
-                  gg_assign(gg_get_indirect_reference(source_address, NULL_TREE),
-                            gg_bitwise_and( signbyte,
-                                            build_int_cst_type( UCHAR,
-                                                                ~NUMERIC_DISPLAY_SIGN_BIT)));
-                  }
+                // The first byte has the sign bit.
+                gg_assign(signp, source_address);
                 }
               else
                 {
-                // The final byte has the sign bit:
-                gg_assign(signbyte,
-                          gg_get_indirect_reference(source_address,
-                                                    build_int_cst_type(SIZE_T,
-                                                    field->data.capacity-1)));
-                if( internal_codeset_is_ebcdic() )
-                  {
-                  // We need to make sure the EBCDIC sign bit is ON, for positive
-                  gg_assign(gg_get_indirect_reference(source_address,
-                                                      build_int_cst_type( SIZE_T,
-                                                                          field->data.capacity-1)),
-                            gg_bitwise_or(signbyte,
-                                          build_int_cst_type( UCHAR,
-                                                              NUMERIC_DISPLAY_SIGN_BIT)));
-                  }
-                else
-                  {
-                  // We need to make sure the ASCII sign bit is Off, for positive
-                  gg_assign(gg_get_indirect_reference(source_address,
-                                                      build_int_cst_type( SIZE_T,
-                                                                          field->data.capacity-1)),
-                            gg_bitwise_and( signbyte,
-                                            build_int_cst_type( UCHAR,
-                                                                ~NUMERIC_DISPLAY_SIGN_BIT)));
-                  }
+                // The final byte has the sign bit.
+                gg_assign(signp,
+                          gg_add(source_address,
+                                build_int_cst_type( SIZE_T,
+                                                    field->data.digits-1)));
                 }
               }
-            }
-          // We can now set up the byte-by-byte processing loop:
-          if( internal_codeset_is_ebcdic() )
-            {
-            // We are working in EBCDIC
-            WHILE( pointer, lt_op, pend )
-              {
-              // Pick up the byte
-              digit = gg_get_indirect_reference(pointer, NULL_TREE);
-              IF( digit, lt_op, build_int_cst_type(UCHAR, EBCDIC_ZERO) )
-                {
-                // break on a non-digit
-                gg_assign(pointer, pend);
-                }
-              ELSE
-                {
-                IF( digit, gt_op, build_int_cst_type(UCHAR, EBCDIC_NINE) )
-                  {
-                  // break on a non-digit
-                  gg_assign(pointer, pend);
-                  }
-                ELSE
-                  {
-                  // Whether ASCII or EBCDIC, the bottom four bits tell the tale:
-                  // Multiply our accumulator by ten:
-                  gg_assign(value, gg_multiply(value, build_int_cst_type(TREE_TYPE(value), 10)));
-                  // And add in the current digit
-                  gg_assign(value,
-                            gg_add(value, gg_cast(TREE_TYPE(value), gg_bitwise_and( digit,
-                                                                                    build_int_cst_type(UCHAR, 0x0F) ))));
-                  gg_increment(pointer);
-                  }
-                  ENDIF
-                }
-                ENDIF
-              }
-              WEND
             }
           else
             {
-            // We are working in ASCII:
-            WHILE( pointer, lt_op, pend )
-              {
-              // Pick up the byte
-              digit = gg_get_indirect_reference(pointer, NULL_TREE);
-              // Whether ASCII or EBCDIC, the bottom four bits tell the tale:
-              // Multiply our accumulator by ten:
-              gg_assign(value, gg_multiply(value, build_int_cst_type(TREE_TYPE(value), 10)));
-              // And add in the current digit
-              gg_assign(value, gg_add(value, gg_cast(TREE_TYPE(value), gg_bitwise_and(digit, build_int_cst_type(UCHAR, 0x0F)))));
-              gg_increment(pointer);
-              }
-              WEND
+            // This value is unsigned, so just use the first location:
+            gg_assign(signp, source_address);
             }
 
-          // Value contains the binary value.  The last thing is to apply -- and
-          // undo -- the signable logic:
-
-          if( field->attr & signable_e )
-            {
-            // The variable is signed
-            if( field->attr & separate_e )
-              {
-              // The sign byte is separate
-              if( field->attr & leading_e)
-                {
-                // The first byte is '+' or '-'
-                if( internal_codeset_is_ebcdic() )
-                  {
-                  // We are operating in EBCDIC, so we look for a 96 (is minus sign)
-                  IF( gg_get_indirect_reference(source_address, NULL_TREE),
-                                                eq_op,
-                                                build_int_cst_type(UCHAR, 96) )
-                    {
-                    gg_assign(value, gg_negate(value));
-                    }
-                  ELSE
-                    ENDIF
-                  }
-                else
-                  {
-                  // We are operating in ASCII
-                  IF( gg_get_indirect_reference(source_address, NULL_TREE),
-                                                eq_op,
-                                                build_int_cst_type(UCHAR, '-') )
-                    {
-                    gg_assign(value, gg_negate(value));
-                    }
-                  ELSE
-                    ENDIF
-                  }
-                }
-              else
-                {
-                // The final byte is '+' or '-'
-                if( internal_codeset_is_ebcdic() )
-                  {
-                  // We are operating in EBCDIC, so we look for a 96 (is minus sign)
-                  IF( gg_get_indirect_reference(source_address, build_int_cst_type(SIZE_T, field->data.capacity-1)),
-                                                eq_op,
-                                                build_int_cst_type(UCHAR, 96) )
-                    {
-                    gg_assign(value, gg_negate(value));
-                    }
-                  ELSE
-                    ENDIF
-                  }
-                else
-                  {
-                  // We are operating in ASCII
-                  IF( gg_get_indirect_reference(source_address, build_int_cst_type(SIZE_T, field->data.capacity-1)),
-                                                eq_op,
-                                                build_int_cst_type(UCHAR, '-') )
-                    {
-                    gg_assign(value, gg_negate(value));
-                    }
-                  ELSE
-                    ENDIF
-                  }
-                }
-              }
-            else
-              {
-              // The sign byte is internal.  Check the sign bit
-              if(internal_codeset_is_ebcdic())
-                {
-                IF( gg_bitwise_and( signbyte,
-                                          build_int_cst_type( UCHAR,
-                                                              NUMERIC_DISPLAY_SIGN_BIT)), eq_op, build_int_cst_type(UCHAR, 0) )
-                  {
-                  // The EBCDIC sign bit was OFF, so negate the result
-                  gg_assign(value, gg_negate(value));
-                  }
-                ELSE
-                  ENDIF
-                }
-              else
-                {
-                IF( gg_bitwise_and( signbyte,
-                                          build_int_cst_type( UCHAR,
-                                                              NUMERIC_DISPLAY_SIGN_BIT)), ne_op, build_int_cst_type(UCHAR, 0) )
-                  {
-                  // The ASCII sign bit was on, so negate the result
-                  gg_assign(value, gg_negate(value));
-                  }
-                ELSE
-                  ENDIF
-                }
-              // It's time to put back the original data:
-              if( field->attr & leading_e)
-                {
-                // The first byte has the sign bit:
-                gg_assign(gg_get_indirect_reference(source_address, NULL_TREE),
-                          signbyte);
-                }
-              else
-                {
-                // The final byte has the sign bit:
-                gg_assign(gg_get_indirect_reference(source_address,
-                                                    build_int_cst_type(SIZE_T, field->data.capacity-1)),
-                          signbyte);
-                }
-              }
-            }
+          gg_assign(val128,
+                    gg_call_expr( INT128,
+                                  "__gg__numeric_display_to_binary",
+                                  signp,
+                                  pointer,
+                                  build_int_cst_type(INT, field->data.digits),
+                                  NULL_TREE));
+          // Assign the value we got from the string to our "return" value:
+          gg_assign(value, gg_cast(TREE_TYPE(value), val128));
           }
         ENDIF
         }
@@ -1095,7 +941,9 @@ get_binary_value( tree value,
                                                     vs_file_static);
         if( field->attr & signable_e )
           {
-          IF( gg_array_value(gg_cast(build_pointer_type(SCHAR), source)), lt_op, gg_cast(SCHAR, integer_zero_node) )
+          IF( gg_array_value(gg_cast(build_pointer_type(SCHAR), source)),
+              lt_op, 
+              gg_cast(SCHAR, integer_zero_node) )
             {
             gg_assign(extension, build_int_cst_type(UCHAR, 0xFF));
             }
@@ -1178,45 +1026,23 @@ get_binary_value( tree value,
 
     case FldPacked:
       {
-      // Zero out the destination:
-      gg_assign(value, gg_cast(TREE_TYPE(value), integer_zero_node));
-      gg_assign(pointer, get_data_address(field, field_offset));
-      gg_assign(pend,
-                gg_add(pointer,
-                       build_int_cst_type(SIZE_T, field->data.capacity-1)));
-
-      // Convert all but the last byte of the packed decimal sequence
-      WHILE( pointer, lt_op, pend )
+      if( rdigits )
         {
-        // Convert the first nybble
-        gg_assign(value, gg_multiply(value, build_int_cst_type(TREE_TYPE(value), 10)));
-        gg_assign(value, gg_add(value, gg_cast(TREE_TYPE(value), gg_rshift(gg_get_indirect_reference(pointer, NULL_TREE), build_int_cst(UINT, 4)))));
-
-        // Convert the second nybble
-        gg_assign(value, gg_multiply(value, build_int_cst_type(TREE_TYPE(value), 10)));
-        gg_assign(value, gg_add(value, gg_cast(TREE_TYPE(value), gg_bitwise_and(gg_get_indirect_reference(pointer, NULL_TREE), build_int_cst_type(UCHAR, 0xF)))));
-        gg_increment(pointer);
+        gg_assign(rdigits,
+                  build_int_cst_type( TREE_TYPE(rdigits),
+                                      get_scaled_rdigits(field)));
         }
-        WEND
-
-      // This is the final byte:
-      gg_assign(value, gg_multiply(value, build_int_cst_type(TREE_TYPE(value), 10)));
-      gg_assign(value, gg_add(value, gg_cast(TREE_TYPE(value), gg_rshift(gg_get_indirect_reference(pointer, NULL_TREE), build_int_cst(UINT, 4)))));
-
-      IF( gg_bitwise_and(gg_get_indirect_reference(pointer, NULL_TREE), build_int_cst_type(UCHAR, 0xF)), eq_op, build_int_cst_type(UCHAR, 0x0D) )
-        {
-        gg_assign(value, gg_negate(value));
-        }
-      ELSE
-        {
-        IF( gg_bitwise_and(gg_get_indirect_reference(pointer, NULL_TREE), build_int_cst_type(UCHAR, 0xF)), eq_op, build_int_cst_type(UCHAR, 0x0B) )
-          {
-          gg_assign(value, gg_negate(value));
-          }
-        ELSE
-          ENDIF
-        }
-        ENDIF
+      tree dest_type = TREE_TYPE(value);
+        
+      gg_assign(value, 
+                gg_cast(dest_type,
+                        gg_call_expr(INT128,
+                                    "__gg__packed_to_binary",
+                                    get_data_address( field,
+                                                      field_offset),
+                                    build_int_cst_type(INT,
+                                                      field->data.capacity),
+                                    NULL_TREE)));
       break;
       }
 
@@ -1238,18 +1064,13 @@ get_binary_value( tree value,
       break;
       }
 
-    case FldAlphanumeric:
-      {
-
-      }
-
-
     default:
       {
-      fprintf(stderr, "%s(): We know not how to"
-                      " get a binary value from %s\n",
-                      __func__,
-                      cbl_field_type_str(field->type) );
+      char *err = xasprintf("%s(): We know not how to"
+                            " get a binary value from %s\n",
+                            __func__,
+                            cbl_field_type_str(field->type) );
+      cbl_internal_error("%s", err);
       abort();
       break;
       }
@@ -1667,8 +1488,9 @@ set_exception_code_func(ec_type_t ec, int /*line*/, int from_raise_statement)
   }
 
 bool
-process_this_exception(ec_type_t ec)
+process_this_exception(const ec_type_t ec)
   {
+  const cbl_enabled_exceptions_t& enabled_exceptions( cdf_enabled_exceptions() );
   bool retval;
   if( enabled_exceptions.match(ec) || !skip_exception_processing )
     {
@@ -1700,7 +1522,7 @@ copy_little_endian_into_place(cbl_field_t *dest,
                               tree value,
                               int rhs_rdigits,
                               bool check_for_error,
-                              tree &size_error)
+                        const tree &size_error)
   {
   if( check_for_error )
     {
@@ -1926,7 +1748,7 @@ get_literal_string(cbl_field_t *field)
   }
 
 bool
-refer_is_clean(cbl_refer_t &refer)
+refer_is_clean(const cbl_refer_t &refer)
   {
   if( !refer.field || refer.field->type == FldLiteralN )
     {
@@ -1957,7 +1779,7 @@ refer_is_clean(cbl_refer_t &refer)
     */
 static
 tree  // size_t
-refer_refmod_length(cbl_refer_t &refer)
+refer_refmod_length(const cbl_refer_t &refer)
   {
   Analyze();
   REFER("refstart and reflen");
@@ -1973,7 +1795,7 @@ refer_refmod_length(cbl_refer_t &refer)
 
 static
 tree // size_t
-refer_fill_depends(cbl_refer_t &refer)
+refer_fill_depends(const cbl_refer_t &refer)
   {
   REFER("");
   // This returns a positive number which is the amount a depends-limited
@@ -2000,8 +1822,8 @@ refer_fill_depends(cbl_refer_t &refer)
   }
 
 tree  // size_t
-refer_offset(cbl_refer_t &refer,
-                    int *pflags)
+refer_offset(const cbl_refer_t &refer,
+                   int *pflags)
   {
   // This routine calculates the effect of a refer offset on the
   // refer.field->data location.  When there are subscripts, the data location
@@ -2028,7 +1850,7 @@ refer_offset(cbl_refer_t &refer,
 
 static
 tree   // size_t
-refer_size(cbl_refer_t &refer, refer_type_t refer_type)
+refer_size(const cbl_refer_t &refer, refer_type_t refer_type)
   {
   Analyze();
   static tree retval = gg_define_variable(SIZE_T, "..rs_retval", vs_file_static);
@@ -2069,13 +1891,13 @@ refer_size(cbl_refer_t &refer, refer_type_t refer_type)
   }
 
 tree  // size_t
-refer_size_dest(cbl_refer_t &refer)
+refer_size_dest(const cbl_refer_t &refer)
   {
   return refer_size(refer, refer_dest);
   }
 
 tree  // size_t
-refer_size_source(cbl_refer_t &refer)
+refer_size_source(const cbl_refer_t &refer)
   {
   /*  There are oddities involved with refer_size_source and refer_size_dest.
       See the comments in refer_has_depends for some explanation.  There are
@@ -2112,7 +1934,7 @@ refer_size_source(cbl_refer_t &refer)
   }
 
 tree
-qualified_data_location(cbl_refer_t &refer)
+qualified_data_location(const cbl_refer_t &refer)
   {
   return gg_add(member(refer.field->var_decl_node, "data"),
                 refer_offset(refer));

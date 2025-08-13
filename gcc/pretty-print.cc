@@ -27,9 +27,11 @@ along with GCC; see the file COPYING3.  If not see
 #include "pretty-print-format-impl.h"
 #include "pretty-print-markup.h"
 #include "pretty-print-urlifier.h"
-#include "diagnostic-color.h"
-#include "diagnostic-event-id.h"
+#include "diagnostics/color.h"
+#include "diagnostics/event-id.h"
+#include "diagnostics/dumping.h"
 #include "diagnostic-highlight-colors.h"
+#include "auto-obstack.h"
 #include "selftest.h"
 
 #if HAVE_ICONV
@@ -714,7 +716,7 @@ static int
 decode_utf8_char (const unsigned char *, size_t len, unsigned int *);
 static void pp_quoted_string (pretty_printer *, const char *, size_t = -1);
 
-static void
+extern void
 default_token_printer (pretty_printer *pp,
 		       const pp_token_list &tokens);
 
@@ -1327,6 +1329,15 @@ pp_token_list::push_back_text (label_text &&text)
 }
 
 void
+pp_token_list::push_back_byte (char ch)
+{
+  char buf[2];
+  buf[0] = ch;
+  buf[1] = '\0';
+  push_back_text (label_text::take (xstrdup (buf)));
+}
+
+void
 pp_token_list::push_back (std::unique_ptr<pp_token> tok)
 {
   if (!m_first)
@@ -1590,9 +1601,8 @@ pp_formatted_chunks::dump (FILE *out, int indent) const
 {
   for (size_t idx = 0; m_args[idx]; ++idx)
     {
-      fprintf (out, "%*s%i: ",
-	       indent, "",
-	       (int)idx);
+      diagnostics::dumping::emit_indent (out, indent);
+      fprintf (out, "%i: ", (int)idx);
       m_args[idx]->dump (out);
     }
 }
@@ -2034,6 +2044,16 @@ format_phase_2 (pretty_printer *pp,
 	    pp_string (pp, va_arg (*text.m_args_ptr, const char *));
 	  break;
 
+	case 'B':
+	  {
+	    string_slice s = *va_arg (*text.m_args_ptr, string_slice *);
+	    if (quote)
+	      pp_quoted_string (pp, s.begin (), s.size ());
+	    else
+	      pp_string_n (pp, s.begin (), s.size ());
+	    break;
+	  }
+
 	case 'p':
 	  pp_pointer (pp, va_arg (*text.m_args_ptr, void *));
 	  break;
@@ -2177,38 +2197,6 @@ format_phase_2 (pretty_printer *pp,
       gcc_assert (!formatters[argno]);
 }
 
-struct auto_obstack
-{
-  auto_obstack ()
-  {
-    obstack_init (&m_obstack);
-  }
-
-  ~auto_obstack ()
-  {
-    obstack_free (&m_obstack, NULL);
-  }
-
-  operator obstack & () { return m_obstack; }
-
-  void grow (const void *src, size_t length)
-  {
-    obstack_grow (&m_obstack, src, length);
-  }
-
-  void *object_base () const
-  {
-    return m_obstack.object_base;
-  }
-
-  size_t object_size () const
-  {
-    return obstack_object_size (&m_obstack);
-  }
-
-  obstack m_obstack;
-};
-
 /* Phase 3 of formatting a message (phases 1 and 2 done by pp_format).
 
    Pop a pp_formatted_chunks from chunk_obstack, collecting all the tokens from
@@ -2261,7 +2249,7 @@ pp_output_formatted_text (pretty_printer *pp,
 
 /* Default implementation of token printing.  */
 
-static void
+void
 default_token_printer (pretty_printer *pp,
 		       const pp_token_list &tokens)
 {
@@ -3112,34 +3100,39 @@ pretty_printer::end_url ()
     pp_string (this, get_end_url_string (this));
 }
 
-/* Dump state of this pretty_printer to OUT, for debugging.  */
-
-void
-pretty_printer::dump (FILE *out, int indent) const
+static const char *
+get_url_format_as_string (diagnostic_url_format url_format)
 {
-  fprintf (out, "%*sm_show_color: %s\n",
-	   indent, "",
-	   m_show_color ? "true" : "false");
-
-  fprintf (out, "%*sm_url_format: ", indent, "");
-  switch (m_url_format)
+  switch (url_format)
     {
     case URL_FORMAT_NONE:
-      fprintf (out, "none");
-      break;
+      return "none";
     case URL_FORMAT_ST:
-      fprintf (out, "st");
-      break;
+      return "st";
     case URL_FORMAT_BEL:
-      fprintf (out, "bel");
-      break;
+      return "bel";
     default:
       gcc_unreachable ();
     }
-  fprintf (out, "\n");
+}
 
-  fprintf (out, "%*sm_buffer:\n", indent, "");
-  m_buffer->dump (out, indent + 2);
+/* Dump state of this pretty_printer to OUT, for debugging.  */
+
+void
+pretty_printer::dump (FILE *outfile, int indent) const
+{
+  namespace dumping = diagnostics::dumping;
+
+  DIAGNOSTICS_DUMPING_EMIT_BOOL_FIELD (m_show_color);
+  dumping::emit_string_field
+    (outfile, indent,
+     "m_url_format",
+     get_url_format_as_string (m_url_format));
+  dumping::emit_heading (outfile, indent, "m_buffer");
+  if (m_buffer)
+    m_buffer->dump (outfile, indent + 2);
+  else
+    dumping::emit_none (outfile, indent + 2);
 }
 
 /* class pp_markup::context.  */
@@ -3186,6 +3179,29 @@ pp_markup::context::end_highlight_color ()
 
   push_back_any_text ();
   m_formatted_token_list->push_back<pp_token_end_color> ();
+}
+
+void
+pp_markup::context::begin_url (const char *url)
+{
+  push_back_any_text ();
+  m_formatted_token_list->push_back<pp_token_begin_url>
+    (label_text::take (xstrdup (url)));
+}
+
+void
+pp_markup::context::end_url ()
+{
+  push_back_any_text ();
+  m_formatted_token_list->push_back<pp_token_end_url> ();
+}
+
+void
+pp_markup::context::add_event_id (diagnostic_event_id_t event_id)
+{
+  gcc_assert (event_id.known_p ());
+  push_back_any_text ();
+  m_formatted_token_list->push_back<pp_token_event_id> (event_id);
 }
 
 void
@@ -3402,8 +3418,8 @@ test_pp_format ()
 			    "foo", 0x12345678);
   /* Verify "%@".  */
   {
-    diagnostic_event_id_t first (2);
-    diagnostic_event_id_t second (7);
+    diagnostics::paths::event_id_t first (2);
+    diagnostics::paths::event_id_t second (7);
 
     ASSERT_PP_FORMAT_2 ("first `free' at (3); second `free' at (8)",
 			"first %<free%> at %@; second %<free%> at %@",

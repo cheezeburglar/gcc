@@ -64,6 +64,9 @@ UrlSuffix(gcc/Warning-Options.html#index-Warray-bounds)
 Warray-bounds=
 UrlSuffix(gcc/Warning-Options.html#index-Warray-bounds)
 
+Wauto-profile
+UrlSuffix(gcc/Warning-Options.html#index-Wauto-profile)
+
 Wuse-after-free
 UrlSuffix(gcc/Warning-Options.html#index-Wno-use-after-free)
 
@@ -269,7 +272,13 @@ UrlSuffix(gcc/Warning-Options.html#index-Wno-unused)
 Wunused-but-set-parameter
 UrlSuffix(gcc/Warning-Options.html#index-Wno-unused-but-set-parameter)
 
+Wunused-but-set-parameter=
+UrlSuffix(gcc/Warning-Options.html#index-Wno-unused-but-set-parameter)
+
 Wunused-but-set-variable
+UrlSuffix(gcc/Warning-Options.html#index-Wno-unused-but-set-variable)
+
+Wunused-but-set-variable=
 UrlSuffix(gcc/Warning-Options.html#index-Wno-unused-but-set-variable)
 
 Wunused-function
@@ -630,6 +639,15 @@ UrlSuffix(gcc/Diagnostic-Message-Formatting-Options.html#index-fdiagnostics-text
 
 fdiagnostics-minimum-margin-width=
 UrlSuffix(gcc/Diagnostic-Message-Formatting-Options.html#index-fdiagnostics-minimum-margin-width)
+
+fdiagnostics-show-nesting
+UrlSuffix(gcc/Diagnostic-Message-Formatting-Options.html#index-fdiagnostics-show-nesting)
+
+fdiagnostics-show-nesting-locations
+UrlSuffix(gcc/Diagnostic-Message-Formatting-Options.html#index-fdiagnostics-show-nesting-locations)
+
+fdiagnostics-show-nesting-levels
+UrlSuffix(gcc/Diagnostic-Message-Formatting-Options.html#index-fdiagnostics-show-nesting-levels)
 
 fdisable-
 UrlSuffix(gcc/Developer-Options.html#index-fdisable-)

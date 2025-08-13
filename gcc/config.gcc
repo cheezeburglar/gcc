@@ -273,7 +273,7 @@ esac
 # Obsolete configurations.
 case ${target} in
      ia64*-*-hpux* | ia64*-*-*vms* | ia64*-*-elf*	\
-   | m32c*-*-*						\
+   | m32c*-*-* | epiphany*-*-* | rl78*-*-*		\
  )
     if test "x$enable_obsolete" != xyes; then
       echo "*** Configuration ${target} is obsolete." >&2
@@ -1847,11 +1847,11 @@ moxie-*-moxiebox*)
 	;;
 h8300-*-elf*)
 	tmake_file="h8300/t-h8300"
-	tm_file="h8300/h8300.h elfos.h newlib-stdint.h h8300/elf.h"
+	tm_file="elfos.h h8300/h8300.h newlib-stdint.h h8300/elf.h"
 	;;
 h8300-*-linux*)
 	tmake_file="${tmake_file} h8300/t-h8300 h8300/t-linux"
-	tm_file="h8300/h8300.h elfos.h gnu-user.h linux.h glibc-stdint.h h8300/linux.h"
+	tm_file="elfos.h h8300/h8300.h gnu-user.h linux.h glibc-stdint.h h8300/linux.h"
 	;;
 hppa*64*-*-linux*)
 	target_cpu_default="MASK_PA_11|MASK_PA_20"
@@ -3504,10 +3504,9 @@ sparc*-*-solaris2*)
 	    sparc64-*-* | sparcv9-*-*)
 		tm_file="sparc/default64.h ${tm_file}"
 		;;
-	    *)
-		test x$with_cpu != x || with_cpu=v9
-		;;
 	esac
+	# Match Studio 12.6 cc.
+	with_cpu=${with_cpu:-ultrasparc3}
 	tmake_file="${tmake_file} sparc/t-sparc sparc/t-sol2"
 	;;
 sparc-wrs-vxworks)
@@ -5894,7 +5893,7 @@ esac
 # distinguish VxWorks variants such as VxWorks 7 or 64).
 
 case ${target} in
-arm*-*-* | i[34567]86-*-* | mips*-*-* | powerpc*-*-* | sh*-*-* \
+aarch64*-*-* | arm*-*-* | i[34567]86-*-* | mips*-*-* | powerpc*-*-* | sh*-*-* \
 | sparc*-*-* | x86_64-*-*)
 	tm_file="vxworks-dummy.h ${tm_file}"
 	;;

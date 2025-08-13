@@ -455,6 +455,7 @@
 (define_mode_iterator VCVTFPM [V4HF V8HF V4SF])
 
 ;; Iterators for single modes, for "@" patterns.
+(define_mode_iterator VNx16BI_ONLY [VNx16BI])
 (define_mode_iterator VNx16QI_ONLY [VNx16QI])
 (define_mode_iterator VNx16SI_ONLY [VNx16SI])
 (define_mode_iterator VNx8HI_ONLY [VNx8HI])
@@ -463,6 +464,7 @@
 (define_mode_iterator VNx8SI_ONLY [VNx8SI])
 (define_mode_iterator VNx8SF_ONLY [VNx8SF])
 (define_mode_iterator VNx8DI_ONLY [VNx8DI])
+(define_mode_iterator VNx2SI_ONLY [VNx2SI])
 (define_mode_iterator VNx4SI_ONLY [VNx4SI])
 (define_mode_iterator VNx4SF_ONLY [VNx4SF])
 (define_mode_iterator VNx2DI_ONLY [VNx2DI])
@@ -540,6 +542,12 @@
 ;; Fully-packed SVE floating-point vector modes that have 16-bit or 32-bit
 ;; elements.
 (define_mode_iterator SVE_FULL_HSF [VNx8HF VNx4SF])
+
+;; Like SVE_FULL_HSF, but selectively enables those modes that are valid
+;; for the variant of the SVE2 FP8 FDOT instruction associated with that
+;; mode.
+(define_mode_iterator SVE_FULL_HSF_FP8_FDOT [(VNx4SF "TARGET_SSVE_FP8DOT4")
+					     (VNx8HF "TARGET_SSVE_FP8DOT2")])
 
 ;; Partial SVE floating-point vector modes that have 16-bit or 32-bit
 ;; elements.
@@ -929,7 +937,6 @@
     UNSPEC_UZP2Q	; Used in aarch64-sve.md.
     UNSPEC_ZIP1Q	; Used in aarch64-sve.md.
     UNSPEC_ZIP2Q	; Used in aarch64-sve.md.
-    UNSPEC_TRN1_CONV	; Used in aarch64-sve.md.
     UNSPEC_COND_CMPEQ_WIDE ; Used in aarch64-sve.md.
     UNSPEC_COND_CMPGE_WIDE ; Used in aarch64-sve.md.
     UNSPEC_COND_CMPGT_WIDE ; Used in aarch64-sve.md.
@@ -1183,6 +1190,9 @@
     UNSPEC_LUTI		; Used in aarch64-simd.md.
     UNSPEC_LUTI2	; Used in aarch64-simd.md.
     UNSPEC_LUTI4	; Used in aarch64-simd.md.
+
+    ;; All used in aarch64-sve.md
+    UNSPEC_PERMUTE_PRED
 
     ;; All used in aarch64-sve2.md
     UNSPEC_ADDQV
@@ -2961,6 +2971,32 @@
 			  (geu "hs")
 			  (gtu "hi")])
 
+(define_code_attr inv_cmp_op [(lt "ge")
+			  (le "gt")
+			  (eq "ne")
+			  (ne "eq")
+			  (ge "lt")
+			  (gt "le")
+			  (ltu "hs")
+			  (leu "hi")
+			  (geu "lo")
+			  (gtu "ls")])
+
+(define_mode_attr cmpbr_suffix [(QI "b") (HI "h")])
+
+(define_code_iterator INT_CMP [lt le eq ne ge gt ltu leu geu gtu])
+
+;; Inverse comparisons must have the same constraint so that
+;; branches can be redirected during late compilation.
+(define_code_attr cmpbr_imm_constraint [
+    (eq "Uc0") (ne "Uc0")
+    (lt "Uc0") (ge "Uc0")
+    (ltu "Uc0") (geu "Uc0")
+
+    (gt "Uc1") (le "Uc1")
+    (gtu "Uc1") (leu "Uc1")
+])
+
 (define_code_attr fix_trunc_optab [(fix "fix_trunc")
 				   (unsigned_fix "fixuns_trunc")])
 
@@ -3336,6 +3372,10 @@
 (define_int_iterator SVE_INT_UNARY [UNSPEC_REVB
 				    UNSPEC_REVH UNSPEC_REVW])
 
+;; This iterator is currently only used for estimation instructions,
+;; which are never generated automatically when -ftrapping-math is true.
+;; The iterator is therefore applied unconditionally to partial FP modes.
+;; This might need to be revisited if new operations are added in future.
 (define_int_iterator SVE_FP_UNARY [UNSPEC_FRECPE UNSPEC_RSQRTE])
 
 (define_int_iterator SVE_FP_UNARY_INT [(UNSPEC_FEXPA "TARGET_NON_STREAMING")])
@@ -3348,6 +3388,10 @@
 (define_int_iterator SVE_INT_BINARY_MULTI [UNSPEC_SQDMULH
 					   UNSPEC_SRSHL UNSPEC_URSHL])
 
+;; This iterator is currently only used for estimation instructions,
+;; which are never generated automatically when -ftrapping-math is true.
+;; The iterator is therefore applied unconditionally to partial FP modes.
+;; This might need to be revisited if new operations are added in future.
 (define_int_iterator SVE_FP_BINARY [UNSPEC_FRECPS UNSPEC_RSQRTS])
 
 (define_int_iterator SVE_FP_BINARY_INT [UNSPEC_FTSMUL UNSPEC_FTSSEL])
@@ -3399,9 +3443,10 @@
 					   UNSPEC_FMINQV
 					   UNSPEC_FMINNMQV])
 
-(define_int_iterator SVE_COND_FP_UNARY [UNSPEC_COND_FABS
-					UNSPEC_COND_FNEG
-					UNSPEC_COND_FRECPX
+(define_int_iterator SVE_COND_FP_UNARY_BITWISE [UNSPEC_COND_FABS
+						UNSPEC_COND_FNEG])
+
+(define_int_iterator SVE_COND_FP_UNARY [UNSPEC_COND_FRECPX
 					UNSPEC_COND_FRINTA
 					UNSPEC_COND_FRINTI
 					UNSPEC_COND_FRINTM
@@ -3409,13 +3454,12 @@
 					UNSPEC_COND_FRINTP
 					UNSPEC_COND_FRINTX
 					UNSPEC_COND_FRINTZ
-					UNSPEC_COND_FSQRT])
+					UNSPEC_COND_FSQRT
+					SVE_COND_FP_UNARY_BITWISE])
 
 ;; Same as SVE_COND_FP_UNARY, but without codes that have a dedicated
 ;; <optab><mode>2 expander.
-(define_int_iterator SVE_COND_FP_UNARY_OPTAB [UNSPEC_COND_FABS
-					      UNSPEC_COND_FNEG
-					      UNSPEC_COND_FRECPX
+(define_int_iterator SVE_COND_FP_UNARY_OPTAB [UNSPEC_COND_FRECPX
 					      UNSPEC_COND_FRINTA
 					      UNSPEC_COND_FRINTI
 					      UNSPEC_COND_FRINTM
@@ -3837,6 +3881,8 @@
 (define_int_iterator SVE_BRK_BINARY [UNSPEC_BRKN UNSPEC_BRKPA UNSPEC_BRKPB])
 
 (define_int_iterator SVE_PITER [UNSPEC_PFIRST UNSPEC_PNEXT])
+
+(define_int_iterator PNEXT_ONLY [UNSPEC_PNEXT])
 
 (define_int_iterator MATMUL [UNSPEC_SMATMUL UNSPEC_UMATMUL
 			     UNSPEC_USMATMUL])

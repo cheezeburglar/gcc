@@ -715,7 +715,6 @@ vec_info::new_stmt_vec_info (gimple *stmt)
   stmt_vec_info res = XCNEW (class _stmt_vec_info);
   res->stmt = stmt;
 
-  STMT_VINFO_TYPE (res) = undef_vec_info_type;
   STMT_VINFO_RELEVANT (res) = vect_unused_in_scope;
   STMT_VINFO_VECTORIZABLE (res) = true;
   STMT_VINFO_REDUC_TYPE (res) = TREE_CODE_REDUCTION;
@@ -724,7 +723,6 @@ vec_info::new_stmt_vec_info (gimple *stmt)
   STMT_VINFO_REDUC_IDX (res) = -1;
   STMT_VINFO_SLP_VECT_ONLY (res) = false;
   STMT_VINFO_SLP_VECT_ONLY_PATTERN (res) = false;
-  STMT_VINFO_VEC_STMTS (res) = vNULL;
   res->reduc_initial_values = vNULL;
   res->reduc_scalar_results = vNULL;
 
@@ -735,7 +733,7 @@ vec_info::new_stmt_vec_info (gimple *stmt)
   else
     STMT_VINFO_DEF_TYPE (res) = vect_internal_def;
 
-  STMT_SLP_TYPE (res) = loop_vect;
+  STMT_SLP_TYPE (res) = not_vect;
 
   /* This is really "uninitialized" until vect_compute_data_ref_alignment.  */
   res->dr_aux.misalignment = DR_MISALIGNMENT_UNINITIALIZED;
@@ -790,8 +788,6 @@ vec_info::free_stmt_vec_info (stmt_vec_info stmt_info)
 
   stmt_info->reduc_initial_values.release ();
   stmt_info->reduc_scalar_results.release ();
-  STMT_VINFO_SIMD_CLONE_INFO (stmt_info).release ();
-  STMT_VINFO_VEC_STMTS (stmt_info).release ();
   free (stmt_info);
 }
 

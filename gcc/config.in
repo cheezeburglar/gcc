@@ -318,6 +318,12 @@
 #endif
 
 
+/* Define to enable -mfentry by default on x86-64. */
+#ifndef USED_FOR_TARGET
+#undef ENABLE_X86_64_MFENTRY
+#endif
+
+
 /* Define to the name of a file containing a list of extra machine modes for
    this architecture. */
 #ifndef USED_FOR_TARGET
@@ -2366,6 +2372,12 @@
 /* Define to 1 if ld64 supports '-macos_version_min'. */
 #ifndef USED_FOR_TARGET
 #undef LD64_HAS_MACOS_VERSION_MIN
+#endif
+
+
+/* Define to 1 if ld64 supports '-no_deduplicate'. */
+#ifndef USED_FOR_TARGET
+#undef LD64_HAS_NO_DEDUPLICATE
 #endif
 
 

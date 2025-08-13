@@ -35,6 +35,7 @@ with Exp_Ch11;       use Exp_Ch11;
 with Exp_Util;       use Exp_Util;
 with Fname;          use Fname;
 with Freeze;         use Freeze;
+with Ghost;          use Ghost;
 with Itypes;         use Itypes;
 with Lib;            use Lib;
 with Lib.Xref;       use Lib.Xref;
@@ -52,6 +53,7 @@ with Sem_Attr;       use Sem_Attr;
 with Sem_Cat;        use Sem_Cat;
 with Sem_Ch6;        use Sem_Ch6;
 with Sem_Ch8;        use Sem_Ch8;
+with Sem_Ch12;       use Sem_Ch12;
 with Sem_Ch13;       use Sem_Ch13;
 with Sem_Dim;        use Sem_Dim;
 with Sem_Disp;       use Sem_Disp;
@@ -1922,6 +1924,10 @@ package body Sem_Util is
    -- Build_Elaboration_Entity --
    ------------------------------
 
+   --  WARNING: This routine manages Ghost regions. Return statements must be
+   --  replaced by gotos which jump to the end of the routine and restore the
+   --  Ghost mode.
+
    procedure Build_Elaboration_Entity (N : Node_Id; Spec_Id : Entity_Id) is
       Loc      : constant Source_Ptr := Sloc (N);
       Decl     : Node_Id;
@@ -1954,6 +1960,11 @@ package body Sem_Util is
             Get_Name_String (Chars (Ent));
          end if;
       end Set_Package_Name;
+
+      --  Local variables
+
+      Saved_Ghost_Config : constant Ghost_Config_Type := Ghost_Config;
+      --  Save the Ghost-related attributes to restore on exit
 
    --  Start of processing for Build_Elaboration_Entity
 
@@ -2002,6 +2013,11 @@ package body Sem_Util is
          return;
       end if;
 
+      --  Elaboration entity is never a ghost object, regardless of the context
+      --  in which this routine is called.
+
+      Install_Ghost_Region (None, N);
+
       --  Here we need the elaboration entity
 
       --  Construct name of elaboration entity as xxx_E, where xxx is the unit
@@ -2042,6 +2058,8 @@ package body Sem_Util is
 
       Set_Has_Qualified_Name       (Elab_Ent);
       Set_Has_Fully_Qualified_Name (Elab_Ent);
+
+      Restore_Ghost_Region (Saved_Ghost_Config);
    end Build_Elaboration_Entity;
 
    --------------------------------
@@ -3687,6 +3705,7 @@ package body Sem_Util is
            Aspect_Aggregate,
            Aspect_Max_Entry_Queue_Length
            --  , Aspect_No_Controlled_Parts
+           --  , Aspect_No_Task_Parts
           );
 
       --  Note that none of these 8 aspects can be specified (for a type)
@@ -10042,16 +10061,19 @@ package body Sem_Util is
            and then not Has_Unknown_Discriminants (Utyp)
            and then not (Ekind (Utyp) = E_String_Literal_Subtype)
       then
-         --  Nothing to do if in spec expression (why not???)
+         --  If the type has no discriminants, there is no subtype to build,
+         --  even if the underlying type is discriminated.
 
-         if In_Spec_Expression then
+         if Is_Private_Type (Typ) and then not Has_Discriminants (Typ) then
             return Typ;
 
-         elsif Is_Private_Type (Typ) and then not Has_Discriminants (Typ) then
+         --  If we are performing preanalysis on a conjured-up copy of a name
+         --  (see calls to Preanalyze_Range in sem_ch5.adb) then we don't want
+         --  to freeze Atyp, now or ever. In this case, the tree we eventually
+         --  pass to the back end should contain no references to Atyp (and a
+         --  freeze node would contain such a reference).
 
-            --  If the type has no discriminants, there is no subtype to
-            --  build, even if the underlying type is discriminated.
-
+         elsif not (Expander_Active or GNATprove_Mode) then
             return Typ;
 
          --  Else build the actual subtype
@@ -10067,42 +10089,21 @@ package body Sem_Util is
 
             Atyp := Defining_Identifier (Decl);
 
-            --  If Build_Actual_Subtype generated a new declaration then use it
+            --  The actual subtype is an Itype, so analyze the declaration
+            --  after attaching it to the tree, to get the type defined.
 
-            if Atyp /= Typ then
+            Set_Parent (Decl, N);
+            Set_Is_Itype (Atyp);
+            Analyze (Decl, Suppress => All_Checks);
+            Set_Associated_Node_For_Itype (Atyp, N);
 
-               --  The actual subtype is an Itype, so analyze the declaration,
-               --  but do not attach it to the tree, to get the type defined.
+            --  We need to freeze the actual subtype immediately. This is
+            --  needed because otherwise this Itype will not get frozen
+            --  at all; it is always safe to freeze on creation because
+            --  any associated types must be frozen at this point.
 
-               Set_Parent (Decl, N);
-               Set_Is_Itype (Atyp);
-               Analyze (Decl, Suppress => All_Checks);
-               Set_Associated_Node_For_Itype (Atyp, N);
-               if Expander_Active then
-                  Set_Has_Delayed_Freeze (Atyp, False);
-
-                  --  We need to freeze the actual subtype immediately. This is
-                  --  needed because otherwise this Itype will not get frozen
-                  --  at all; it is always safe to freeze on creation because
-                  --  any associated types must be frozen at this point.
-
-                  --  On the other hand, if we are performing preanalysis on
-                  --  a conjured-up copy of a name (see calls to
-                  --  Preanalyze_Range in sem_ch5.adb) then we don't want
-                  --  to freeze Atyp, now or ever. In this case, the tree
-                  --  we eventually pass to the back end should contain no
-                  --  references to Atyp (and a freeze node would contain
-                  --  such a reference). That's why Expander_Active is tested.
-
-                  Freeze_Itype (Atyp, N);
-               end if;
-               return Atyp;
-
-            --  Otherwise we did not build a declaration, so return original
-
-            else
-               return Typ;
-            end if;
+            Freeze_Itype (Atyp, N);
+            return Atyp;
          end if;
 
       --  For all remaining cases, the actual subtype is the same as
@@ -12471,6 +12472,41 @@ package body Sem_Util is
       end if;
    end Is_Extended_Access_Type;
 
+   ----------------------------------------
+   -- Is_Ignored_Ghost_Entity_In_Codegen --
+   ----------------------------------------
+
+   function Is_Ignored_Ghost_Entity_In_Codegen (N : Entity_Id) return Boolean
+   is
+   begin
+      return
+        Is_Ignored_Ghost_Entity (N)
+        and then not GNATprove_Mode
+        and then not CodePeer_Mode;
+   end Is_Ignored_Ghost_Entity_In_Codegen;
+
+   ----------------------------------------
+   -- Is_Ignored_Ghost_Pragma_In_Codegen --
+   ----------------------------------------
+
+   function Is_Ignored_Ghost_Pragma_In_Codegen (N : Node_Id) return Boolean is
+   begin
+      return
+        Is_Ignored_Ghost_Pragma (N)
+        and then not GNATprove_Mode
+        and then not CodePeer_Mode;
+   end Is_Ignored_Ghost_Pragma_In_Codegen;
+
+   ---------------------------
+   -- Is_Ignored_In_Codegen --
+   ---------------------------
+
+   function Is_Ignored_In_Codegen (N : Node_Id) return Boolean is
+   begin
+      return
+        Is_Ignored (N) and then not GNATprove_Mode and then not CodePeer_Mode;
+   end Is_Ignored_In_Codegen;
+
    ---------------------------------
    -- Side_Effect_Free_Statements --
    ---------------------------------
@@ -12836,6 +12872,150 @@ package body Sem_Util is
 
       return False;
    end Has_Overriding_Initialize;
+
+   -----------------------------
+   -- Has_Potentially_Invalid --
+   -----------------------------
+
+   function Has_Potentially_Invalid (E : Entity_Id) return Boolean is
+
+      function Denotes_Invalid_Parameter
+        (Expr  : Node_Id;
+         Param : Entity_Id)
+         return Boolean;
+      --  Returns True iff expression Expr denotes a formal parameter or
+      --  function Param (through its attribute Result).
+
+      -------------------------------
+      -- Denotes_Invalid_Parameter --
+      -------------------------------
+
+      function Denotes_Invalid_Parameter
+        (Expr  : Node_Id;
+         Param : Entity_Id) return Boolean is
+      begin
+         if Nkind (Expr) in N_Identifier | N_Expanded_Name then
+            return Entity (Expr) = Param;
+         else
+            pragma Assert (Is_Attribute_Result (Expr));
+            return Entity (Prefix (Expr)) = Param;
+         end if;
+      end Denotes_Invalid_Parameter;
+
+   --  Start of processing for Has_Potentially_Invalid
+
+   begin
+      --  When analyzing, we checked all syntax legality rules for the aspect
+      --  Potentially_Invalid, but didn't store the property anywhere (e.g. as
+      --  an Einfo flag). To query the property we look directly at the AST,
+      --  but now without any syntactic checks.
+
+      case Ekind (E) is
+         --  Constants have this aspect attached directly; for deferred
+         --  constants, the aspect is attached to the partial view.
+
+         when E_Constant =>
+            return Has_Aspect (E, Aspect_Potentially_Invalid);
+
+         --  Variables have this aspect attached directly
+
+         when E_Variable =>
+            return Has_Aspect (E, Aspect_Potentially_Invalid);
+
+         when Formal_Kind
+            | E_Function
+         =>
+            --  Instances of Ada.Unchecked_Conversion is a special case. Look
+            --  for the aspect on the generic instance. The aspect necessarily
+            --  applies to the function result.
+
+            if Is_Unchecked_Conversion_Instance (E) then
+               declare
+                  Wrapper_Pkg : constant Node_Id :=
+                    Defining_Unit_Name (Parent (Subprogram_Spec (E)));
+                  pragma Assert (Is_Wrapper_Package (Wrapper_Pkg));
+                  Instance    : constant Entity_Id := Defining_Unit_Name
+                    (Get_Unit_Instantiation_Node (Wrapper_Pkg));
+               begin
+                  return Has_Aspect (Instance, Aspect_Potentially_Invalid);
+               end;
+            end if;
+
+            --  Formal parameters and functions have the Potentially_Invalid
+            --  aspect attached to the subprogram entity and must be listed in
+            --  the aspect expression.
+
+            declare
+               Subp_Id     : Entity_Id;
+               Aspect_Expr : Node_Id;
+               Param_Expr  : Node_Id;
+               Assoc       : Node_Id;
+
+            begin
+               if Is_Formal (E) then
+                  Subp_Id := Scope (E);
+               else
+                  Subp_Id := E;
+               end if;
+
+               if Has_Aspect (Subp_Id, Aspect_Potentially_Invalid) then
+                  Aspect_Expr :=
+                    Find_Value_Of_Aspect
+                      (Subp_Id, Aspect_Potentially_Invalid);
+
+                  --  Aspect expression is either an aggregate with an optional
+                  --  Boolean expression (which defaults to True), e.g.:
+                  --
+                  --    function F (X : Integer) return Integer
+                  --      with Potentially_Invalid => (X => True, F'Result);
+
+                  if Nkind (Aspect_Expr) = N_Aggregate then
+
+                     if Present (Component_Associations (Aspect_Expr)) then
+                        Assoc := First (Component_Associations (Aspect_Expr));
+
+                        while Present (Assoc) loop
+                           if Denotes_Invalid_Parameter
+                             (First (Choices (Assoc)), E)
+                           then
+                              return
+                                Is_True
+                                  (Static_Boolean (Expression (Assoc)));
+                           end if;
+
+                           Next (Assoc);
+                        end loop;
+                     end if;
+
+                     Param_Expr := First (Expressions (Aspect_Expr));
+
+                     while Present (Param_Expr) loop
+                        if Denotes_Invalid_Parameter (Param_Expr, E) then
+                           return True;
+                        end if;
+
+                        Next (Param_Expr);
+                     end loop;
+
+                     return False;
+
+                  --  or it is a single identifier, e.g.:
+                  --
+                  --    function F (X : Integer) return Integer
+                  --      with Potentially_Invalid => X;
+
+                  else
+                     return Denotes_Invalid_Parameter (Aspect_Expr, E);
+                  end if;
+               else
+                  return False;
+               end if;
+            end;
+
+         when others =>
+            raise Program_Error;
+      end case;
+   end Has_Potentially_Invalid;
 
    --------------------------------------
    -- Has_Preelaborable_Initialization --
@@ -14872,6 +15052,7 @@ package body Sem_Util is
                | Aspect_Iterator_Element
                | Aspect_Max_Entry_Queue_Length
                | Aspect_No_Controlled_Parts
+               | Aspect_No_Task_Parts
             =>
                return;
          end case;
@@ -16131,8 +16312,9 @@ package body Sem_Util is
                  Names_Match (Assign_Indexed_1, Assign_Indexed_2);
             end;
 
-         --  Checking for this aspect is performed elsewhere during freezing
-         when Aspect_No_Controlled_Parts =>
+         --  Checking for these aspects is performed elsewhere during freezing
+         when Aspect_No_Controlled_Parts
+            | Aspect_No_Task_Parts =>
             return True;
 
          --  scalar-valued aspects; compare (static) values.
@@ -21228,6 +21410,18 @@ package body Sem_Util is
       return False;
    end Is_Unchecked_Conversion_Instance;
 
+   ---------------------------------
+   -- Is_Unchecked_Union_Equality --
+   ---------------------------------
+
+   function Is_Unchecked_Union_Equality (Id : Entity_Id) return Boolean is
+   begin
+      return Ekind (Id) = E_Function
+        and then Present (First_Formal (Id))
+        and then Is_Unchecked_Union (Etype (First_Formal (Id)))
+        and then Id = TSS (Etype (First_Formal (Id)), TSS_Composite_Equality);
+   end Is_Unchecked_Union_Equality;
+
    -------------------------------
    -- Is_Universal_Numeric_Type --
    -------------------------------
@@ -22414,7 +22608,7 @@ package body Sem_Util is
          --  Mark the Ghost and SPARK mode in effect
 
          if Modes then
-            if Ghost_Mode = Ignore then
+            if Ghost_Config.Ghost_Mode = Ignore then
                Set_Is_Ignored_Ghost_Node (N);
             end if;
 
@@ -23967,7 +24161,7 @@ package body Sem_Util is
 
          Result := N;
 
-         if N > Empty_Or_Error then
+         if N not in Empty | Error then
             pragma Assert (Nkind (N) not in N_Entity);
 
             Result := New_Copy (N);
@@ -24048,7 +24242,7 @@ package body Sem_Util is
 
          Result := Id;
 
-         if Id > Empty_Or_Error then
+         if Id not in Empty | Error then
             pragma Assert (Nkind (Id) in N_Entity);
 
             --  Determine whether the entity has a corresponding new entity
@@ -24162,7 +24356,9 @@ package body Sem_Util is
             Next (Old_Act);
          end loop;
 
-         pragma Assert (Replaced);
+         if Nkind (Old_Call) /= N_Function_Call then
+            pragma Assert (Replaced);
+         end if;
       end Update_Controlling_Argument;
 
       -------------------------------
@@ -26277,16 +26473,6 @@ package body Sem_Util is
          end if;
       end if;
 
-      --  In CodePeer mode and GNATprove mode, we need to consider all
-      --  assertions, unless they are disabled. Force Name_Check on
-      --  ignored assertions.
-
-      if Kind in Name_Ignore | Name_Off
-        and then (CodePeer_Mode or GNATprove_Mode)
-      then
-         Kind := Name_Check;
-      end if;
-
       return Kind;
    end Policy_In_Effect;
 
@@ -26320,9 +26506,11 @@ package body Sem_Util is
 
    function Predicate_Enabled (Typ : Entity_Id) return Boolean is
    begin
-      return Present (Predicate_Function (Typ))
-        and then not Predicates_Ignored (Typ)
-        and then not Predicate_Checks_Suppressed (Empty);
+      return
+        Present (Predicate_Function (Typ))
+        and then (GNATprove_Mode
+                  or else (not Predicates_Ignored (Typ)
+                           and then not Predicate_Checks_Suppressed (Empty)));
    end Predicate_Enabled;
 
    ----------------------------------
@@ -26807,6 +26995,10 @@ package body Sem_Util is
 
       if Has_Relaxed_Finalization (From_Typ) then
          Set_Has_Relaxed_Finalization (Typ);
+      end if;
+
+      if Deriv and then Has_Destructor (From_Typ) then
+         Set_Has_Destructor (Typ);
       end if;
    end Propagate_Controlled_Flags;
 

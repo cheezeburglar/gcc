@@ -282,6 +282,9 @@ struct lexer_state
   /* Nonzero to skip evaluating part of an expression.  */
   unsigned int skip_eval;
 
+  /* Nonzero if CPP_COMMA is valid in expression in C++.  */
+  unsigned int comma_ok;
+
   /* Nonzero when tokenizing a deferred pragma.  */
   unsigned char in_deferred_pragma;
 
@@ -622,8 +625,8 @@ struct cpp_reader
      zero of said file.  */
   location_t main_loc;
 
-  /* If non-zero, override diagnostic locations (other than DK_NOTE
-     diagnostics) to this one.  */
+  /* If non-zero, override diagnostic locations (other than
+     diagnostics::kind::note diagnostics) to this one.  */
   location_t diagnostic_override_loc;
 
   /* Returns true iff we should warn about UTF-8 bidirectional control

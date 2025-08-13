@@ -120,7 +120,7 @@
   ;; Interrupt handler instructions.
   UNSPECV_MRET
   UNSPECV_SRET
-  UNSPECV_URET
+  UNSPECV_MNRET
 
   ;; Blockage and synchronization.
   UNSPECV_BLOCKAGE
@@ -712,14 +712,17 @@
    (set_attr "mode" "SI")])
 
 (define_expand "addsi3"
-  [(set (match_operand:SI          0 "register_operand" "=r,r")
-	(plus:SI (match_operand:SI 1 "register_operand" " r,r")
-		 (match_operand:SI 2 "arith_operand"    " r,I")))]
+  [(set (match_operand:SI          0 "register_operand")
+	(plus:SI (match_operand:SI 1 "register_operand")
+		 (match_operand:SI 2 "reg_or_const_int_operand")))]
   ""
 {
   if (TARGET_64BIT)
     {
       rtx t = gen_reg_rtx (DImode);
+
+      if (CONST_INT_P (operands[2]) && !SMALL_OPERAND (operands[2]))
+	operands[2] = force_reg (SImode, operands[2]);
       emit_insn (gen_addsi3_extended (t, operands[1], operands[2]));
       t = gen_lowpart (SImode, t);
       SUBREG_PROMOTED_VAR_P (t) = 1;
@@ -727,9 +730,26 @@
       emit_move_insn (operands[0], t);
       DONE;
     }
+
+  /* We may be able to find a faster sequence, if so, then we are
+     done.  Otherwise let expansion continue normally.  */
+  if (CONST_INT_P (operands[2]) && synthesize_add (operands))
+    DONE;
 })
 
-(define_insn "adddi3"
+(define_expand "adddi3"
+  [(set (match_operand:DI          0 "register_operand")
+	(plus:DI (match_operand:DI 1 "register_operand")
+		 (match_operand:DI 2 "reg_or_const_int_operand")))]
+  "TARGET_64BIT"
+{
+  /* We may be able to find a faster sequence, if so, then we are
+     done.  Otherwise let expansion continue normally.  */
+  if (CONST_INT_P (operands[2]) && synthesize_add (operands))
+    DONE;
+})
+
+(define_insn "*adddi3"
   [(set (match_operand:DI          0 "register_operand" "=r,r")
 	(plus:DI (match_operand:DI 1 "register_operand" " r,r")
 		 (match_operand:DI 2 "arith_operand"    " r,I")))]
@@ -3298,7 +3318,7 @@
 			  (match_operand:GPR 2 "movcc_operand")
 			  (match_operand:GPR 3 "movcc_operand")))]
   "TARGET_SFB_ALU || TARGET_XTHEADCONDMOV || TARGET_ZICOND_LIKE
-   || TARGET_MOVCC"
+   || TARGET_MOVCC || TARGET_XMIPSCMOV"
 {
   if (riscv_expand_conditional_move (operands[0], operands[1],
 				     operands[2], operands[3]))
@@ -4166,11 +4186,11 @@
   "sret"
   [(set_attr "type" "ret")])
 
-(define_insn "riscv_uret"
+(define_insn "riscv_mnret"
   [(return)
-   (unspec_volatile [(const_int 0)] UNSPECV_URET)]
-  ""
-  "uret"
+   (unspec_volatile [(const_int 0)] UNSPECV_MNRET)]
+  "TARGET_SMRNMI"
+  "mnret"
   [(set_attr "type" "ret")])
 
 (define_insn "stack_tie<mode>"
@@ -4402,7 +4422,7 @@
 )
 
 (define_insn "prefetch"
-  [(prefetch (match_operand 0 "prefetch_operand" "Q")
+  [(prefetch (match_operand 0 "prefetch_operand" "Qr")
              (match_operand 1 "imm5_operand" "i")
              (match_operand 2 "const_int_operand" "n"))]
   "TARGET_ZICBOP"
@@ -4630,6 +4650,17 @@
   ""
   {
     riscv_expand_sssub (operands[0], operands[1], operands[2]);
+    DONE;
+  }
+)
+
+(define_expand "usmul<mode>3"
+  [(match_operand:ANYI 0 "register_operand")
+   (match_operand:ANYI 1 "register_operand")
+   (match_operand:ANYI 2 "register_operand")]
+  ""
+  {
+    riscv_expand_usmul (operands[0], operands[1], operands[2]);
     DONE;
   }
 )
@@ -4872,6 +4903,7 @@
 (include "vector-crypto.md")
 (include "vector-bfloat16.md")
 (include "zicond.md")
+(include "mips-insn.md")
 (include "sfb.md")
 (include "zc.md")
 ;; Vendor extensions

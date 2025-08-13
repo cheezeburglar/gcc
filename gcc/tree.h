@@ -22,6 +22,7 @@ along with GCC; see the file COPYING3.  If not see
 
 #include "tree-core.h"
 #include "options.h"
+#include "vec.h"
 
 /* Convert a target-independent built-in function code to a combined_fn.  */
 
@@ -1658,6 +1659,16 @@ class auto_suppress_location_wrappers
   != UNKNOWN_LOCATION)
 #define OMP_CLAUSE_LOCATION(NODE)  (OMP_CLAUSE_CHECK (NODE))->omp_clause.locus
 
+#define OMP_CLAUSE_HAS_ITERATORS(NODE) \
+  ((OMP_CLAUSE_CODE (NODE) == OMP_CLAUSE_FROM				\
+    || OMP_CLAUSE_CODE (NODE) == OMP_CLAUSE_TO				\
+    || OMP_CLAUSE_CODE (NODE) == OMP_CLAUSE_MAP)			\
+   && OMP_CLAUSE_ITERATORS (NODE))
+#define OMP_CLAUSE_ITERATORS(NODE) \
+  OMP_CLAUSE_OPERAND (OMP_CLAUSE_RANGE_CHECK (OMP_CLAUSE_CHECK (NODE),	\
+					      OMP_CLAUSE_FROM,		\
+					      OMP_CLAUSE_MAP), 2)
+
 /* True on OMP_FOR and other OpenMP/OpenACC looping constructs if the loop nest
    is non-rectangular.  */
 #define OMP_FOR_NON_RECTANGULAR(NODE) \
@@ -2231,6 +2242,12 @@ class auto_suppress_location_wrappers
 
 #define OMP_CLAUSE_OPERAND(NODE, I)				\
 	OMP_CLAUSE_ELT_CHECK (NODE, I)
+
+/* True if the clause decl NODE contains an OpenMP iterator.  */
+#define OMP_ITERATOR_DECL_P(NODE) \
+	(TREE_CODE (NODE) == TREE_LIST				\
+	 && TREE_PURPOSE (NODE)					\
+	 && TREE_CODE (TREE_PURPOSE (NODE)) == TREE_VEC)
 
 /* In a BLOCK (scope) node:
    Variables declared in the scope NODE.  */
@@ -7081,5 +7098,15 @@ extern unsigned fndecl_dealloc_argno (tree);
 extern tree get_attr_nonstring_decl (tree, tree * = NULL);
 
 extern int get_target_clone_attr_len (tree);
+
+/* Returns the version string for a decl with target_version attribute.
+   Returns an invalid string_slice if no attribute is present.  */
+extern string_slice get_target_version (const tree);
+/* Returns a vector of the version strings from a target_clones attribute on
+   a decl.  Can also record the number of default versions found.  */
+extern auto_vec<string_slice> get_clone_versions (const tree, int * = NULL);
+/* Returns a vector of the version strings from a target_clones attribute
+   directly.  */
+extern auto_vec<string_slice> get_clone_attr_versions (const tree, int *);
 
 #endif  /* GCC_TREE_H  */
