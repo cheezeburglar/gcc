@@ -2318,115 +2318,15 @@
 #endif /* !defined(__cpp_lib_constexpr_exceptions) && defined(__glibcxx_want_constexpr_exceptions) */
 #undef __glibcxx_want_constexpr_exceptions
 
-#if !defined(_cpp_lib_constexpr_deque)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_deque // TODO: idk lol
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_deque)
-#   define __cpp_lib_constexpr_deque 202502L
-#  endif
-# endif
-#endif
-#undef __glibcxx_want_constexpr_deque
-
-#if !defined(_cpp_lib_constexpr_flat_map)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_flat_map // TODO: idk lol
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_flat_map)
-#   define __cpp_lib_constexpr_flat_map 202502L
-#  endif
-# endif
-#endif
-#undef __glibcxx_want_constexpr_flat_map
-
-#if !defined(_cpp_lib_constexpr_flat_set)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_flat_set // TODO: idk lol
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_flat_set)
-#   define __cpp_lib_constexpr_flat_set 202502L
-#  endif
-# endif
-#endif
-#undef __glibcxx_want_constexpr_flat_set
-
-#if !defined(_cpp_lib_constexpr_forward_list)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_forward_list // TODO: idk lol
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_forward_list)
-#   define __cpp_lib_constexpr_forward_list 202502L
-#  endif
-# endif
-#endif
-#undef __glibcxx_want_constexpr_forward_list
-
-#if !defined(_cpp_lib_constexpr_list)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_list // TODO: idk lol
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_list)
-#   define __cpp_lib_constexpr_list 202502L
-#  endif
-# endif
-#endif
-#undef __glibcxx_want_constexpr_list
-
-#if !defined(_cpp_lib_constexpr_map)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_map // TODO: idk lol
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_map)
-#   define __cpp_lib_constexpr_map 202502L
-#  endif
-# endif
-#endif
-#undef __glibcxx_want_constexpr_map
-
-#if !defined(_cpp_lib_constexpr_queue)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_queue // TODO: idk lol
 #if !defined(__cpp_lib_constexpr_queue)
 # if (__cplusplus >  202302L)
 #  define __glibcxx_constexpr_queue 202502L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_queue)
+#   define __cpp_lib_constexpr_queue 202502L
+#  endif
 # endif
-#endif
+#endif /* !defined(__cpp_lib_constexpr_queue) && defined(__glibcxx_want_constexpr_queue) */
 #undef __glibcxx_want_constexpr_queue
-
-#if !defined(_cpp_lib_constexpr_set)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_set // TODO: idk lol
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_set)
-#   define __cpp_lib_constexpr_set 202502L
-#  endif
-# endif
-#endif
-#undef __glibcxx_want_constexpr_set
-
-#if !defined(_cpp_lib_constexpr_stack)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_stack // TODO: idk lol
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_stack)
-#   define __cpp_lib_constexpr_stack 202502L
-#  endif
-# endif
-#endif
-#undef __glibcxx_want_constexpr_stack
-
-#if !defined(_cpp_lib_constexpr_unordered_map)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_unordered_map // TODO: idk lol
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_unordered_map)
-#   define __cpp_lib_constexpr_unordered_map 202502L
-#  endif
-# endif
-#endif
-#undef __glibcxx_want_constexpr_unordered_map
-
-#if !defined(_cpp_lib_constexpr_unordered_set)
-# if (__cplusplus > 202502L)
-#  define __glibcxx_constexpr_unordered_set // TODO: idk lol
-#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_unordered_set)
-#   define __cpp_lib_constexpr_unordered_set 202502L
-#  endif
-# endif
-#endif
-#undef __glibcxx_want_constexpr_unordered_set
 
 #if !defined(__cpp_lib_constexpr_deque)
 # if (__cplusplus >  202302L)
@@ -2437,6 +2337,5 @@
 # endif
 #endif /* !defined(__cpp_lib_constexpr_deque) && defined(__glibcxx_want_constexpr_deque) */
 #undef __glibcxx_want_constexpr_deque
->>>>>>> patch-create-constexpr-sdq
 
 #undef __glibcxx_want_all
