@@ -139,9 +139,10 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
 //      __gnu_cxx::__aligned_buffer<_Tp> _M_storage;
       union _Uninit_storage {
+	alignas(__alignof__(_Tp))
 	_Uninit_storage () noexcept {};
 	~_Uninit_storage () {};
-	alignas(__alignof__(_Tp)) unsigned char _M_storage[sizeof(_Value)];
+//	alignas(__alignof__(_Tp)) unsigned char _M_storage[sizeof(_Value)];
 	_Tp _M_ptr;
       };
 
