@@ -51,6 +51,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       using value_type = typename allocator_traits<_Alloc>::value_type;
 
       /// Take ownership of __ptr
+      _GLIBCXX26_CONSTEXPR
       __allocated_ptr(_Alloc& __a, pointer __ptr) noexcept
       : _M_alloc(std::__addressof(__a)), _M_ptr(__ptr)
       { }
@@ -58,17 +59,20 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       /// Convert __ptr to allocator's pointer type and take ownership of it
       template<typename _Ptr,
 	       typename _Req = _Require<is_same<_Ptr, value_type*>>>
+      _GLIBCXX26_CONSTEXPR
       __allocated_ptr(_Alloc& __a, _Ptr __ptr)
       : _M_alloc(std::__addressof(__a)),
 	_M_ptr(pointer_traits<pointer>::pointer_to(*__ptr))
       { }
 
       /// Transfer ownership of the owned pointer
+      _GLIBCXX26_CONSTEXPR
       __allocated_ptr(__allocated_ptr&& __gd) noexcept
       : _M_alloc(__gd._M_alloc), _M_ptr(__gd._M_ptr)
       { __gd._M_ptr = nullptr; }
 
       /// Deallocate the owned pointer
+      _GLIBCXX26_CONSTEXPR
       ~__allocated_ptr()
       {
 	if (_M_ptr != nullptr)
