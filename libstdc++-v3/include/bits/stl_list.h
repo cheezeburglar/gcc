@@ -130,10 +130,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     /// The %list node header.
     struct _List_node_header : public _List_node_base, _List_size
     {
+      _GLIBCXX26_CONSTEXPR
       _List_node_header() _GLIBCXX_NOEXCEPT
       { _M_init(); }
 
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       _List_node_header(_List_node_header&& __x) noexcept
       : _List_node_base(__x), _List_size(__x)
       {
@@ -146,6 +148,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	  }
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_move_nodes(_List_node_header&& __x)
       {
@@ -164,6 +167,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_init() _GLIBCXX_NOEXCEPT
       {
@@ -173,6 +177,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       using _List_node_base::_M_base;
 #if ! _GLIBCXX_INLINE_VERSION
+      _GLIBCXX26_CONSTEXPR
       _List_node_base* _M_base() { return this; } // XXX GLIBCXX_ABI Deprecated
 #endif
     };
@@ -196,9 +201,11 @@ namespace __list
       _Base_ptr _M_next;
       _Base_ptr _M_prev;
 
+      _GLIBCXX26_CONSTEXPR
       static void
       swap(_Node_base& __x, _Node_base& __y) noexcept;
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_transfer(_Base_ptr const __first, _Base_ptr const __last) noexcept;
 
@@ -213,6 +220,7 @@ namespace __list
 	__position->_M_prev = __self;
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_unhook() noexcept
       {
@@ -228,6 +236,7 @@ namespace __list
       // const_iterator and so constness is restored.
       // The standard allows pointer_to to be potentially-throwing,
       // but we have to assume it doesn't throw to implement std::list.
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr
       _M_base() const noexcept
       {
@@ -245,9 +254,11 @@ namespace __list
     struct _Node_header
     : public _Node_base<_VoidPtr>, _List_size
     {
+      _GLIBCXX26_CONSTEXPR
       _Node_header() noexcept
       { _M_init(); }
 
+      _GLIBCXX26_CONSTEXPR
       _Node_header(_Node_header&& __x) noexcept
       : _Node_base<_VoidPtr>(__x), _List_size(__x)
       {
@@ -260,6 +271,7 @@ namespace __list
 	  }
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_move_nodes(_Node_header&& __x) noexcept
       {
@@ -277,6 +289,7 @@ namespace __list
 	  }
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_init() noexcept
       {
@@ -284,6 +297,7 @@ namespace __list
 	_List_size::operator=(_List_size());
       }
 
+      _GLIBCXX26_CONSTEXPR
       void _M_reverse() noexcept;
     };
 
