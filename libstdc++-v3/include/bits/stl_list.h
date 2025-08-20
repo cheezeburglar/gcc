@@ -829,10 +829,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
       void _M_dec_size(size_t) { }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       typename _Node_alloc_traits::pointer
       _M_get_node()
       { return _Node_alloc_traits::allocate(_M_impl, 1); }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_put_node(_Node_ptr __p) _GLIBCXX_NOEXCEPT
       {
@@ -855,6 +857,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
 #endif
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_destroy_node(_Node_ptr __p)
       {
@@ -878,49 +881,60 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
   public:
       typedef _Alloc allocator_type;
 
+      _GLIBCXX26_CONSTEXPR
       _Node_alloc_type&
       _M_get_Node_allocator() _GLIBCXX_NOEXCEPT
       { return _M_impl; }
 
+      _GLIBCXX26_CONSTEXPR
       const _Node_alloc_type&
       _M_get_Node_allocator() const _GLIBCXX_NOEXCEPT
       { return _M_impl; }
 
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       _List_base() = default;
 #else
       _List_base() { }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       _List_base(const _Node_alloc_type& __a) _GLIBCXX_NOEXCEPT
       : _M_impl(__a)
       { }
 
 #if __cplusplus >= 201103L
+      _GLIBCXX26_CONSTEXPR
       _List_base(_List_base&&) = default;
 
       // Used when allocator is_always_equal.
+      _GLIBCXX26_CONSTEXPR
       _List_base(_Node_alloc_type&& __a, _List_base&& __x)
       : _M_impl(std::move(__a), std::move(__x._M_impl))
       { }
 
       // Used when allocator !is_always_equal.
+      _GLIBCXX26_CONSTEXPR
       _List_base(_Node_alloc_type&& __a)
       : _M_impl(std::move(__a))
       { }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_move_nodes(_List_base&& __x)
       { _M_impl._M_node._M_move_nodes(std::move(__x._M_impl._M_node)); }
 #endif
 
       // This is what actually destroys the list.
+      _GLIBCXX26_CONSTEXPR
       ~_List_base() _GLIBCXX_NOEXCEPT
       { _M_clear(); }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_clear() _GLIBCXX_NOEXCEPT;
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_init() _GLIBCXX_NOEXCEPT
       { this->_M_impl._M_node._M_init(); }
