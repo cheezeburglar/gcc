@@ -1916,19 +1916,23 @@ namespace __fwdlist
 
       // Called by forward_list(n,v,a), and the range constructor when it
       // turns out to be the same thing.
+      _GLIBCXX26_CONSTEXPR
       void
       _M_fill_initialize(size_type __n, const value_type& __value);
 
       // Called by splice_after and insert_after.
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_splice_after(const_iterator __pos, const_iterator __before,
 		      const_iterator __last);
 
       // Called by forward_list(n).
+      _GLIBCXX26_CONSTEXPR
       void
       _M_default_initialize(size_type __n);
 
       // Called by resize(sz).
+      _GLIBCXX26_CONSTEXPR
       void
       _M_default_insert_after(const_iterator __pos, size_type __n);
 
@@ -1947,6 +1951,7 @@ namespace __fwdlist
       // old code referencing these symbols wasn't using the fancy-pointer
       // specializations.
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_move_assign(forward_list&& __list, true_type) noexcept
       {
@@ -1962,6 +1967,7 @@ namespace __fwdlist
 	 }
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_move_assign(forward_list&& __list, false_type)
       {
@@ -1979,6 +1985,7 @@ namespace __fwdlist
 	  }
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_assign_n(size_type __n, const _Tp& __val, true_type)
       {
@@ -2003,6 +2010,7 @@ namespace __fwdlist
 	  }
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_assign_n(size_type __n, const _Tp& __val, false_type)
       {
