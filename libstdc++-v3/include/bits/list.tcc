@@ -62,6 +62,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     _List_base<_Tp, _Alloc>::
     _M_clear() _GLIBCXX_NOEXCEPT
@@ -171,6 +172,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   //   return end();
   // }
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename list<_Tp, _Alloc>::const_iterator
     list<_Tp, _Alloc>::
     _M_resize_pos(size_type& __new_size) const
@@ -207,6 +209,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
 #if __cplusplus >= 201103L
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     list<_Tp, _Alloc>::
     _M_default_append(size_type __n)
@@ -293,6 +296,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     list<_Tp, _Alloc>::
     _M_fill_assign(size_type __n, const value_type& __val)
@@ -308,6 +312,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   template<typename _Tp, typename _Alloc>
     template <typename _InputIterator>
+      _GLIBCXX26_CONSTEXPR
       void
       list<_Tp, _Alloc>::
       _M_assign_dispatch(_InputIterator __first2, _InputIterator __last2,
