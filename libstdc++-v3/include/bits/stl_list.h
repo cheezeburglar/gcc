@@ -2562,6 +2562,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
       }
 
       // Called by resize(sz).
+      _GLIBCXX26_CONSTEXPR
       void
       _M_default_append(size_type __n);
 #endif
@@ -2573,18 +2574,21 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
       // _GLIBCXX_RESOLVE_LIB_DEFECTS
       // 438. Ambiguity in the "do the right thing" clause
       template<typename _Integer>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_assign_dispatch(_Integer __n, _Integer __val, __true_type)
 	{ _M_fill_assign(__n, __val); }
 
       // Called by the range assign to implement [23.1.1]/9
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_assign_dispatch(_InputIterator __first, _InputIterator __last,
 			   __false_type);
 
       // Called by assign(n,t), and the range assign when it turns out
       // to be the same thing.
+      _GLIBCXX26_CONSTEXPR
       void
       _M_fill_assign(size_type __n, const value_type& __val);
 
@@ -2635,6 +2639,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
       }
 
       // Used to implement resize.
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       _M_resize_pos(size_type& __new_size) const;
 
