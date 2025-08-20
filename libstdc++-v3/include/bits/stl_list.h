@@ -780,22 +780,27 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
       {
 	typename _Node_traits::_Node_header _M_node;
 
+	_GLIBCXX26_CONSTEXPR
 	_List_impl() _GLIBCXX_NOEXCEPT_IF(
 	    is_nothrow_default_constructible<_Node_alloc_type>::value)
 	: _Node_alloc_type()
 	{ }
 
+	_GLIBCXX26_CONSTEXPR
 	_List_impl(const _Node_alloc_type& __a) _GLIBCXX_NOEXCEPT
 	: _Node_alloc_type(__a)
 	{ }
 
 #if __cplusplus >= 201103L
+	_GLIBCXX26_CONSTEXPR
 	_List_impl(_List_impl&&) = default;
 
+	_GLIBCXX26_CONSTEXPR
 	_List_impl(_Node_alloc_type&& __a, _List_impl&& __x)
 	: _Node_alloc_type(std::move(__a)), _M_node(std::move(__x._M_node))
 	{ }
 
+	_GLIBCXX26_CONSTEXPR
 	_List_impl(_Node_alloc_type&& __a) noexcept
 	: _Node_alloc_type(std::move(__a))
 	{ }
