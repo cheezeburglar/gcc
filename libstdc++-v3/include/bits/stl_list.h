@@ -810,12 +810,16 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
       _List_impl _M_impl;
 
 #if _GLIBCXX_USE_CXX11_ABI
+      _GLIBCXX26_CONSTEXPR
       size_t _M_get_size() const { return _M_impl._M_node._M_size; }
 
+      _GLIBCXX26_CONSTEXPR
       void _M_set_size(size_t __n) { _M_impl._M_node._M_size = __n; }
 
+      _GLIBCXX26_CONSTEXPR
       void _M_inc_size(size_t __n) { _M_impl._M_node._M_size += __n; }
 
+      _GLIBCXX26_CONSTEXPR
       void _M_dec_size(size_t __n) { _M_impl._M_node._M_size -= __n; }
 #else
       // dummy implementations used when the size is not stored
