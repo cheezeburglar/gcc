@@ -2825,6 +2825,7 @@ _GLIBCXX_END_NAMESPACE_CXX11
 
   /// See std::list::swap().
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     inline void
     swap(list<_Tp, _Alloc>& __x, list<_Tp, _Alloc>& __y)
     _GLIBCXX_NOEXCEPT_IF(noexcept(__x.swap(__y)))
@@ -2897,6 +2898,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 namespace __list
 {
   template<typename _VoidPtr>
+    _GLIBCXX26_CONSTEXPR
     void
     _Node_base<_VoidPtr>::swap(_Node_base& __x, _Node_base& __y) noexcept
     {
@@ -2934,6 +2936,7 @@ namespace __list
     }
 
   template<typename _VoidPtr>
+    _GLIBCXX26_CONSTEXPR
     void
     _Node_base<_VoidPtr>::_M_transfer(_Base_ptr const __first,
 				      _Base_ptr const __last) noexcept
@@ -2957,6 +2960,7 @@ namespace __list
     }
 
   template<typename _VoidPtr>
+    _GLIBCXX26_CONSTEXPR
     void
     _Node_header<_VoidPtr>::_M_reverse() noexcept
     {
