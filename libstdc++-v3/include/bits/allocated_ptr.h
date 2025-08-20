@@ -131,6 +131,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /// Construct an object in storage allocated using __a.
   template<typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     inline __allocated_obj<_Alloc>
     __allocate_guarded_obj(_Alloc& __a)
     {
