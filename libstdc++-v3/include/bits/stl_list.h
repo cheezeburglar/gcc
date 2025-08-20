@@ -1157,6 +1157,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
       }
 #else
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	_Node_ptr
 	_M_create_node(_Args&&... __args)
 	{
