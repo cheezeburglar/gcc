@@ -606,28 +606,34 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       typedef _Tp*				pointer;
       typedef _Tp&				reference;
 
+      _GLIBCXX26_CONSTEXPR
       _List_iterator() _GLIBCXX_NOEXCEPT
       : _M_node() { }
 
+      _GLIBCXX26_CONSTEXPR
       explicit
       _List_iterator(__detail::_List_node_base* __x) _GLIBCXX_NOEXCEPT
       : _M_node(__x) { }
 
+      _GLIBCXX26_CONSTEXPR
       _List_iterator
       _M_const_cast() const _GLIBCXX_NOEXCEPT
       { return *this; }
 
       // Must downcast from _List_node_base to _List_node to get to value.
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       reference
       operator*() const _GLIBCXX_NOEXCEPT
       { return *static_cast<_Node*>(_M_node)->_M_valptr(); }
 
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       pointer
       operator->() const _GLIBCXX_NOEXCEPT
       { return static_cast<_Node*>(_M_node)->_M_valptr(); }
 
+      _GLIBCXX26_CONSTEXPR
       _List_iterator&
       operator++() _GLIBCXX_NOEXCEPT
       {
@@ -635,6 +641,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return *this;
       }
 
+      _GLIBCXX26_CONSTEXPR
       _List_iterator
       operator++(int) _GLIBCXX_NOEXCEPT
       {
@@ -643,6 +650,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return __tmp;
       }
 
+      _GLIBCXX26_CONSTEXPR
       _List_iterator&
       operator--() _GLIBCXX_NOEXCEPT
       {
@@ -650,6 +658,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return *this;
       }
 
+      _GLIBCXX26_CONSTEXPR
       _List_iterator
       operator--(int) _GLIBCXX_NOEXCEPT
       {
@@ -659,6 +668,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       }
 
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       friend bool
       operator==(const _List_iterator& __x,
 		 const _List_iterator& __y) _GLIBCXX_NOEXCEPT
@@ -666,6 +676,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
 #if __cpp_impl_three_way_comparison < 201907L
       _GLIBCXX_NODISCARD
+      _GLIBCXX26_CONSTEXPR
       friend bool
       operator!=(const _List_iterator& __x,
 		 const _List_iterator& __y) _GLIBCXX_NOEXCEPT
