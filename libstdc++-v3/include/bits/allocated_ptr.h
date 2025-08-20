@@ -97,6 +97,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
   /// Allocate space for a single object using __a.
   template<typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     inline __allocated_ptr<_Alloc>
     __allocate_guarded(_Alloc& __a)
     {
