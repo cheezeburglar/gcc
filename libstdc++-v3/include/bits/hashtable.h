@@ -295,20 +295,25 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       struct _Scoped_node
       {
 	// Take ownership of a node with a constructed element.
+	_GLIBCXX26_CONSTEXPR
 	_Scoped_node(__node_ptr __n, __hashtable_alloc* __h)
 	: _M_h(__h), _M_node(__n) { }
 
 	// Allocate a node and construct an element within it.
 	template<typename... _Args>
+	  _GLIBCXX26_CONSTEXPR
 	  _Scoped_node(__hashtable_alloc* __h, _Args&&... __args)
 	  : _M_h(__h),
 	    _M_node(__h->_M_allocate_node(std::forward<_Args>(__args)...))
 	  { }
 
 	// Destroy element and deallocate node.
+	_GLIBCXX26_CONSTEXPR
 	~_Scoped_node() { if (_M_node) _M_h->_M_deallocate_node(_M_node); };
 
+	_GLIBCXX26_CONSTEXPR
 	_Scoped_node(const _Scoped_node&) = delete;
+	_GLIBCXX26_CONSTEXPR
 	_Scoped_node& operator=(const _Scoped_node&) = delete;
 
 	__hashtable_alloc* _M_h;

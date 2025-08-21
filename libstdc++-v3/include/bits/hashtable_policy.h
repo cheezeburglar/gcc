@@ -81,6 +81,7 @@ namespace __detail
   struct _Identity
   {
     template<typename _Tp>
+      _GLIBCXX26_CONSTEXPR
       _Tp&&
       operator()(_Tp&& __x) const noexcept
       { return std::forward<_Tp>(__x); }
