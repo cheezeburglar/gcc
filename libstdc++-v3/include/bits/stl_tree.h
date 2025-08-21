@@ -2392,25 +2392,30 @@ namespace __rb_tree
       struct _Auto_node
       {
 	template<typename... _Args>
+	  _GLIBCXX26_CONSTEXPR
 	  _Auto_node(_Rb_tree& __t, _Args&&... __args)
 	  : _M_t(__t),
 	    _M_node(__t._M_create_node(std::forward<_Args>(__args)...))
 	  { }
 
+	_GLIBCXX26_CONSTEXPR
 	~_Auto_node()
 	{
 	  if (_M_node)
 	    _M_t._M_drop_node(_M_node);
 	}
 
+	_GLIBCXX26_CONSTEXPR
 	_Auto_node(_Auto_node&& __n)
 	: _M_t(__n._M_t), _M_node(__n._M_node)
 	{ __n._M_node = nullptr; }
 
+	_GLIBCXX26_CONSTEXPR
 	const _Key&
 	_M_key() const
 	{ return _S_key(_M_node); }
 
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_insert(pair<_Base_ptr, _Base_ptr> __p)
 	{
@@ -2419,6 +2424,7 @@ namespace __rb_tree
 	  return __it;
 	}
 
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_insert_equal_lower()
 	{
