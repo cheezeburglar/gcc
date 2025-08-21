@@ -80,6 +80,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 
       /// Release ownership of the owned pointer
+      _GLIBCXX26_CONSTEXPR
       __allocated_ptr&
       operator=(std::nullptr_t) noexcept
       {
