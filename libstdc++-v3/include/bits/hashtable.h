@@ -918,9 +918,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       // The _M_before pointer might point to _M_before_begin, so must not be
       // cast to __node_ptr, and it must not be used to modify *_M_before
       // except in non-const member functions, such as erase.
+      _GLIBCXX26_CONSTEXPR
       __location_type
       _M_locate(const key_type& __k) const;
 
+      _GLIBCXX26_CONSTEXPR
       __node_ptr
       _M_find_node(size_type __bkt, const key_type& __key,
 		   __hash_code __c) const
@@ -931,6 +933,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	__node_ptr
 	_M_find_node_tr(size_type __bkt, const _Kt& __key,
 			__hash_code __c) const
@@ -941,6 +944,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	}
 
       // Insert a node at the beginning of a bucket.
+      _GLIBCXX26_CONSTEXPR
       void
       _M_insert_bucket_begin(size_type __bkt, __node_ptr __node)
       {
@@ -969,6 +973,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 
       // Remove the bucket first node
+      _GLIBCXX26_CONSTEXPR
       void
       _M_remove_bucket_begin(size_type __bkt, __node_ptr __next_n,
 			     size_type __next_bkt)
@@ -983,9 +988,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 
       // Get the node before __n in the bucket __bkt
+      _GLIBCXX26_CONSTEXPR
       __node_base_ptr
       _M_get_previous_node(size_type __bkt, __node_ptr __n);
 
+      _GLIBCXX26_CONSTEXPR
       pair<__node_ptr, __hash_code>
       _M_compute_hash_code(__node_ptr __hint, const key_type& __k) const;
 
@@ -995,12 +1002,14 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       // Takes ownership of __n if insertion succeeds, throws otherwise.
       // __n_elt is an estimated number of elements we expect to insert,
       // used as a hint for rehashing when inserting a range.
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_insert_unique_node(size_type __bkt, __hash_code,
 			    __node_ptr __n, size_type __n_elt = 1);
 
       // Insert node __n with key __k and hash code __code.
       // Takes ownership of __n if insertion succeeds, throws otherwise.
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_insert_multi_node(__node_ptr __hint,
 			   __hash_code __code, __node_ptr __n);
@@ -1027,13 +1036,16 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 #pragma GCC diagnostic pop
 
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_emplace_multi(const_iterator, _Args&&... __args);
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_erase(size_type __bkt, __node_base_ptr __prev_n, __node_ptr __n);
 
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_insert_range_multi(_InputIterator __first, _InputIterator __last);
 
