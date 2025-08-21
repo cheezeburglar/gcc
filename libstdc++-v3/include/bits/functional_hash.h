@@ -117,10 +117,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
   // Explicit specializations for integer types.
 #define _Cxx_hashtable_define_trivial_hash(_Tp) 	\
   template<>						\
-    _GLIBCXX26_CONSTEXPR
     struct hash<_Tp> : public __hash_base<size_t, _Tp>  \
     {                                                   \
-      size_t                                            \
+      _GLIBCXX26_CONSTEXPR size_t                       \
       operator()(_Tp __val) const noexcept              \
       { return static_cast<size_t>(__val); }            \
     };
