@@ -586,6 +586,7 @@ namespace __detail
   /// into the range [0, N).
   struct _Mod_range_hashing
   {
+    _GLIBCXX26_CONSTEXPR
     size_t
     operator()(size_t __num, size_t __den) const noexcept
     { return __num % __den; }
