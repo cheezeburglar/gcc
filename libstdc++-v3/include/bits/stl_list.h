@@ -1162,7 +1162,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
 	_M_create_node(_Args&&... __args)
 	{
 	  auto& __alloc = _M_get_Node_allocator();
-	  auto __guard = constexpr std::__allocate_guarded_obj(__alloc);
+	  auto __guard = std::__allocate_guarded_obj(__alloc);
 	  _Node_alloc_traits::construct(__alloc, __guard->_M_valptr(),
 					std::forward<_Args>(__args)...);
 	  return __guard.release();
