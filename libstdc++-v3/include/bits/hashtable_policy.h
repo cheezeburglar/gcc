@@ -1071,6 +1071,7 @@ namespace __detail
 
       _Hash_code_base(const _Hash& __hash) : _M_hash{__hash} { }
 
+      _GLIBCXX26_CONSTEXPR
       __hash_code
       _M_hash_code(const _Key& __k) const
       {
@@ -1080,6 +1081,7 @@ namespace __detail
       }
 
       template<typename _Kt>
+	_GLIBCXX26_CONSTEXPR
 	__hash_code
 	_M_hash_code_tr(const _Kt& __k) const
 	{
@@ -1088,18 +1090,22 @@ namespace __detail
 	  return _M_hash._M_obj(__k);
 	}
 
+      _GLIBCXX26_CONSTEXPR
       __hash_code
       _M_hash_code(const _Hash_node_value<_Value, false>& __n) const
       { return _M_hash_code(_ExtractKey{}(__n._M_v())); }
 
+      _GLIBCXX26_CONSTEXPR
       __hash_code
       _M_hash_code(const _Hash_node_value<_Value, true>& __n) const
       { return __n._M_hash_code; }
 
+      _GLIBCXX26_CONSTEXPR
       size_t
       _M_bucket_index(__hash_code __c, size_t __bkt_count) const
       { return _RangeHash{}(__c, __bkt_count); }
 
+      _GLIBCXX26_CONSTEXPR
       size_t
       _M_bucket_index(const _Hash_node_value<_Value, false>& __n,
 		      size_t __bkt_count) const
@@ -1109,6 +1115,7 @@ namespace __detail
 			    __bkt_count);
       }
 
+      _GLIBCXX26_CONSTEXPR
       size_t
       _M_bucket_index(const _Hash_node_value<_Value, true>& __n,
 		      size_t __bkt_count) const noexcept

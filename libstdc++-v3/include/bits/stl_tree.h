@@ -169,6 +169,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _Rb_tree_node_base	_M_header;
     size_t		_M_node_count; // Keeps track of size of tree.
 
+    _GLIBCXX26_CONSTEXPR
     _Rb_tree_header() _GLIBCXX_NOEXCEPT
     {
       _M_header._M_color = _S_red;
@@ -176,6 +177,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     }
 
 #if __cplusplus >= 201103L
+    _GLIBCXX26_CONSTEXPR
     _Rb_tree_header(_Rb_tree_header&& __x) noexcept
     {
       if (__x._M_header._M_parent != nullptr)
@@ -188,6 +190,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     }
 #endif
 
+    _GLIBCXX26_CONSTEXPR
     void
     _M_move_data(_Rb_tree_header& __from)
     {
@@ -201,6 +204,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       __from._M_reset();
     }
 
+    _GLIBCXX26_CONSTEXPR
     void
     _M_reset()
     {
