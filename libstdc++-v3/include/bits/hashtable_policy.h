@@ -1597,6 +1597,7 @@ namespace __detail
       }
 
   template<typename _NodeAlloc>
+    _GLIBCXX26_CONSTEXPR
     void
     _Hashtable_alloc<_NodeAlloc>::_M_deallocate_node(__node_ptr __n)
     {
@@ -1605,6 +1606,7 @@ namespace __detail
     }
 
   template<typename _NodeAlloc>
+    _GLIBCXX26_CONSTEXPR
     void
     _Hashtable_alloc<_NodeAlloc>::_M_deallocate_node_ptr(__node_ptr __n)
     {
@@ -1615,6 +1617,7 @@ namespace __detail
     }
 
   template<typename _NodeAlloc>
+    _GLIBCXX26_CONSTEXPR
     void
     _Hashtable_alloc<_NodeAlloc>::_M_deallocate_nodes(__node_ptr __n)
     {
@@ -1627,6 +1630,7 @@ namespace __detail
     }
 
   template<typename _NodeAlloc>
+    _GLIBCXX26_CONSTEXPR
     auto
     _Hashtable_alloc<_NodeAlloc>::_M_allocate_buckets(size_t __bkt_count)
     -> __buckets_ptr
@@ -1640,6 +1644,7 @@ namespace __detail
     }
 
   template<typename _NodeAlloc>
+    _GLIBCXX26_CONSTEXPR
     void
     _Hashtable_alloc<_NodeAlloc>::
     _M_deallocate_buckets(__buckets_ptr __bkts, size_t __bkt_count)

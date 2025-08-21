@@ -1166,6 +1166,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       template<typename... _Args>
 
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	emplace_hint(const_iterator __hint, _Args&&... __args)
 	{
@@ -1177,6 +1178,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       // Insert
 
+      _GLIBCXX26_CONSTEXPR
       __ireturn_type
       insert(const value_type& __v)
       {
@@ -1187,6 +1189,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const_iterator __hint, const value_type& __v)
       {
@@ -1197,6 +1200,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 
 
+      _GLIBCXX26_CONSTEXPR
       __ireturn_type
       insert(value_type&& __v)
       {
@@ -1207,6 +1211,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       insert(const_iterator __hint, value_type&& __v)
       {
@@ -1219,6 +1224,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 #ifdef __glibcxx_unordered_map_try_emplace // C++ >= 17 && HOSTED
       template<typename _KType, typename... _Args>
 
+	_GLIBCXX26_CONSTEXPR
 	std::pair<iterator, bool>
 	try_emplace(const_iterator, _KType&& __k, _Args&&... __args)
 	{
@@ -1245,12 +1251,14 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 #endif
 
 
+      _GLIBCXX26_CONSTEXPR
       void
       insert(initializer_list<value_type> __l)
       { this->insert(__l.begin(), __l.end()); }
 
       template<typename _InputIterator>
 
+	_GLIBCXX26_CONSTEXPR
 	void
 	insert(_InputIterator __first, _InputIterator __last)
 	{
@@ -1266,6 +1274,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	       typename = _Require<__not_<is_same<_Key, _Value>>,
 				   is_constructible<value_type, _Pair&&>>>
 
+	_GLIBCXX26_CONSTEXPR
 	__ireturn_type
 	insert(_Pair&& __v)
 	{
@@ -1280,6 +1289,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	       typename = _Require<__not_<is_same<_Key, _Value>>,
 				   is_constructible<value_type, _Pair&&>>>
 
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	insert(const_iterator __hint, _Pair&& __v)
 	{
@@ -1292,30 +1302,36 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       // Erase
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase(const_iterator);
 
       // _GLIBCXX_RESOLVE_LIB_DEFECTS
       // 2059. C++0x ambiguity problem with map::erase
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase(iterator __it)
       { return erase(const_iterator(__it)); }
 
 
+      _GLIBCXX26_CONSTEXPR
       size_type
       erase(const key_type& __k);
 
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       erase(const_iterator, const_iterator);
 
 
+      _GLIBCXX26_CONSTEXPR
       void
       clear() noexcept;
 
       // Set number of buckets keeping it appropriate for container's number
       // of elements.
+      _GLIBCXX26_CONSTEXPR
       void rehash(size_type __bkt_count);
 
       // DR 1189.
@@ -1323,6 +1339,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
 #if __glibcxx_node_extract // >= C++17 && HOSTED
       /// Re-insert an extracted node into a container with unique keys.
+      _GLIBCXX26_CONSTEXPR
       insert_return_type
       _M_reinsert_node(node_type&& __nh)
       {
@@ -1353,6 +1370,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 
       /// Re-insert an extracted node into a container with equivalent keys.
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_reinsert_node_multi(const_iterator __hint, node_type&& __nh)
       {
@@ -1370,6 +1388,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 
     private:
+      _GLIBCXX26_CONSTEXPR
       node_type
       _M_extract_node(size_t __bkt, __node_base_ptr __prev_n)
       {
@@ -1395,6 +1414,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       // for use in _M_merge_multi where the node comes from another container
       // with a hash function that might not match this->hash_function().
       template<typename _H2>
+	_GLIBCXX26_CONSTEXPR
 	__hash_code
 	_M_src_hash_code(const _H2&, const __node_value_type& __src_n) const
 	{
@@ -1409,6 +1429,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     public:
       // Extract a node.
 
+      _GLIBCXX26_CONSTEXPR
       node_type
       extract(const_iterator __pos)
       {
@@ -1419,6 +1440,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       /// Extract a node.
 
+      _GLIBCXX26_CONSTEXPR
       node_type
       extract(const _Key& __k)
       {
@@ -1432,6 +1454,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       /// Merge from another container of the same type.
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_merge_unique(_Hashtable& __src)
       {
@@ -1468,6 +1491,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       /// Merge from a compatible container into one with unique keys.
       template<typename _Compatible_Hashtable>
 
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_merge_unique(_Compatible_Hashtable& __src)
 	{
@@ -1499,6 +1523,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       /// Merge from another container of the same type.
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_merge_multi(_Hashtable& __src)
       {
@@ -1531,6 +1556,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       /// Merge from a compatible container into one with equivalent keys.
       template<typename _Compatible_Hashtable>
 
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_merge_multi(_Compatible_Hashtable& __src)
 	{
@@ -1555,14 +1581,17 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 #endif // C++17 __glibcxx_node_extract
 
 
+      _GLIBCXX26_CONSTEXPR
       bool
       _M_equal(const _Hashtable& __other) const;
 
     private:
       // Helper rehash method used when keys are unique.
+      _GLIBCXX26_CONSTEXPR
       void _M_rehash(size_type __bkt_count, true_type __uks);
 
       // Helper rehash method used when keys can be non-unique.
+      _GLIBCXX26_CONSTEXPR
       void _M_rehash(size_type __bkt_count, false_type __uks);
     };
 
