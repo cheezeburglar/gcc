@@ -912,7 +912,6 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       /**
        *  @brief  Creates a %deque with no elements.
        */
-      _GLIBCXX26_CONSTEXPR
 #if __cplusplus >= 201103L
       _GLIBCXX26_CONSTEXPR
       deque() = default;
