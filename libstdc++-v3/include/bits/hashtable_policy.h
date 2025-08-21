@@ -1518,14 +1518,17 @@ namespace __detail
       _Hashtable_alloc(_Hashtable_alloc&&) = default;
 
       template<typename _Alloc>
+	_GLIBCXX26_CONSTEXPR
 	_Hashtable_alloc(_Alloc&& __a)
 	: _M_alloc{std::forward<_Alloc>(__a)}
 	{ }
 
+      _GLIBCXX26_CONSTEXPR
       __node_alloc_type&
       _M_node_allocator()
       { return _M_alloc._M_obj; }
 
+      _GLIBCXX26_CONSTEXPR
       const __node_alloc_type&
       _M_node_allocator() const
       { return _M_alloc._M_obj; }
@@ -1537,21 +1540,26 @@ namespace __detail
 	_M_allocate_node(_Args&&... __args);
 
       // Destroy the element within a node and deallocate the node.
+      _GLIBCXX26_CONSTEXPR
       void
       _M_deallocate_node(__node_ptr __n);
 
       // Deallocate a node.
+      _GLIBCXX26_CONSTEXPR
       void
       _M_deallocate_node_ptr(__node_ptr __n);
 
       // Deallocate the linked list of nodes pointed to by __n.
       // The elements within the nodes are destroyed.
+      _GLIBCXX26_CONSTEXPR
       void
       _M_deallocate_nodes(__node_ptr __n);
 
+      _GLIBCXX26_CONSTEXPR
       __buckets_ptr
       _M_allocate_buckets(size_t __bkt_count);
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_deallocate_buckets(__buckets_ptr, size_t __bkt_count);
     };
