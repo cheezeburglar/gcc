@@ -622,6 +622,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc++17-extensions" // if constexpr
 
+      _GLIBCXX26_CONSTEXPR
       _Hashtable&
       operator=(initializer_list<value_type> __l)
       {
@@ -669,9 +670,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       }
 #pragma GCC diagnostic pop
 
+      _GLIBCXX26_CONSTEXPR
       ~_Hashtable() noexcept;
 
 
+      _GLIBCXX26_CONSTEXPR
       void
       swap(_Hashtable&)
       noexcept(__and_<__is_nothrow_swappable<_Hash>,
@@ -679,56 +682,67 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       // Basic container operations
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       begin() noexcept
       { return iterator(_M_begin()); }
 
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       begin() const noexcept
       { return const_iterator(_M_begin()); }
 
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       end() noexcept
       { return iterator(nullptr); }
 
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       end() const noexcept
       { return const_iterator(nullptr); }
 
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cbegin() const noexcept
       { return const_iterator(_M_begin()); }
 
 
+      _GLIBCXX26_CONSTEXPR
       const_iterator
       cend() const noexcept
       { return const_iterator(nullptr); }
 
 
+      _GLIBCXX26_CONSTEXPR
       size_type
       size() const noexcept
       { return _M_element_count; }
 
       _GLIBCXX_NODISCARD
 
+      _GLIBCXX26_CONSTEXPR
       bool
       empty() const noexcept
       { return size() == 0; }
 
 
+      _GLIBCXX26_CONSTEXPR
       allocator_type
       get_allocator() const noexcept
       { return allocator_type(this->_M_node_allocator()); }
 
+      _GLIBCXX26_CONSTEXPR
       size_type
       max_size() const noexcept
       { return __node_alloc_traits::max_size(this->_M_node_allocator()); }
 
       // Observers
+      _GLIBCXX26_CONSTEXPR
       key_equal
       key_eq() const
       { return this->_M_eq(); }
@@ -736,22 +750,27 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       // hash_function, if present, comes from _Hash_code_base.
 
       // Bucket operations
+      _GLIBCXX26_CONSTEXPR
       size_type
       bucket_count() const noexcept
       { return _M_bucket_count; }
 
+      _GLIBCXX26_CONSTEXPR
       size_type
       max_bucket_count() const noexcept
       { return max_size(); }
 
+      _GLIBCXX26_CONSTEXPR
       size_type
       bucket_size(size_type __bkt) const
       { return std::distance(begin(__bkt), end(__bkt)); }
 
+      _GLIBCXX26_CONSTEXPR
       size_type
       bucket(const key_type& __k) const
       { return _M_bucket_index(this->_M_hash_code(__k)); }
 
+      _GLIBCXX26_CONSTEXPR
       local_iterator
       begin(size_type __bkt)
       {
@@ -759,10 +778,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 			      __bkt, _M_bucket_count);
       }
 
+      _GLIBCXX26_CONSTEXPR
       local_iterator
       end(size_type __bkt)
       { return local_iterator(*this, nullptr, __bkt, _M_bucket_count); }
 
+      _GLIBCXX26_CONSTEXPR
       const_local_iterator
       begin(size_type __bkt) const
       {
@@ -770,11 +791,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 				    __bkt, _M_bucket_count);
       }
 
+      _GLIBCXX26_CONSTEXPR
       const_local_iterator
       end(size_type __bkt) const
       { return const_local_iterator(*this, nullptr, __bkt, _M_bucket_count); }
 
       // DR 691.
+      _GLIBCXX26_CONSTEXPR
       const_local_iterator
       cbegin(size_type __bkt) const
       {
@@ -782,6 +805,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 				    __bkt, _M_bucket_count);
       }
 
+      _GLIBCXX26_CONSTEXPR
       const_local_iterator
       cend(size_type __bkt) const
       { return const_local_iterator(*this, nullptr, __bkt, _M_bucket_count); }
@@ -1109,15 +1133,18 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 
       template<typename... _Args>
 
+	_GLIBCXX26_CONSTEXPR
 	iterator
 	_M_emplace_multi(const_iterator, _Args&&... __args);
 
 
+      _GLIBCXX26_CONSTEXPR
       iterator
       _M_erase(size_type __bkt, __node_base_ptr __prev_n, __node_ptr __n);
 
       template<typename _InputIterator>
 
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_insert_range_multi(_InputIterator __first, _InputIterator __last);
 
