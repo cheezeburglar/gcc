@@ -628,17 +628,21 @@ namespace __fwdlist
       {
 	typename _Node_traits::_Node_base _M_head;
 
+	_GLIBCXX26_CONSTEXPR
 	_Fwd_list_impl()
 	  noexcept(is_nothrow_default_constructible<_Node_alloc_type>::value)
 	: _Node_alloc_type(), _M_head()
 	{ }
 
+	_GLIBCXX26_CONSTEXPR
 	_Fwd_list_impl(_Fwd_list_impl&&) = default;
 
+	_GLIBCXX26_CONSTEXPR
 	_Fwd_list_impl(_Fwd_list_impl&& __fl, _Node_alloc_type&& __a)
 	: _Node_alloc_type(std::move(__a)), _M_head(std::move(__fl._M_head))
 	{ }
 
+	_GLIBCXX26_CONSTEXPR
 	_Fwd_list_impl(_Node_alloc_type&& __a)
 	: _Node_alloc_type(std::move(__a)), _M_head()
 	{ }
