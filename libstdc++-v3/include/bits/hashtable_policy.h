@@ -104,6 +104,7 @@ namespace __detail
       { using type = typename __1st_type<_Pair>::type&; };
 
     template<typename _Tp>
+      _GLIBCXX26_CONSTEXPR
       typename __1st_type<_Tp>::type&&
       operator()(_Tp&& __x) const noexcept
       { return std::forward<_Tp>(__x).first; }
