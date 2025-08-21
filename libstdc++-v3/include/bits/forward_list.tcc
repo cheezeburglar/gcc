@@ -93,6 +93,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   // Called by the range constructor to implement [23.3.4.2]/9
   template<typename _Tp, typename _Alloc>
     template<typename _InputIterator>
+      _GLIBCXX26_CONSTEXPR
       void
       forward_list<_Tp, _Alloc>::
       _M_range_initialize(_InputIterator __first, _InputIterator __last)
@@ -107,6 +108,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
   // Called by forward_list(n,v,a).
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     forward_list<_Tp, _Alloc>::
     _M_fill_initialize(size_type __n, const value_type& __value)
@@ -120,6 +122,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     forward_list<_Tp, _Alloc>::
     _M_default_initialize(size_type __n)

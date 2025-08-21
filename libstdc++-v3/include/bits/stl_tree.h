@@ -141,6 +141,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     {
       _Key_compare		_M_key_compare;
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree_key_compare()
       _GLIBCXX_NOEXCEPT_IF(
 	is_nothrow_default_constructible<_Key_compare>::value)
