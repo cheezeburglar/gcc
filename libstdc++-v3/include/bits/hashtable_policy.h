@@ -312,26 +312,31 @@ namespace __detail
     {
       using value_type = _Value;
 
+      //TODO: we gotta replace this with a union at some point.
       __gnu_cxx::__aligned_buffer<_Value> _M_storage;
 
       // These member functions must be always_inline, see PR 111050
 
       [[__gnu__::__always_inline__]]
+      _GLIBCXX26_CONSTEXPR
       _Value*
       _M_valptr() noexcept
       { return _M_storage._M_ptr(); }
 
       [[__gnu__::__always_inline__]]
+      _GLIBCXX26_CONSTEXPR
       const _Value*
       _M_valptr() const noexcept
       { return _M_storage._M_ptr(); }
 
       [[__gnu__::__always_inline__]]
+      _GLIBCXX26_CONSTEXPR
       _Value&
       _M_v() noexcept
       { return *_M_valptr(); }
 
       [[__gnu__::__always_inline__]]
+      _GLIBCXX26_CONSTEXPR
       const _Value&
       _M_v() const noexcept
       { return *_M_valptr(); }
