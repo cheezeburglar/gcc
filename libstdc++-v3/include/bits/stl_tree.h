@@ -1387,34 +1387,42 @@ namespace __rb_tree
       _Rb_tree_impl<_Compare> _M_impl;
 
     protected:
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr&
       _M_root() _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_header._M_parent; }
 
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr
       _M_root() const _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_header._M_parent; }
 
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr&
       _M_leftmost() _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_header._M_left; }
 
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr
       _M_leftmost() const _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_header._M_left; }
 
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr&
       _M_rightmost() _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_header._M_right; }
 
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr
       _M_rightmost() const _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_header._M_right; }
 
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr
       _M_begin() const _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_header._M_parent; }
 
+      _GLIBCXX26_CONSTEXPR
       _Node_ptr
       _M_begin_node() const _GLIBCXX_NOEXCEPT
       {
@@ -1424,6 +1432,7 @@ namespace __rb_tree
 	  : _Node_ptr();
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Base_ptr
       _M_end() const _GLIBCXX_NOEXCEPT
       { return this->_M_impl._M_header._M_base_ptr(); }
@@ -1431,6 +1440,7 @@ namespace __rb_tree
       // _GLIBCXX_RESOLVE_LIB_DEFECTS
       // 2542. Missing const requirements for associative containers
       template<typename _Key1, typename _Key2>
+	_GLIBCXX26_CONSTEXPR
 	bool
 	_M_key_compare(const _Key1& __k1, const _Key2& __k2) const
 	{
