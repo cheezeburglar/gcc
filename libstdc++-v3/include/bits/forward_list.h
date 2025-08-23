@@ -178,23 +178,28 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       typedef ptrdiff_t				difference_type;
       typedef std::forward_iterator_tag		iterator_category;
 
+      _GLIBCXX26_CONSTEXPR
       _Fwd_list_iterator() noexcept
       : _M_node() { }
 
+      _GLIBCXX26_CONSTEXPR
       explicit
       _Fwd_list_iterator(_Fwd_list_node_base* __n) noexcept
       : _M_node(__n) { }
 
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       reference
       operator*() const noexcept
       { return *static_cast<_Node*>(this->_M_node)->_M_valptr(); }
 
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       pointer
       operator->() const noexcept
       { return static_cast<_Node*>(this->_M_node)->_M_valptr(); }
 
+      _GLIBCXX26_CONSTEXPR
       _Self&
       operator++() noexcept
       {
@@ -202,6 +207,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	return *this;
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Self
       operator++(int) noexcept
       {
@@ -214,6 +220,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @brief  Forward list iterator equality comparison.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       friend bool
       operator==(const _Self& __x, const _Self& __y) noexcept
       { return __x._M_node == __y._M_node; }
@@ -223,6 +230,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
        *  @brief  Forward list iterator inequality comparison.
        */
       [[__nodiscard__]]
+      _GLIBCXX26_CONSTEXPR
       friend bool
       operator!=(const _Self& __x, const _Self& __y) noexcept
       { return __x._M_node != __y._M_node; }
@@ -235,6 +243,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	friend struct _Fwd_list_base;
       friend struct _Fwd_list_const_iterator<_Tp>;
 
+      _GLIBCXX26_CONSTEXPR
       _Self
       _M_next() const noexcept
       {
