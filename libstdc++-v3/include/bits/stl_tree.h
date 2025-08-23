@@ -1062,6 +1062,7 @@ namespace __rb_tree
       // is empty.
       struct _Reuse_or_alloc_node
       {
+	_GLIBCXX26_CONSTEXPR
 	_Reuse_or_alloc_node(_Rb_tree& __t)
 	: _M_root(__t._M_root()), _M_nodes(__t._M_rightmost()), _M_t(__t)
 	{
@@ -1077,9 +1078,11 @@ namespace __rb_tree
 	}
 
 #if __cplusplus >= 201103L
+	_GLIBCXX26_CONSTEXPR
 	_Reuse_or_alloc_node(const _Reuse_or_alloc_node&) = delete;
 #endif
 
+	_GLIBCXX26_CONSTEXPR
 	~_Reuse_or_alloc_node()
 	{
 	  if (_M_root)
@@ -1087,6 +1090,7 @@ namespace __rb_tree
 	}
 
 	template<typename _Arg>
+	  _GLIBCXX26_CONSTEXPR
 	  _Node_ptr
 	  operator()(_GLIBCXX_FWDREF(_Arg) __arg)
 	  {
@@ -1103,6 +1107,7 @@ namespace __rb_tree
 	  }
 
       private:
+	_GLIBCXX26_CONSTEXPR
 	_Base_ptr
 	_M_extract()
 	{
@@ -1169,19 +1174,23 @@ namespace __rb_tree
       typedef ptrdiff_t 			difference_type;
       typedef _Alloc 				allocator_type;
 
+      _GLIBCXX26_CONSTEXPR
       _Node_allocator&
       _M_get_Node_allocator() _GLIBCXX_NOEXCEPT
       { return this->_M_impl; }
 
+      _GLIBCXX26_CONSTEXPR
       const _Node_allocator&
       _M_get_Node_allocator() const _GLIBCXX_NOEXCEPT
       { return this->_M_impl; }
 
+      _GLIBCXX26_CONSTEXPR
       allocator_type
       get_allocator() const _GLIBCXX_NOEXCEPT
       { return allocator_type(_M_get_Node_allocator()); }
 
     protected:
+      _GLIBCXX26_CONSTEXPR
       _Node_ptr
       _M_get_node()
       {
@@ -1203,6 +1212,7 @@ namespace __rb_tree
 #endif
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_put_node(_Node_ptr __p) _GLIBCXX_NOEXCEPT
       {
@@ -1247,6 +1257,7 @@ namespace __rb_tree
       }
 #else
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_construct_node(_Node_ptr __node, _Args&&... __args)
 	{
@@ -1266,6 +1277,7 @@ namespace __rb_tree
 	}
 
       template<typename... _Args>
+	_GLIBCXX26_CONSTEXPR
 	_Node_ptr
 	_M_create_node(_Args&&... __args)
 	{
@@ -1275,6 +1287,7 @@ namespace __rb_tree
 	}
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_destroy_node(_Node_ptr __p) _GLIBCXX_NOEXCEPT
       {
@@ -1286,6 +1299,7 @@ namespace __rb_tree
 #endif
       }
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_drop_node(_Node_ptr __p) _GLIBCXX_NOEXCEPT
       {

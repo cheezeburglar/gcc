@@ -1915,6 +1915,7 @@ namespace __fwdlist
     private:
       // Called by the range constructor to implement [23.3.4.2]/9
       template<typename _InputIterator>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_range_initialize(_InputIterator __first, _InputIterator __last);
 

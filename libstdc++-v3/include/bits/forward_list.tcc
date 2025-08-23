@@ -161,6 +161,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     void
     forward_list<_Tp, _Alloc>::
     _M_default_insert_after(const_iterator __pos, size_type __n)
@@ -219,6 +220,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
     typename forward_list<_Tp, _Alloc>::iterator
     forward_list<_Tp, _Alloc>::
     _M_splice_after(const_iterator __pos,
