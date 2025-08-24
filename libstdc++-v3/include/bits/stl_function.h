@@ -1171,21 +1171,25 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     struct _Select1st
     : public unary_function<_Pair, typename _Pair::first_type>
     {
+      _GLIBCXX26_CONSTEXPR
       typename _Pair::first_type&
       operator()(_Pair& __x) const
       { return __x.first; }
 
+      _GLIBCXX26_CONSTEXPR
       const typename _Pair::first_type&
       operator()(const _Pair& __x) const
       { return __x.first; }
 
 #if __cplusplus >= 201103L
       template<typename _Pair2>
+	_GLIBCXX26_CONSTEXPR
         typename _Pair2::first_type&
         operator()(_Pair2& __x) const
         { return __x.first; }
 
       template<typename _Pair2>
+	_GLIBCXX26_CONSTEXPR
         const typename _Pair2::first_type&
         operator()(const _Pair2& __x) const
         { return __x.first; }
