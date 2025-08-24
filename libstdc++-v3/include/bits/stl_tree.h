@@ -113,6 +113,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     _Base_ptr		_M_left;
     _Base_ptr		_M_right;
 
+    _GLIBCXX26_CONSTEXPR
     static _Base_ptr
     _S_minimum(_Base_ptr __x) _GLIBCXX_NOEXCEPT
     {
@@ -120,6 +121,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       return __x;
     }
 
+    _GLIBCXX26_CONSTEXPR
     static _Base_ptr
     _S_maximum(_Base_ptr __x) _GLIBCXX_NOEXCEPT
     {
@@ -130,6 +132,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     // This is not const-correct, but it's only used in a const access path
     // by std::_Rb_tree::_M_end() where the pointer is used to initialize a
     // const_iterator and so constness is restored.
+    _GLIBCXX26_CONSTEXPR
     _Base_ptr
     _M_base_ptr() const _GLIBCXX_NOEXCEPT
     { return const_cast<_Rb_tree_node_base*>(this); }
@@ -148,14 +151,17 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       : _M_key_compare()
       { }
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree_key_compare(const _Key_compare& __comp)
       : _M_key_compare(__comp)
       { }
 
 #if __cplusplus >= 201103L
       // Copy constructor added for consistency with C++98 mode.
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree_key_compare(const _Rb_tree_key_compare&) = default;
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree_key_compare(_Rb_tree_key_compare&& __x)
 	noexcept(is_nothrow_copy_constructible<_Key_compare>::value)
       : _M_key_compare(__x._M_key_compare)
@@ -231,7 +237,9 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 #else
       union _Uninit_storage
 	{
+	  _GLIBCXX26_CONSTEXPR
 	  _Uninit_storage () noexcept {}
+          _GLIBCXX26_CONSTEXPR
 	  ~_Uninit_storage () {}
 	     _Val _M_storage;
 	} __attribute__ ((aligned(alignof(_Val))));
