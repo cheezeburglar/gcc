@@ -274,13 +274,16 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       typedef ptrdiff_t				difference_type;
       typedef std::forward_iterator_tag		iterator_category;
 
+      _GLIBCXX26_CONSTEXPR
       _Fwd_list_const_iterator() noexcept
       : _M_node() { }
 
       explicit
+      _GLIBCXX26_CONSTEXPR
       _Fwd_list_const_iterator(const _Fwd_list_node_base* __n)  noexcept
       : _M_node(__n) { }
 
+      _GLIBCXX26_CONSTEXPR
       _Fwd_list_const_iterator(const iterator& __iter) noexcept
       : _M_node(__iter._M_node) { }
 
