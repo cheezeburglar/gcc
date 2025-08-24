@@ -312,11 +312,12 @@ namespace __detail
     {
       using value_type = _Value;
 
-      //TODO: we gotta replace this with a union at some point.
       __gnu_cxx::__aligned_buffer<_Value> _M_storage;
       union _Uninit_storage
 	{
+	  _GLIBCXX26_CONSTEXPR
 	  _Uninit_storage () noexcept {}
+	  _GLIBCXX26_CONSTEXPR
 	  ~_Uninit_storage () {}
 	   _Value _M_storage;
 	} __attribute__ ((aligned(alignof(_Value))));
@@ -1184,7 +1185,9 @@ namespace __detail
     {
       union _Uninit_storage
       {
+	  _GLIBCXX26_CONSTEXPR
 	_Uninit_storage() noexcept { }
+	  _GLIBCXX26_CONSTEXPR
 	~_Uninit_storage() { }
 
 	[[__no_unique_address__]] _Hash _M_h;
