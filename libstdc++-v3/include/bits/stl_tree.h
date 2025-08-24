@@ -245,15 +245,18 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	} __attribute__ ((aligned(alignof(_Val))));
       _Uninit_storage __u;
 
+      _GLIBCXX26_CONSTEXPR
       _Val*
       _M_valptr()
       { return std::addressof(__u._M_storage); }
 
+      _GLIBCXX26_CONSTEXPR
       const _Val*
       _M_valptr() const
       { return std::addressof(__u._M_storage); }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree_node*
       _M_node_ptr() _GLIBCXX_NOEXCEPT
       { return this; }
