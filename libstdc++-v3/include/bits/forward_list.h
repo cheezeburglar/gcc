@@ -70,14 +70,19 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
   {
     using _Base_ptr = _Fwd_list_node_base*;
 
+    _GLIBCXX26_CONSTEXPR
     _Fwd_list_node_base() = default;
+    _GLIBCXX26_CONSTEXPR
     _Fwd_list_node_base(_Fwd_list_node_base&& __x) noexcept
       : _M_next(__x._M_next)
     { __x._M_next = nullptr; }
 
+    _GLIBCXX26_CONSTEXPR
     _Fwd_list_node_base(const _Fwd_list_node_base&) = delete;
+    _GLIBCXX26_CONSTEXPR
     _Fwd_list_node_base& operator=(const _Fwd_list_node_base&) = delete;
 
+    _GLIBCXX26_CONSTEXPR
     _Fwd_list_node_base&
     operator=(_Fwd_list_node_base&& __x) noexcept
     {
@@ -88,6 +93,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
     _Fwd_list_node_base* _M_next = nullptr;
 
+    _GLIBCXX26_CONSTEXPR
     _Fwd_list_node_base*
     _M_transfer_after(_Fwd_list_node_base* __begin,
 		      _Fwd_list_node_base* __end) noexcept
@@ -104,6 +110,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
       return __end;
     }
 
+    _GLIBCXX26_CONSTEXPR
     void
     _M_reverse_after() noexcept
     {
@@ -119,7 +126,9 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	}
     }
 
+    _GLIBCXX26_CONSTEXPR
     _Fwd_list_node_base* _M_base_ptr() { return this; }
+    _GLIBCXX26_CONSTEXPR
     const _Fwd_list_node_base* _M_base_ptr() const { return this; }
   };
 
