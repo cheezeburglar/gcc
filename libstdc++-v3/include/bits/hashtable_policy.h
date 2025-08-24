@@ -797,12 +797,14 @@ namespace __detail
       _RehashPolicy* _M_guarded_obj;
       typename _RehashPolicy::_State _M_prev_state;
 
+      _GLIBCXX26_CONSTEXPR
       _RehashStateGuard(_RehashPolicy& __policy)
       : _M_guarded_obj(std::__addressof(__policy))
       , _M_prev_state(__policy._M_state())
       { }
       _RehashStateGuard(const _RehashStateGuard&) = delete;
 
+      _GLIBCXX26_CONSTEXPR
       ~_RehashStateGuard()
       {
 	if (_M_guarded_obj)
