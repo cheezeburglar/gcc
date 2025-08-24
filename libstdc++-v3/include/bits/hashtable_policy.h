@@ -622,16 +622,19 @@ namespace __detail
     _Prime_rehash_policy(float __z = 1.0) noexcept
     : _M_max_load_factor(__z), _M_next_resize(0) { }
 
+    _GLIBCXX26_CONSTEXPR
     float
     max_load_factor() const noexcept
     { return _M_max_load_factor; }
 
     // Return a bucket size no smaller than n.
     // TODO: 'const' qualifier is kept for abi compatibility reason.
+    _GLIBCXX26_CONSTEXPR
     size_t
     _M_next_bkt(size_t __n) const;
 
     // Return a bucket count appropriate for n elements
+    _GLIBCXX26_CONSTEXPR
     size_t
     _M_bkt_for_elements(size_t __n) const
     { return __builtin_ceil(__n / (double)_M_max_load_factor); }
@@ -641,20 +644,24 @@ namespace __detail
     // increase bucket count?  If so, return make_pair(true, n), where n
     // is the new bucket count.  If not, return make_pair(false, 0).
     // TODO: 'const' qualifier is kept for abi compatibility reason.
+    _GLIBCXX26_CONSTEXPR
     std::pair<bool, size_t>
     _M_need_rehash(size_t __n_bkt, size_t __n_elt,
 		   size_t __n_ins) const;
 
     using _State = size_t;
 
+    _GLIBCXX26_CONSTEXPR
     _State
     _M_state() const
     { return _M_next_resize; }
 
+    _GLIBCXX26_CONSTEXPR
     void
     _M_reset() noexcept
     { _M_next_resize = 0; }
 
+    _GLIBCXX26_CONSTEXPR
     void
     _M_reset(_State __state)
     { _M_next_resize = __state; }
