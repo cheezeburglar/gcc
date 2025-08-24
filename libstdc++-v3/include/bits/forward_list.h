@@ -676,36 +676,45 @@ namespace __fwdlist
       using iterator = typename _Node_traits::_Iterator;
       using const_iterator = typename _Node_traits::_Const_iterator;
 
+      _GLIBCXX26_CONSTEXPR
       _Node_alloc_type&
       _M_get_Node_allocator() noexcept
       { return this->_M_impl; }
 
+      _GLIBCXX26_CONSTEXPR
       const _Node_alloc_type&
       _M_get_Node_allocator() const noexcept
       { return this->_M_impl; }
 
+      _GLIBCXX26_CONSTEXPR
       _Fwd_list_base() = default;
 
+      _GLIBCXX26_CONSTEXPR
       _Fwd_list_base(_Node_alloc_type&& __a)
       : _M_impl(std::move(__a)) { }
 
       // When allocators are always equal.
+      _GLIBCXX26_CONSTEXPR
       _Fwd_list_base(_Fwd_list_base&& __lst, _Node_alloc_type&& __a,
 		     std::true_type)
       : _M_impl(std::move(__lst._M_impl), std::move(__a))
       { }
 
       // When allocators are not always equal.
+      _GLIBCXX26_CONSTEXPR
       _Fwd_list_base(_Fwd_list_base&& __lst, _Node_alloc_type&& __a);
 
+      _GLIBCXX26_CONSTEXPR
       _Fwd_list_base(_Fwd_list_base&&) = default;
 
+      _GLIBCXX26_CONSTEXPR
       ~_Fwd_list_base()
       { _M_erase_after(_M_impl._M_head._M_base_ptr(), nullptr); }
 
     protected:
 #if ! _GLIBCXX_INLINE_VERSION
       // XXX GLIBCXX_ABI Deprecated
+      _GLIBCXX26_CONSTEXPR
       _Node*
       _M_get_node()
       {
@@ -714,6 +723,7 @@ namespace __fwdlist
       }
 #endif
 
+      _GLIBCXX26_CONSTEXPR
       void
       _M_put_node(_Node_ptr __p)
       {
