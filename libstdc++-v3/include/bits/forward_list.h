@@ -354,6 +354,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 	  return _Fwd_list_const_iterator(nullptr);
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Fwd_list_iterator<_Tp>
       _M_const_cast() const noexcept
       {
