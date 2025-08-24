@@ -1465,22 +1465,27 @@ namespace __rb_tree
 	  return _M_impl._M_key_compare(__k1, __k2);
 	}
 
+      _GLIBCXX26_CONSTEXPR
       static const _Key&
       _S_key(const _Node& __node)
       { return _KeyOfValue()(*__node._M_valptr()); }
 
+      _GLIBCXX26_CONSTEXPR
       static const _Key&
       _S_key(_Base_ptr __x)
       { return _S_key(static_cast<const _Node&>(*__x)); }
 
+      _GLIBCXX26_CONSTEXPR
       static const _Key&
       _S_key(_Node_ptr __x)
       { return _S_key(*__x); }
 
+      _GLIBCXX26_CONSTEXPR
       static _Base_ptr
       _S_left(_Base_ptr __x) _GLIBCXX_NOEXCEPT
       { return __x->_M_left; }
 
+      _GLIBCXX26_CONSTEXPR
       static _Node_ptr
       _S_left(_Node_ptr __x)
       {
@@ -1489,10 +1494,12 @@ namespace __rb_tree
 	  : _Node_ptr();
       }
 
+      _GLIBCXX26_CONSTEXPR
       static _Base_ptr
       _S_right(_Base_ptr __x) _GLIBCXX_NOEXCEPT
       { return __x->_M_right; }
 
+      _GLIBCXX26_CONSTEXPR
       static _Node_ptr
       _S_right(_Node_ptr __x) _GLIBCXX_NOEXCEPT
       {
