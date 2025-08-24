@@ -314,6 +314,13 @@ namespace __detail
 
       //TODO: we gotta replace this with a union at some point.
       __gnu_cxx::__aligned_buffer<_Value> _M_storage;
+      union _Uninit_storage
+	{
+	  _Uninit_storage () noexcept {}
+	  ~_Uninit_storage () {}
+	   _Value _M_storage;
+	} __attribute__ ((aligned(alignof(_Value))));
+      _Uninit_storage _M_u;
 
       // These member functions must be always_inline, see PR 111050
 
@@ -321,25 +328,25 @@ namespace __detail
       _GLIBCXX26_CONSTEXPR
       _Value*
       _M_valptr() noexcept
-      { return _M_storage._M_ptr(); }
+      { return std::__addressof(_M_u._M_storage); }
 
       [[__gnu__::__always_inline__]]
       _GLIBCXX26_CONSTEXPR
       const _Value*
       _M_valptr() const noexcept
-      { return _M_storage._M_ptr(); }
+      { return std::__addressof(_M_u._M_storage); }
 
       [[__gnu__::__always_inline__]]
       _GLIBCXX26_CONSTEXPR
       _Value&
       _M_v() noexcept
-      { return *_M_valptr(); }
+      { return _M_u._M_storage; }
 
       [[__gnu__::__always_inline__]]
       _GLIBCXX26_CONSTEXPR
       const _Value&
       _M_v() const noexcept
-      { return *_M_valptr(); }
+      { return _M_u._M_storage; }
     };
 
   /**
