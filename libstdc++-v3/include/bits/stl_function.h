@@ -1155,10 +1155,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     struct _Identity
     : public unary_function<_Tp, _Tp>
     {
+      _GLIBCXX26_CONSTEXPR
       _Tp&
       operator()(_Tp& __x) const
       { return __x; }
 
+      _GLIBCXX26_CONSTEXPR
       const _Tp&
       operator()(const _Tp& __x) const
       { return __x; }
