@@ -79,12 +79,14 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     return __x;
   }
 
+  //TODO: THOR this needs to be moved.
   _Rb_tree_node_base*
   _Rb_tree_increment(_Rb_tree_node_base* __x) throw ()
   {
     return local_Rb_tree_increment(__x);
   }
 
+  //TODO: THOR this needs to be moved.
   const _Rb_tree_node_base*
   _Rb_tree_increment(const _Rb_tree_node_base* __x) throw ()
   {
@@ -190,7 +192,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 			_Rb_tree_node_base*& __root)
   { local_Rb_tree_rotate_right (__x, __root); }
 #endif
-
+  //TODO: THOR this needs to be moved.
   void
   _Rb_tree_insert_and_rebalance(const bool          __insert_left,
                                 _Rb_tree_node_base* __x,
@@ -282,6 +284,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     __root->_M_color = _S_black;
   }
 
+  //TODO: THOR this needs to be moved.
   _Rb_tree_node_base*
   _Rb_tree_rebalance_for_erase(_Rb_tree_node_base* const __z,
 			       _Rb_tree_node_base& __header) throw ()
@@ -443,6 +446,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
     return __y;
   }
 
+  //TODO: THOR this needs to be moved.
   unsigned int
   _Rb_tree_black_count(const _Rb_tree_node_base* __node,
                        const _Rb_tree_node_base* __root) throw ()
