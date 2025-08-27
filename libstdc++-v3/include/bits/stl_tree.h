@@ -384,6 +384,7 @@ namespace __rb_tree
 } // namespace __rb_tree
 #endif // _GLIBCXX_USE_ALLOC_PTR_FOR_RB_TREE
 
+  _GLIBCXX26_CONSTEXPR
   _GLIBCXX_PURE _Rb_tree_node_base*
   _Rb_tree_increment(_Rb_tree_node_base* __x) throw ()
   {
@@ -407,6 +408,7 @@ namespace __rb_tree
     return __x;
   }
 
+  _GLIBCXX26_CONSTEXPR
   _GLIBCXX_PURE _Rb_tree_node_base*
   _Rb_tree_decrement(_Rb_tree_node_base* __x) throw ()
   {
@@ -590,6 +592,7 @@ namespace __rb_tree
       _Base_ptr _M_node;
     };
 
+  _GLIBCXX26_CONSTEXPR
   static void
   local_Rb_tree_rotate_right(_Rb_tree_node_base* const __x,
 			     _Rb_tree_node_base*& __root)
@@ -611,6 +614,7 @@ namespace __rb_tree
     __x->_M_parent = __y;
   }
 
+  _GLIBCXX26_CONSTEXPR
   static void
   local_Rb_tree_rotate_left(_Rb_tree_node_base* const __x,
 		             _Rb_tree_node_base*& __root)
@@ -726,6 +730,7 @@ namespace __rb_tree
   }
 
   __attribute__((__nonnull__,__returns_nonnull__))
+  _GLIBCXX26_CONSTEXPR
   _Rb_tree_node_base*
   _Rb_tree_rebalance_for_erase(_Rb_tree_node_base* const __z,
 			       _Rb_tree_node_base& __header) throw ()
