@@ -3746,7 +3746,9 @@ namespace __rb_tree
       return __n;
     }
 
-  _GLIBCXX_PURE unsigned int
+#if _cplusplus >= 202502L
+
+  _GLIBCXX_PURE constexpr unsigned int
   _Rb_tree_black_count(const _Rb_tree_node_base* __node,
 		       const _Rb_tree_node_base* __root) throw ()
   {
@@ -3764,6 +3766,14 @@ namespace __rb_tree
     while (1);
     return __sum;
   }
+
+#else
+
+  _GLIBCXX_PURE unsigned int
+  _Rb_tree_black_count(const _Rb_tree_node_base* __node,
+		       const _Rb_tree_node_base* __root) throw ();
+
+#endif
 
   template<typename _Key, typename _Val, typename _KeyOfValue,
 	   typename _Compare, typename _Alloc>
