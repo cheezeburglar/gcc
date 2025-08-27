@@ -590,6 +590,48 @@ namespace __rb_tree
       _Base_ptr _M_node;
     };
 
+  static void
+  local_Rb_tree_rotate_right(_Rb_tree_node_base* const __x,
+			     _Rb_tree_node_base*& __root)
+  {
+    _Rb_tree_node_base* const __y = __x->_M_left;
+
+    __x->_M_left = __y->_M_right;
+    if (__y->_M_right != 0)
+      __y->_M_right->_M_parent = __x;
+    __y->_M_parent = __x->_M_parent;
+
+    if (__x == __root)
+      __root = __y;
+    else if (__x == __x->_M_parent->_M_right)
+      __x->_M_parent->_M_right = __y;
+    else
+      __x->_M_parent->_M_left = __y;
+    __y->_M_right = __x;
+    __x->_M_parent = __y;
+  }
+
+  static void
+  local_Rb_tree_rotate_left(_Rb_tree_node_base* const __x,
+		             _Rb_tree_node_base*& __root)
+  {
+    _Rb_tree_node_base* const __y = __x->_M_right;
+
+    __x->_M_right = __y->_M_left;
+    if (__y->_M_left !=0)
+      __y->_M_left->_M_parent = __x;
+    __y->_M_parent = __x->_M_parent;
+
+    if (__x == __root)
+      __root = __y;
+    else if (__x == __x->_M_parent->_M_left)
+      __x->_M_parent->_M_left = __y;
+    else
+      __x->_M_parent->_M_right = __y;
+    __y->_M_left = __x;
+    __x->_M_parent = __y;
+  }
+
   __attribute__((__nonnull__))
   _GLIBCXX26_CONSTEXPR
   void
