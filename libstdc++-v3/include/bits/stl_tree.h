@@ -384,16 +384,6 @@ namespace __rb_tree
 } // namespace __rb_tree
 #endif // _GLIBCXX_USE_ALLOC_PTR_FOR_RB_TREE
 
-#if __cplusplus < 202502L
-
-  _GLIBCXX_PURE _Rb_tree_node_base*
-  _Rb_tree_increment(_Rb_tree_node_base* __x) throw ();
-
-  _GLIBCXX_PURE _Rb_tree_node_base*
-  _Rb_tree_decrement(_Rb_tree_node_base* __x) throw ();
-
-#else
-
   _GLIBCXX26_CONSTEXPR
   _GLIBCXX_PURE _Rb_tree_node_base*
   _Rb_tree_increment(_Rb_tree_node_base* __x) throw ()
@@ -444,8 +434,6 @@ namespace __rb_tree
       }
     return __x;
   }
-
-#endif
 
   template<typename _Tp>
     struct _Rb_tree_iterator
@@ -603,22 +591,6 @@ namespace __rb_tree
 
       _Base_ptr _M_node;
     };
-
-#if __cplusplus < 202502L
-
-  __attribute__((__nonnull__,__returns_nonnull__))
-  _Rb_tree_node_base*
-  _Rb_tree_rebalance_for_erase(_Rb_tree_node_base* const __z,
-			       _Rb_tree_node_base& __header) throw ();
-
-  __attribute__((__nonnull__))
-  void
-  _Rb_tree_insert_and_rebalance(const bool __insert_left,
-				_Rb_tree_node_base* __x,
-				_Rb_tree_node_base* __p,
-				_Rb_tree_node_base& __header) throw ();
-
-#else
 
 _GLIBCXX26_CONSTEXPR
   static void
@@ -919,8 +891,6 @@ _GLIBCXX26_CONSTEXPR
       }
     return __y;
   }
-
-#endif
 
 namespace __rb_tree
 {
@@ -3745,14 +3715,6 @@ namespace __rb_tree
       const size_type __n = std::distance(__p.first, __p.second);
       return __n;
     }
-
-#if _cplusplus < 202502L
-
-  _GLIBCXX_PURE unsigned int
-  _Rb_tree_black_count(const _Rb_tree_node_base* __node,
-		       const _Rb_tree_node_base* __root) throw ();
-
-#else
 
   _GLIBCXX_PURE constexpr unsigned int
   _Rb_tree_black_count(const _Rb_tree_node_base* __node,
