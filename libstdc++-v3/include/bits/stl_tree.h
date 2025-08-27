@@ -909,11 +909,13 @@ _GLIBCXX26_CONSTEXPR
 #else
 
   __attribute__((__nonnull__,__returns_nonnull__))
+  _GLIBCXX26_CONSTEXPR
   _Rb_tree_node_base*
   _Rb_tree_rebalance_for_erase(_Rb_tree_node_base* const __z,
 			       _Rb_tree_node_base& __header) throw ();
 
   __attribute__((__nonnull__))
+  _GLIBCXX26_CONSTEXPR
   void
   _Rb_tree_insert_and_rebalance(const bool __insert_left,
 				_Rb_tree_node_base* __x,
