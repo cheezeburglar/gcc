@@ -384,6 +384,8 @@ namespace __rb_tree
 } // namespace __rb_tree
 #endif // _GLIBCXX_USE_ALLOC_PTR_FOR_RB_TREE
 
+#if __cplusplus >= 202502L
+
   _GLIBCXX26_CONSTEXPR
   _GLIBCXX_PURE _Rb_tree_node_base*
   _Rb_tree_increment(_Rb_tree_node_base* __x) throw ()
@@ -434,6 +436,16 @@ namespace __rb_tree
       }
     return __x;
   }
+
+#else
+
+  _GLIBCXX_PURE _Rb_tree_node_base*
+  _Rb_tree_increment(_Rb_tree_node_base* __x) throw ();
+
+_GLIBCXX_PURE _Rb_tree_node_base*
+  _Rb_tree_decrement(_Rb_tree_node_base* __x) throw ();
+
+#endif
 
   template<typename _Tp>
     struct _Rb_tree_iterator
@@ -592,7 +604,9 @@ namespace __rb_tree
       _Base_ptr _M_node;
     };
 
-  _GLIBCXX26_CONSTEXPR
+#if __cplusplus >= 202502L
+
+_GLIBCXX26_CONSTEXPR
   static void
   local_Rb_tree_rotate_right(_Rb_tree_node_base* const __x,
 			     _Rb_tree_node_base*& __root)
@@ -891,6 +905,22 @@ namespace __rb_tree
       }
     return __y;
   }
+
+#else
+
+  __attribute__((__nonnull__,__returns_nonnull__))
+  _Rb_tree_node_base*
+  _Rb_tree_rebalance_for_erase(_Rb_tree_node_base* const __z,
+			       _Rb_tree_node_base& __header) throw ();
+
+  __attribute__((__nonnull__))
+  void
+  _Rb_tree_insert_and_rebalance(const bool __insert_left,
+				_Rb_tree_node_base* __x,
+				_Rb_tree_node_base* __p,
+				_Rb_tree_node_base& __header) throw ();
+
+#endif
 
 namespace __rb_tree
 {
