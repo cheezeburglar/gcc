@@ -384,7 +384,15 @@ namespace __rb_tree
 } // namespace __rb_tree
 #endif // _GLIBCXX_USE_ALLOC_PTR_FOR_RB_TREE
 
-#if __cplusplus >= 202502L
+#if __cplusplus < 202502L
+
+  _GLIBCXX_PURE _Rb_tree_node_base*
+  _Rb_tree_increment(_Rb_tree_node_base* __x) throw ();
+
+  _GLIBCXX_PURE _Rb_tree_node_base*
+  _Rb_tree_decrement(_Rb_tree_node_base* __x) throw ();
+
+#else
 
   _GLIBCXX26_CONSTEXPR
   _GLIBCXX_PURE _Rb_tree_node_base*
@@ -436,14 +444,6 @@ namespace __rb_tree
       }
     return __x;
   }
-
-#else
-
-  _GLIBCXX_PURE _Rb_tree_node_base*
-  _Rb_tree_increment(_Rb_tree_node_base* __x) throw ();
-
-_GLIBCXX_PURE _Rb_tree_node_base*
-  _Rb_tree_decrement(_Rb_tree_node_base* __x) throw ();
 
 #endif
 
@@ -604,7 +604,21 @@ _GLIBCXX_PURE _Rb_tree_node_base*
       _Base_ptr _M_node;
     };
 
-#if __cplusplus >= 202502L
+#if __cplusplus < 202502L
+
+  __attribute__((__nonnull__,__returns_nonnull__))
+  _Rb_tree_node_base*
+  _Rb_tree_rebalance_for_erase(_Rb_tree_node_base* const __z,
+			       _Rb_tree_node_base& __header) throw ();
+
+  __attribute__((__nonnull__))
+  void
+  _Rb_tree_insert_and_rebalance(const bool __insert_left,
+				_Rb_tree_node_base* __x,
+				_Rb_tree_node_base* __p,
+				_Rb_tree_node_base& __header) throw ();
+
+#else
 
 _GLIBCXX26_CONSTEXPR
   static void
@@ -905,22 +919,6 @@ _GLIBCXX26_CONSTEXPR
       }
     return __y;
   }
-
-#else
-
-  __attribute__((__nonnull__,__returns_nonnull__))
-  _GLIBCXX26_CONSTEXPR
-  _Rb_tree_node_base*
-  _Rb_tree_rebalance_for_erase(_Rb_tree_node_base* const __z,
-			       _Rb_tree_node_base& __header) throw ();
-
-  __attribute__((__nonnull__))
-  _GLIBCXX26_CONSTEXPR
-  void
-  _Rb_tree_insert_and_rebalance(const bool __insert_left,
-				_Rb_tree_node_base* __x,
-				_Rb_tree_node_base* __p,
-				_Rb_tree_node_base& __header) throw ();
 
 #endif
 
@@ -3731,6 +3729,18 @@ namespace __rb_tree
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     find(const _Key& __k) const
     {
+#include<iostream>
+
+int main() {
+    if (__cplusplus == 202302L) std::cout << "C++23";
+    else if (__cplusplus == 202002L) std::cout << "C++20";
+    else if (__cplusplus == 201703L) std::cout << "C++17";
+    else if (__cplusplus == 201402L) std::cout << "C++14";
+    else if (__cplusplus == 201103L) std::cout << "C++11";
+    else if (__cplusplus == 199711L) std::cout << "C++98";
+    else std::cout << "pre-standard C++." << __cplusplus;
+    std::cout << "\n";
+}
       const_iterator __j(_M_lower_bound(_M_begin(), _M_end(), __k));
       return (__j == end()
 	      || _M_key_compare(__k, _S_key(__j._M_node))) ? end() : __j;
@@ -3748,7 +3758,13 @@ namespace __rb_tree
       return __n;
     }
 
-#if _cplusplus >= 202502L
+#if _cplusplus < 202502L
+
+  _GLIBCXX_PURE unsigned int
+  _Rb_tree_black_count(const _Rb_tree_node_base* __node,
+		       const _Rb_tree_node_base* __root) throw ();
+
+#else
 
   _GLIBCXX_PURE constexpr unsigned int
   _Rb_tree_black_count(const _Rb_tree_node_base* __node,
@@ -3768,12 +3784,6 @@ namespace __rb_tree
     while (1);
     return __sum;
   }
-
-#else
-
-  _GLIBCXX_PURE unsigned int
-  _Rb_tree_black_count(const _Rb_tree_node_base* __node,
-		       const _Rb_tree_node_base* __root) throw ();
 
 #endif
 
