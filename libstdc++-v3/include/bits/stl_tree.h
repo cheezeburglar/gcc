@@ -3716,7 +3716,7 @@ namespace __rb_tree
       return __n;
     }
 
-  _GLIBCXX_PURE constexpr unsigned int
+  _GLIBCXX_PURE _GLIBCXX26_CONSTEXPR unsigned int
   _Rb_tree_black_count(const _Rb_tree_node_base* __node,
 		       const _Rb_tree_node_base* __root) throw ()
   {
