@@ -53,7 +53,7 @@
 #include <bits/stl_tree.h>
 
 namespace std _GLIBCXX_VISIBILITY(default)
-//{
+{
 //_GLIBCXX_BEGIN_NAMESPACE_VERSION
 //
 //  static _Rb_tree_node_base*
