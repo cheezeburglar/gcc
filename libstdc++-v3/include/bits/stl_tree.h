@@ -3729,6 +3729,22 @@ namespace __rb_tree
     _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
     find(const _Key& __k) const
     {
+       const_iterator __j(_M_lower_bound(_M_begin(), _M_end(), __k));
+       return (__j == end()
+              || _M_key_compare(__k, _S_key(__j._M_node))) ? end() : __j;
+    }
+
+  template<typename _Key, typename _Val, typename _KeyOfValue,
+          typename _Compare, typename _Alloc>
+    _GLIBCXX26_CONSTEXPR
+    typename _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::size_type
+    _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::
+    count(const _Key& __k) const
+    {
+      pair<const_iterator, const_iterator> __p = equal_range(__k);
+      const size_type __n = std::distance(__p.first, __p.second);
+      return __n;
+    }
 
 #if _cplusplus < 202502L
 
