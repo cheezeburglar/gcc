@@ -539,14 +539,17 @@ namespace __rb_tree
       _Rb_tree_const_iterator(const iterator& __it) _GLIBCXX_NOEXCEPT
       : _M_node(__it._M_node) { }
 
+      _GLIBCXX26_CONSTEXPR
       reference
       operator*() const _GLIBCXX_NOEXCEPT
       { return *static_cast<_Node_ptr>(_M_node)->_M_valptr(); }
 
+      _GLIBCXX26_CONSTEXPR
       pointer
       operator->() const _GLIBCXX_NOEXCEPT
       { return static_cast<_Node_ptr>(_M_node)->_M_valptr(); }
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree_const_iterator&
       operator++() _GLIBCXX_NOEXCEPT
       {
@@ -554,6 +557,7 @@ namespace __rb_tree
 	return *this;
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree_const_iterator
       operator++(int) _GLIBCXX_NOEXCEPT
       {
@@ -562,6 +566,7 @@ namespace __rb_tree
 	return __tmp;
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree_const_iterator&
       operator--() _GLIBCXX_NOEXCEPT
       {
@@ -569,6 +574,7 @@ namespace __rb_tree
 	return *this;
       }
 
+      _GLIBCXX26_CONSTEXPR
       _Rb_tree_const_iterator
       operator--(int) _GLIBCXX_NOEXCEPT
       {
@@ -577,12 +583,14 @@ namespace __rb_tree
 	return __tmp;
       }
 
+      _GLIBCXX26_CONSTEXPR
       friend bool
       operator==(const _Rb_tree_const_iterator& __x,
 		 const _Rb_tree_const_iterator& __y) _GLIBCXX_NOEXCEPT
       { return __x._M_node == __y._M_node; }
 
 #if ! __cpp_lib_three_way_comparison
+      _GLIBCXX26_CONSTEXPR
       friend bool
       operator!=(const _Rb_tree_const_iterator& __x,
 		 const _Rb_tree_const_iterator& __y) _GLIBCXX_NOEXCEPT
