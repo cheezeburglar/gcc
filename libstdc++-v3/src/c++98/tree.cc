@@ -467,4 +467,4 @@ namespace std _GLIBCXX_VISIBILITY(default)
 //  }
 //
 //_GLIBCXX_END_NAMESPACE_VERSION
-//} // namespace
+} // namespace
