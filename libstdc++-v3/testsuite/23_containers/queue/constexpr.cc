@@ -1,4 +1,4 @@
-// { dg-do compile { target c++26 } }
+// { dg-do run { target c++26 } }
 
 #include <queue>
 
@@ -13,18 +13,7 @@
 #include <vector>
 #include <numeric>
 #include <testsuite_hooks.h>
-
-template<typename T>
-struct Alloc : std::allocator<T>
-{
-  using std::allocator<T>::allocator;
-
-  int personality = 0;
-  constexpr explicit Alloc (int p) : personality(p) { }
-
-  template<typename U>
-    constexpr Alloc(const Alloc<U>& a) : personality(a.personality) { }
-};
+#include <testsuite_iterators.h>
 
 namespace queue_tests {
 
@@ -64,8 +53,9 @@ constexpr bool ctor_tests()
   VERIFY( q6.size() == q4.size() );
   VERIFY( q5.empty() );
 
+  using Alloc as __gnu_test::SimpleAllocator<int>;
   Alloc<int> aa(5);
-  std::queue<int> q7 (aa);
+  std::queue<int, Alloc> q7 (aa);
   VERIFY( q7.size() == 0 );
 
   int rg[4] = {2, 3, 5, 7};
@@ -127,10 +117,13 @@ constexpr bool front_and_back_test()
 
 static_assert( front_and_back_test() );
 
+template<Range>
 constexpr int push_range_test()
 {
+  using Tp = std::ranges:range_value_t<Range>;
+
   std::queue<int> a;
-  const auto rg = {2, 3, 5, 7};
+  Tp rg [] {2, 3, 5, 7};
   a.push_range(rg);
   VERIFY (a.size() == 4);
   VERIFY (a.front() == 2);
@@ -196,6 +189,19 @@ constexpr bool operator_test()
 }
 
 static_assert( operator_test() );
+
+constexpr bool do_tests()
+{
+
+  ctor_tests();
+  push_and_pop_test();
+  front_and_back_test();
+  swap_test();
+  emplace_test();
+  operator_test();
+
+  push_range_test();
+}
 
 } // end queue_tests
 
@@ -407,4 +413,52 @@ constexpr bool emplace_test()
 }
 
 static_assert( emplace_test() );
+
+template<Range>
+constexpr void range_tests()
+{
+
+}
+
+constexpr bool do_tests()
+{
+  ctor_tests();
+  alloc_aware_ctor_tests();
+  push_and_pop_test();
+  top_test();
+  swap_test();
+  emplace_test();
+
+  using namespace __gnu_test;
+
+  push_range_test<test_forward_range<int>>();
+  push_range_test<test_forward_sized_range<int>>();
+  push_range_test<test_sized_range_sized_sent<int, forward_iterator_wrapper>>();
+
+  push_range_test<test_input_range<int>>();
+  push_range_test<test_input_sized_range<int>>();
+  push_range_test<test_sized_range_sized_sent<int, input_iterator_wrapper>>();
+
+  push_range_test<test_range<int, input_iterator_wrapper_nocopy>>();
+  push_range_test<test_sized_range<int, input_iterator_wrapper_nocopy>>();
+  push_range_test<test_sized_range_sized_sent<int, input_iterator_wrapper_nocopy>>();
+
+  push_range_test<test_forward_range<short>>();
+  push_range_test<test_input_range<short>>();
+
+  struct C {
+    constexpr C(int v) : val(v) { }
+    constexpr operator int() && { return val; }
+    constexpr bool operator==(int b) const { return b == val; }
+    int val;
+  };
+  using rvalue_input_range = test_range<C, input_iterator_wrapper_rval>;
+  push_range_test<rvalue_input_range>();
+  push_range_test();
+}
+
 } // end priority_queue_test
+
+static_assert(queue_test::do_test());
+static_assert(priority_queue_test::do_test());
+

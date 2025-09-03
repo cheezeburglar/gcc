@@ -1,6 +1,7 @@
 // { dg-do run { target c++26 } }
+// { dg-require-debug-mode "" }
 
-#include <deque>
+#include <debug/deque>
 
 #ifndef __cpp_lib_constexpr_deque
 #error "Feature test macro for constexpr deque is missing in <deque>"
