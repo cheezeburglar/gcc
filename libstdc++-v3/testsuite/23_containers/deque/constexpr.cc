@@ -259,7 +259,7 @@ constexpr bool nonmember_tests()
 
 static_assert(nonmember_tests());
 
-template<Range>
+template<typename Range>
 constexpr void
 ranges_test()
 {
