@@ -9,7 +9,7 @@
 #include <span>
 #include <testsuite_hooks.h>
 #include <testsuite_iterators.h>
-#include <testsuite_allocator.h>
+#include <testsuite_allocators.h>
 
 void
 test_deduction_guide(long* p)
