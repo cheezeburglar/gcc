@@ -1,4 +1,5 @@
 // { dg-do run { target c++26 } }
+// { dg-do run { target c++26 } }
 
 #include <deque>
 
@@ -12,6 +13,7 @@
 #include <numeric>
 #include <testsuite_hooks.h>
 #include <testsuite_iterators.h>
+#include <testsuite_allocators.h>
 
 constexpr bool ctor_tests()
 {
