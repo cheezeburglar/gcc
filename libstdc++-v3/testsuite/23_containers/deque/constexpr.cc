@@ -13,7 +13,7 @@
 #include <numeric>
 #include <testsuite_hooks.h>
 #include <testsuite_iterators.h>
-#include <testsuite_allocators.h>
+#include <testsuite_allocator.h>
 
 constexpr bool ctor_tests()
 {
