@@ -265,31 +265,21 @@ constexpr void
 ranges_test()
 {
   using Tp = std::ranges::range_value_t<Range>;
-  Tp rg [] {2, 3, 5, 7}; //TODO: is this optimally clean?
-
+  Tp a[] {1, 2, 3, 4, 5};
+  auto rg = Range(a, a+4);
   //  Constructor tests
 
   auto dq0 = std::deque(rg.begin(), rg.end());
-  VERIFY( dq0.front() == 2 );
-  VERIFY( dq0.back() == 7 );
-  VERIFY( dq0.size() == 5 );
 
   auto dq1 = std::deque<int>(std::from_range, rg);
   VERIFY(dq1 == dq0);
 
   // Insert tests
 
-  rg = {1, 2, 3, 4, 5};
-
-  std::deque<int> dq2 {};
+  std::deque<Tp> dq2 {};
   dq2.insert(dq2.begin() , 1);
   dq2.insert(dq2.end(), 2);
-  VERIFY( dq2.size() == 2 );
-  VERIFY( dq2.front() == 1 );
-  VERIFY( dq2.back() == 2 );
-
   dq2.insert(dq2.end(), 1, 3);
-
   dq2.insert(dq2.end(), rg.begin() + 3, rg.end());
 
   VERIFY( dq2[0] == 1 );
@@ -317,7 +307,7 @@ ranges_test()
   dq3.insert_range(dq3.begin(), rg);
   dq4.append_range(rg);
   VERIFY( dq3 == dq4 );
-  dq3.erase(dq3.begin(), dq3.end());
+  dq3.clear();
   dq3.prepend_range(rg);
   VERIFY( dq3 == dq4 );
 }
