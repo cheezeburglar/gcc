@@ -295,10 +295,10 @@ ranges_test()
   VERIFY( dq2[8] == 8 );
   VERIFY( dq2[9] == 9 );
 
-  dq3.clear();
-  dq3.append_range(Range(a, a+5));
-  dq3.prepend_range(Range(a+6, a+10));
-  VERIFY( dq2 == dq3 );
+  std::deque<Tp> dq4 {};
+  dq4.append_range(Range(a, a+5));
+  dq4.prepend_range(Range(a+6, a+10));
+  VERIFY( dq2 == dq4 );
 }
 
 constexpr bool do_tests()
