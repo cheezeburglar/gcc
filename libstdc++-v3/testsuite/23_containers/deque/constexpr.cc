@@ -285,7 +285,7 @@ ranges_test()
   VERIFY( dq2[4] == 4 );
 
   std::deque<Tp> dq3;
-  dq3.assign_range(rg);
+  dq3.assign_range(Range(a, a+5));
   VERIFY( dq2 == dq3 );
 
   dq2.insert_range(dq2.end(), Range(a+6, a+10));
