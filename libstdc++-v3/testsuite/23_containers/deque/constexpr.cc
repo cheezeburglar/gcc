@@ -266,7 +266,7 @@ ranges_test()
 {
   using Tp = std::ranges::range_value_t<Range>;
   Tp a[] {1, 2, 3, 4, 5};
-  auto rg = Range(a, a + 5);
+  auto rg = Range(a, a + 4);
   //  Constructor tests
 
   auto dq1 = std::deque<Tp>(std::from_range, rg);
