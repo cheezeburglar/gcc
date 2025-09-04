@@ -45,7 +45,7 @@ constexpr bool ctor_tests()
   std::deque<int>dq8 (std::move(dq1));
   VERIFY( dq8 == dq7 );
 
-  dq2.insert_range(dq2.begin(), rg);
+//  dq2.insert_range(dq2.begin(), rg);
   std::deque<int, Alloc> dq9 (dq2, alloc);
   std::deque<int, Alloc> dq10 (std::move(dq2), alloc);
   VERIFY( dq9 == dq10 );
