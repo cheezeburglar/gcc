@@ -280,12 +280,16 @@ ranges_test()
 
   std::deque<Tp> dq2 {};
 
-  dq2.insert(dq2.begin(), rg.begin(), rg.end());
+  dq2.insert_range(dq2.begin(), rg);
   VERIFY( dq2[0] == 1 );
   VERIFY( dq2[1] == 2 );
   VERIFY( dq2[2] == 3 );
   VERIFY( dq2[3] == 4 );
   VERIFY( dq2[4] == 5 );
+
+  std::deque<Tp> dq3;
+  dq3.assign_range(rg);
+  VERIFY( dq2 == dq3 );
 
   dq2.insert_range(dq2.end(), rg);
   VERIFY( dq2[5] == 1 );
@@ -294,13 +298,8 @@ ranges_test()
   VERIFY( dq2[8] == 4 );
   VERIFY( dq2[9] == 5 );
 
-  std::deque<int> dq3, dq4;
-  dq3.insert_range(dq3.begin(), rg);
-  dq4.append_range(rg);
-  VERIFY( dq3 == dq4 );
-  dq3.clear();
-  dq3.prepend_range(rg);
-  VERIFY( dq3 == dq4 );
+  dq3.append_range(rg);
+  VERIFY( dq2 == dq3 );
 }
 
 constexpr bool do_tests()
