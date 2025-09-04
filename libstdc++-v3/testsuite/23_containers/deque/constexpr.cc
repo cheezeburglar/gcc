@@ -1,5 +1,4 @@
 // { dg-do run { target c++26 } }
-// { dg-do run { target c++26 } }
 
 #include <deque>
 
