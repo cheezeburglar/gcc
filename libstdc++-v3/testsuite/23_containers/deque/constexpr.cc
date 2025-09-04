@@ -269,10 +269,12 @@ ranges_test()
   auto rg = Range(a, a+4);
   //  Constructor tests
 
-  auto dq0 = std::deque<Tp>(rg.begin(), rg.end());
-
   auto dq1 = std::deque<Tp>(std::from_range, rg);
-  VERIFY(dq1 == dq0);
+  VERIFY( dq1[0] == 1 );
+  VERIFY( dq1[1] == 2 );
+  VERIFY( dq1[2] == 3 );
+  VERIFY( dq1[3] == 4 );
+  VERIFY( dq1[4] == 5 );
 
   // Insert tests
 
