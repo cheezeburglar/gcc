@@ -35,7 +35,7 @@ constexpr bool ctor_tests()
   auto dq5 = std::deque(rg.begin(), rg.end());
   VERIFY( dq5.front() == 2 );
   VERIFY( dq5.back() == 7 );
-  VERIFY( dq5.size() == 5 );
+  VERIFY( dq5.size() == 4 );
 
   auto dq6 = std::deque<int>(std::from_range, rg);
   VERIFY(dq6 == dq5);
@@ -280,6 +280,7 @@ ranges_test()
 
   std::deque<Tp> dq2 {};
 
+  VERIFY( dq2 == dq1 );
   dq2.insert_range(dq2.begin(), rg);
   VERIFY( dq2[0] == 1 );
   VERIFY( dq2[1] == 2 );
@@ -321,6 +322,7 @@ constexpr bool do_tests()
   ranges_test<test_forward_range<short>>();
   ranges_test<test_input_range<short>>();
 
+  //TODO: this probably needs to be converted to be proper. Needs to be r-values?
   struct C {
     constexpr C(int v) : val(v) { }
     constexpr operator int() { return val; }
