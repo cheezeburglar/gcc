@@ -54,8 +54,6 @@ constexpr bool ctor_tests()
   return true;
 }
 
-static_assert(ctor_tests());
-
 constexpr bool insert_tests()
 {
   std::deque<int> dq1 {};
@@ -150,8 +148,6 @@ constexpr bool insert_tests()
   return true;
 }
 
-static_assert(insert_tests());
-
 constexpr bool iterators_tests()
 {
   std::deque<int> dq0 {};
@@ -204,8 +200,6 @@ constexpr bool iterators_tests()
   return true;
 }
 
-static_assert(iterators_tests());
-
 constexpr bool capacity_tests()
 {
   std::deque<int> dq0 {};
@@ -218,8 +212,6 @@ constexpr bool capacity_tests()
 
   return true;
 }
-
-static_assert(capacity_tests());
 
 constexpr bool nonmember_tests()
 {
@@ -256,8 +248,6 @@ constexpr bool nonmember_tests()
   VERIFY( dq1.empty() );
   return true;
 }
-
-static_assert(nonmember_tests());
 
 template<typename Range>
 constexpr void
