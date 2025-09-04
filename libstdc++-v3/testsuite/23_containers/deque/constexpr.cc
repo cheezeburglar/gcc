@@ -277,7 +277,7 @@ ranges_test()
   VERIFY( dq1[4] == 5 );
 
   // Insert tests
-  auto rg = Range(a, a + 5);
+  rg = Range(a, a + 5);
 
   std::deque<Tp> dq2 {};
   dq2.insert_range(dq2.begin(), rg);
