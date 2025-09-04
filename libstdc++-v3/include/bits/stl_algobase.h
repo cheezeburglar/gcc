@@ -331,21 +331,18 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
     class ostreambuf_iterator;
 
   template<bool _IsMove, typename _CharT>
-    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<__is_char<_CharT>::__value,
 	     ostreambuf_iterator<_CharT, char_traits<_CharT> > >::__type
     __copy_move_a2(_CharT*, _CharT*,
 		   ostreambuf_iterator<_CharT, char_traits<_CharT> >);
 
   template<bool _IsMove, typename _CharT>
-    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<__is_char<_CharT>::__value,
 	     ostreambuf_iterator<_CharT, char_traits<_CharT> > >::__type
     __copy_move_a2(const _CharT*, const _CharT*,
 		   ostreambuf_iterator<_CharT, char_traits<_CharT> >);
 
   template<bool _IsMove, typename _CharT>
-    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<__is_char<_CharT>::__value,
 				    _CharT*>::__type
     __copy_move_a2(istreambuf_iterator<_CharT, char_traits<_CharT> >,
@@ -537,7 +534,6 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc++17-extensions" // for if-constexpr
   template<typename _InputIterator, typename _Size, typename _OutputIterator>
-    _GLIBCXX20_CONSTEXPR
     _OutputIterator
     __copy_n_a(_InputIterator __first, _Size __n, _OutputIterator __result,
 	       bool)
@@ -603,7 +599,6 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 
 #if _GLIBCXX_HOSTED
   template<typename _CharT, typename _Size>
-    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<
       __is_char<_CharT>::__value, _CharT*>::__type
     __copy_n_a(istreambuf_iterator<_CharT, char_traits<_CharT> >,
