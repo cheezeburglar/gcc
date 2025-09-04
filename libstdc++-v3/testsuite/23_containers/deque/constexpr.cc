@@ -50,7 +50,7 @@ constexpr bool ctor_tests()
   std::deque<int, Alloc> dq10 (std::move(dq2), alloc);
   VERIFY( dq9 == dq10 );
   std::deque<int, Alloc> dq11 (rg, alloc);
-//  VERIFY( dq11 == dq10 );
+  VERIFY( dq11 == dq10 );
 
   return true;
 }
@@ -279,7 +279,7 @@ ranges_test()
   // Insert tests
 
   std::deque<Tp> dq2 {};
-  dq2.insert_range(dq2.begin() + 1, rg);
+  dq2.insert_range(dq2.begin(), rg);
   VERIFY( dq2[0] == 1 );
   VERIFY( dq2[1] == 2 );
   VERIFY( dq2[2] == 3 );
