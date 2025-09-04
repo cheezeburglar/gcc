@@ -281,37 +281,37 @@ ranges_test()
 
   rg = {1, 2, 3, 4, 5};
 
-  std::deque<int> dq1 {};
-  dq1.insert(dq1.begin() , 1);
-  dq1.insert(dq1.end(), 2);
-  VERIFY( dq1.size() == 2 );
-  VERIFY( dq1.front() == 1 );
-  VERIFY( dq1.back() == 2 );
+  std::deque<int> dq2 {};
+  dq2.insert(dq2.begin() , 1);
+  dq2.insert(dq2.end(), 2);
+  VERIFY( dq2.size() == 2 );
+  VERIFY( dq2.front() == 1 );
+  VERIFY( dq2.back() == 2 );
 
-  dq1.insert(dq1.end(), 1, 3);
+  dq2.insert(dq2.end(), 1, 3);
 
-  dq1.insert(dq1.end(), rg.begin() + 3, rg.end());
+  dq2.insert(dq2.end(), rg.begin() + 3, rg.end());
 
-  VERIFY( dq1[0] == 1 );
-  VERIFY( dq1[1] == 2 );
-  VERIFY( dq1[2] == 3 );
-  VERIFY( dq1[3] == 4 );
-  VERIFY( dq1[4] == 5 );
-  dq1.clear();
+  VERIFY( dq2[0] == 1 );
+  VERIFY( dq2[1] == 2 );
+  VERIFY( dq2[2] == 3 );
+  VERIFY( dq2[3] == 4 );
+  VERIFY( dq2[4] == 5 );
+  dq2.clear();
 
-  dq1.insert(dq1.begin(), rg.begin(), rg.end());
-  VERIFY( dq1[0] == 1 );
-  VERIFY( dq1[1] == 2 );
-  VERIFY( dq1[2] == 3 );
-  VERIFY( dq1[3] == 4 );
-  VERIFY( dq1[4] == 5 );
+  dq2.insert(dq2.begin(), rg.begin(), rg.end());
+  VERIFY( dq2[0] == 1 );
+  VERIFY( dq2[1] == 2 );
+  VERIFY( dq2[2] == 3 );
+  VERIFY( dq2[3] == 4 );
+  VERIFY( dq2[4] == 5 );
 
-  dq1.insert_range(dq1.end(), rg);
-  VERIFY( dq1[5] == 1 );
-  VERIFY( dq1[6] == 2 );
-  VERIFY( dq1[7] == 3 );
-  VERIFY( dq1[8] == 4 );
-  VERIFY( dq1[9] == 5 );
+  dq2.insert_range(dq2.end(), rg);
+  VERIFY( dq2[5] == 1 );
+  VERIFY( dq2[6] == 2 );
+  VERIFY( dq2[7] == 3 );
+  VERIFY( dq2[8] == 4 );
+  VERIFY( dq2[9] == 5 );
 
   std::deque<int> dq3, dq4;
   dq3.insert_range(dq3.begin(), rg);
