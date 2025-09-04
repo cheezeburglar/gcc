@@ -292,11 +292,11 @@ ranges_test()
   VERIFY( dq2 == dq3 );
 
   dq2.insert_range(dq2.end(), rg);
-//  VERIFY( dq2[5] == 1 );
-//  VERIFY( dq2[6] == 2 );
-//  VERIFY( dq2[7] == 3 );
-//  VERIFY( dq2[8] == 4 );
-//  VERIFY( dq2[9] == 5 );
+  VERIFY( dq2[5] == 1 );
+  VERIFY( dq2[6] == 2 );
+  VERIFY( dq2[7] == 3 );
+  VERIFY( dq2[8] == 4 );
+  VERIFY( dq2[9] == 5 );
 
   dq3.clear();
   dq3.append_range(rg);
