@@ -323,7 +323,7 @@ constexpr bool do_tests()
 
   struct C {
     constexpr C(int v) : val(v) { }
-    constexpr operator int() && { return val; }
+    constexpr operator int() { return val; }
     constexpr bool operator==(int b) { return b == val; }
     int val;
   };
