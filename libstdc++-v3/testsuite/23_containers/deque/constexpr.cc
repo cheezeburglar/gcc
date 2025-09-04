@@ -269,7 +269,7 @@ ranges_test()
   auto rg = Range(a, a+4);
   //  Constructor tests
 
-  auto dq0 = std::deque(rg.begin(), rg.end());
+  auto dq0 = std::deque<Tp>(rg.begin(), rg.end());
 
   auto dq1 = std::deque<Tp>(std::from_range, rg);
   VERIFY(dq1 == dq0);
