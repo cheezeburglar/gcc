@@ -265,7 +265,7 @@ constexpr void
 ranges_test()
 {
   using Tp = std::ranges::range_value_t<Range>;
-  Range rg [] {2, 3, 5, 7}; //TODO: is this optimally clean?
+  Tp rg [] {2, 3, 5, 7}; //TODO: is this optimally clean?
 
   //  Constructor tests
 
