@@ -603,12 +603,14 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 
 #if _GLIBCXX_HOSTED
   template<typename _CharT, typename _Size>
+    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<
       __is_char<_CharT>::__value, _CharT*>::__type
     __copy_n_a(istreambuf_iterator<_CharT, char_traits<_CharT> >,
 	       _Size, _CharT*, bool);
 
   template<typename _CharT, typename _Size>
+    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<
       __is_char<_CharT>::__value,
       _GLIBCXX_STD_C::_Deque_iterator<_CharT, _CharT&, _CharT*> >::__type
