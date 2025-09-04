@@ -18,7 +18,7 @@
 constexpr bool ctor_tests()
 {
 
-  using Alloc = __gnu_test::SimpleAllocator<typename int>;
+  using Alloc = __gnu_test::SimpleAllocator<long>;
   Alloc alloc;
 
   std::deque<int> dq1 {};
