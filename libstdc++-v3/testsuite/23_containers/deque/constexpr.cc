@@ -265,38 +265,35 @@ constexpr void
 ranges_test()
 {
   using Tp = std::ranges::range_value_t<Range>;
-  Tp a[] {1, 2, 3, 4, 5};
-  auto rg = Range(a, a + 5);
-  //  Constructor tests
+  Tp a[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-  auto dq1 = std::deque<Tp>(std::from_range, rg);
-  VERIFY( dq1[0] == 1 );
-  VERIFY( dq1[1] == 2 );
-  VERIFY( dq1[2] == 3 );
-  VERIFY( dq1[3] == 4 );
-  VERIFY( dq1[4] == 5 );
+  //  Constructor tests
+  auto dq1 = std::deque<Tp>(std::from_range, Range(a, a+5));
+  VERIFY( dq1[0] == 0 );
+  VERIFY( dq1[1] == 1 );
+  VERIFY( dq1[2] == 2 );
+  VERIFY( dq1[3] == 3 );
+  VERIFY( dq1[4] == 4 );
 
   // Insert tests
-  rg = Range(a, a + 5);
-
   std::deque<Tp> dq2 {};
-  dq2.insert_range(dq2.begin(), rg);
-  VERIFY( dq2[0] == 1 );
-  VERIFY( dq2[1] == 2 );
-  VERIFY( dq2[2] == 3 );
-  VERIFY( dq2[3] == 4 );
-  VERIFY( dq2[4] == 5 );
+  dq2.insert_range(dq2.begin(), Range(a, a+5));
+  VERIFY( dq2[0] == 0 );
+  VERIFY( dq2[1] == 1 );
+  VERIFY( dq2[2] == 2 );
+  VERIFY( dq2[3] == 3 );
+  VERIFY( dq2[4] == 4 );
 
   std::deque<Tp> dq3;
   dq3.assign_range(rg);
   VERIFY( dq2 == dq3 );
 
-  dq2.insert_range(dq2.end(), rg);
-  VERIFY( dq2[5] == 1 );
-  VERIFY( dq2[6] == 2 );
-  VERIFY( dq2[7] == 3 );
-  VERIFY( dq2[8] == 4 );
-  VERIFY( dq2[9] == 5 );
+  dq2.insert_range(dq2.end(), Range(a+6, a+10);
+  VERIFY( dq2[5] == 5 );
+  VERIFY( dq2[6] == 6 );
+  VERIFY( dq2[7] == 7 );
+  VERIFY( dq2[8] == 8 );
+  VERIFY( dq2[9] == 9 );
 
   dq3.clear();
   dq3.append_range(rg);
