@@ -154,6 +154,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
       __copy_streambufs_eof<>(basic_streambuf*, basic_streambuf*, bool&);
 
       template<bool _IsMove, typename _CharT2>
+	_GLIBCXX20_CONSTEXPR
         friend typename __gnu_cxx::__enable_if<__is_char<_CharT2>::__value,
 					       _CharT2*>::__type
         __copy_move_a2(istreambuf_iterator<_CharT2>,
