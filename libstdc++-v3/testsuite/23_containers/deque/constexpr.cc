@@ -288,7 +288,7 @@ ranges_test()
   dq3.assign_range(rg);
   VERIFY( dq2 == dq3 );
 
-  dq2.insert_range(dq2.end(), Range(a+6, a+10);
+  dq2.insert_range(dq2.end(), Range(a+6, a+10));
   VERIFY( dq2[5] == 5 );
   VERIFY( dq2[6] == 6 );
   VERIFY( dq2[7] == 7 );
