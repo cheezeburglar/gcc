@@ -898,6 +898,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 
 #if __glibcxx_containers_ranges // C++ >= 23
   template<ranges::forward_range _Rg>
+    _GLIBCXX26_CONSTEXPR
     auto __advance_dist(_Rg& __rg)
     {
       struct _Res
