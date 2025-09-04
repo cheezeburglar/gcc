@@ -297,7 +297,7 @@ ranges_test()
 
   dq3.clear();
   dq3.append_range(Range(a, a+5));
-  dq3.prepend_range(Range(a+5, a+10));
+  dq3.prepend_range(Range(a+6, a+10));
   VERIFY( dq2 == dq3 );
 }
 
