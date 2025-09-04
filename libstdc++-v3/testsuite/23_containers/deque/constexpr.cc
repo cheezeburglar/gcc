@@ -278,6 +278,8 @@ ranges_test()
 
   // Insert tests
 
+  static_assert(rg);
+
   std::deque<Tp> dq2 {};
   dq2.insert_range(dq2.begin(), rg);
 //  VERIFY( dq2[0] == 1 );
