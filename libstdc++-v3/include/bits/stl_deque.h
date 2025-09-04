@@ -2318,11 +2318,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 #endif
 
       // called by insert(p,n,x) via fill_insert
+      _GLIBCXX26_CONSTEXPR
       void
       _M_insert_aux(iterator __pos, size_type __n, const value_type& __x);
 
       // called by range_insert_aux for forward iterators
       template<typename _ForwardIterator>
+	_GLIBCXX26_CONSTEXPR
 	void
 	_M_insert_aux(iterator __pos,
 		      _ForwardIterator __first, _ForwardIterator __last,
