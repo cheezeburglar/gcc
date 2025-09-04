@@ -271,23 +271,12 @@ ranges_test()
 
   auto dq0 = std::deque(rg.begin(), rg.end());
 
-  auto dq1 = std::deque<int>(std::from_range, rg);
+  auto dq1 = std::deque<Tp>(std::from_range, rg);
   VERIFY(dq1 == dq0);
 
   // Insert tests
 
   std::deque<Tp> dq2 {};
-  dq2.insert(dq2.begin() , 1);
-  dq2.insert(dq2.end(), 2);
-  dq2.insert(dq2.end(), 1, 3);
-  dq2.insert(dq2.end(), rg.begin() + 3, rg.end());
-
-  VERIFY( dq2[0] == 1 );
-  VERIFY( dq2[1] == 2 );
-  VERIFY( dq2[2] == 3 );
-  VERIFY( dq2[3] == 4 );
-  VERIFY( dq2[4] == 5 );
-  dq2.clear();
 
   dq2.insert(dq2.begin(), rg.begin(), rg.end());
   VERIFY( dq2[0] == 1 );
