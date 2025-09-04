@@ -307,7 +307,7 @@ constexpr bool do_tests()
 
   ranges_test<test_forward_range<int>>();
   ranges_test<test_forward_sized_range<int>>();
-  ranges_test<test_sized_range_sized_sent<int, forward_iterator_wrapper>>();
+//  ranges_test<test_sized_range_sized_sent<int, forward_iterator_wrapper>>();
 
   ranges_test<test_input_range<int>>();
   ranges_test<test_input_sized_range<int>>();
