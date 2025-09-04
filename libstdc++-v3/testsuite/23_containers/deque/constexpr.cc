@@ -28,8 +28,8 @@ constexpr bool ctor_tests()
   VERIFY( dq3.front() == 0 );
   VERIFY( dq3.size() == 4 );
   std::deque<int, Alloc> dq4 (4, 5, alloc);
-  VERIFY( dq3.front() == 5 );
-  VERIFY( dq3.size() == 4 );
+  VERIFY( dq4.front() == 5 );
+  VERIFY( dq4.size() == 4 );
 
   auto rg = {2, 3, 5, 7};
   auto dq5 = std::deque(rg.begin(), rg.end());
@@ -45,9 +45,10 @@ constexpr bool ctor_tests()
   std::deque<int>dq8 (std::move(dq1));
   VERIFY( dq8 == dq7 );
 
-  std::deque<int, Alloc> dq9 (dq5, alloc);
-  std::deque<int, Alloc> dq10 (std::move(dq5), alloc);
-  VERIFY ( dq9 == dq10 );
+  dq2.insert_range(dq2.begin(), rg);
+  std::deque<int, Alloc> dq9 (dq2, alloc);
+  std::deque<int, Alloc> dq10 (std::move(dq2), alloc);
+  VERIFY( dq9 == dq10 );
   std::deque<int, Alloc> dq11 (rg, alloc);
   VERIFY( dq11 == dq10 );
 
@@ -280,7 +281,7 @@ ranges_test()
 
   rg = {1, 2, 3, 4, 5};
 
-  std::deque<int> dq1();
+  std::deque<int> dq1 {};
   dq1.insert(dq1.begin() , 1);
   dq1.insert(dq1.end(), 2);
   VERIFY( dq1.size() == 2 );
@@ -324,7 +325,6 @@ ranges_test()
 constexpr bool do_tests()
 {
   using namespace __gnu_test;
-  ranges_test<foo>(bar); // TODO:
 
   ranges_test<test_forward_range<int>>();
   ranges_test<test_forward_sized_range<int>>();
