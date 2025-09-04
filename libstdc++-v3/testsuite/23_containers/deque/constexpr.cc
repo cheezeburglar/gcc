@@ -265,7 +265,8 @@ constexpr void
 ranges_test()
 {
   using Tp = std::ranges::range_value_t<Range>;
-  Tp a[] {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  Tp a[] {0, 1, 2, 3, 4,
+	  5, 6, 7, 8, 9};
 
   //  Constructor tests
   auto dq1 = std::deque<Tp>(std::from_range, Range(a, a+5));
@@ -296,8 +297,8 @@ ranges_test()
   VERIFY( dq2[9] == 9 );
 
   std::deque<Tp> dq4 {};
-  dq4.append_range(Range(a, a+5));
-  dq4.prepend_range(Range(a+6, a+10));
+  dq4.prepend_range(Range(a, a+5));
+  dq4.append_range(Range(a+5, a+10));
   VERIFY( dq2 == dq4 );
 }
 
