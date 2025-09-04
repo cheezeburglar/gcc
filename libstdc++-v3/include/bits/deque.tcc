@@ -1032,6 +1032,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
 		 deque& __self;
 		 size_type __n = __self.size();
 
+		 _GLIBCXX26_CONSTEXPR
 		 ~_Guard_elts_back()
 		   {
 		     if (__n < __self.size())
