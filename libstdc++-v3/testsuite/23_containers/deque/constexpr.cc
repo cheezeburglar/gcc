@@ -297,7 +297,9 @@ ranges_test()
 //  VERIFY( dq2[8] == 4 );
 //  VERIFY( dq2[9] == 5 );
 
+  dq3.clear();
   dq3.append_range(rg);
+  dq3.prepend_range(rg);
   VERIFY( dq2 == dq3 );
 }
 
