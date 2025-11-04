@@ -40,6 +40,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "attribs.h"
 #include "asan.h"
 #include "gimplify.h"
+#include "print-tree.h"
 
 static tree cp_build_addr_expr_strict (tree, tsubst_flags_t);
 static tree cp_build_function_call (tree, tree, tsubst_flags_t);
@@ -11492,6 +11493,11 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
   if (fn_returns_value_p && flag_elide_constructors
       && current_function_return_value != bare_retval)
     {
+      const tree foo = bare_retval;
+//      debug_tree(foo);
+      if (named_return_value_okay_p)
+	vec_safe_push(current_function_return_values, foo);
+    //      current_function_return_values->safe_insert(foo);
       if (named_return_value_okay_p
 	  && current_function_return_value == NULL_TREE)
 	current_function_return_value = bare_retval;
