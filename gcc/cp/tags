@@ -1,0 +1,77 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+CONSTRAINT	lex.cc	50;"	d	file:
+DEFTRAIT	lex.cc	103;"	d	file:
+DEFTRAIT	lex.cc	106;"	d	file:
+DEF_OPERATOR	lex.cc	90;"	d	file:
+OPERATOR_TRANSITION	lex.cc	92;"	d	file:
+build_lang_decl	lex.cc	/^build_lang_decl (enum tree_code code, tree name, tree type)$/;"	f
+build_lang_decl_loc	lex.cc	/^build_lang_decl_loc (location_t loc, enum tree_code code, tree name, tree type)$/;"	f
+conv_type_hasher	lex.cc	/^struct conv_type_hasher : ggc_ptr_hash<tree_node>$/;"	s	file:
+conv_type_names	lex.cc	/^static GTY (()) hash_table<conv_type_hasher> *conv_type_names;$/;"	v
+copy_decl	lex.cc	/^copy_decl (tree decl MEM_STAT_DECL)$/;"	f
+copy_lang_type	lex.cc	/^copy_lang_type (tree node)$/;"	f	file:
+copy_type	lex.cc	/^copy_type (tree type MEM_STAT_DECL)$/;"	f
+cp_traits	lex.cc	/^const cp_trait cp_traits[] =$/;"	v
+cxx_dup_lang_specific_decl	lex.cc	/^cxx_dup_lang_specific_decl (tree node)$/;"	f
+cxx_finish	lex.cc	/^cxx_finish (void)$/;"	f
+cxx_init	lex.cc	/^cxx_init (void)$/;"	f
+cxx_make_type	lex.cc	/^cxx_make_type (enum tree_code code MEM_STAT_DECL)$/;"	f
+cxx_make_type_hook	lex.cc	/^cxx_make_type_hook (enum tree_code code)$/;"	f
+equal	lex.cc	/^  static bool equal (tree node, tree type)$/;"	f	struct:conv_type_hasher
+filename	lex.cc	/^  const char *filename;$/;"	m	struct:impl_files	file:
+fit_decomposition_lang_decl	lex.cc	/^fit_decomposition_lang_decl (tree t, tree base)$/;"	f
+get_identifier_kind_name	lex.cc	/^get_identifier_kind_name (tree id)$/;"	f
+got_colon	lex.cc	/^  bool got_colon : 1;$/;"	m	struct:module_token_filter	file:
+got_export	lex.cc	/^  bool got_export : 1;$/;"	m	struct:module_token_filter	file:
+handle_pragma_implementation	lex.cc	/^handle_pragma_implementation (cpp_reader* \/*dfile*\/)$/;"	f	file:
+handle_pragma_interface	lex.cc	/^handle_pragma_interface (cpp_reader* \/*dfile*\/)$/;"	f	file:
+handle_pragma_unit	lex.cc	/^handle_pragma_unit (cpp_reader* \/*dfile*\/)$/;"	f	file:
+handle_pragma_vtable	lex.cc	/^handle_pragma_vtable (cpp_reader* \/*dfile*\/)$/;"	f	file:
+hash	lex.cc	/^  static hashval_t hash (tree node)$/;"	f	struct:conv_type_hasher
+idle	lex.cc	/^   idle,$/;"	e	enum:module_token_filter::state	file:
+impl_file_chain	lex.cc	/^static struct impl_files *impl_file_chain;$/;"	v	typeref:struct:impl_files	file:
+impl_files	lex.cc	/^struct impl_files$/;"	s	file:
+import	lex.cc	/^  module_state *import;$/;"	m	struct:module_token_filter	file:
+in_main_input_context	lex.cc	/^in_main_input_context (void)$/;"	f
+init_cp_pragma	lex.cc	/^init_cp_pragma (void)$/;"	f	file:
+init_cp_traits	lex.cc	/^init_cp_traits (void)$/;"	f	file:
+init_operators	lex.cc	/^init_operators (void)$/;"	f	file:
+init_reswords	lex.cc	/^init_reswords (void)$/;"	f
+interface_strcmp	lex.cc	/^interface_strcmp (const char* s)$/;"	f	file:
+is_import	lex.cc	/^  bool is_import : 1;$/;"	m	struct:module_token_filter	file:
+make_class_type	lex.cc	/^make_class_type (enum tree_code code MEM_STAT_DECL)$/;"	f
+make_conv_op_name	lex.cc	/^make_conv_op_name (tree type)$/;"	f
+maybe_add_lang_decl_raw	lex.cc	/^maybe_add_lang_decl_raw (tree t, bool decomp_p)$/;"	f
+maybe_add_lang_type_raw	lex.cc	/^maybe_add_lang_type_raw (tree t)$/;"	f
+module	lex.cc	/^  module_state *module;$/;"	m	struct:module_token_filter	file:
+module_cont	lex.cc	/^   module_cont,$/;"	e	enum:module_token_filter::state	file:
+module_end	lex.cc	/^   module_end,$/;"	e	enum:module_token_filter::state	file:
+module_first	lex.cc	/^   module_first,$/;"	e	enum:module_token_filter::state	file:
+module_token_cdtor	lex.cc	/^module_token_cdtor (cpp_reader *pfile, uintptr_t data_)$/;"	f
+module_token_filter	lex.cc	/^  module_token_filter (cpp_reader *reader)$/;"	f	struct:module_token_filter
+module_token_filter	lex.cc	/^struct module_token_filter$/;"	s	file:
+module_token_lang	lex.cc	/^module_token_lang (int type, int keyword, tree value, location_t loc,$/;"	f
+module_token_pre	lex.cc	/^module_token_pre (cpp_reader *pfile, const cpp_token *tok, uintptr_t data_)$/;"	f
+next	lex.cc	/^  struct impl_files *next;$/;"	m	struct:impl_files	typeref:struct:impl_files::impl_files	file:
+ovl_op_alternate	lex.cc	/^unsigned char ovl_op_alternate[OVL_OP_MAX];$/;"	v
+ovl_op_info	lex.cc	/^ovl_op_info_t ovl_op_info[2][OVL_OP_MAX] =$/;"	v
+ovl_op_mapping	lex.cc	/^unsigned char ovl_op_mapping[MAX_TREE_CODES];$/;"	v
+parse_strconst_pragma	lex.cc	/^parse_strconst_pragma (const char* name, int opt)$/;"	f	file:
+reader	lex.cc	/^  cpp_reader *reader;$/;"	m	struct:module_token_filter	file:
+resume	lex.cc	/^  uintptr_t resume (int type, int keyword, tree value, location_t loc)$/;"	f	struct:module_token_filter
+retrofit_lang_decl	lex.cc	/^retrofit_lang_decl (tree t)$/;"	f
+set_decl_linkage	lex.cc	/^set_decl_linkage (tree t)$/;"	f	file:
+set_identifier_kind	lex.cc	/^set_identifier_kind (tree id, cp_identifier_kind kind)$/;"	f
+set_operator_ident	lex.cc	/^set_operator_ident (ovl_op_info_t *ptr)$/;"	f	file:
+state	lex.cc	/^  enum state state : 8;$/;"	m	struct:module_token_filter	typeref:enum:module_token_filter::state	file:
+state	lex.cc	/^  enum state$/;"	g	struct:module_token_filter	file:
+statement_code_p	lex.cc	/^bool statement_code_p[MAX_TREE_CODES];$/;"	v
+token_loc	lex.cc	/^  location_t token_loc;$/;"	m	struct:module_token_filter	file:
+unqualified_fn_lookup_error	lex.cc	/^unqualified_fn_lookup_error (cp_expr name_expr)$/;"	f
+unqualified_name_lookup_error	lex.cc	/^unqualified_name_lookup_error (tree name, location_t loc)$/;"	f
+want_dot	lex.cc	/^  bool want_dot : 1;$/;"	m	struct:module_token_filter	file:

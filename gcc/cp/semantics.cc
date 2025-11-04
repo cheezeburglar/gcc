@@ -47,6 +47,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "memmodel.h"
 #include "gimplify.h"
 #include "contracts.h"
+#include "print-tree.h"
+#include "cstdio"
 
 /* There routines provide a modular interface to perform many parsing
    operations.  They may therefore be used during actual parsing, or
@@ -5627,6 +5629,11 @@ public:
   tree var;
   tree result;
   hash_set<tree> visited;
+
+  // experimental for nrv
+  hash_set<tree> results_test;
+  tree canary;
+
   bool simple;
   bool in_nrv_cleanup;
 };
@@ -5638,50 +5645,84 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 {
   class nrv_data *dp = (class nrv_data *)data;
 
+//  if (dp->results_test.contains(*tp))
+//    printf("haha ");
+
   /* No need to walk into types.  There wouldn't be any need to walk into
      non-statements, except that we have to consider STMT_EXPRs.  */
   if (TYPE_P (*tp))
+  {
+    printf("hit branch 1 nrv_r\n");
     *walk_subtrees = 0;
-
+  }
   /* Replace all uses of the NRV with the RESULT_DECL.  */
   else if (*tp == dp->var)
+  {
+    printf("hit branch 2 nrv_r\n");
     *tp = dp->result;
-
+  }
   /* Avoid walking into the same tree more than once.  Unfortunately, we
      can't just use walk_tree_without duplicates because it would only call
      us for the first occurrence of dp->var in the function body.  */
   else if (dp->visited.add (*tp))
+  {
+    printf("hit branch 3 nrv_r\n");
     *walk_subtrees = 0;
+  }
 
   /* If there's a label, we might need to destroy the NRV on goto (92407).  */
   else if (TREE_CODE (*tp) == LABEL_EXPR && !dp->in_nrv_cleanup)
+  {
+    printf("hit branch 4 (label_expr) nrv_r\n");
     dp->simple = false;
+  }
+
   /* Change NRV returns to just refer to the RESULT_DECL; this is a nop,
      but differs from using NULL_TREE in that it indicates that we care
      about the value of the RESULT_DECL.  But preserve anything appended
      by check_return_expr.  */
   else if (TREE_CODE (*tp) == RETURN_EXPR)
     {
+      printf("hit branch 5 (return_expr) nrv_r\n");
       tree *p = &TREE_OPERAND (*tp, 0);
       while (TREE_CODE (*p) == COMPOUND_EXPR)
 	p = &TREE_OPERAND (*p, 0);
+      if (TREE_CODE (*p) != INIT_EXPR)
+	printf("  not okay init con expr\n");
+      else if (!INIT_EXPR_NRV_P(*p))
+	printf("  not okay init con nrv\n");
       if (TREE_CODE (*p) == INIT_EXPR
-	  && INIT_EXPR_NRV_P (*p))
+	  && INIT_EXPR_NRV_P (*p)) {
+	printf("  init condition okay\n");
 	*p = dp->result;
+      }
     }
   /* Change all cleanups for the NRV to only run when not returning.  */
   else if (TREE_CODE (*tp) == CLEANUP_STMT
+//	   && dp->results_test.contains(CLEANUP_DECL (*tp)))
 	   && CLEANUP_DECL (*tp) == dp->var)
     {
+      printf("  --- enter cleanup_stmt handling --- \n");
+      printf(" note: current_retval_sentinel is: \n");
+      debug_tree(current_retval_sentinel);
+      printf(" \n");
+      printf("hit branch 6 (cleanup_stmt) nrv_r\n");
       dp->in_nrv_cleanup = true;
+      printf("	  --- enter cleanup_body handling - true - --- \n");
       cp_walk_tree (&CLEANUP_BODY (*tp), finalize_nrv_r, data, 0);
+      printf("	  --- exit cleanup_body handling --- \n");
       dp->in_nrv_cleanup = false;
+      printf("	  --- enter cleanup_body handling - false - --- \n");
       cp_walk_tree (&CLEANUP_EXPR (*tp), finalize_nrv_r, data, 0);
+      printf("	  --- exit cleanup_body handling --- \n");
       *walk_subtrees = 0;
 
       if (dp->simple)
+	{
+	printf("  -- simple EH");
 	/* For a simple NRV, just run it on the EH path.  */
 	CLEANUP_EH_ONLY (*tp) = true;
+	}
       else
 	{
 	  /* Not simple, we need to check current_retval_sentinel to decide
@@ -5689,10 +5730,20 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	     don't want to destroy the NRV.  If the sentinel is not set, we're
 	     leaving scope some other way, either by flowing off the end of its
 	     scope or throwing an exception.  */
-	  tree cond = build3 (COND_EXPR, void_type_node,
-			      current_retval_sentinel,
-			      void_node, CLEANUP_EXPR (*tp));
-	  CLEANUP_EXPR (*tp) = cond;
+	  printf("  -- in current_retval_sentinel brnach, not simple\n");
+	  // WE NEED MORE CHECKS HERE!!! -THOR
+	  if (chain_member (dp->var,
+			    dp->canary)) {
+	    printf("  TEST COND OKAY!\n");
+	  }
+//	  maybe_set_retval_sentinel();
+	  if (current_retval_sentinel)
+	  {
+	    tree cond = build3 (COND_EXPR, void_type_node,
+				current_retval_sentinel,
+				void_node, CLEANUP_EXPR (*tp));
+	    CLEANUP_EXPR (*tp) = cond;
+	  }
 	}
 
       /* If a cleanup might throw, we need to clear current_retval_sentinel on
@@ -5700,6 +5751,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	 cleanup added by maybe_splice_retval_cleanup doesn't run.  */
       if (cp_function_chain->throwing_cleanup)
 	{
+	  printf("  in throwing_cleanup branch \n");
 	  tree clear = build2 (MODIFY_EXPR, boolean_type_node,
 			       current_retval_sentinel,
 			       boolean_false_node);
@@ -5719,18 +5771,25 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	      CLEANUP_EH_ONLY (bod) = true;
 	    }
 	}
+      printf("  --- exit cleanup_stmt handling --- \n");
     }
   /* Disable maybe_splice_retval_cleanup within the NRV cleanup scope, we don't
      want to destroy the retval before the variable goes out of scope.  */
+  // TODO: Thor I think we're fallaciously zeroing clobbers here.
   else if (TREE_CODE (*tp) == CLEANUP_STMT
 	   && dp->in_nrv_cleanup
 	   && CLEANUP_DECL (*tp) == dp->result)
+  {
+//    printf("hit branch 7 (cleanup_stmt) nrv_r\n");
     CLEANUP_EXPR (*tp) = void_node;
-  /* Replace the DECL_EXPR for the NRV with an initialization of the
+  }
+    /* Replace the DECL_EXPR for the NRV with an initialization of the
      RESULT_DECL, if needed.  */
   else if (TREE_CODE (*tp) == DECL_EXPR
 	   && DECL_EXPR_DECL (*tp) == dp->var)
     {
+//      printf("hit branch 8 (decl_expr) nrv_r\n");
+//      debug_tree(DECL_EXPR_DECL(*tp));
       tree init;
       if (DECL_INITIAL (dp->var)
 	  && DECL_INITIAL (dp->var) != error_mark_node)
@@ -5741,6 +5800,9 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
       DECL_INITIAL (dp->var) = NULL_TREE;
       SET_EXPR_LOCATION (init, EXPR_LOCATION (*tp));
       *tp = init;
+      if (DECL_HAS_VALUE_EXPR_P(*tp))
+	gcc_unreachable();
+//      printf("\n");
     }
 
   /* Keep iterating.  */
@@ -5755,8 +5817,11 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 void
 finalize_nrv (tree fndecl, tree var)
 {
+  printf("--- enter finalize_nrv ---\n");
   class nrv_data data;
   tree result = DECL_RESULT (fndecl);
+
+  if (!result->decl_minimal.name) { return; }
 
   /* Copy name from VAR to RESULT.  */
   DECL_NAME (result) = DECL_NAME (var);
@@ -5772,13 +5837,24 @@ finalize_nrv (tree fndecl, tree var)
   data.result = result;
   data.in_nrv_cleanup = false;
 
+  for (auto r : current_function_return_values)
+    data.results_test.add(r);
+
   /* This is simpler for variables declared in the outer scope of
      the function so we know that their lifetime always ends with a
      return; see g++.dg/opt/nrv6.C.  */
   tree outer = outer_curly_brace_block (fndecl);
   data.simple = chain_member (var, BLOCK_VARS (outer));
+  data.canary = BLOCK_VARS (outer);
+
+//  printf(" simple dumps:\n");
+//  printf(" tree outer is: \n");
+//  debug_tree(outer);
+//  printf(" data.simple is: %d\n", data.simple);
+
 
   cp_walk_tree (&DECL_SAVED_TREE (fndecl), finalize_nrv_r, &data, 0);
+  printf("--- exit finalize_nrv ---\n");
 }
 
 /* Create CP_OMP_CLAUSE_INFO for clause C.  Returns true if it is invalid.  */
@@ -12449,6 +12525,7 @@ finish_transaction_stmt (tree stmt, tree compound_stmt, int flags, tree noex)
   gcc_assert (!(noex && compound_stmt));
   if (noex)
     {
+      printf(" -- sema must_not_throw 1 -- \n");
       tree body = build_must_not_throw_expr (TRANSACTION_EXPR_BODY (stmt),
 					     noex);
       protected_set_expr_location
@@ -12471,6 +12548,7 @@ build_transaction_expr (location_t loc, tree expr, int flags, tree noex)
   tree ret;
   if (noex)
     {
+      printf(" -- sema must_not_throw 2 -- \n");
       expr = build_must_not_throw_expr (expr, noex);
       protected_set_expr_location (expr, loc);
       TREE_SIDE_EFFECTS (expr) = 1;

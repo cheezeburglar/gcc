@@ -35,6 +35,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "asan.h"
 #include "stor-layout.h"
 #include "pointer-query.h"
+#include "cstdio"
 
 static bool begin_init_stmts (tree *, tree *);
 static tree finish_init_stmts (bool, tree, tree);
@@ -2186,6 +2187,7 @@ expand_default_init (tree binfo, tree true_exp, tree exp, tree init, int flags,
       while (TREE_CODE (*p) == MUST_NOT_THROW_EXPR
 	     || TREE_CODE (*p) == CLEANUP_POINT_EXPR)
 	{
+	  printf(" -- init must_not_throw 1 -- \n");
 	  /* Avoid voidify_wrapper_expr making a temporary.  */
 	  TREE_TYPE (*p) = void_type_node;
 	  p = &TREE_OPERAND (*p, 0);
@@ -3570,6 +3572,10 @@ build_new_1 (vec<tree, va_gc> **placement, tree type, tree nelts,
        && (!outer_nelts || !integer_zerop (cst_outer_nelts))
        && (!*init || CLASS_TYPE_P (elt_type)));
 
+  if (do_clobber)
+    printf(" -- do_clobber is yes\n");
+  else
+    printf(" -- do_clobber -s no\n");
   /* In the simple case, we can stop now.  */
   pointer_type = build_pointer_type (type);
   if (!cookie_size && !is_initialized && !member_delete_p && !do_clobber)
@@ -3664,6 +3670,7 @@ build_new_1 (vec<tree, va_gc> **placement, tree type, tree nelts,
   tree clobber_expr = NULL_TREE;
   if (do_clobber)
     {
+      printf(" -- Doing CLOBBER1\n");
       if (array_p && TREE_CODE (cst_outer_nelts) != INTEGER_CST)
 	{
 	  /* Clobber each element rather than the array at once.  */
