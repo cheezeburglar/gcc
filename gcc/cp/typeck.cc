@@ -11629,8 +11629,12 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
   if (retval && retval != result)
     retval = cp_build_init_expr (result, retval);
 
-  if (current_function_return_value == bare_retval)
-    INIT_EXPR_NRV_P (retval) = true;
+  if (current_function_return_values)
+    if (current_function_return_values->contains(bare_retval))
+      INIT_EXPR_NRV_P (retval) = true;
+
+//  if (current_function_return_value == bare_retval)
+//    INIT_EXPR_NRV_P (retval) = true;
 
   if (tree set = maybe_set_retval_sentinel ())
     retval = build2 (COMPOUND_EXPR, void_type_node, retval, set);

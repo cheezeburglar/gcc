@@ -5642,8 +5642,8 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 {
   class nrv_data *dp = (class nrv_data *)data;
 
-  if (dp->results_test.contains(*tp))
-    printf("haha ");
+//  if (dp->results_test.contains(*tp))
+//    printf("haha ");
 
   /* No need to walk into types.  There wouldn't be any need to walk into
      non-statements, except that we have to consider STMT_EXPRs.  */
@@ -5684,9 +5684,15 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
       tree *p = &TREE_OPERAND (*tp, 0);
       while (TREE_CODE (*p) == COMPOUND_EXPR)
 	p = &TREE_OPERAND (*p, 0);
+      if (TREE_CODE (*p) != INIT_EXPR)
+	printf("  not okay init con expr\n");
+      else if (!INIT_EXPR_NRV_P(*p))
+	printf("  not okay init con nrv\n");
       if (TREE_CODE (*p) == INIT_EXPR
-	  && INIT_EXPR_NRV_P (*p))
+	  && INIT_EXPR_NRV_P (*p)) {
+	printf("  init condition okay\n");
 	*p = dp->result;
+      }
     }
   /* Change all cleanups for the NRV to only run when not returning.  */
   else if (TREE_CODE (*tp) == CLEANUP_STMT
@@ -5755,7 +5761,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	   && DECL_EXPR_DECL (*tp) == dp->var)
     {
       printf("hit branch 8 (decl_expr) nrv_r\n");
-      debug_tree(DECL_EXPR_DECL(*tp));
+//      debug_tree(DECL_EXPR_DECL(*tp));
       tree init;
       if (DECL_INITIAL (dp->var)
 	  && DECL_INITIAL (dp->var) != error_mark_node)
