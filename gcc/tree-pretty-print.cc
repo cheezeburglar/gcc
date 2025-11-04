@@ -2834,6 +2834,9 @@ dump_generic_node (pretty_printer *pp, tree node, int spc, dump_flags_t flags,
 
     case RESULT_DECL:
       pp_string (pp, "<retval>");
+//      pp_scalar(pp, "%p ", (void *)&node);
+//      if (DECL_NAME(node))
+//	pp_tree_identifier(pp, DECL_NAME(node));
       break;
 
     case COMPONENT_REF:

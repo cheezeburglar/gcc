@@ -49,6 +49,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "contracts.h"
 #include "c-family/c-pragma.h"
 
+#include "cxx-pretty-print.h"
+#include "langhooks.h"
+
 /* There routines provide a modular interface to perform many parsing
    operations.  They may therefore be used during actual parsing, or
    during template instantiation, which may be regarded as a
@@ -5670,14 +5673,145 @@ expand_or_defer_fn (tree fn)
 class nrv_data
 {
 public:
-  nrv_data () : visited (37) {}
+  nrv_data () : visited (1000000) {}
 
   tree var;
   tree result;
   hash_set<tree> visited;
+  vec<tree> other_nrv_candidates;
   bool simple;
   bool in_nrv_cleanup;
 };
+
+
+#include "context.h"
+//auto tmp_dmp_cntxt = new gcc::dump_manager()
+
+static FILE * nrv_dump;
+struct nrv_cntxt { int replacements; int cleanups; };
+
+static nrv_cntxt nrv_stats = {.replacements = 0, .cleanups = 0};
+
+
+
+static void
+nrv_maybe_dump_init(tree fndecl, tree nrv_cand)
+{
+  if (!nrv_dump)
+    return;
+  cxx_pretty_printer pp;
+  pp.set_output_stream(nrv_dump);
+  pp.flags=0;
+
+  fprintf (nrv_dump,
+	   ";; Starting nrv opt for %s\n",
+	   lang_hooks.decl_printable_name(fndecl, 2));
+  pp.declaration (fndecl);
+  pp_newline_and_flush (&pp);
+
+  fprintf (nrv_dump,
+	   ";; Candidate var is %s\n",
+	   lang_hooks.decl_printable_name(nrv_cand, 2));
+  pp.declaration (nrv_cand);
+  pp_newline_and_flush (&pp);
+}
+
+static void
+nrv_maybe_dump_replacement_start (tree tp, int rule, bool exp = true)
+{
+  if (!nrv_dump)
+    return;
+  cxx_pretty_printer pp;
+  pp.set_output_stream(nrv_dump);
+  pp.flags=0;
+
+  fprintf(nrv_dump, "Replacing by rule %d the address %p\n", rule, (void *)&tp);
+  pp_string(&pp, "Old node is: ");
+  pp_newline_and_indent(&pp, 0);
+  if ( TREE_CODE(tp) == RETURN_EXPR )
+    pp.declaration(cfun->decl);
+  else
+    exp ? pp.expression(tp) : pp.declaration(tp);
+  pp_newline_and_flush(&pp);
+  nrv_stats.replacements += 1;
+}
+
+static void
+nrv_maybe_dump_replacement_end (tree tp /*replaced thingie*/, bool exp = true)
+{
+  if (!nrv_dump)
+    return;
+  cxx_pretty_printer pp;
+  pp.set_output_stream(nrv_dump);
+  pp.flags=0;
+
+  pp_string(&pp, "New node is: ");
+  pp_newline_and_indent(&pp, 0);
+  if ( TREE_CODE(tp) == RETURN_EXPR )
+    pp.declaration(cfun->decl);
+  else
+    exp ? pp.expression(tp) : pp.declaration(tp);
+  pp.expression(tp);
+  pp_newline_and_flush (&pp);
+}
+
+static void
+nrv_maybe_log_cleanup_start (tree tp)
+{
+  if (!nrv_dump)
+    return;
+  cxx_pretty_printer pp;
+  pp.set_output_stream(nrv_dump);
+  pp.flags=0;
+
+  if (cp_function_chain->throwing_cleanup)
+    fprintf(nrv_dump, "Starting cleanups. Throwing. Statement is: \n");
+  else
+    fprintf(nrv_dump, "Starting cleanups. Statement is: \n");
+  pp.statement(tp);
+  pp_newline_and_flush (&pp);
+  nrv_stats.cleanups += 1;
+}
+
+
+// TODO: think eh is getting munged. this isnt finished yet.
+static void
+nrv_maybe_log_cleanup_end (tree tp, bool simple)
+{
+  if (!nrv_dump)
+    return;
+  cxx_pretty_printer pp;
+  pp.set_output_stream(nrv_dump);
+  pp.flags=0;
+
+  if (cp_function_chain->throwing_cleanup)
+    fprintf(nrv_dump, "Ending cleanups. Throwing. Statement is: \n");
+  else
+    fprintf(nrv_dump, "Ending cleanups. Simple is: %d. Statement is: \n", simple);
+  pp.statement(tp);
+  pp_newline_and_flush (&pp);
+}
+
+static void
+nrv_maybe_dump_end (tree fndecl)
+{
+  if (!nrv_dump)
+    return;
+  cxx_pretty_printer pp;
+  pp.set_output_stream(nrv_dump);
+  pp.flags=0;
+
+  fprintf (nrv_dump,
+	   "Ending nrv opt for %s. Replacements: %d Cleanups %d\n",
+           lang_hooks.decl_printable_name(fndecl, 2),
+	   nrv_stats.replacements,
+	   nrv_stats.cleanups);
+  fprintf (nrv_dump, ";; Final functions is: ");
+  pp.declaration(fndecl);
+  pp_newline_and_flush (&pp);
+
+}
+
 
 /* Helper function for walk_tree, used by finalize_nrv below.  */
 
@@ -5686,15 +5820,19 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 {
   class nrv_data *dp = (class nrv_data *)data;
 
+
   /* No need to walk into types.  There wouldn't be any need to walk into
      non-statements, except that we have to consider STMT_EXPRs.  */
   if (TYPE_P (*tp))
     *walk_subtrees = 0;
-
   /* Replace all uses of the NRV with the RESULT_DECL.  */
+  /* check target expr here? TODO: I think this munges function calls with multiple result_decls. We need to keep track of other info.*/
   else if (*tp == dp->var)
+  {
+    nrv_maybe_dump_replacement_start(*tp, 1);
     *tp = dp->result;
-
+    nrv_maybe_dump_replacement_end(*tp);
+  }
   /* Avoid walking into the same tree more than once.  Unfortunately, we
      can't just use walk_tree_without duplicates because it would only call
      us for the first occurrence of dp->var in the function body.  */
@@ -5704,23 +5842,39 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
   /* If there's a label, we might need to destroy the NRV on goto (92407).  */
   else if (TREE_CODE (*tp) == LABEL_EXPR && !dp->in_nrv_cleanup)
     dp->simple = false;
+
   /* Change NRV returns to just refer to the RESULT_DECL; this is a nop,
      but differs from using NULL_TREE in that it indicates that we care
      about the value of the RESULT_DECL.  But preserve anything appended
      by check_return_expr.  */
-  else if (TREE_CODE (*tp) == RETURN_EXPR)
+  else if (TREE_CODE (*tp) == RETURN_EXPR
+	   && TREE_OPERAND(*tp, 0))
     {
+    nrv_maybe_dump_replacement_start(*tp, 2);
       tree *p = &TREE_OPERAND (*tp, 0);
       while (TREE_CODE (*p) == COMPOUND_EXPR)
 	p = &TREE_OPERAND (*p, 0);
+//      tree *foo = hash_map_safe_get (current_function_return_values_experimental, *p);
+//      gcc_assert(*foo);
       if (TREE_CODE (*p) == INIT_EXPR
 	  && INIT_EXPR_NRV_P (*p))
-	*p = dp->result;
+//	  && (*foo == dp->var || DECL_NAME(*p) == DECL_NAME(dp->result)))
+      {
+	tree *foo = hash_map_safe_get (current_function_return_values_experimental, *p);
+	gcc_assert(DECL_NAME(*foo));
+	gcc_assert(dp->result);
+	if (DECL_NAME(*foo) == DECL_NAME(dp->result))
+	  *p = dp->result;
+//	else
+//	  gcc_unreachable();
+      }
+    nrv_maybe_dump_replacement_end(*tp);
     }
   /* Change all cleanups for the NRV to only run when not returning.  */
   else if (TREE_CODE (*tp) == CLEANUP_STMT
 	   && CLEANUP_DECL (*tp) == dp->var)
     {
+      nrv_maybe_log_cleanup_start (*tp);
       dp->in_nrv_cleanup = true;
       cp_walk_tree (&CLEANUP_BODY (*tp), finalize_nrv_r, data, 0);
       dp->in_nrv_cleanup = false;
@@ -5728,8 +5882,11 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
       *walk_subtrees = 0;
 
       if (dp->simple)
+	{
 	/* For a simple NRV, just run it on the EH path.  */
 	CLEANUP_EH_ONLY (*tp) = true;
+	nrv_maybe_log_cleanup_end(*tp, dp->simple);
+	}
       else
 	{
 	  /* Not simple, we need to check current_retval_sentinel to decide
@@ -5737,10 +5894,14 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	     don't want to destroy the NRV.  If the sentinel is not set, we're
 	     leaving scope some other way, either by flowing off the end of its
 	     scope or throwing an exception.  */
-	  tree cond = build3 (COND_EXPR, void_type_node,
-			      current_retval_sentinel,
-			      void_node, CLEANUP_EXPR (*tp));
-	  CLEANUP_EXPR (*tp) = cond;
+//	  if (current_retval_sentinel)
+//	  {
+	    tree cond = build3 (COND_EXPR, void_type_node,
+				current_retval_sentinel,
+				void_node, CLEANUP_EXPR (*tp));
+	    CLEANUP_EXPR (*tp) = cond;
+	    nrv_maybe_log_cleanup_end(*tp, dp->simple);
+//	  }
 	}
 
       /* If a cleanup might throw, we need to clear current_retval_sentinel on
@@ -5756,6 +5917,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	      /* We're already only on the EH path, just prepend it.  */
 	      tree &exp = CLEANUP_EXPR (*tp);
 	      exp = build2 (COMPOUND_EXPR, void_type_node, clear, exp);
+	      nrv_maybe_log_cleanup_end(*tp, dp->simple);
 	    }
 	  else
 	    {
@@ -5765,6 +5927,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	      bod = build_stmt (EXPR_LOCATION (*tp), CLEANUP_STMT,
 				bod, clear, current_retval_sentinel);
 	      CLEANUP_EH_ONLY (bod) = true;
+	      nrv_maybe_log_cleanup_end(*tp, dp->simple);
 	    }
 	}
     }
@@ -5779,6 +5942,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
   else if (TREE_CODE (*tp) == DECL_EXPR
 	   && DECL_EXPR_DECL (*tp) == dp->var)
     {
+      nrv_maybe_dump_replacement_start(*tp, 3, true);
       tree init;
       if (DECL_INITIAL (dp->var)
 	  && DECL_INITIAL (dp->var) != error_mark_node)
@@ -5789,6 +5953,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
       DECL_INITIAL (dp->var) = NULL_TREE;
       SET_EXPR_LOCATION (init, EXPR_LOCATION (*tp));
       *tp = init;
+      nrv_maybe_dump_replacement_end(*tp, true);
     }
 
   /* Keep iterating.  */
@@ -5805,11 +5970,30 @@ finalize_nrv (tree fndecl, tree var)
 {
   class nrv_data data;
   tree result = DECL_RESULT (fndecl);
+  tree result_old = DECL_RESULT (fndecl);
 
+  auto tmp_dmp_context = new gcc::dump_manager();
+  nrv_dump = tmp_dmp_context->get_dump_file_info(TDI_original)->pstream;
+//  nrv_dump = NULL;
+
+  nrv_stats.replacements=0;
+  nrv_stats.cleanups=0;
+
+  /* Sometimes we walk with returns generated by the compiler in, e.g. _Coro_gro.
+     Set DECL_NAME manually for them. */
+//  if (DECL_NAME (result))
+//    return; // FIXME: Hacky. we need multiple DECL_RESULTs that are semantically distinct.
+//    DECL_NAME (result) = get_identifier("__nrvo_init");
+
+//  if (!DECL_NAME (result))
+//  {
   /* Copy name from VAR to RESULT.  */
   DECL_NAME (result) = DECL_NAME (var);
   /* Don't forget that we take its address.  */
   TREE_ADDRESSABLE (result) = TREE_ADDRESSABLE (var);
+//  }
+//  else
+//    return;
   /* Finally set DECL_VALUE_EXPR to avoid assigning
      a stack slot at -O0 for the original var and debug info
      uses RESULT location for VAR.  */
@@ -5820,13 +6004,19 @@ finalize_nrv (tree fndecl, tree var)
   data.result = result;
   data.in_nrv_cleanup = false;
 
+
+  hash_set<tree> experimental_visited(100);
   /* This is simpler for variables declared in the outer scope of
      the function so we know that their lifetime always ends with a
      return; see g++.dg/opt/nrv6.C.  */
   tree outer = outer_curly_brace_block (fndecl);
   data.simple = chain_member (var, BLOCK_VARS (outer));
 
+  nrv_maybe_dump_init (fndecl, var);
   cp_walk_tree (&DECL_SAVED_TREE (fndecl), finalize_nrv_r, &data, 0);
+  nrv_maybe_dump_end (fndecl);
+  delete tmp_dmp_context;
+  DECL_RESULT(fndecl) = result_old;
 }
 
 /* Create CP_OMP_CLAUSE_INFO for clause C.  Returns true if it is invalid.  */

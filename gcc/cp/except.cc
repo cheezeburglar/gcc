@@ -318,7 +318,6 @@ build_must_not_throw_expr (tree body, tree cond)
       else if (integer_onep (cond))
 	cond = NULL_TREE;
     }
-
   return build2 (MUST_NOT_THROW_EXPR, type, body, cond);
 }
 

@@ -64,7 +64,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "gcc-urlifier.h"
 #include "diagnostic-highlight-colors.h"
 #include "pretty-print-markup.h"
-
+#include "cstdio"
+#include "print-tree.h"
 /* Possible cases of bad specifiers type used by bad_specifiers. */
 enum bad_spec_place {
   BSP_VAR,    /* variable */
@@ -20067,7 +20068,6 @@ start_preparsed_function (tree decl1, tree attrs, int flags)
     DECL_ATTRIBUTES (current_class_ptr)
       = tree_cons (get_identifier ("clobber *this"), NULL_TREE,
 		   DECL_ATTRIBUTES (current_class_ptr));
-
   if (!processing_template_decl
       && DECL_CONSTRUCTOR_P (decl1)
       && sanitize_flags_p (SANITIZE_VPTR)
@@ -20676,11 +20676,18 @@ finish_function (bool inline_p)
 
   /* Set up the named return value optimization, if we can.  Candidate
      variables are selected in check_return_expr.  */
-  if (tree r = current_function_return_value)
+  if (current_function_return_values)
     {
-      if (r != error_mark_node)
-	finalize_nrv (fndecl, r);
       current_function_return_value = NULL_TREE;
+      for ( auto r : current_function_return_values)
+      {
+	if (r != NULL_TREE)
+	{
+	  if (r != error_mark_node)
+	    finalize_nrv(fndecl, r);
+	  r = NULL_TREE;
+	}
+      }
     }
 
   /* Must mark the RESULT_DECL as being in this function.  */
