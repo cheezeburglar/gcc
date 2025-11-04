@@ -47,6 +47,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "memmodel.h"
 #include "gimplify.h"
 #include "contracts.h"
+#include "print-tree.h"
+#include "cstdio"
 
 /* There routines provide a modular interface to perform many parsing
    operations.  They may therefore be used during actual parsing, or
@@ -5625,8 +5627,10 @@ public:
   nrv_data () : visited (37) {}
 
   tree var;
+  vec<tree, va_gc> vars_test;
   tree result;
   hash_set<tree> visited;
+  hash_set<tree> results_test;
   bool simple;
   bool in_nrv_cleanup;
 };
@@ -5638,30 +5642,45 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 {
   class nrv_data *dp = (class nrv_data *)data;
 
+  if (dp->results_test.contains(*tp))
+    printf("haha ");
+
   /* No need to walk into types.  There wouldn't be any need to walk into
      non-statements, except that we have to consider STMT_EXPRs.  */
   if (TYPE_P (*tp))
+  {
+    printf("hit branch 1 nrv_r\n");
     *walk_subtrees = 0;
-
+  }
   /* Replace all uses of the NRV with the RESULT_DECL.  */
   else if (*tp == dp->var)
+  {
+    printf("hit branch 2 nrv_r\n");
     *tp = dp->result;
-
+  }
   /* Avoid walking into the same tree more than once.  Unfortunately, we
      can't just use walk_tree_without duplicates because it would only call
      us for the first occurrence of dp->var in the function body.  */
   else if (dp->visited.add (*tp))
+  {
+    printf("hit branch 3 nrv_r\n");
     *walk_subtrees = 0;
+  }
 
   /* If there's a label, we might need to destroy the NRV on goto (92407).  */
   else if (TREE_CODE (*tp) == LABEL_EXPR && !dp->in_nrv_cleanup)
+  {
+    printf("hit branch 4 (label_expr) nrv_r\n");
     dp->simple = false;
+  }
+
   /* Change NRV returns to just refer to the RESULT_DECL; this is a nop,
      but differs from using NULL_TREE in that it indicates that we care
      about the value of the RESULT_DECL.  But preserve anything appended
      by check_return_expr.  */
   else if (TREE_CODE (*tp) == RETURN_EXPR)
     {
+      printf("hit branch 5 (return_expr) nrv_r\n");
       tree *p = &TREE_OPERAND (*tp, 0);
       while (TREE_CODE (*p) == COMPOUND_EXPR)
 	p = &TREE_OPERAND (*p, 0);
@@ -5673,6 +5692,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
   else if (TREE_CODE (*tp) == CLEANUP_STMT
 	   && CLEANUP_DECL (*tp) == dp->var)
     {
+      printf("hit branch 6 (cleanup_stmt) nrv_r\n");
       dp->in_nrv_cleanup = true;
       cp_walk_tree (&CLEANUP_BODY (*tp), finalize_nrv_r, data, 0);
       dp->in_nrv_cleanup = false;
@@ -5725,12 +5745,17 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
   else if (TREE_CODE (*tp) == CLEANUP_STMT
 	   && dp->in_nrv_cleanup
 	   && CLEANUP_DECL (*tp) == dp->result)
+  {
+    printf("hit branch 7 (cleanup_stmt) nrv_r\n");
     CLEANUP_EXPR (*tp) = void_node;
-  /* Replace the DECL_EXPR for the NRV with an initialization of the
+  }
+    /* Replace the DECL_EXPR for the NRV with an initialization of the
      RESULT_DECL, if needed.  */
   else if (TREE_CODE (*tp) == DECL_EXPR
 	   && DECL_EXPR_DECL (*tp) == dp->var)
     {
+      printf("hit branch 8 (decl_expr) nrv_r\n");
+      debug_tree(DECL_EXPR_DECL(*tp));
       tree init;
       if (DECL_INITIAL (dp->var)
 	  && DECL_INITIAL (dp->var) != error_mark_node)
@@ -5741,6 +5766,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
       DECL_INITIAL (dp->var) = NULL_TREE;
       SET_EXPR_LOCATION (init, EXPR_LOCATION (*tp));
       *tp = init;
+      printf("\n");
     }
 
   /* Keep iterating.  */
@@ -5771,6 +5797,9 @@ finalize_nrv (tree fndecl, tree var)
   data.var = var;
   data.result = result;
   data.in_nrv_cleanup = false;
+
+  for (auto r : current_function_return_values)
+    data.results_test.add(r);
 
   /* This is simpler for variables declared in the outer scope of
      the function so we know that their lifetime always ends with a

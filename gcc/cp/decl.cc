@@ -64,6 +64,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "gcc-urlifier.h"
 #include "diagnostic-highlight-colors.h"
 #include "pretty-print-markup.h"
+#include "print-tree.h"
+#include "cstdio"
+
 
 /* Possible cases of bad specifiers type used by bad_specifiers. */
 enum bad_spec_place {
@@ -20430,12 +20433,28 @@ finish_function (bool inline_p)
 
   /* Set up the named return value optimization, if we can.  Candidate
      variables are selected in check_return_expr.  */
-  if (tree r = current_function_return_value)
+  if (current_function_return_values)
+  {
+    for ( auto r : current_function_return_values)
     {
-      if (r != error_mark_node)
-	finalize_nrv (fndecl, r);
-      current_function_return_value = NULL_TREE;
+      printf("iterating with finalize irv \n");
+      printf("fndecl: \n");
+      debug_tree(fndecl);
+      printf("\n decl result fndecl: \n");
+      debug_tree(DECL_RESULT(fndecl));
+      printf("\n r: \n");
+      debug_tree(r);
+      printf("\n\n");
+      finalize_nrv(fndecl, r);
     }
+  }
+
+//  if (tree r = current_function_return_value)
+//    {
+//      if (r != error_mark_node)
+//	finalize_nrv (fndecl, r);
+//      current_function_return_value = NULL_TREE;
+//    }
 
   /* Must mark the RESULT_DECL as being in this function.  */
   DECL_CONTEXT (DECL_RESULT (fndecl)) = fndecl;
