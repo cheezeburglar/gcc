@@ -11590,6 +11590,7 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
       if (retval == error_mark_node)
 	{
 	  /* And suppress NRV.  */
+	  vec_safe_push(current_function_return_values, error_mark_node);
 	  current_function_return_value = error_mark_node;
 	  return retval;
 	}
