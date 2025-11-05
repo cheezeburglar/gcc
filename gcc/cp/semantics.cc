@@ -5695,7 +5695,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
     }
   /* Change all cleanups for the NRV to only run when not returning.  */
   else if (TREE_CODE (*tp) == CLEANUP_STMT
-	   && dp->results_test.contains(CLEANUP_DECL (*tp)))
+//	   && dp->results_test.contains(CLEANUP_DECL (*tp)))
 	   && CLEANUP_DECL (*tp) == dp->var)
     {
       printf("hit branch 6 (cleanup_stmt) nrv_r\n");
