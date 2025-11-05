@@ -20438,14 +20438,14 @@ finish_function (bool inline_p)
   {
     for ( auto r : current_function_return_values)
     {
-      printf("iterating with finalize irv \n");
-      printf("fndecl: \n");
-      debug_tree(fndecl);
-      printf("\n decl result fndecl: \n");
-      debug_tree(DECL_RESULT(fndecl));
-      printf("\n r: \n");
-      debug_tree(r);
-      printf("\n\n");
+//      printf("iterating with finalize irv \n");
+//      printf("fndecl: \n");
+//      debug_tree(fndecl);
+//      printf("\n decl result fndecl: \n");
+//      debug_tree(DECL_RESULT(fndecl));
+//      printf("\n r: \n");
+//      debug_tree(r);
+//      printf("\n\n");
       finalize_nrv(fndecl, r);
     }
   }
