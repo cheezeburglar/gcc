@@ -5627,7 +5627,6 @@ public:
   nrv_data () : visited (37) {}
 
   tree var;
-  vec<tree, va_gc> vars_test;
   tree result;
   hash_set<tree> visited;
   hash_set<tree> results_test;
@@ -5696,7 +5695,8 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
     }
   /* Change all cleanups for the NRV to only run when not returning.  */
   else if (TREE_CODE (*tp) == CLEANUP_STMT
-	   && CLEANUP_DECL (*tp) == dp->var)
+	   && dp->results_test.contains(CLEANUP_DECL (*tp)))
+//	   && CLEANUP_DECL (*tp) == dp->var)
     {
 //      printf("hit branch 6 (cleanup_stmt) nrv_r\n");
       dp->in_nrv_cleanup = true;
