@@ -5641,20 +5641,20 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 {
   class nrv_data *dp = (class nrv_data *)data;
 
-//  if (dp->results_test.contains(*tp))
-//    printf("haha ");
+  if (dp->results_test.contains(*tp))
+    printf("haha ");
 
   /* No need to walk into types.  There wouldn't be any need to walk into
      non-statements, except that we have to consider STMT_EXPRs.  */
   if (TYPE_P (*tp))
   {
-//    printf("hit branch 1 nrv_r\n");
+    printf("hit branch 1 nrv_r\n");
     *walk_subtrees = 0;
   }
   /* Replace all uses of the NRV with the RESULT_DECL.  */
   else if (*tp == dp->var)
   {
-//    printf("hit branch 2 nrv_r\n");
+    printf("hit branch 2 nrv_r\n");
     *tp = dp->result;
   }
   /* Avoid walking into the same tree more than once.  Unfortunately, we
@@ -5662,14 +5662,14 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
      us for the first occurrence of dp->var in the function body.  */
   else if (dp->visited.add (*tp))
   {
-//    printf("hit branch 3 nrv_r\n");
+    printf("hit branch 3 nrv_r\n");
     *walk_subtrees = 0;
   }
 
   /* If there's a label, we might need to destroy the NRV on goto (92407).  */
   else if (TREE_CODE (*tp) == LABEL_EXPR && !dp->in_nrv_cleanup)
   {
-//    printf("hit branch 4 (label_expr) nrv_r\n");
+    printf("hit branch 4 (label_expr) nrv_r\n");
     dp->simple = false;
   }
 
@@ -5683,22 +5683,22 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
       tree *p = &TREE_OPERAND (*tp, 0);
       while (TREE_CODE (*p) == COMPOUND_EXPR)
 	p = &TREE_OPERAND (*p, 0);
-//      if (TREE_CODE (*p) != INIT_EXPR)
-//	printf("  not okay init con expr\n");
-//      else if (!INIT_EXPR_NRV_P(*p))
-//	printf("  not okay init con nrv\n");
+      if (TREE_CODE (*p) != INIT_EXPR)
+	printf("  not okay init con expr\n");
+      else if (!INIT_EXPR_NRV_P(*p))
+	printf("  not okay init con nrv\n");
       if (TREE_CODE (*p) == INIT_EXPR
 	  && INIT_EXPR_NRV_P (*p)) {
-//	printf("  init condition okay\n");
+	printf("  init condition okay\n");
 	*p = dp->result;
       }
     }
   /* Change all cleanups for the NRV to only run when not returning.  */
   else if (TREE_CODE (*tp) == CLEANUP_STMT
 	   && dp->results_test.contains(CLEANUP_DECL (*tp)))
-//	   && CLEANUP_DECL (*tp) == dp->var)
+	   && CLEANUP_DECL (*tp) == dp->var)
     {
-//      printf("hit branch 6 (cleanup_stmt) nrv_r\n");
+      printf("hit branch 6 (cleanup_stmt) nrv_r\n");
       dp->in_nrv_cleanup = true;
       cp_walk_tree (&CLEANUP_BODY (*tp), finalize_nrv_r, data, 0);
       dp->in_nrv_cleanup = false;
@@ -5752,7 +5752,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	   && dp->in_nrv_cleanup
 	   && CLEANUP_DECL (*tp) == dp->result)
   {
-//    printf("hit branch 7 (cleanup_stmt) nrv_r\n");
+    printf("hit branch 7 (cleanup_stmt) nrv_r\n");
     CLEANUP_EXPR (*tp) = void_node;
   }
     /* Replace the DECL_EXPR for the NRV with an initialization of the
@@ -5760,8 +5760,8 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
   else if (TREE_CODE (*tp) == DECL_EXPR
 	   && DECL_EXPR_DECL (*tp) == dp->var)
     {
-//      printf("hit branch 8 (decl_expr) nrv_r\n");
-//      debug_tree(DECL_EXPR_DECL(*tp));
+      printf("hit branch 8 (decl_expr) nrv_r\n");
+      debug_tree(DECL_EXPR_DECL(*tp));
       tree init;
       if (DECL_INITIAL (dp->var)
 	  && DECL_INITIAL (dp->var) != error_mark_node)
@@ -5772,7 +5772,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
       DECL_INITIAL (dp->var) = NULL_TREE;
       SET_EXPR_LOCATION (init, EXPR_LOCATION (*tp));
       *tp = init;
-//      printf("\n");
+      printf("\n");
     }
 
   /* Keep iterating.  */
