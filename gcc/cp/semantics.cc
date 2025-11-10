@@ -5629,7 +5629,11 @@ public:
   tree var;
   tree result;
   hash_set<tree> visited;
+
+  // experimental for nrv
   hash_set<tree> results_test;
+  tree canary;
+
   bool simple;
   bool in_nrv_cleanup;
 };
@@ -5698,16 +5702,27 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 //	   && dp->results_test.contains(CLEANUP_DECL (*tp)))
 	   && CLEANUP_DECL (*tp) == dp->var)
     {
+      printf("  --- enter cleanup_stmt handling --- \n");
+      printf(" note: current_retval_sentinel is: \n");
+      debug_tree(current_retval_sentinel);
+      printf(" \n");
       printf("hit branch 6 (cleanup_stmt) nrv_r\n");
       dp->in_nrv_cleanup = true;
+      printf("	  --- enter cleanup_stmt handling - true - --- \n");
       cp_walk_tree (&CLEANUP_BODY (*tp), finalize_nrv_r, data, 0);
+      printf("	  --- exit cleanup_stmt handling --- \n");
       dp->in_nrv_cleanup = false;
+      printf("	  --- enter cleanup_stmt handling - false - --- \n");
       cp_walk_tree (&CLEANUP_EXPR (*tp), finalize_nrv_r, data, 0);
+      printf("	  --- exit cleanup_stmt handling --- \n");
       *walk_subtrees = 0;
 
       if (dp->simple)
+	{
+	printf("  -- simple EH");
 	/* For a simple NRV, just run it on the EH path.  */
 	CLEANUP_EH_ONLY (*tp) = true;
+	}
       else
 	{
 	  /* Not simple, we need to check current_retval_sentinel to decide
@@ -5715,6 +5730,13 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	     don't want to destroy the NRV.  If the sentinel is not set, we're
 	     leaving scope some other way, either by flowing off the end of its
 	     scope or throwing an exception.  */
+	  printf("  -- in current_retval_sentinel brnach, not simple\n");
+	  // WE NEED MORE CHECKS HERE!!! -THOR
+	  if (chain_member (dp->var,
+			    dp->canary)) {
+	    printf("  TEST COND OKAY!\n");
+	  }
+	  maybe_set_retval_sentinel();
 	  tree cond = build3 (COND_EXPR, void_type_node,
 			      current_retval_sentinel,
 			      void_node, CLEANUP_EXPR (*tp));
@@ -5726,6 +5748,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	 cleanup added by maybe_splice_retval_cleanup doesn't run.  */
       if (cp_function_chain->throwing_cleanup)
 	{
+	  printf("  in throwing_cleanup branch \n");
 	  tree clear = build2 (MODIFY_EXPR, boolean_type_node,
 			       current_retval_sentinel,
 			       boolean_false_node);
@@ -5745,6 +5768,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	      CLEANUP_EH_ONLY (bod) = true;
 	    }
 	}
+      printf("  --- exit cleanup_stmt handling --- \n");
     }
   /* Disable maybe_splice_retval_cleanup within the NRV cleanup scope, we don't
      want to destroy the retval before the variable goes out of scope.  */
@@ -5787,6 +5811,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 void
 finalize_nrv (tree fndecl, tree var)
 {
+  printf("--- enter finalize_nrv ---\n");
   class nrv_data data;
   tree result = DECL_RESULT (fndecl);
 
@@ -5812,8 +5837,16 @@ finalize_nrv (tree fndecl, tree var)
      return; see g++.dg/opt/nrv6.C.  */
   tree outer = outer_curly_brace_block (fndecl);
   data.simple = chain_member (var, BLOCK_VARS (outer));
+  data.canary = BLOCK_VARS (outer);
+
+  printf(" simple dumps:\n");
+  printf(" tree outer is: \n");
+  debug_tree(outer);
+  printf(" data.simple is: %d\n", data.simple);
+
 
   cp_walk_tree (&DECL_SAVED_TREE (fndecl), finalize_nrv_r, &data, 0);
+  printf("--- exit finalize_nrv ---\n");
 }
 
 /* Create CP_OMP_CLAUSE_INFO for clause C.  Returns true if it is invalid.  */
