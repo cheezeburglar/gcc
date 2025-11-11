@@ -20433,7 +20433,8 @@ finish_function (bool inline_p)
 
   /* Set up the named return value optimization, if we can.  Candidate
      variables are selected in check_return_expr.  */
-  if (current_function_return_values)
+  if (current_function_return_values
+      && fndecl != error_mark_node)
   {
     for ( auto r : current_function_return_values)
     {
