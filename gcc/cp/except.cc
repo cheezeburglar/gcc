@@ -1350,13 +1350,13 @@ maybe_set_retval_sentinel ()
     {
       /* Just create the temporary now, maybe_splice_retval_cleanup
 	 will do the rest.  */
-      printf("Creating current_retval_sentinel\n");
+//      printf("Creating current_retval_sentinel\n");
       current_retval_sentinel = create_temporary_var (boolean_type_node);
       DECL_INITIAL (current_retval_sentinel) = boolean_false_node;
       pushdecl_outermost_localscope (current_retval_sentinel);
     }
 
-  printf("Setting current_retval_sentinel true\n");
+//  printf("Setting current_retval_sentinel true\n");
   return build2 (MODIFY_EXPR, boolean_type_node,
 		 current_retval_sentinel, boolean_true_node);
 }
