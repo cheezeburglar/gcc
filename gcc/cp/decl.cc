@@ -20447,6 +20447,7 @@ finish_function (bool inline_p)
 //      debug_tree(r);
 //      printf("\n\n");
       finalize_nrv(fndecl, r);
+      r = NULL_TREE;
     }
   }
 
