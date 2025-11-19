@@ -35,6 +35,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "asan.h"
 #include "stor-layout.h"
 #include "pointer-query.h"
+#include "cstdio"
 
 static bool begin_init_stmts (tree *, tree *);
 static tree finish_init_stmts (bool, tree, tree);
@@ -3664,6 +3665,7 @@ build_new_1 (vec<tree, va_gc> **placement, tree type, tree nelts,
   tree clobber_expr = NULL_TREE;
   if (do_clobber)
     {
+      printf(" -- Doing CLOBBER1\n");
       if (array_p && TREE_CODE (cst_outer_nelts) != INTEGER_CST)
 	{
 	  /* Clobber each element rather than the array at once.  */

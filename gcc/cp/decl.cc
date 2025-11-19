@@ -19378,6 +19378,7 @@ implicit_default_ctor_p (tree fn)
 static tree
 build_clobber_this (clobber_kind kind)
 {
+  printf(" -- Doing CLOBBER2\n");
   /* Clobbering an empty base is pointless, and harmful if its one byte
      TYPE_SIZE overlays real data.  */
   if (is_empty_class (current_class_type))
@@ -19823,10 +19824,12 @@ start_preparsed_function (tree decl1, tree attrs, int flags)
       && !implicit_default_ctor_p (decl1)
       && !lookup_attribute ("clobber *this",
 			    DECL_ATTRIBUTES (current_class_ptr)))
+  {
+    printf(" -- Doing CLOBBER3\n");
     DECL_ATTRIBUTES (current_class_ptr)
       = tree_cons (get_identifier ("clobber *this"), NULL_TREE,
 		   DECL_ATTRIBUTES (current_class_ptr));
-
+  }
   if (!processing_template_decl
       && DECL_CONSTRUCTOR_P (decl1)
       && sanitize_flags_p (SANITIZE_VPTR)
@@ -20029,6 +20032,7 @@ begin_destructor_body (void)
 	  /* Clobbering an empty base is harmful if it overlays real data.  */
 	  && !is_empty_class (current_class_type))
       {
+      printf(" -- Doing CLOBBER4\n");
 	if (sanitize_flags_p (SANITIZE_VPTR)
 	    && (flag_sanitize_recover & SANITIZE_VPTR) == 0
 	    && TYPE_CONTAINS_VPTR_P (current_class_type))
@@ -20434,8 +20438,8 @@ finish_function (bool inline_p)
 
   /* Set up the named return value optimization, if we can.  Candidate
      variables are selected in check_return_expr.  */
-  if (current_function_return_values
-      && fndecl != error_mark_node)
+  if (current_function_return_values)
+//      && fndecl != error_mark_node)
   {
     for ( auto r : current_function_return_values)
     {
@@ -20447,8 +20451,12 @@ finish_function (bool inline_p)
 //      printf("\n r: \n");
 //      debug_tree(r);
 //      printf("\n\n");
-      finalize_nrv(fndecl, r);
-      r = NULL_TREE;
+      if (r != error_mark_node)
+      {
+        finalize_nrv(fndecl, r);
+        r = NULL_TREE;
+        current_function_return_value = NULL_TREE;
+      }
     }
   }
 

@@ -229,7 +229,7 @@ announce_function (tree decl)
 	fprintf (stderr, "%s ",
 		 identifier_to_locale (IDENTIFIER_POINTER (DECL_NAME (decl))));
       else
-	fprintf (stderr, " %s",
+	fprintf (stderr, " %s -foobar- \n",
 		 identifier_to_locale (lang_hooks.decl_printable_name (decl, 2)));
       fflush (stderr);
       pp_needs_newline (global_dc->get_reference_printer ()) = true;
