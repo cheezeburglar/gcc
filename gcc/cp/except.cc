@@ -30,6 +30,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "attribs.h"
 #include "tree-iterator.h"
 #include "target.h"
+#include "cstdio"
 
 static void push_eh_cleanup (tree);
 static tree prepare_eh_type (tree);
@@ -295,6 +296,7 @@ push_eh_cleanup (tree type)
 tree
 build_must_not_throw_expr (tree body, tree cond)
 {
+  printf(" -- enter build_must_not_throw_expr\n");
   tree type = body ? TREE_TYPE (body) : void_type_node;
 
   if (!flag_exceptions)
@@ -615,6 +617,7 @@ wrap_cleanups_r (tree *tp, int *walk_subtrees, void * /*data*/)
   cleanup = TARGET_EXPR_CLEANUP (exp);
   if (cleanup)
     {
+      printf(" -- debug -- am i here?\n");
       cleanup = build2 (MUST_NOT_THROW_EXPR, void_type_node, cleanup,
 			NULL_TREE);
       MUST_NOT_THROW_THROW_P (cleanup) = 1;
