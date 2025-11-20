@@ -99,6 +99,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "unique-argv.h"
 
 #include "selftest.h"
+#include "cstdio"
 
 #ifdef HAVE_isl
 #include <isl/version.h>
@@ -231,6 +232,7 @@ announce_function (tree decl)
       else
 	fprintf (stderr, " %s -foobar- \n",
 		 identifier_to_locale (lang_hooks.decl_printable_name (decl, 2)));
+      printf(" -- START PRINTF DEBUGGING: \n");
       fflush (stderr);
       pp_needs_newline (global_dc->get_reference_printer ()) = true;
       diagnostic_set_last_function (global_dc,

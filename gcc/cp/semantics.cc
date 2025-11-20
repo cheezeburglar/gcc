@@ -12523,6 +12523,7 @@ finish_transaction_stmt (tree stmt, tree compound_stmt, int flags, tree noex)
   gcc_assert (!(noex && compound_stmt));
   if (noex)
     {
+      printf(" -- sema must_not_throw 1 -- \n");
       tree body = build_must_not_throw_expr (TRANSACTION_EXPR_BODY (stmt),
 					     noex);
       protected_set_expr_location
@@ -12545,6 +12546,7 @@ build_transaction_expr (location_t loc, tree expr, int flags, tree noex)
   tree ret;
   if (noex)
     {
+      printf(" -- sema must_not_throw 2 -- \n");
       expr = build_must_not_throw_expr (expr, noex);
       protected_set_expr_location (expr, loc);
       TREE_SIDE_EFFECTS (expr) = 1;
