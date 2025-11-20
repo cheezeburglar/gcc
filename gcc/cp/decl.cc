@@ -19381,6 +19381,7 @@ build_clobber_this (clobber_kind kind)
   printf(" -- Doing CLOBBER2\n");
   /* Clobbering an empty base is pointless, and harmful if its one byte
      TYPE_SIZE overlays real data.  */
+  printf(" -- build_clobber_this called\n -- clobber_kind is %d", kind);
   if (is_empty_class (current_class_type))
     return void_node;
 

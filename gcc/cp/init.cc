@@ -3572,6 +3572,10 @@ build_new_1 (vec<tree, va_gc> **placement, tree type, tree nelts,
        && (!outer_nelts || !integer_zerop (cst_outer_nelts))
        && (!*init || CLASS_TYPE_P (elt_type)));
 
+  if (do_clobber)
+    printf(" -- do_clobber is yes\n");
+  else
+    printf(" -- do_clobber -s no\n");
   /* In the simple case, we can stop now.  */
   pointer_type = build_pointer_type (type);
   if (!cookie_size && !is_initialized && !member_delete_p && !do_clobber)
