@@ -320,7 +320,7 @@ build_must_not_throw_expr (tree body, tree cond)
       else if (integer_onep (cond))
 	cond = NULL_TREE;
     }
-  printf(" -- except must_not_throw 1 -- ");
+  printf(" -- except must_not_throw 1 -- \n");
   return build2 (MUST_NOT_THROW_EXPR, type, body, cond);
 }
 
@@ -368,7 +368,7 @@ initialize_handler_parm (tree decl, tree exp)
       /* Force cleanups now to avoid nesting problems with the
 	 MUST_NOT_THROW_EXPR.  */
       init = fold_build_cleanup_point_expr (TREE_TYPE (init), init);
-      printf(" -- except must_not_throw 2 -- ");
+      printf(" -- except must_not_throw 2 -- \n");
       init = build_must_not_throw_expr (init, NULL_TREE);
       if (init && TREE_CODE (init) == MUST_NOT_THROW_EXPR)
 	MUST_NOT_THROW_CATCH_P (init) = 1;
@@ -525,7 +525,7 @@ begin_eh_spec_block (void)
      MUST_NOT_THROW_EXPR.  */
   if (TYPE_NOEXCEPT_P (TREE_TYPE (current_function_decl)))
     {
-      printf(" -- except must_not_throw 3 -- ");
+      printf(" -- except must_not_throw 3 -- \n");
       r = build_stmt (spec_location, MUST_NOT_THROW_EXPR,
 		      NULL_TREE, NULL_TREE);
       TREE_SIDE_EFFECTS (r) = 1;
@@ -619,7 +619,7 @@ wrap_cleanups_r (tree *tp, int *walk_subtrees, void * /*data*/)
   cleanup = TARGET_EXPR_CLEANUP (exp);
   if (cleanup)
     {
-      printf(" -- except must_not_throw 4 -- ");
+      printf(" -- except must_not_throw 4 -- \n");
       cleanup = build2 (MUST_NOT_THROW_EXPR, void_type_node, cleanup,
 			NULL_TREE);
       MUST_NOT_THROW_THROW_P (cleanup) = 1;
@@ -772,7 +772,7 @@ build_throw (location_t loc, tree exp, tsubst_flags_t complain)
 
       /* Mark any cleanups from the initialization as MUST_NOT_THROW, since
 	 they are run after the exception object is initialized.  */
-      printf(" -- except must_not_throw 5 -- ");
+      printf(" -- except must_not_throw 5 -- \n");
       cp_walk_tree_without_duplicates (&exp, wrap_cleanups_r, 0);
 
       /* Prepend the allocation.  */
