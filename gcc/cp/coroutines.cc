@@ -66,7 +66,7 @@ dump_record_fields (cxx_pretty_printer *pp, tree typ)
 }
 
 /* The lang-coro stream.  */
-static FILE *dmp_str = NULL;
+static FILE *dmp_str = stderr;
 
 /* ID of the lang-coro dump. */
 int coro_dump_id;
