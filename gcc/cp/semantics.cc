@@ -5780,7 +5780,7 @@ finalize_nrv (tree fndecl, tree var)
   class nrv_data data;
   tree result = DECL_RESULT (fndecl);
 
-//  if (!result->decl_minimal.name) { return; }
+  if (!result->decl_minimal.name) { return; }
 //  TODO: Learn why I did this origianlly - THOR
 
   /* Copy name from VAR to RESULT.  */
