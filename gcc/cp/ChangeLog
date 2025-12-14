@@ -1,3 +1,403 @@
+2025-12-13  Jakub Jelinek  <jakub@redhat.com>
+
+	* parser.cc (cp_parser_omp_clause_reduction): Provide fixit hints
+	for -Wdeprecated-openmp diagnostics.
+	(cp_parser_omp_clause_linear): Likewise.
+	(cp_parser_omp_clause_depend): Likewise.
+	(cp_parser_omp_clause_map): Likewise.  Reset num_commas after the
+	diagnostics.
+	(cp_parser_omp_clause_proc_bind): Provide fixit hints for
+	-Wdeprecated-openmp diagnostics.
+	(cp_parser_omp_all_clauses): Move -Wdeprecated-openmp diagnostics
+	for to vs. enter here, add fixit hints for it.
+	(cp_parser_omp_master):Add MASTER_LOC argument.  Provide fixit hints
+	for -Wdeprecated-openmp diagnostics.
+	(cp_parser_omp_parallel): Adjust cp_parser_omp_master caller.
+	(cp_parser_omp_declare_target): Don't emit -Wdeprecated-openmp
+	warning for to vs. enter here.
+	(cp_parser_omp_metadirective): Provide fixit hints for
+	-Wdeprecated-openmp diagnostics.
+	(cp_parser_omp_construct): Adjust cp_parser_omp_master caller.
+
+2025-12-12  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* method.cc (constructible_expr): Emit diagnostics for abstract
+	types.
+	* typeck2.cc (abstract_virtuals_error): Use more accurate
+	wording for default case, and remove extranneous whitespace
+	in favour of a nesting level.
+
+2025-12-12  Chung-Lin Tang  <cltang@baylibre.com>
+	    Tobias Burnus  <tburnus@baylibre.com>
+	    Andrew Stubbs  <ams@baylibre.com>
+
+	* parser.cc (cp_parser_omp_clause_uses_allocators): New function.
+	(cp_parser_omp_clause_name, cp_parser_omp_all_clauses,
+	OMP_TARGET_CLAUSE_MASK): Handle uses_allocators.
+	* semantics.cc (finish_omp_clauses): Likewise.
+	* pt.cc (tsubst_omp_clauses): Likewise.
+
+2025-12-11  Jakub Jelinek  <jakub@redhat.com>
+
+	PR testsuite/123098
+	* parser.cc (cp_parser_omp_clause_reduction): Only emit
+	-Wdeprecated-openmp warning for CPP_MINUS if is_omp.
+
+2025-12-11  Jakub Jelinek  <jakub@redhat.com>
+
+	* parser.cc (cp_parser_omp_clause_reduction,
+	cp_parser_omp_clause_linear, cp_parser_omp_clause_depend,
+	cp_parser_omp_clause_map, cp_parser_omp_clause_proc_bind,
+	cp_parser_omp_master, cp_parser_omp_declare_target,
+	cp_parser_omp_metadirective): Formatting fixes.
+
+2025-12-11  supers1ngular  <supers1ngular@baylibre.com>
+
+	* parser.cc (cp_parser_omp_clause_reduction): Deprecate '-'
+	operator.
+	(cp_parser_omp_clause_linear): Deprecate modifiers with parens.
+	(cp_parser_omp_clause_depend): Deprecate sink and source.
+	(cp_parser_omp_clause_map): Map clause modifiers
+	comma-separated.
+	(cp_parser_omp_declare_target): Deprecate synonymous omp declare
+	target for omp begin declare target. Deprecate to clause.
+	(cp_parser_omp_metadirective): Deprecate default clause on
+	metadirectives.
+
+2025-12-11  supers1ngular  <supers1ngular@baylibre.com>
+
+	* parser.cc (cp_parser_postfix_expression): Whitespace.
+	(cp_parser_builtin_c23_va_start): Ditto.
+	(cp_parser_omp_clause_proc_bind): Deprecate master affinity.
+	(cp_parser_omp_master): Deprecate master construct.
+
+2025-12-10  Jason Merrill  <jason@redhat.com>
+
+	* module.cc (maybe_translate_include): Suggest <bits/stdc++.h>
+	as an alternate for importable standard library headers.
+	(importable_headers, is_importable_header): New.
+
+2025-12-09  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	Revert:
+	2025-12-09  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122819
+	* decl.cc (start_preparsed_function): Use
+	DECL_TEMPLOID_INSTANTIATION instead of
+	DECL_TEMPLATE_INSTANTIATION to check vague linkage.
+	* decl2.cc (vague_linkage_p): Likewise.
+	(c_parse_final_cleanups): Simplify condition.
+	* semantics.cc (expand_or_defer_fn_1): Also check for temploid
+	friend functions.
+
+2025-12-09  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122819
+	* decl.cc (start_preparsed_function): Use
+	DECL_TEMPLOID_INSTANTIATION instead of
+	DECL_TEMPLATE_INSTANTIATION to check vague linkage.
+	* decl2.cc (vague_linkage_p): Likewise.
+	(c_parse_final_cleanups): Simplify condition.
+	* semantics.cc (expand_or_defer_fn_1): Also check for temploid
+	friend functions.
+
+2025-12-08  Egas Ribeiro  <egas.g.ribeiro@tecnico.ulisboa.pt>
+
+	* pt.cc (tsubst_expr): Add TARGET_EXPR case with explanatory
+	comment and gcc_unreachable.
+
+2025-12-08  Egas Ribeiro  <egas.g.ribeiro@tecnico.ulisboa.pt>
+
+	PR c++/119343
+	* pt.cc (resolve_nondeduced_context): Remove mark_used call.
+
+2025-12-06  Jakub Jelinek  <jakub@redhat.com>
+
+	* decl2.cc (is_late_template_attribute): Call lookup_attribute_spec
+	on TREE_PURPOSE (attr) rather than name.  Only call
+	attribute_takes_identifier_p if get_attribute_namespace (attr) is
+	gnu_identifier.
+	* pt.cc (tsubst_attribute): Only call attribute_takes_identifier_p
+	if get_attribute_namespace (t) is gnu_identifier.
+
+2025-12-05  Tobias Burnus  <tburnus@baylibre.com>
+
+	* pt.cc (tsubst_omp_clauses): Handle OMP_CLAUSE_DYN_GROUPPRIVATE.
+	* semantics.cc (finish_omp_clauses): Likewise.
+	* parser.cc (cp_parser_omp_clause_dyn_groupprivate): New.
+	(cp_parser_omp_clause_name, cp_parser_omp_all_clauses):
+	Handle 'dyn_groupprivate' clause.
+	(OMP_TARGET_CLAUSE_MASK): Add PRAGMA_OMP_CLAUSE_DYN_GROUPPRIVATE;
+	sort clauses alphabetically.
+
+2025-12-03  Jason Merrill  <jason@redhat.com>
+
+	* pt.cc (dependent_implict_conv_p): Rename to...
+	(dependent_implicit_conv_p): ...this.
+
+2025-12-02  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122860
+	* decl.cc (make_rtl_for_nonlocal_decl): Diagnose taking address
+	of a hard register decl in its initializer.
+	(cp_finish_decl): Likewise.
+
+2025-12-02  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122836
+	* decl.cc (check_array_designated_initializer): Change ce->index to
+	error_mark_node after emitting an error for it.
+
+2025-12-02  Jason Merrill  <jason@redhat.com>
+
+	PR c++/122171
+	PR c++/112632
+	* pt.cc (dependent_implict_conv_p): Split out...
+	(convert_template_argument): ...from here.
+	(tsubst_expr) [IMPLICIT_CONV_EXPR]: Use it.
+	(do_auto_deduction): Call mark_single_function.
+
+2025-12-02  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* module.cc (module_state::write_using_directives): Correct
+	condition.
+
+2025-12-01  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* module.cc (trees_out::lang_decl_vals): Stream DECL_CHAIN for
+	decl_specialization_friend_p functions.
+	(trees_in::lang_decl_vals): Likewise.
+
+2025-12-01  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122915
+	* module.cc (module_state::write_using_directives): Don't emit
+	imported using-directives.
+	(module_state::read_using_directives): Rename
+	add_using_namespace to add_imported_using_namespace.
+	* name-lookup.cc (add_using_namespace): Handle imported
+	using-directives.
+	(add_imported_using_namespace): Rename to match new
+	functionality.
+	* name-lookup.h (add_using_namespace): Rename to...
+	(add_imported_using_namespace): ...this.
+
+2025-12-01  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/119864
+	PR c++/122939
+	* module.cc (trees_out::write_function_def): Don't crash on
+	OMP used-defined type reduction function definitions.
+
+2025-12-01  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122905
+	* decl.cc (enum_with_enumerator_for_linkage_p): Only return true
+	for namespace scope types.
+
+2025-11-30  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122465
+	* parser.cc (cp_parser_simple_declaration): Adjust function comment.
+	Set *maybe_range_for_decl to error_mark_node instead of keeping it
+	NULL_TREE in error cases or when followed by CPP_COLON.
+
+2025-11-30  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/119864
+	* module.cc (trees_in::read_function_def): Don't call
+	post_process on OpenMP UDT reductions.
+	* parser.cc (cp_parser_omp_declare_reduction): Call push_decl
+	for block_scope, even when processing_template_decl.
+
+2025-11-29  Eczbek  <eczbek.void@gmail.com>
+	    Jason Merrill  <jason@redhat.com>
+
+	PR c++/116952
+	* parser.cc (cp_parser_lambda_expression): Revert
+	r11-8166-ge1666ebd9ad31d change prohibiting lambda in non-type
+	parameter.
+
+2025-11-29  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122758
+	* decl.cc (pop_labels): Don't call adjust_backward_gotos if
+	processing_template_decl.
+	(decl_instrument_init_bypass_p): Always return false if
+	processing_template_decl.
+	(check_goto_1): Don't push anything to direct_goto vector
+	if processing_template_decl.
+
+2025-11-28  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/119969
+	* cp-objcp-common.cc (cxx_get_alias_set): Remove special cases
+	for TYPE_PTRMEMFUNC_P and INDIRECT_TYPE_P for TYPE_PTRMEMFUNC_P.
+
+2025-11-26  Marek Polacek  <polacek@redhat.com>
+
+	PR c++/121325
+	* pt.cc (tsubst_tree_vec): New.
+	(tsubst_pack_index): Call it.
+
+2025-11-25  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122699
+	* name-lookup.h (expose_existing_namespace): Declare.
+	* name-lookup.cc (expose_existing_namespace): New function.
+	(push_namespace): Call it.
+	* pt.cc (tsubst_friend_function): Likewise.
+
+2025-11-25  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122789
+	* module.cc (trees_out::core_vals): Treat REQUIRES_EXPR
+	specially and stream the chained decls of its first operand.
+	(trees_in::core_vals): Likewise.
+	(trees_out::tree_node): Check the PARM_DECLs we see are what we
+	expect.
+
+2025-11-25  Jason Merrill  <jason@redhat.com>
+
+	* lang-specs.h: Add @c++-system-module.
+	* g++spec.cc (lang_specific_driver): Handle --compile-std-module.
+
+2025-11-24  Marek Polacek  <polacek@redhat.com>
+
+	PR c++/119964
+	* cp-tree.h (maybe_delete_defaulted_fn): Remove.
+	* method.cc (maybe_delete_defaulted_fn): Make static.  Refactor.  If FN
+	is not explicitly defaulted on its first declaration, emit an error.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122636
+	* module.cc (instantiating_tu_local_entity): Don't check
+	importingness of originating module decl; also check templates.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* constraint.cc (diagnose_trait_expr):
+	<case CPTK_IS_POINTER_INTERCONVERTIBLE_BASE_OF>: Explain failure
+	with more detail.
+	* cp-tree.h (pointer_interconvertible_base_of_p): Add explain
+	parameter.
+	* semantics.cc (pointer_interconvertible_base_of_p): Explain why
+	not.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* constraint.cc (diagnose_trait_expr)
+	<case CPTK_IS_LAYOUT_COMPATIBLE>: Explain why not.
+	* cp-tree.h (layout_compatible_type_p): Add explain parameter.
+	* typeck.cc (layout_compatible_type_p): Add explanations when
+	returning false.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* constraint.cc (diagnose_trait_expr)
+	<case CPTK_HAS_UNIQUE_OBJ_REPRESENTATIONS>: Explain failure with
+	more detail.
+	* cp-tree.h (type_has_unique_obj_representations): Add explain
+	parameter.
+	* tree.cc (record_has_unique_obj_representations): Explain when
+	returning false.
+	(type_has_unique_obj_representations): Likewise.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* method.cc (destructible_expr): Add explanation when type is
+	neither class nor scalar.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* constraint.cc (diagnose_trait_expr): Use t2's location for
+	is_base_of, is_pointer_interconvertible_base_of, and
+	is_virtual_base_of.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* constraint.cc (diagnose_trait_expr): Reset input_location.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* typeck.cc (layout_compatible_type_p): Do not check TYPE_SIZE.
+
+2025-11-22  Sandra Loosemore  <sloosemore@baylibre.com>
+	    Julian Brown  <julian@codesourcery.com>
+	    waffl3x  <waffl3x@baylibre.com>
+
+	* cp-tree.h (struct cp_omp_declare_variant_attr): New.
+	(struct saved_scope): Add omp_declare_variant_attribute field.
+	* decl.cc (omp_declare_variant_finalize_one): Add logic to inject
+	"this" parameter for method calls.
+	* parser.cc (cp_parser_skip_to_pragma_omp_end_declare_variant): New.
+	(cp_parser_translation_unit): Handle leftover "begin declare variant"
+	functions.
+	(omp_start_variant_function): New.
+	(omp_finish_variant_function): New.
+	(omp_maybe_record_variant_base): New.
+	(cp_parser_init_declarator): Handle variant functions.
+	(cp_parser_class_specifier): Handle deferred lookup of base functions
+	when the entire class has been seen.
+	(cp_parser_member_declaration): Handle variant functions.
+	(cp_finish_omp_declare_variant): Merge context selectors if in
+	a "begin declare variant" block.
+	(cp_parser_omp_begin): Match "omp begin declare variant".  Adjust
+	error messages.
+	(cp_parser_omp_end): Match "omp end declare variant".
+	* parser.h (struct omp_begin_declare_variant_map_entry): New.
+	(struct cp_parser): Add omp_begin_declare_variant_map field.
+	* semantics.cc (finish_translation_unit): Detect unmatched
+	"omp begin declare variant".
+
+2025-11-22  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122788
+	* pt.cc (finish_expansion_stmt): Or in TREE_USED and DECL_READ_P
+	flags from range_decl to decl or from corresponding structured binding
+	to this_decl.
+
+2025-11-22  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122185
+	* cp-gimplify.cc (cp_fold) <case CALL_EXPR>: For -ffold-simple-inlines
+	restore check that both types are INDIRECT_TYPE_P, except for
+	"to_underlying" check that r has ENUMERAL_TYPE and x has
+	INTEGRAL_TYPE_P.
+
+2025-11-22  Daniele Sahebi  <daniele@mkryss.me>
+	    Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122658
+	* call.cc (build_over_call): Don't call build_cplus_new in
+	template declarations.
+
+2025-11-21  Marek Polacek  <polacek@redhat.com>
+
+	PR c++/120529
+	* call.cc (ref_conv_binds_to_temporary): Don't ignore access control.
+
+2025-11-21  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/121445
+	* constexpr.cc (build_data_member_initialization): Just return
+	false if member is COMPONENT_REF of COMPONENT_REF with
+	VAR_P get_base_address.
+
+2025-11-20  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/120876
+	* pt.cc (tsubst_baselink): Move maybe_incomplete handling after
+	!baselink handling.
+
+2025-11-20  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122540
+	* decl.cc (start_enum): When setting ENUM_UNDERLYING_TYPE
+	to integer_type_node during error recovery, also call copy_type_enum.
+
 2025-11-19  Marek Polacek  <polacek@redhat.com>
 
 	PR c++/119580

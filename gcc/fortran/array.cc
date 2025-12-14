@@ -1344,6 +1344,7 @@ gfc_match_array_constructor (gfc_expr **result)
   match m;
   const char *end_delim;
   bool seen_ts;
+  gfc_namespace *old_ns = gfc_current_ns;
 
   head = NULL;
   seen_ts = false;
@@ -1368,6 +1369,8 @@ gfc_match_array_constructor (gfc_expr **result)
   /* Try to match an optional "type-spec ::"  */
   gfc_clear_ts (&ts);
   m = gfc_match_type_spec (&ts);
+  gfc_current_ns = old_ns;
+
   if (m == MATCH_YES)
     {
       seen_ts = (gfc_match (" ::") == MATCH_YES);
@@ -1549,10 +1552,37 @@ check_constructor_type (gfc_constructor_base base, bool convert)
     {
       e = c->expr;
 
+      /* Simplify non-constant expressions (like parenthesized arrays) so type
+	 conversion can work on the simplified result.  This handles cases like
+	 [integer :: ([1.0])] where ([1.0]) is an EXPR_OP that needs to be
+	 simplified to an EXPR_ARRAY before type conversion.  */
+      if (convert && e->expr_type != EXPR_CONSTANT
+	  && e->expr_type != EXPR_ARRAY)
+	gfc_simplify_expr (e, 0);
+
       if (e->expr_type == EXPR_ARRAY)
 	{
-	  if (!check_constructor_type (e->value.constructor, convert))
-	    return false;
+	  /* If the outer constructor has no type-spec (convert=false) and
+	     the nested array has an explicit type-spec, process it separately
+	     so its elements get converted according to its type-spec.  This
+	     handles cases like [[character(16) :: ['a','b']]] where the outer
+	     constructor has no type-spec but the inner one does.
+	     gfc_check_constructor_type will also update the global
+	     constructor_ts and cons_state which propagates the type info
+	     to the outer constructor.
+	     For character types, length_from_typespec indicates an explicit
+	     type-spec was provided.  */
+	  if (!convert && e->ts.type == BT_CHARACTER
+	      && e->ts.u.cl && e->ts.u.cl->length_from_typespec)
+	    {
+	      if (!gfc_check_constructor_type (e))
+		return false;
+	    }
+	  else
+	    {
+	      if (!check_constructor_type (e->value.constructor, convert))
+		return false;
+	    }
 
 	  continue;
 	}
@@ -2261,9 +2291,13 @@ gfc_resolve_character_array_constructor (gfc_expr *expr)
 {
   gfc_constructor *p;
   HOST_WIDE_INT found_length;
+  bool has_ts;
 
   gcc_assert (expr->expr_type == EXPR_ARRAY);
   gcc_assert (expr->ts.type == BT_CHARACTER);
+
+  /* Check if we have an explicit type-spec with length.  */
+  has_ts = expr->ts.u.cl && expr->ts.u.cl->length_from_typespec;
 
   if (expr->ts.u.cl == NULL)
     {
@@ -2367,28 +2401,56 @@ got_charlen:
       if (found_length != -1)
 	for (p = gfc_constructor_first (expr->value.constructor);
 	     p; p = gfc_constructor_next (p))
-	  if (p->expr->expr_type == EXPR_CONSTANT)
-	    {
-	      gfc_expr *cl = NULL;
-	      HOST_WIDE_INT current_length = -1;
-	      bool has_ts;
+	  {
+	    /* For non-constant expressions (like EXPR_OP from concatenation),
+	       try to simplify them first so we can then pad/truncate.  */
+	    if (p->expr->expr_type != EXPR_CONSTANT
+		&& p->expr->ts.type == BT_CHARACTER)
+	      gfc_simplify_expr (p->expr, 0);
 
-	      if (p->expr->ts.u.cl && p->expr->ts.u.cl->length)
+	    if (p->expr->expr_type == EXPR_CONSTANT)
 	      {
-		cl = p->expr->ts.u.cl->length;
-		gfc_extract_hwi (cl, &current_length);
+		gfc_expr *cl = NULL;
+		HOST_WIDE_INT current_length = -1;
+
+		if (p->expr->ts.u.cl && p->expr->ts.u.cl->length)
+		  {
+		    cl = p->expr->ts.u.cl->length;
+		    gfc_extract_hwi (cl, &current_length);
+		  }
+
+		/* If gfc_extract_int above set current_length, we implicitly
+		   know the type is BT_INTEGER and it's EXPR_CONSTANT.  */
+
+		if (! cl
+		    || (current_length != -1 && current_length != found_length))
+		  gfc_set_constant_character_len (found_length, p->expr,
+						  has_ts ? -1 : found_length);
 	      }
+	    else if (p->expr->expr_type == EXPR_ARRAY)
+	      {
+		/* For nested array constructors, propagate the type-spec and
+		   recursively resolve.  This handles cases like
+		   [character(16) :: ['a','b']] // "|".  The inner constructor
+		   may have BT_UNKNOWN type initially.  */
+		if (p->expr->ts.type == BT_UNKNOWN
+		    || p->expr->ts.type == BT_CHARACTER)
+		  {
+		    if (p->expr->ts.type == BT_CHARACTER
+			&& p->expr->ts.u.cl
+			&& p->expr->ts.u.cl->length_from_typespec)
+		      {
+			/* If the inner array has an explicit type-spec, we must
+			   honor it first (e.g. truncate/pad to its length),
+			   before coercing it to the outer length.  */
+			gfc_resolve_character_array_constructor (p->expr);
+		      }
 
-	      /* If gfc_extract_int above set current_length, we implicitly
-		 know the type is BT_INTEGER and it's EXPR_CONSTANT.  */
-
-	      has_ts = expr->ts.u.cl->length_from_typespec;
-
-	      if (! cl
-		  || (current_length != -1 && current_length != found_length))
-		gfc_set_constant_character_len (found_length, p->expr,
-						has_ts ? -1 : found_length);
-	    }
+		    p->expr->ts = expr->ts;
+		    gfc_resolve_character_array_constructor (p->expr);
+		  }
+	      }
+	  }
     }
 
   return true;

@@ -6460,13 +6460,19 @@ trees_out::core_vals (tree t)
 	if (has_warning_spec (t))
 	  u (get_warning_spec (t));
 
-      /* Walk in forward order, as (for instance) REQUIRES_EXPR has a
-         bunch of unscoped parms on its first operand.  It's safer to
-         create those in order.  */
       bool vl = TREE_CODE_CLASS (code) == tcc_vl_exp;
-      for (unsigned limit = (vl ? VL_EXP_OPERAND_LENGTH (t)
-			     : TREE_OPERAND_LENGTH (t)),
-	     ix = unsigned (vl); ix != limit; ix++)
+      unsigned limit = (vl ? VL_EXP_OPERAND_LENGTH (t)
+			: TREE_OPERAND_LENGTH (t));
+      unsigned ix = unsigned (vl);
+      if (code == REQUIRES_EXPR)
+	{
+	  /* The first operand of a REQUIRES_EXPR is a tree chain
+	     of PARM_DECLs.  We need to stream this separately as
+	     otherwise we would only stream the first one.  */
+	  chained_decls (REQUIRES_EXPR_PARMS (t));
+	  ++ix;
+	}
+      for (; ix != limit; ix++)
 	WT (TREE_OPERAND (t, ix));
     }
   else
@@ -7045,9 +7051,15 @@ trees_in::core_vals (tree t)
 	put_warning_spec (t, u ());
 
       bool vl = TREE_CODE_CLASS (code) == tcc_vl_exp;
-      for (unsigned limit = (vl ? VL_EXP_OPERAND_LENGTH (t)
-			     : TREE_OPERAND_LENGTH (t)),
-	     ix = unsigned (vl); ix != limit; ix++)
+      unsigned limit = (vl ? VL_EXP_OPERAND_LENGTH (t)
+			: TREE_OPERAND_LENGTH (t));
+      unsigned ix = unsigned (vl);
+      if (code == REQUIRES_EXPR)
+	{
+	  REQUIRES_EXPR_PARMS (t) = chained_decls ();
+	  ++ix;
+	}
+      for (; ix != limit; ix++)
 	RTU (TREE_OPERAND (t, ix));
     }
 
@@ -7512,6 +7524,12 @@ trees_out::lang_decl_vals (tree t)
 
 	WT (access);
       }
+      /* A friend template specialisation stashes its owning class on its
+	 DECL_CHAIN; we need to reconstruct this, but it needs to happen
+	 after we stream the template_info so readers can know this is such
+	 an entity.  */
+      if (decl_specialization_friend_p (t))
+	WT (t->common.chain);
       break;
 
     case lds_ns:  /* lang_decl_ns.  */
@@ -7581,6 +7599,8 @@ trees_in::lang_decl_vals (tree t)
     lds_min:
       RT (lang->u.min.template_info);
       RT (lang->u.min.access);
+      if (decl_specialization_friend_p (t))
+	RT (t->common.chain);
       break;
 
     case lds_ns:  /* lang_decl_ns.  */
@@ -10200,9 +10220,10 @@ trees_out::tree_node (tree t)
 	      break;
 
 	    case PARM_DECL:
-	      /* REQUIRES_EXPRs have a tree list of uncontexted
-		 PARM_DECLS.  It'd be nice if they had a
-		 distinguishing flag to double check.  */
+	      /* REQUIRES_EXPRs have a chain of uncontexted PARM_DECLS,
+		 and an implicit this parm in an NSDMI has no context.  */
+	      gcc_checking_assert (CONSTRAINT_VAR_P (t)
+				   || DECL_NAME (t) == this_identifier);
 	      break;
 
 	    case TYPE_DECL:
@@ -12923,6 +12944,9 @@ trees_out::write_function_def (tree decl)
 	 on non-templates or we'll crash later in import_export_decl.  */
       gcc_checking_assert (flags || DECL_INTERFACE_KNOWN (decl)
 			   || (DECL_LANG_SPECIFIC (decl)
+			       && DECL_LOCAL_DECL_P (decl)
+			       && DECL_OMP_DECLARE_REDUCTION_P (decl))
+			   || (DECL_LANG_SPECIFIC (decl)
 			       && DECL_TEMPLATE_INFO (decl)
 			       && uses_template_parms (DECL_TI_ARGS (decl))));
 
@@ -13002,7 +13026,13 @@ trees_in::read_function_def (tree decl, tree maybe_template)
 	SET_DECL_FRIEND_CONTEXT (decl, context);
       if (cexpr.decl)
 	register_constexpr_fundef (cexpr);
-      post_process (pdata);
+
+      if (DECL_LOCAL_DECL_P (decl))
+	/* Block-scope OMP UDRs aren't real functions, and don't need a
+	   function structure to be allocated or to be expanded.  */
+	gcc_checking_assert (DECL_OMP_DECLARE_REDUCTION_P (decl));
+      else
+	post_process (pdata);
     }
   else if (maybe_dup)
     {
@@ -14234,9 +14264,10 @@ instantiating_tu_local_entity (tree decl)
       return true;
     }
 
-  /* Currently, only TU-local variables and functions will be emitted
-     from named modules.  */
-  if (!VAR_OR_FUNCTION_DECL_P (decl))
+  /* Currently, only TU-local variables and functions, or possibly
+     templates thereof, will be emitted from named modules.  */
+  tree inner = STRIP_TEMPLATE (decl);
+  if (!VAR_OR_FUNCTION_DECL_P (inner))
     return false;
 
   /* From this point we will only be emitting warnings; if we're not
@@ -14249,16 +14280,15 @@ instantiating_tu_local_entity (tree decl)
   if (!is_tu_local_entity (decl))
     return false;
 
-  tree origin = get_originating_module_decl (decl);
-  if (!DECL_LANG_SPECIFIC (STRIP_TEMPLATE (origin))
-      || !DECL_MODULE_IMPORT_P (STRIP_TEMPLATE (origin)))
+  if (!DECL_LANG_SPECIFIC (inner)
+      || !DECL_MODULE_IMPORT_P (inner))
     return false;
 
   /* Referencing TU-local entities from a header is generally OK.
      We don't have an easy way to detect if this declaration came
      from a header via a separate named module, but we can just
      ignore that case for warning purposes.  */
-  unsigned index = import_entity_index (origin);
+  unsigned index = import_entity_index (decl);
   module_state *mod = import_entity_module (index);
   if (mod->is_header ())
     return false;
@@ -17617,7 +17647,16 @@ module_state::write_using_directives (elf_out *to, depset::hash &table,
 	  bool exported = DECL_MODULE_EXPORT_P (udir);
 	  tree target = USING_DECL_DECLS (udir);
 	  depset *target_dep = table.find_dependency (target);
-	  gcc_checking_assert (target_dep);
+
+	  /* An using-directive imported from a different module might not
+	     have been walked earlier (PR c++/122915).  But importers will
+	     be able to just refer to the decl in that module unless it was
+	     a partition anyway, so we don't have anything to do here.  */
+	  if (!target_dep)
+	    {
+	      gcc_checking_assert (DECL_MODULE_IMPORT_P (udir));
+	      continue;
+	    }
 
 	  dump () && dump ("Writing using-directive in %N for %N",
 			   parent, target);
@@ -17666,7 +17705,7 @@ module_state::read_using_directives (unsigned num)
 
       dump () && dump ("Read using-directive in %N for %N", parent, target);
       if (exported || is_module () || is_partition ())
-	add_using_namespace (parent, target);
+	add_imported_using_namespace (parent, target);
     }
 
   dump.outdent ();
@@ -22502,11 +22541,66 @@ void module_state::set_filename (const Cody::Packet &packet)
     }
 }
 
+/* The list of importable headers from C++ Table 24.  */
+
+static const char *
+importable_headers[] =
+  {
+    "algorithm", "any", "array", "atomic",
+    "barrier", "bit", "bitset",
+    "charconv", "chrono", "compare", "complex", "concepts",
+    "condition_variable", "contracts", "coroutine",
+    "debugging", "deque",
+    "exception", "execution", "expected",
+    "filesystem", "flat_map", "flat_set", "format", "forward_list",
+    "fstream", "functional", "future",
+    "generator",
+    "hazard_pointer", "hive",
+    "initializer_list", "inplace_vector", "iomanip", "ios", "iosfwd",
+    "iostream", "istream", "iterator",
+    "latch", "limits", "linalg", "list", "locale",
+    "map", "mdspan", "memory", "memory_resource", "meta", "mutex",
+    "new", "numbers", "numeric",
+    "optional", "ostream",
+    "print",
+    "queue",
+    "random", "ranges", "ratio", "rcu", "regex",
+    "scoped_allocator", "semaphore", "set", "shared_mutex", "simd",
+    "source_location", "span", "spanstream", "sstream", "stack", "stacktrace",
+    "stdexcept", "stdfloat", "stop_token", "streambuf", "string",
+    "string_view", "syncstream", "system_error",
+    "text_encoding", "thread", "tuple", "type_traits", "typeindex", "typeinfo",
+    "unordered_map", "unordered_set",
+    "utility",
+    "valarray", "variant", "vector", "version"
+  };
+
+/* True iff <name> is listed as an importable standard header.  */
+
+static bool
+is_importable_header (const char *name)
+{
+  unsigned lo = 0;
+  unsigned hi = ARRAY_SIZE (importable_headers);
+  while (hi > lo)
+    {
+      unsigned mid = (lo + hi)/2;
+      int cmp = strcmp (name, importable_headers[mid]);
+      if (cmp > 0)
+	lo = mid + 1;
+      else if (cmp < 0)
+	hi = mid;
+      else
+	return true;
+    }
+  return false;
+}
+
 /* Figure out whether to treat HEADER as an include or an import.  */
 
 static char *
 maybe_translate_include (cpp_reader *reader, line_maps *lmaps, location_t loc,
-			 const char *path)
+			 _cpp_file *file, bool angle, const char **alternate)
 {
   if (!modules_p ())
     {
@@ -22514,6 +22608,8 @@ maybe_translate_include (cpp_reader *reader, line_maps *lmaps, location_t loc,
       cpp_get_callbacks (reader)->translate_include = NULL;
       return nullptr;
     }
+
+  const char *path = _cpp_get_file_path (file);
 
   dump.push (NULL);
 
@@ -22559,6 +22655,28 @@ maybe_translate_include (cpp_reader *reader, line_maps *lmaps, location_t loc,
     for (unsigned ix = note_includes->length (); !note && ix--;)
       if (!strcmp ((*note_includes)[ix], path))
 	note = true;
+
+  /* Maybe try importing a different header instead.  */
+  if (alternate && translate == xlate_kind::unknown)
+    {
+      const char *fname = _cpp_get_file_name (file);
+      /* Redirect importable <name> to <bits/stdc++.h>.  */
+      /* ??? Generalize to use a .json.  */
+      expanded_location eloc = expand_location (loc);
+      if (angle && is_importable_header (fname)
+	  /* Exclude <version> which often goes with import std.  */
+	  && strcmp (fname, "version") != 0
+	  /* Don't redirect #includes between headers under the same include
+	     path directory (i.e. between library headers); if the import
+	     brings in the current file we then get redefinition errors.  */
+	  && !strstr (eloc.file, _cpp_get_file_dir (file)->name)
+	  /* ??? These are needed when running a toolchain from the build
+	     directory, because libsupc++ headers aren't linked into
+	     libstdc++-v3/include with the other headers.  */
+	  && !strstr (eloc.file, "libstdc++-v3/include")
+	  && !strstr (eloc.file, "libsupc++"))
+	*alternate = "bits/stdc++.h";
+    }
 
   if (note)
     inform (loc, translate == xlate_kind::import

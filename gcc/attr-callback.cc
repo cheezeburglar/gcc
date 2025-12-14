@@ -83,6 +83,15 @@ callback_special_case_attr (tree decl)
   gcc_unreachable ();
 }
 
+/* Returns TRUE if the callee of E has a callback attribute.  */
+bool
+callback_edge_callee_has_attr (cgraph_edge *e)
+{
+  return lookup_attribute (CALLBACK_ATTR_IDENT,
+			   DECL_ATTRIBUTES (e->callee->decl))
+	 || callback_is_special_cased (e->callee->decl, e->call_stmt);
+}
+
 /* Given an instance of callback attribute, return the 0-based
    index of the called function in question.  */
 int
@@ -344,11 +353,19 @@ bool
 callback_edge_useful_p (cgraph_edge *e)
 {
   gcc_checking_assert (e->callback);
-  /* If the edge is not pointing towards a clone, it is no longer useful as its
-     entire purpose is to produce clones of callbacks.  */
-  if (!e->callee->clone_of)
-    return false;
-  return true;
+  /* If the edge is pointing towards a clone, it is useful.  */
+  if (e->callee->clone_of)
+    return true;
+
+  /* If the callee has been produced by icf, the edge is useful, as it will be
+     used to for the redirection.  */
+  if (e->callee->icf_merged)
+    return true;
+
+  /* In case some future pass redirects edges, it should be added as a case
+     here.  */
+
+  return false;
 }
 
 /* Returns the number of arguments the callback function described by ATTR

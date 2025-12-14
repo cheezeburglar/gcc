@@ -1811,7 +1811,8 @@ expand_const_vector_onestep (rtx target, rvv_builder &builder)
   rtx dest = gen_reg_rtx (mode);
   insn_code icode = code_for_pred_mov (mode);
   rtx ops3[] = {dest, tmp3, tmp1};
-  emit_nonvlmax_insn (icode, __MASK_OP_TUMA | UNARY_OP_P, ops3, GEN_INT (n));
+  emit_nonvlmax_insn (icode, (unsigned) __MASK_OP_TUMA | UNARY_OP_P,
+		      ops3, GEN_INT (n));
 
   emit_move_insn (target, dest);
 }
@@ -4884,6 +4885,54 @@ expand_reduction (unsigned unspec, unsigned unspec_for_vl0_safe,
   emit_insn (gen_pred_extract_first (m1_mode, scalar_dest, m1_tmp2));
 }
 
+/* Expand mask reductions.  OPS are {dest, src} where DEST's mode
+   is QImode and SRC's mode is a mask mode.
+   CODE is one of AND, IOR, XOR.  */
+
+void
+expand_mask_reduction (rtx *ops, rtx_code code)
+{
+  machine_mode mode = GET_MODE (ops[1]);
+  rtx dest = ops[0];
+  gcc_assert (GET_MODE (dest) == QImode);
+
+  rtx tmp = gen_reg_rtx (Xmode);
+  rtx cpop_ops[] = {tmp, ops[1]};
+  emit_vlmax_insn (code_for_pred_popcount (mode, Xmode), CPOP_OP, cpop_ops);
+
+  bool eq_zero = false;
+
+  /* AND reduction is popcount (mask) == len,
+     IOR reduction is popcount (mask) != 0,
+     XOR reduction is popcount (mask) & 1 != 0.  */
+  if (code == AND)
+    {
+      rtx len = gen_int_mode (GET_MODE_NUNITS (mode), HImode);
+      tmp = expand_binop (Xmode, sub_optab, tmp, len, NULL, true,
+			  OPTAB_DIRECT);
+      eq_zero = true;
+    }
+  else if (code == IOR)
+    ;
+  else if (code == XOR)
+    tmp = expand_binop (Xmode, and_optab, tmp, GEN_INT (1), NULL, true,
+			OPTAB_DIRECT);
+  else
+    gcc_unreachable ();
+
+  rtx els = gen_label_rtx ();
+  rtx end = gen_label_rtx ();
+
+  riscv_expand_conditional_branch (els, eq_zero ? EQ : NE, tmp, const0_rtx);
+  emit_move_insn (dest, const0_rtx);
+  emit_jump_insn (gen_jump (end));
+  emit_barrier ();
+
+  emit_label (els);
+  emit_move_insn (dest, const1_rtx);
+  emit_label (end);
+}
+
 /* Prepare ops for ternary operations.
    It can be called before or after RA.  */
 void
@@ -5265,7 +5314,7 @@ emit_vec_cvt_x_f (rtx op_dest, rtx op_src, rtx mask,
 {
   insn_code icode = code_for_pred_fcvt_x_f (UNSPEC_VFCVT, vec_mode);
 
-  if (type & USE_VUNDEF_MERGE_P)
+  if (type & (insn_type) USE_VUNDEF_MERGE_P)
     {
       rtx cvt_x_ops[] = {op_dest, mask, op_src};
       emit_vlmax_insn (icode, type, cvt_x_ops);
@@ -5333,7 +5382,7 @@ emit_vec_cvt_x_f_rtz (rtx op_dest, rtx op_src, rtx mask,
 {
   insn_code icode = code_for_pred (FIX, vec_mode);
 
-  if (type & USE_VUNDEF_MERGE_P)
+  if (type & (insn_type) USE_VUNDEF_MERGE_P)
     {
       rtx cvt_x_ops[] = {op_dest, mask, op_src};
       emit_vlmax_insn (icode, type, cvt_x_ops);
@@ -5861,6 +5910,40 @@ expand_vx_binary_vec_vec_dup (rtx op_0, rtx op_1, rtx op_2,
   emit_vlmax_insn (icode, riscv_vector::BINARY_OP, ops);
 }
 
+static rtx_code
+get_swapped_cmp_rtx_code (rtx_code code)
+{
+  switch (code)
+    {
+    case GTU:
+      return LTU;
+    case GT:
+      return LT;
+    default:
+      gcc_unreachable ();
+    }
+}
+
+/* Expand the binary vx combine with the format like v2 = vec_dup(x) > v1.
+   Aka the first op comes from the vec_duplicate, and the second op is the vector
+   reg.  Unfortunately, the RVV vms* only form like v2 = v1 < vec_dup(x), so
+   we need to swap the op_1 and op_2, then emit the swapped(from gtu to ltu)
+   insn instead.  */
+
+void
+expand_vx_cmp_vec_dup_vec (rtx op_0, rtx op_1, rtx op_2, rtx_code code,
+			   machine_mode mode)
+{
+  machine_mode mask_mode = get_mask_mode (mode);
+  rtx_code swapped_code = get_swapped_cmp_rtx_code (code);
+
+  insn_code icode = code_for_pred_cmp_scalar (mode);
+  rtx cmp = gen_rtx_fmt_ee (swapped_code, mask_mode, op_2, op_1);
+  rtx ops[] = {op_0, cmp, op_2, op_1};
+
+  emit_vlmax_insn (icode, COMPARE_OP, ops);
+}
+
 /* Vectorize popcount by the Wilkes-Wheeler-Gill algorithm that libgcc uses as
    well.  */
 void
@@ -6071,6 +6154,10 @@ can_be_broadcast_p (rtx op)
   if (mode == HFmode && !TARGET_ZVFH)
     return false;
 
+  /* We don't have a vfmv.bf16.v.f.  */
+  if (mode == BFmode)
+    return false;
+
   /* Same for float, just that we can always handle 64-bit doubles
      even on !TARGET_64BIT.  We have ruled out 16-bit HF already
      above.  */
@@ -6108,6 +6195,10 @@ strided_broadcast_p (rtx op)
 
   /* Zvfhmin does not have a vfmv.v.f/vfmv.s.f.  for 16-bit elements.  */
   if (!TARGET_ZVFH && mode == HFmode)
+    return true;
+
+  /* We don't have a vfmv.bf16.v.f.  */
+  if (mode == BFmode)
     return true;
 
   return false;

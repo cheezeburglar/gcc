@@ -1502,6 +1502,8 @@ if test "x$ZSTD_LIB" != x \
   ZSTD_LDFLAGS=-L$ZSTD_LIB
 fi
 
+saved_CXXFLAGS="$CXXFLAGS"
+saved_LDFLAGS="$LDFLAGS"
 CXXFLAGS="$CXXFLAGS $ZSTD_CPPFLAGS"
 LDFLAGS="$LDFLAGS $ZSTD_LDFLAGS"
 
@@ -1532,6 +1534,9 @@ elif test "x$with_zstd" != x; then
     as_fn_error $? "Unable to find zstd.h.  See config.log for details." "$LINENO" 5
 fi
 fi
+
+CXXFLAGS="$saved_CXXFLAGS"
+LDFLAGS="$saved_LDFLAGS"
 
 dnl Disabled until we have a complete test for buggy enum bitfields.
 dnl gcc_AC_C_ENUM_BF_UNSIGNED
@@ -7760,7 +7765,6 @@ if test x$enable_default_pie = xyes ; then
   AC_DEFINE(ENABLE_DEFAULT_PIE, 1,
       [Define if your target supports default PIE and it is enabled.])
 fi
-AC_SUBST([enable_default_pie])
 
 # Check if -fno-PIE works.
 AC_CACHE_CHECK([for -fno-PIE option],

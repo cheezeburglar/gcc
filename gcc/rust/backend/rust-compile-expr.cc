@@ -175,7 +175,7 @@ CompileExpr::visit (HIR::ArithmeticOrLogicalExpr &expr)
     }
 
   auto receiver_tmp = NULL_TREE;
-  auto receiver
+  Bvariable *receiver
     = Backend::temporary_variable (ctx->peek_fn ().fndecl, NULL_TREE,
 				   TREE_TYPE (lhs), lhs, true,
 				   expr.get_locus (), &receiver_tmp);
@@ -214,7 +214,7 @@ CompileExpr::visit (HIR::CompoundAssignmentExpr &expr)
   if (ctx->in_fn () && !ctx->const_context_p ())
     {
       auto tmp = NULL_TREE;
-      auto receiver
+      Bvariable *receiver
 	= Backend::temporary_variable (ctx->peek_fn ().fndecl, NULL_TREE,
 				       TREE_TYPE (lhs), lhs, true,
 				       expr.get_locus (), &tmp);
@@ -1712,6 +1712,8 @@ CompileExpr::compile_float_literal (const HIR::LiteralExpr &expr,
       rust_error_at (expr.get_locus (), "bad number in literal");
       return error_mark_node;
     }
+  if (expr.is_negative ())
+    mpfr_neg (fval, fval, MPFR_RNDN);
 
   // taken from:
   // see go/gofrontend/expressions.cc:check_float_type

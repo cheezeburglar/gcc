@@ -1358,6 +1358,7 @@ ANALYZER_OBJS = \
 	analyzer/kf-analyzer.o \
 	analyzer/kf-lang-cp.o \
 	analyzer/known-function-manager.o \
+	analyzer/ops.o \
 	analyzer/pending-diagnostic.o \
 	analyzer/program-point.o \
 	analyzer/program-state.o \
@@ -1379,6 +1380,9 @@ ANALYZER_OBJS = \
 	analyzer/state-purge.o \
 	analyzer/store.o \
 	analyzer/supergraph.o \
+	analyzer/supergraph-fixup-locations.o \
+	analyzer/supergraph-simplify.o \
+	analyzer/supergraph-sorting.o \
 	analyzer/svalue.o \
 	analyzer/symbol.o \
 	analyzer/trimmed-graph.o \
@@ -2503,13 +2507,6 @@ libgcc.mvars: config.status Makefile specs xgcc$(exeext)
 	: > tmp-libgcc.mvars
 	echo GCC_CFLAGS = '$(GCC_CFLAGS)' >> tmp-libgcc.mvars
 	echo INHIBIT_LIBC_CFLAGS = '$(INHIBIT_LIBC_CFLAGS)' >> tmp-libgcc.mvars
-	echo TARGET_SYSTEM_ROOT = '$(TARGET_SYSTEM_ROOT)' >> tmp-libgcc.mvars
-	if test @enable_default_pie@ = yes; then \
-	  NO_PIE_CFLAGS="-fno-PIE"; \
-	else \
-	  NO_PIE_CFLAGS=; \
-	fi; \
-	echo NO_PIE_CFLAGS = "$$NO_PIE_CFLAGS" >> tmp-libgcc.mvars
 
 	mv tmp-libgcc.mvars libgcc.mvars
 
@@ -3902,7 +3899,8 @@ $(build_htmldir)/gccinstall/index.html: $(TEXI_GCCINSTALL_FILES)
 .PHONY: regenerate-opt-urls
 OPT_URLS_HTML_DEPS = $(build_htmldir)/gcc/Option-Index.html \
 	$(build_htmldir)/gdc/Option-Index.html \
-	$(build_htmldir)/gfortran/Option-Index.html
+	$(build_htmldir)/gfortran/Option-Index.html \
+	$(build_htmldir)/ga68/Option-Index.html
 $(OPT_URLS_HTML_DEPS): %/Option-Index.html: %/index.html
 
 regenerate-opt-urls: $(srcdir)/regenerate-opt-urls.py $(OPT_URLS_HTML_DEPS)

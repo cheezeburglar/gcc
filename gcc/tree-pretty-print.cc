@@ -907,6 +907,20 @@ dump_omp_clause (pretty_printer *pp, tree clause, int spc, dump_flags_t flags)
       pp_right_paren (pp);
       break;
 
+    case OMP_CLAUSE_USES_ALLOCATORS:
+      pp_string (pp, "uses_allocators(");
+      dump_generic_node (pp, OMP_CLAUSE_USES_ALLOCATORS_ALLOCATOR (clause),
+			 spc, flags, false);
+      pp_string (pp, ": memspace(");
+      dump_generic_node (pp, OMP_CLAUSE_USES_ALLOCATORS_MEMSPACE (clause),
+			 spc, flags, false);
+      pp_string (pp, "), traits(");
+      dump_generic_node (pp, OMP_CLAUSE_USES_ALLOCATORS_TRAITS (clause),
+			 spc, flags, false);
+      pp_right_paren (pp);
+      pp_right_paren (pp);
+      break;
+
     case OMP_CLAUSE_AFFINITY:
       pp_string (pp, "affinity(");
       {
@@ -1324,6 +1338,27 @@ dump_omp_clause (pretty_printer *pp, tree clause, int spc, dump_flags_t flags)
 	default:
 	  gcc_unreachable ();
 	}
+      pp_right_paren (pp);
+      break;
+
+    case OMP_CLAUSE_DYN_GROUPPRIVATE:
+      pp_string (pp, "dyn_groupprivate(");
+      switch (OMP_CLAUSE_DYN_GROUPPRIVATE_KIND (clause))
+	{
+	case OMP_CLAUSE_FALLBACK_ABORT:
+	  pp_string (pp, "fallback(abort):");
+	  break;
+	case OMP_CLAUSE_FALLBACK_DEFAULT_MEM:
+	  pp_string (pp, "fallback(default_mem):");
+	  break;
+	case OMP_CLAUSE_FALLBACK_NULL:
+	  pp_string (pp, "fallback(null):");
+	  break;
+	case OMP_CLAUSE_FALLBACK_UNSPECIFIED:
+	  break;
+	}
+      dump_generic_node (pp, OMP_CLAUSE_DYN_GROUPPRIVATE_EXPR (clause),
+			 spc, flags, false);
       pp_right_paren (pp);
       break;
 
@@ -1982,6 +2017,13 @@ dump_mem_ref (pretty_printer *pp, tree node, int spc, dump_flags_t flags)
 	      dump_generic_node (pp, TREE_OPERAND (node, 4),
 				 spc, flags | TDF_SLIM, false);
 	    }
+	}
+      if (MR_DEPENDENCE_CLIQUE (node) != 0)
+	{
+	  pp_string (pp, ", ");
+	  pp_decimal_int (pp, MR_DEPENDENCE_CLIQUE (node));
+	  pp_colon (pp);
+	  pp_decimal_int (pp, MR_DEPENDENCE_BASE (node));
 	}
       pp_right_paren (pp);
     }

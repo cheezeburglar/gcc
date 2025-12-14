@@ -67,18 +67,18 @@ package Exp_Ch6 is
       --  Present if result subtype is returned on the secondary stack or is
       --  tagged: in this case, this indicates whether the return object is
       --  allocated by the caller or callee, and if the callee, whether to
-      --  use the secondary stack, the global heap or a storage pool. Also
-      --  present if result type needs finalization.
+      --  use the secondary stack, the global heap or a storage pool.
 
       BIP_Storage_Pool,
       --  Present if result subtype is returned on the secondary stack or is
       --  tagged: in this case, if BIP_Alloc_Form = User_Storage_Pool, this
       --  is a pointer to the pool (of type Root_Storage_Pool_Ptr); otherwise
-      --  this is null. Also present if result type needs finalization.
+      --  this is null.
 
       BIP_Collection,
-      --  Present if result type needs finalization. Pointer to the collection
-      --  of the access type used by the caller.
+      --  Present if result type is returned on the secondary stack and needs
+      --  finalization, or is tagged. Pointer to the collection of the access
+      --  type used by the caller.
 
       BIP_Task_Master,
       --  Present if result type contains tasks. Master associated with
@@ -305,7 +305,8 @@ package Exp_Ch6 is
    --  BIP_Collection parameter (see type BIP_Formal_Kind).
 
    function Needs_BIP_Task_Actuals (Func_Id : Entity_Id) return Boolean;
-   --  Return True if the function returns an object of a type that has tasks.
+   --  Ada 2005 (AI-318-02): Return True if the function needs implicit
+   --  BIP_Task_Master and BIP_Activation_Chain parameters.
 
    function Unqual_BIP_Iface_Function_Call (Expr : Node_Id) return Node_Id;
    --  Return the inner BIP function call removing any qualification from Expr

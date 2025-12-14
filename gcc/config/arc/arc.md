@@ -3555,7 +3555,14 @@ archs4x, archs4xd"
   [(set (match_operand:SI 0 "dest_reg_operand" "")
 	(ANY_SHIFT_ROTATE:SI (match_operand:SI 1 "register_operand" "")
 			     (match_operand:SI 2 "nonmemory_operand" "")))]
-  "")
+  ""
+{
+  if (!TARGET_BARREL_SHIFTER && operands[2] != const1_rtx)
+    {
+      emit_insn (gen_<insn>si3_loop (operands[0], operands[1], operands[2]));
+      DONE;
+    }
+})
 
 ; asl, asr, lsr patterns:
 ; There is no point in including an 'I' alternative since only the lowest 5
@@ -3654,35 +3661,23 @@ archs4x, archs4xd"
   [(set_attr "type" "shift")
    (set_attr "length" "8")])
 
-(define_insn_and_split "*<insn>si3_nobs"
-  [(set (match_operand:SI 0 "dest_reg_operand")
-	(ANY_SHIFT_ROTATE:SI (match_operand:SI 1 "register_operand")
-			     (match_operand:SI 2 "nonmemory_operand")))]
+(define_insn_and_split "<insn>si3_loop"
+  [(set (match_operand:SI 0 "dest_reg_operand" "=r,r")
+  (ANY_SHIFT_ROTATE:SI (match_operand:SI 1 "register_operand" "0,0")
+        (match_operand:SI 2 "nonmemory_operand" "rn,Cal")))
+  (clobber (reg:SI LP_COUNT))
+  (clobber (reg:CC CC_REG))]
   "!TARGET_BARREL_SHIFTER
-   && operands[2] != const1_rtx
-   && arc_pre_reload_split ()"
-  "#"
-  "&& 1"
+  && operands[2] != const1_rtx"
+  "* return output_shift_loop (<CODE>, operands);"
+  "&& arc_pre_reload_split ()"
   [(const_int 0)]
 {
   arc_split_<insn> (operands);
   DONE;
-})
-
-;; <ANY_SHIFT_ROTATE>si3_loop appears after <ANY_SHIFT_ROTATE>si3_nobs
-(define_insn "<insn>si3_loop"
-  [(set (match_operand:SI 0 "dest_reg_operand" "=r,r")
-	(ANY_SHIFT_ROTATE:SI 
-	  (match_operand:SI 1 "register_operand" "0,0")
-	  (match_operand:SI 2 "nonmemory_operand" "rn,Cal")))
-   (clobber (reg:SI LP_COUNT))
-   (clobber (reg:CC CC_REG))
-  ]
-  "!TARGET_BARREL_SHIFTER
-   && operands[2] != const1_rtx"
-  "* return output_shift_loop (<CODE>, operands);"
-  [(set_attr "type" "shift")
-   (set_attr "length" "16,20")])
+}
+[(set_attr "type" "shift")
+ (set_attr "length" "16,20")])
 
 ;; DImode shifts
 
@@ -6286,15 +6281,15 @@ archs4x, archs4xd"
 
 (define_insn_and_split "*extvsi_n_0"
   [(set (match_operand:SI 0 "register_operand" "=r")
-	(sign_extract:SI (match_operand:SI 1 "register_operand" "0")
+	(sign_extract:SI (match_operand:SI 1 "register_operand" "r")
 			 (match_operand:QI 2 "const_int_operand")
 			 (const_int 0)))]
   "!TARGET_BARREL_SHIFTER
    && IN_RANGE (INTVAL (operands[2]), 2,
 		(optimize_insn_for_size_p () ? 28 : 30))"
   "#"
-  "&& 1"
-[(set (match_dup 0) (and:SI (match_dup 0) (match_dup 3)))
+  "&& reload_completed"
+[(set (match_dup 0) (and:SI (match_dup 1) (match_dup 3)))
  (set (match_dup 0) (xor:SI (match_dup 0) (match_dup 4)))
  (set (match_dup 0) (minus:SI (match_dup 0) (match_dup 4)))]
 {
@@ -6413,6 +6408,21 @@ archs4x, archs4xd"
   [(set_attr "type" "unary")
    (set_attr "length" "4")
    (set_attr "predicable" "no")])
+
+;; Match <insn>si3_loop pattern if operand 2 has become const_int 1 in the meantime
+(define_insn_and_split "<insn>si3_cnt1_clobber"
+  [(set (match_operand:SI 0 "dest_reg_operand")
+  (ANY_SHIFT_ROTATE:SI (match_operand:SI 1 "register_operand")
+        (const_int 1)))
+  (clobber (reg:SI LP_COUNT))
+  (clobber (reg:CC CC_REG))]
+  "!TARGET_BARREL_SHIFTER"
+  "#"
+  "&& arc_pre_reload_split ()"
+  [(set (match_dup 0) (ANY_SHIFT_ROTATE:SI (match_dup 1) (const_int 1)))]
+  ""
+[(set_attr "type" "shift")
+ (set_attr "length" "4")])
 
 (define_peephole2
   [(set (match_operand:SI 0 "register_operand" "")

@@ -33,6 +33,7 @@ default_changelog_locations = {
     'contrib/regression',
     'fixincludes',
     'gcc/ada',
+    'gcc/algol68',
     'gcc/analyzer',
     'gcc/brig',
     'gcc/c',
@@ -64,6 +65,7 @@ default_changelog_locations = {
     'libcpp/po',
     'libdecnumber',
     'libffi',
+    'libga68',
     'libgcc',
     'libgcc/config/avr/libf7',
     'libgcc/config/libbid',
@@ -88,6 +90,7 @@ default_changelog_locations = {
 
 bug_components = {
     'ada',
+    'algol68',
     'analyzer',
     'boehm-gc',
     'bootstrap',

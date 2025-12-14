@@ -359,7 +359,7 @@ aarch64*-*-*)
 	c_target_objs="aarch64-c.o"
 	cxx_target_objs="aarch64-c.o"
 	d_target_objs="aarch64-d.o"
-	extra_objs="aarch64-builtins.o aarch-common.o aarch64-elf-metadata.o aarch64-sve-builtins.o aarch64-sve-builtins-shapes.o aarch64-sve-builtins-base.o aarch64-sve-builtins-sve2.o aarch64-sve-builtins-sme.o cortex-a57-fma-steering.o aarch64-speculation.o aarch-bti-insert.o aarch64-early-ra.o aarch64-ldp-fusion.o aarch64-sched-dispatch.o"
+	extra_objs="aarch64-builtins.o aarch-common.o aarch64-elf-metadata.o aarch64-sve-builtins.o aarch64-sve-builtins-shapes.o aarch64-sve-builtins-base.o aarch64-sve-builtins-sve2.o aarch64-sve-builtins-sme.o cortex-a57-fma-steering.o aarch64-speculation.o aarch-bti-insert.o aarch64-early-ra.o aarch64-ldp-fusion.o aarch64-sched-dispatch.o aarch64-json-tunings-printer.o aarch64-json-tunings-parser.o"
 	target_gtfiles="\$(srcdir)/config/aarch64/aarch64-protos.h \$(srcdir)/config/aarch64/aarch64-builtins.h \$(srcdir)/config/aarch64/aarch64-builtins.cc \$(srcdir)/config/aarch64/aarch64-sve-builtins.h \$(srcdir)/config/aarch64/aarch64-sve-builtins.cc"
 	target_has_targetm_common=yes
 	;;
@@ -560,7 +560,7 @@ riscv*)
 	extra_objs="riscv-builtins.o riscv-c.o riscv-sr.o riscv-shorten-memrefs.o riscv-selftests.o riscv-string.o"
 	extra_objs="${extra_objs} riscv-v.o riscv-vsetvl.o riscv-vector-costs.o riscv-avlprop.o riscv-vect-permconst.o"
 	extra_objs="${extra_objs} riscv-vector-builtins.o riscv-vector-builtins-shapes.o riscv-vector-builtins-bases.o sifive-vector-builtins-bases.o andes-vector-builtins-bases.o"
-	extra_objs="${extra_objs} thead.o riscv-target-attr.o riscv-zicfilp.o riscv-bclr-lowest-set-bit.o"
+	extra_objs="${extra_objs} thead.o riscv-target-attr.o riscv-zicfilp.o riscv-bclr-lowest-set-bit.o riscv-opt-popretz.o"
 	d_target_objs="riscv-d.o"
 	extra_headers="riscv_vector.h riscv_crypto.h riscv_bitmanip.h riscv_th_vector.h sifive_vector.h andes_vector.h"
 	target_gtfiles="$target_gtfiles \$(srcdir)/config/riscv/riscv-vector-builtins.cc"
@@ -1293,10 +1293,12 @@ aarch64-*-mingw*)
 	tm_file="${tm_file} mingw/winnt.h"
 	tm_file="${tm_file} mingw/winnt-dll.h"
 	tmake_file="${tmake_file} aarch64/t-aarch64"
+	tmake_file="${tmake_file} aarch64/t-aarch64-mingw"
+        native_system_header_dir=/mingw/include
 	target_gtfiles="$target_gtfiles \$(srcdir)/config/mingw/winnt.cc"
 	target_gtfiles="$target_gtfiles \$(srcdir)/config/mingw/winnt-dll.cc"
 	extra_options="${extra_options} mingw/cygming.opt mingw/mingw.opt"
-	extra_objs="${extra_objs} winnt.o winnt-dll.o"
+	extra_objs="${extra_objs} aarch64-abi-ms.o winnt.o winnt-dll.o"
 	c_target_objs="${c_target_objs} msformat-c.o"
 	cxx_target_objs="${cxx_target_objs} msformat-c.o"
 	d_target_objs="${d_target_objs} winnt-d.o"
@@ -4639,14 +4641,14 @@ case "${target}" in
 				exit 1
 			fi
 		done
-		[ "x$with_arch" = x ] && with_arch=gfx900
+		[ "x$with_arch" = x ] && with_arch=gfx90a
 
 		case "x${with_multilib_list}" in
 		x | xno)
 			TM_MULTILIB_CONFIG=
 			;;
 		xdefault | xyes)
-			TM_MULTILIB_CONFIG=`echo "gfx900,gfx906,gfx908,gfx90a,gfx90c,gfx1030,gfx1036,gfx1100,gfx1103" | sed "s/${with_arch},\?//;s/,$//"`
+			TM_MULTILIB_CONFIG=`echo "gfx908,gfx90a,gfx9-generic,gfx9-4-generic,gfx10-3-generic,gfx11-generic" | sed "s/${with_arch},\?//;s/,$//"`
 			;;
 		*)
 			TM_MULTILIB_CONFIG="${with_multilib_list}"
@@ -4752,7 +4754,7 @@ case "${target}" in
 		;;
 
 	riscv*-*-*)
-		supported_defaults="abi arch tune riscv_attribute isa_spec tls cmodel"
+		supported_defaults="abi arch cpu tune riscv_attribute isa_spec tls cmodel"
 
 		case "${target}" in
 		riscv-* | riscv32*) xlen=32 ;;
@@ -5139,6 +5141,10 @@ case "${target}" in
 
 		# Infer ABI from the triplet.
 		case ${target} in
+		loongarch32-*f64) abi_base="ilp32d"; abi_ext="base" ;;
+		loongarch32-*f32) abi_base="ilp32f"; abi_ext="base" ;;
+		loongarch32-*sf)  abi_base="ilp32s"; abi_ext="base" ;;
+		loongarch32-*)    abi_base="ilp32d"; abi_ext="base" ;;
 		loongarch64-*f64) abi_base="lp64d"; abi_ext="base" ;;
 		loongarch64-*f32) abi_base="lp64f"; abi_ext="base" ;;
 		loongarch64-*sf)  abi_base="lp64s"; abi_ext="base" ;;
@@ -5151,6 +5157,9 @@ case "${target}" in
 
 		# Get the canonical triplet (multiarch specifier).
 		case ${abi_base},${abi_ext} in
+		ilp32d,base) triplet_abi="";;
+		ilp32f,base) triplet_abi="f32";;
+		ilp32s,base) triplet_abi="sf";;
 		lp64d,base) triplet_abi="";;
 		lp64f,base) triplet_abi="f32";;
 		lp64s,base) triplet_abi="sf";;
@@ -5165,12 +5174,21 @@ case "${target}" in
 			  exit 1
 			  ;;
 		esac
-		la_canonical_triplet="loongarch64-${triplet_os}${triplet_abi}"
+
+		case ${target} in
+		loongarch32-*)    la_canonical_triplet="loongarch32-${triplet_os}${triplet_abi}" ;;
+		loongarch64-*)    la_canonical_triplet="loongarch64-${triplet_os}${triplet_abi}" ;;
+		*)
+			echo "Unsupported target ${target}." 1>&2
+			exit 1
+			;;
+		esac
 
 
 		# Perform initial sanity checks on --with-* options.
 		case ${with_arch} in
-		"" | la64v1.[01] | abi-default | loongarch64 | la[46]64) ;; # OK, append here.
+		"" | la64v1.[01] | abi-default | loongarch64 | la[46]64 | la32v1.0 | la32rv1.0)
+			;; # OK, append here.
 		native)
 			if test x${host} != x${target}; then
 				echo "--with-arch=native is illegal for cross-compiler." 1>&2
@@ -5231,6 +5249,13 @@ case "${target}" in
 			# default architecture for lp64[fs] ABI
 			arch_default="abi-default"
 			;;
+		ilp32[dfs]/base)
+			# architectures that support ilp32* ABI
+			arch_pattern="native|abi-default|la32v1.0|la32rv1.0"
+
+			# default architecture for ilp32* ABI
+			arch_default="abi-default"
+			;;
 		*)
 			echo "Unsupported ABI type ${abi_base}/${abi_ext}." 1>&2
 			exit 1
@@ -5239,14 +5264,14 @@ case "${target}" in
 
 		# Infer ISA-related default options from the ABI: pass 2
 		case ${abi_base}/${abi_ext} in
-		lp64d/base)
+		ilp32d/base | lp64d/base)
 			fpu_pattern="64"
 			;;
-		lp64f/base)
+		ilp32f/base | lp64f/base)
 			fpu_pattern="32|64"
 			fpu_default="32"
 			;;
-		lp64s/base)
+		ilp32s/base | lp64s/base)
 			fpu_pattern="none|32|64"
 			fpu_default="none"
 			;;
@@ -5300,7 +5325,14 @@ case "${target}" in
 
 
 		# Check default with_tune configuration using with_arch.
-		tune_pattern="native|generic|loongarch64|la[46]64"
+		case ${with_arch} in
+		la32v1.0 | la32rv1.0)
+			tune_pattern="loongarch32"
+			;;
+		loongarch64)
+			tune_pattern="native|generic|loongarch64|la[46]64"
+			;;
+		esac
 
 		case ${with_tune} in
 		"") ;; # OK
@@ -5350,7 +5382,7 @@ case "${target}" in
 					# Fixed: use the default gcc configuration for all multilib
 					# builds by default.
 					with_multilib_default="" ;;
-				arch,native|arch,la64v1.[01]|arch,loongarch64|arch,la[46]64) # OK, append here.
+				arch,native|arch,la64v1.[01]|arch,loongarch64|arch,la[46]64|arch,la32v1.0|arch,la32rv1.0) # OK, append here.
 					with_multilib_default="/march=${component}" ;;
 				arch,*)
 					with_multilib_default="/march=abi-default"
@@ -5414,7 +5446,7 @@ case "${target}" in
 				if test x${parse_state} = x"abi-base"; then
 					# Base ABI type
 					case ${component} in
-					lp64d | lp64f | lp64s) elem_tmp="ABI_BASE_$(echo ${component} | tr a-z A-Z),";;
+					ilp32d | ilp32f | ilp32s |lp64d | lp64f | lp64s) elem_tmp="ABI_BASE_$(echo ${component} | tr a-z A-Z),";;
 					*)
 						echo "Unknown base ABI \"${component}\" in --with-multilib-list." 1>&2
 						exit 1
@@ -5450,7 +5482,7 @@ case "${target}" in
 				if test x${parse_state} = x"arch"; then
 					# -march option
 					case ${component} in
-					native | abi-default | la64v1.[01] | loongarch64 | la[46]64) # OK, append here.
+					native | abi-default | la64v1.[01] | loongarch64 | la[46]64 | la32v1.0 | la32rv1.0) # OK, append here.
 						# Append -march spec for each multilib variant.
 						loongarch_multilib_list_make="${loongarch_multilib_list_make}/march=${component}"
 						parse_state="opts"

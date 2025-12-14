@@ -175,7 +175,7 @@ See also @ref{OpenMP Implementation Status}.
 
 The @code{_OPENMP} preprocessor macro and Fortran's @code{openmp_version}
 parameter, provided by @code{omp_lib.h} and the @code{omp_lib} module, have
-the value @code{201511} (i.e. OpenMP 4.5).
+the value @code{202111} (i.e. OpenMP 5.2).
 
 @node OpenMP 4.5
 @section OpenMP 4.5
@@ -261,7 +261,7 @@ The OpenMP 4.5 specification is fully supported.
       and allocatable components of variables
       @tab Y @tab
 @item @code{defaultmap} extensions @tab Y @tab
-@item @code{declare mapper} directive @tab N @tab
+@item @code{declare mapper} directive @tab P @tab Initial support and for C/C++, only
 @item @code{omp_get_supported_active_levels} routine @tab Y @tab
 @item Runtime routines and environment variables to display runtime thread
       affinity information @tab Y @tab
@@ -289,10 +289,11 @@ The OpenMP 4.5 specification is fully supported.
 @headitem Description @tab Status @tab Comments
 @item OpenMP directive as C++ attribute specifiers @tab Y @tab
 @item @code{omp_all_memory} reserved locator @tab Y @tab
-@item @emph{target_device trait} in OpenMP Context @tab Y
+@item @emph{target_device trait} in OpenMP Context @tab Y @tab
 @item @code{target_device} selector set in context selectors @tab Y @tab
-@item C/C++'s @code{declare variant} directive: elision support of
-      preprocessed code @tab N @tab
+@item C/C++'s delimited @code{declare variant} directive: support elision of
+      preprocessed code and interpret enclosed function definitions
+      as variant functions  @tab Y @tab
 @item @code{declare variant}: new clauses @code{adjust_args} and
       @code{append_args} @tab Y @tab
 @item @code{dispatch} construct @tab Y @tab
@@ -311,7 +312,7 @@ The OpenMP 4.5 specification is fully supported.
 @item @code{thread_limit} clause to @code{target} construct @tab Y @tab
 @item @code{has_device_addr} clause to @code{target} construct @tab Y @tab
 @item Iterators in @code{target update} motion clauses and @code{map}
-      clauses @tab N @tab
+      clauses @tab P @tab Limited support for C/C++
 @item Indirect calls to the device version of a procedure or function in
       @code{target} regions @tab Y @tab
 @item @code{interop} directive @tab Y @tab Cf. @ref{Offload-Target Specifics}
@@ -400,31 +401,31 @@ to address of matching mapped list item per 5.1, Sect. 2.21.7.2 @tab N @tab
 @item Deprecation of no-argument @code{destroy} clause on @code{depobj}
       @tab N/A @tab undeprecated in OpenMP 6
 @item @code{linear} clause syntax changes and @code{step} modifier @tab Y @tab
-@item Deprecation of minus operator for reductions @tab N @tab
-@item Deprecation of separating @code{map} modifiers without comma @tab N @tab
+@item Deprecation of minus operator for reductions @tab Y @tab
+@item Deprecation of separating @code{map} modifiers without comma @tab Y @tab
 @item @code{declare mapper} with iterator and @code{present} modifiers
       @tab N @tab
 @item If a matching mapped list item is not found in the data environment, the
       pointer retains its original value @tab Y @tab
 @item New @code{enter} clause as alias for @code{to} on declare target directive
       @tab Y @tab
-@item Deprecation of @code{to} clause on declare target directive @tab N @tab
+@item Deprecation of @code{to} clause on declare target directive @tab Y @tab
 @item Extended list of directives permitted in Fortran pure procedures
       @tab Y @tab
 @item New @code{allocators} directive for Fortran @tab Y @tab
 @item Deprecation of @code{allocate} directive for Fortran
-      allocatables/pointers @tab N @tab
+      allocatables/pointers @tab Y @tab
 @item Optional paired @code{end} directive with @code{dispatch} @tab Y @tab
 @item New @code{memspace} and @code{traits} modifiers for @code{uses_allocators}
-      @tab N @tab
+      @tab P @tab Only predefined allocators
 @item Deprecation of traits array following the allocator_handle expression in
-      @code{uses_allocators} @tab N @tab
+      @code{uses_allocators} @tab Y @tab
 @item New @code{otherwise} clause as alias for @code{default} on metadirectives
       @tab Y @tab
-@item Deprecation of @code{default} clause on metadirectives @tab N
+@item Deprecation of @code{default} clause on metadirectives @tab Y
       @tab Both @code{otherwise} and @code{default} are accepted
       without diagnostics.
-@item Deprecation of delimited form of @code{declare target} @tab N @tab
+@item Deprecation of delimited form of @code{declare target} @tab Y @tab
 @item Reproducible semantics changed for @code{order(concurrent)} @tab N @tab
 @item @code{allocate} and @code{firstprivate} clauses on @code{scope}
       @tab Y @tab
@@ -434,7 +435,7 @@ to address of matching mapped list item per 5.1, Sect. 2.21.7.2 @tab N @tab
 @item New @code{doacross} clause as alias for @code{depend} with
       @code{source}/@code{sink} modifier @tab Y @tab
 @item Deprecation of @code{depend} with @code{source}/@code{sink} modifier
-      @tab N @tab
+      @tab Y @tab
 @item @code{omp_cur_iteration} keyword @tab Y @tab
 @end multitable
 
@@ -1364,8 +1365,9 @@ They have C linkage and do not throw exceptions.
 This functions returns the currently active thread affinity policy, which is
 set via @env{OMP_PROC_BIND}.  Possible values are @code{omp_proc_bind_false},
 @code{omp_proc_bind_true}, @code{omp_proc_bind_primary},
-@code{omp_proc_bind_master}, @code{omp_proc_bind_close} and @code{omp_proc_bind_spread},
-where @code{omp_proc_bind_master} is an alias for @code{omp_proc_bind_primary}.
+@code{omp_proc_bind_master}, @code{omp_proc_bind_close}
+and @code{omp_proc_bind_spread}, where @code{omp_proc_bind_master} is a
+deprecated alias for @code{omp_proc_bind_primary}.
 
 @item @emph{C/C++}:
 @multitable @columnfractions .20 .80
@@ -4003,7 +4005,7 @@ are only printed when @var{verbose} set to @code{true}.
 
 @smallexample
 OPENMP DISPLAY ENVIRONMENT BEGIN
-  _OPENMP = '201511'
+  _OPENMP = '202111'
   [host] OMP_DYNAMIC = 'FALSE'
   [host] OMP_NESTED = 'FALSE'
   [all] OMP_CANCELLATION = 'FALSE'
@@ -4428,14 +4430,14 @@ When a list with more than value is specified, it also affects the
 Specifies whether threads may be moved between processors.  If set to
 @code{TRUE}, OpenMP threads should not be moved; if set to @code{FALSE}
 they may be moved.  Alternatively, a comma separated list with the
-values @code{PRIMARY}, @code{MASTER}, @code{CLOSE} and @code{SPREAD} can
-be used to specify the thread affinity policy for the corresponding nesting
-level.  With @code{PRIMARY} and @code{MASTER} the worker threads are in the
-same place partition as the primary thread.  With @code{CLOSE} those are
-kept close to the primary thread in contiguous place partitions.  And
-with @code{SPREAD} a sparse distribution
-across the place partitions is used.  Specifying more than one item in the
-list automatically enables nesting by default.
+values @code{PRIMARY}, @code{MASTER} (deprecated since OpenMP 5.1),
+@code{CLOSE} and @code{SPREAD} can be used to specify the thread affinity
+policy for the corresponding nesting level.  With @code{PRIMARY} and
+@code{MASTER} the worker threads are in the same place partition as the
+primary thread. With @code{CLOSE} those are kept close to the primary
+thread in contiguous place partitions.  And with @code{SPREAD} a sparse
+distribution across the place partitions is used.  Specifying more than
+one item in the list automatically enables nesting by default.
 
 When a list is specified, it also affects the @var{max-active-levels-var} ICV
 as described in @ref{OMP_MAX_ACTIVE_LEVELS}.
@@ -7156,13 +7158,14 @@ The implementation remark:
       such that the next reverse offload region is only executed after the previous
       one returned.
 @item OpenMP code that has a @code{requires} directive with @code{self_maps} or
-      @code{unified_shared_memory} is only supported if all AMD GPUs have the
-      @code{HSA_AMD_SYSTEM_INFO_SVM_ACCESSIBLE_BY_DEFAULT} property; for
-      discrete GPUs, this may require setting the @code{HSA_XNACK} environment
-      variable to @samp{1}; for systems with both an APU and a discrete GPU that
-      does not support XNACK, consider using @code{ROCR_VISIBLE_DEVICES} to
-      enable only the APU.  If not supported, all AMD GPU devices are removed
-      from the list of available devices (``host fallback'').
+      @code{unified_shared_memory} is only supported if @emph{all} the AMD GPUs
+      present have the @code{HSA_AMD_SYSTEM_INFO_SVM_ACCESSIBLE_BY_DEFAULT}
+      property; some systems require the "xnack" feature enabled for this to be
+      true, in which case the runtime will attempt to set the @code{HSA_XNACK}
+      environment variable to @samp{1} automatically (user-set values are not
+      overridden, and the setting only affects the executable itself and any
+      child processes).  If any AMD GPU device is not supported, all AMD GPUs
+      are removed from the list of available devices (``host fallback'').
 @item The available stack size can be changed using the @code{GCN_STACK_SIZE}
       environment variable; the default is 32 kiB per thread.
 @item Low-latency memory (@code{omp_low_lat_mem_space}) is supported when the
@@ -7184,11 +7187,26 @@ The implementation remark:
       a performance boost for NVPTX offload code and also allows unlimited use
       of pinned memory regardless of the OS @code{ulimit}/@code{rlimit}
       settings.
-@item Managed memory allocated with the OpenMP
+@item Managed memory allocated on the host with the
       @code{ompx_gnu_managed_mem_alloc} allocator or in the
-      @code{ompx_gnu_managed_mem_space} is not currently supported for AMD GPU
-      devices; attempting to use it in an allocator will trigger the fall-back
-      trait.
+      @code{ompx_gnu_managed_mem_space} (both GNU extensions) allocate memory
+      equivalent to HIP Managed Memory, although @emph{not} actually allocated
+      using @code{hipMallocManaged}.  This memory is accessible by both the
+      host and the device at the same address, so it need not be mapped with
+      @code{map} clauses.  Instead, use the @code{is_device_ptr} clause or
+      @code{has_device_addr} clause to indicate that the pointer is already
+      accessible on the device.  The ROCm runtime will automatically handle
+      data migration between host and device as needed.  Not all AMD GPU
+      devices support this feature, and many that do require that
+      @code{-mxnack=on} is configured at compile time.  If managed memory is
+      not supported by the default device, as configured at the moment the
+      allocator is called, then the allocator will use the fall-back setting.
+      If the default device is configured differently when the memory is freed,
+      via @code{omp_free} or @code{omp_realloc}, the result may be undefined.
+      If the current device does not support Unified Shared Memory (or it is
+      not enabled with @code{HSA_XNACK=1}) then Managed Memory might still
+      work, but allocations may only be visible to a single device (whichever
+      was the default device when the @emph{first} allocation was made).
 @item The OpenMP routines @code{omp_target_memcpy_rect} and
       @code{omp_target_memcpy_rect_async} and the @code{target update}
       directive for non-contiguous list items use the 3D memory-copy function

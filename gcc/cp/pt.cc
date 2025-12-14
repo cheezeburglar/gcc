@@ -8646,6 +8646,19 @@ maybe_convert_nontype_argument (tree type, tree arg, bool force)
   return arg;
 }
 
+/* True if we need an IMPLICIT_CONV_EXPR for converting EXPR to TYPE, possibly
+   in a FORCED context (i.e. alias or concept).  */
+
+static bool
+dependent_implicit_conv_p (tree type, tree expr, bool forced)
+{
+  return (dependent_type_p (type) || type_dependent_expression_p (expr)
+	  || (forced
+	      && !(same_type_ignoring_top_level_qualifiers_p
+		   (TREE_TYPE (expr), type))
+	      && value_dependent_expression_p (expr)));
+}
+
 /* Convert the indicated template ARG as necessary to match the
    indicated template PARM.  Returns the converted ARG, or
    error_mark_node if the conversion was unsuccessful.  Error and
@@ -8926,12 +8939,7 @@ convert_template_argument (tree parm,
 	  && same_type_p (TREE_TYPE (orig_arg), t))
 	orig_arg = TREE_OPERAND (orig_arg, 0);
 
-      if (!uses_template_parms (t)
-	  && !type_dependent_expression_p (orig_arg)
-	  && !(force_conv
-	       && !(same_type_ignoring_top_level_qualifiers_p
-		    (TREE_TYPE (orig_arg), t))
-	       && value_dependent_expression_p (orig_arg)))
+      if (!dependent_implicit_conv_p (t, orig_arg, force_conv))
 	/* We used to call digest_init here.  However, digest_init
 	   will report errors, which we don't want when complain
 	   is zero.  More importantly, digest_init will try too
@@ -11899,14 +11907,13 @@ tsubst_friend_function (tree decl, tree args)
 	  new_friend = old_decl;
 	}
 
-      /* We've just introduced a namespace-scope function in the purview
-	 without necessarily having opened the enclosing namespace, so
-	 make sure the namespace is in the purview now too.  */
-      if (modules_p ()
-	  && DECL_MODULE_PURVIEW_P (STRIP_TEMPLATE (new_friend)))
+      /* We've just introduced a namespace-scope function without
+	 necessarily having opened the enclosing namespace, so
+	 make sure the namespace is declared in this TU as well.  */
+      if (modules_p ())
 	for (tree ctx = DECL_CONTEXT (new_friend);
 	     TREE_CODE (ctx) == NAMESPACE_DECL; ctx = DECL_CONTEXT (ctx))
-	  DECL_MODULE_PURVIEW_P (ctx) = true;
+	  expose_existing_namespace (ctx);
     }
   else
     {
@@ -12379,7 +12386,8 @@ tsubst_attribute (tree t, tree *decl_p, tree args,
      pass it through tsubst.  Attributes like mode, format,
      cleanup and several target specific attributes expect it
      unmodified.  */
-  else if (attribute_takes_identifier_p (get_attribute_name (t)))
+  else if (get_attribute_namespace (t) == gnu_identifier
+	   && attribute_takes_identifier_p (get_attribute_name (t)))
     {
       tree chain
 	= tsubst_expr (TREE_CHAIN (val), args, complain, in_decl);
@@ -14204,6 +14212,25 @@ tsubst_pack_expansion (tree t, tree args, tsubst_flags_t complain,
   return result;
 }
 
+/* Substitute ARGS into T, which is a TREE_VEC.  This function creates a new
+   TREE_VEC rather than substituting the elements in-place.  */
+
+static tree
+tsubst_tree_vec (tree t, tree args, tsubst_flags_t complain, tree in_decl)
+{
+  const int len = TREE_VEC_LENGTH (t);
+  tree r = make_tree_vec (len);
+  for (int i = 0; i < len; ++i)
+    {
+      tree arg = TREE_VEC_ELT (t, i);
+      if (TYPE_P (arg))
+	TREE_VEC_ELT (r, i) = tsubst (arg, args, complain, in_decl);
+      else
+	TREE_VEC_ELT (r, i) = tsubst_expr (arg, args, complain, in_decl);
+    }
+  return r;
+}
+
 /* Substitute ARGS into T, which is a pack index (i.e., PACK_INDEX_TYPE or
    PACK_INDEX_EXPR).  Returns a single type or expression, a PACK_INDEX_*
    node if only a partial substitution could be performed, or ERROR_MARK_NODE
@@ -14221,7 +14248,7 @@ tsubst_pack_index (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 	 a partially instantiated closure.  Let tsubst find the
 	 fully-instantiated one.  */
       gcc_assert (TREE_CODE (pack) == TREE_VEC);
-      pack = tsubst (pack, args, complain, in_decl);
+      pack = tsubst_tree_vec (pack, args, complain, in_decl);
     }
   if (TREE_CODE (pack) == TREE_VEC && TREE_VEC_LENGTH (pack) == 0)
     {
@@ -18188,6 +18215,7 @@ tsubst_omp_clauses (tree clauses, enum c_omp_region_type ort,
 	case OMP_CLAUSE_ASYNC:
 	case OMP_CLAUSE_WAIT:
 	case OMP_CLAUSE_DETACH:
+	case OMP_CLAUSE_DYN_GROUPPRIVATE:
 	  OMP_CLAUSE_OPERAND (nc, 0)
 	    = tsubst_stmt (OMP_CLAUSE_OPERAND (oc, 0), args, complain, in_decl);
 	  break;
@@ -18267,6 +18295,14 @@ tsubst_omp_clauses (tree clauses, enum c_omp_region_type ort,
 	    OMP_CLAUSE_LINEAR_STEP (nc)
 	      = tsubst_stmt (OMP_CLAUSE_LINEAR_STEP (oc), args,
 			     complain, in_decl);
+	  break;
+	case OMP_CLAUSE_USES_ALLOCATORS:
+	  OMP_CLAUSE_OPERAND (nc, 0)
+	    = tsubst_stmt (OMP_CLAUSE_OPERAND (oc, 0), args, complain, in_decl);
+	  OMP_CLAUSE_OPERAND (nc, 1)
+	    = tsubst_stmt (OMP_CLAUSE_OPERAND (oc, 1), args, complain, in_decl);
+	  OMP_CLAUSE_OPERAND (nc, 2)
+	    = tsubst_stmt (OMP_CLAUSE_OPERAND (oc, 2), args, complain, in_decl);
 	  break;
 	case OMP_CLAUSE_INIT:
 	  if (ort == C_ORT_OMP_INTEROP
@@ -21013,7 +21049,8 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 	if (type == error_mark_node)
 	  RETURN (error_mark_node);
 	tree expr = RECUR (TREE_OPERAND (t, 0));
-	if (dependent_type_p (type) || type_dependent_expression_p (expr))
+	if (dependent_implicit_conv_p (type, expr,
+				       IMPLICIT_CONV_EXPR_FORCED (t)))
 	  {
 	    retval = copy_node (t);
 	    TREE_TYPE (retval) = type;
@@ -22531,6 +22568,11 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl)
       /* We shouldn't have built any of these during initial template
 	 generation.  Instead, they should be built during instantiation
 	 in response to the saved STMT_IS_FULL_EXPR_P setting.  */
+      gcc_unreachable ();
+
+    case TARGET_EXPR:
+      /* TARGET_EXPR represents temporary objects and should not appear in
+	 templated trees.  */
       gcc_unreachable ();
 
     case OFFSET_REF:
@@ -24787,8 +24829,6 @@ resolve_nondeduced_context (tree orig_expr, tsubst_flags_t complain)
 	}
       if (good == 1)
 	{
-	  if (!mark_used (goodfn, complain) && !(complain & tf_error))
-	    return error_mark_node;
 	  expr = goodfn;
 	  if (baselink)
 	    expr = build_baselink (BASELINK_BINFO (baselink),
@@ -32129,10 +32169,18 @@ do_auto_deduction (tree type, tree init, tree auto_node,
 	 initializer_list.  */
       if (CONSTRUCTOR_ELTS (init))
 	for (constructor_elt &elt : CONSTRUCTOR_ELTS (init))
-	  elt.value = resolve_nondeduced_context (elt.value, complain);
+	  {
+	    elt.value = resolve_nondeduced_context (elt.value, complain);
+	    if (!mark_single_function (elt.value, complain))
+	      return error_mark_node;
+	  }
     }
   else if (init)
-    init = resolve_nondeduced_context (init, complain);
+    {
+      init = resolve_nondeduced_context (init, complain);
+      if (!mark_single_function (init, complain))
+	return error_mark_node;
+    }
 
   /* In C++23, we must deduce the type to int&& for code like
        decltype(auto) f(int&& x) { return (x); }
@@ -32900,6 +32948,8 @@ finish_expansion_stmt (tree expansion_stmt, tree args,
 	type = tsubst (type, args, complain | tf_tst_ok, in_decl);
       tree decl = build_decl (loc, VAR_DECL, DECL_NAME (range_decl), type);
       DECL_ATTRIBUTES (decl) = DECL_ATTRIBUTES (range_decl);
+      TREE_USED (decl) |= TREE_USED (range_decl);
+      DECL_READ_P (decl) |= DECL_READ_P (range_decl);
       if (args)
 	apply_late_template_attributes (&decl, DECL_ATTRIBUTES (decl),
 					/*flags=*/0, args, complain,
@@ -32958,6 +33008,8 @@ finish_expansion_stmt (tree expansion_stmt, tree args,
 	      DECL_ARTIFICIAL (this_decl) = 1;
 	      DECL_ATTRIBUTES (this_decl)
 		= DECL_ATTRIBUTES (TREE_VEC_ELT (v, i + 1));
+	      TREE_USED (this_decl) |= TREE_USED (TREE_VEC_ELT (v, i + 1));
+	      DECL_READ_P (this_decl) |= DECL_READ_P (TREE_VEC_ELT (v, i + 1));
 	      if (DECL_PACK_P (TREE_VEC_ELT (v, i + 1)))
 		{
 		  tree dtype = cxx_make_type (DECLTYPE_TYPE);

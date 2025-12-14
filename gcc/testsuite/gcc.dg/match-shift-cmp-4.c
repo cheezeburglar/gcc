@@ -1,51 +1,47 @@
 /* { dg-do compile } */
 /* { dg-options "-O2 -fdump-tree-optimized" } */
+/* { dg-final { scan-tree-dump-times "return 0;" 4 "optimized" { target bitint575 } } } */
+/* { dg-final { scan-tree-dump-times "return 0;" 2 "optimized" { target { ! bitint575 } } } } */
+/* { dg-final { scan-tree-dump-not " << " "optimized" } } */
 
-/* The fold (y << x) <op> x -> 0|1 should trigger when y is negative
-   unsigned.  */
-
-#define TEST_ONE_CST(n, op, type, cst)                                         \
-  bool lshift_cst_##type##_##n (type x) { return ((unsigned) (cst) << x) op x; }
-
-#define TEST_OP_CST(n, op, cst)                                                \
-  TEST_ONE_CST (n, op, unsigned, cst)                                          \
-  TEST_ONE_CST (n, op, int, cst)                                               \
-  TEST_ONE_CST (n, op, test_enum, cst)
-
-#define TEST_ONE(n, op, type)                                                  \
-  bool lshift_##type##_##n (type x, type y)                                    \
-  {                                                                            \
-    if ((int) y <= 0)                                                          \
-      __builtin_unreachable ();                                                \
-    return ((unsigned) (y) << x) op x;                                         \
-  }
-
-#define TEST_OP(n, op)                                                         \
-  TEST_ONE (n, op, unsigned)                                                   \
-  TEST_ONE (n, op, int)                                                        \
-  TEST_ONE (n, op, test_enum)
-
-typedef enum
+bool
+foo (unsigned long long x, unsigned y)
 {
-  MONE = -1,
-  ZERO = 0,
-  ONE = 1,
-  TWO = 2
-} test_enum;
+  if (x >= 64 || x == 0)
+    __builtin_unreachable ();
+  if (y > sizeof (unsigned long long) * __CHAR_BIT__ - 6)
+    __builtin_unreachable ();
+  return (x << y) <= y;
+}
 
-TEST_OP_CST (eq, ==, -1)
-TEST_OP_CST (ne, !=, -2)
-TEST_OP_CST (lt, <, -3)
-TEST_OP_CST (gt, >, -4)
-TEST_OP_CST (le, <=, -5)
-TEST_OP_CST (ge, >=, -6)
+#if __BITINT_MAXWIDTH__ >= 575
+bool
+bar (unsigned _BitInt(575) x, unsigned y)
+{
+  if (x >= 1361129467683753853853498429727072845823uwb || x == 0)
+    __builtin_unreachable ();
+  if (y > 575 - 130)
+    __builtin_unreachable ();
+  return (x << y) < y;
+}
 
-TEST_OP (eq, ==)
-TEST_OP (ne, !=)
-TEST_OP (lt, <)
-TEST_OP (gt, >)
-TEST_OP (le, <=)
-TEST_OP (ge, >=)
+bool
+baz (unsigned _BitInt(575) x, unsigned y)
+{
+  if (x >= 1361129467683753853853498429727072845823uwb || x == 0)
+    __builtin_unreachable ();
+  if (y >= 575 - 130)
+    __builtin_unreachable ();
+  return ((signed _BitInt(575)) (x << y)) < y;
+}
+#endif
 
-/* { dg-final { scan-tree-dump-times "return 0;" 18 optimized } } */
-/* { dg-final { scan-tree-dump-times "return 1;" 18 optimized } } */
+bool
+qux (int x, int y)
+{
+  if (x >= 128 || x <= 0)
+    __builtin_unreachable ();
+  if (y >= sizeof (int) * __CHAR_BIT__ - 7)
+    __builtin_unreachable ();
+  return (x << y) <= y;
+}

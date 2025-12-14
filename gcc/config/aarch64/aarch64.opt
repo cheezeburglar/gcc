@@ -193,6 +193,14 @@ mabi=
 Target RejectNegative Joined Enum(aarch64_abi) Var(aarch64_abi) Init(AARCH64_ABI_DEFAULT)
 Generate code that conforms to the specified ABI.
 
+fdump-tuning-model=
+Target Undocumented RejectNegative Negative(fdump-tuning-model=) Joined Var(fdump_tuning_model)
+-fdump-tuning-model=<filename> Dump current tuning model to a JSON file.
+
+muser-provided-CPU=
+Target Undocumented RejectNegative Negative(muser-provided-CPU=) Joined Var(muser_provided_CPU)
+-muser-provided-CPU=<json-tuning-file> User specific CPU tunings.
+
 moverride=
 Target RejectNegative ToLower Joined Var(aarch64_override_tune_string) Save
 -moverride=<string>	Power users only! Override CPU optimization parameters.
@@ -449,5 +457,5 @@ also try to opportunistically form writeback opportunities by folding in
 trailing destructive updates of the base register used by a pair.
 
 Wexperimental-fmv-target
-Target Var(warn_experimental_fmv) Warning Init(1)
+Target Var(warn_experimental_fmv) Warning Init(1) Undocumented
 This option is deprecated.

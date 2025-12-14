@@ -2673,6 +2673,7 @@ collect_fallthrough_labels (gimple_stmt_iterator *gsi_p,
 	  gsi_next (gsi_p);
 	}
 
+      tree lab;
       /* Remember the last statement.  Skip labels that are of no interest
 	 to us.  */
       if (gimple_code (gsi_stmt (*gsi_p)) == GIMPLE_LABEL)
@@ -2691,7 +2692,9 @@ collect_fallthrough_labels (gimple_stmt_iterator *gsi_p,
 	;
       else if (flag_auto_var_init > AUTO_INIT_UNINITIALIZED
 	       && gimple_code (gsi_stmt (*gsi_p)) == GIMPLE_GOTO
-	       && VACUOUS_INIT_LABEL_P (gimple_goto_dest (gsi_stmt (*gsi_p))))
+	       && (lab = gimple_goto_dest (gsi_stmt (*gsi_p)))
+	       && TREE_CODE (lab) == LABEL_DECL
+	       && VACUOUS_INIT_LABEL_P (lab))
 	;
       else if (!is_gimple_debug (gsi_stmt (*gsi_p)))
 	prev = gsi_stmt (*gsi_p);
@@ -2928,9 +2931,12 @@ expand_FALLTHROUGH_r (gimple_stmt_iterator *gsi_p, bool *handled_ops_p,
 
 	  gimple_stmt_iterator gsi2 = *gsi_p;
 	  stmt = gsi_stmt (gsi2);
+	  tree lab;
 	  if (flag_auto_var_init > AUTO_INIT_UNINITIALIZED
 	      && gimple_code (stmt) == GIMPLE_GOTO
-	      && VACUOUS_INIT_LABEL_P (gimple_goto_dest (stmt)))
+	      && (lab = gimple_goto_dest (stmt))
+	      && TREE_CODE (lab) == LABEL_DECL
+	      && VACUOUS_INIT_LABEL_P (lab))
 	    {
 	      /* Handle for C++ artificial -ftrivial-auto-var-init=
 		 sequences.  Those look like:
@@ -4690,6 +4696,26 @@ gimplify_call_expr (tree *expr_p, gimple_seq *pre_p, fallback_t fallback)
 	      gimplify_seq_add_stmt (pre_p, g);
 	      *expr_p = NULL_TREE;
 	      return GS_ALL_DONE;
+	    }
+	  else if (ifn == IFN_UBSAN_BOUNDS
+		   && nargs == 3
+		   && integer_onep (CALL_EXPR_ARG (*expr_p, 0)))
+	    {
+	      /* If first argument is one, add TYPE_MAX_VALUE (TYPE_DOMAIN (t))
+		 to 3rd argument and change first argument to 0.  This is
+		 done by ubsan_instrument_bounds so that we can use the
+		 max value from gimplify_type_sizes here instead of original
+		 expression for VLAs.  */
+	      tree type = TREE_TYPE (CALL_EXPR_ARG (*expr_p, 0));
+	      CALL_EXPR_ARG (*expr_p, 0) = build_int_cst (type, 0);
+	      gcc_assert (TREE_CODE (type) == POINTER_TYPE);
+	      type = TREE_TYPE (type);
+	      gcc_assert (TREE_CODE (type) == ARRAY_TYPE);
+	      tree maxv = TYPE_MAX_VALUE (TYPE_DOMAIN (type));
+	      gcc_assert (maxv);
+	      tree arg3 = CALL_EXPR_ARG (*expr_p, 2);
+	      CALL_EXPR_ARG (*expr_p, 2)
+		= fold_build2 (PLUS_EXPR, TREE_TYPE (arg3), maxv, arg3);
 	    }
 
 	  for (i = 0; i < nargs; i++)
@@ -14832,6 +14858,11 @@ gimplify_scan_omp_clauses (tree *list_p, gimple_seq *pre_p,
 	  nowait = 1;
 	  break;
 
+	case OMP_CLAUSE_USES_ALLOCATORS:
+	  sorry_at (OMP_CLAUSE_LOCATION (c), "%<uses_allocators%> clause");
+	  remove = 1;
+	  break;
+
 	case OMP_CLAUSE_ORDERED:
 	case OMP_CLAUSE_UNTIED:
 	case OMP_CLAUSE_COLLAPSE:
@@ -14853,6 +14884,11 @@ gimplify_scan_omp_clauses (tree *list_p, gimple_seq *pre_p,
 	case OMP_CLAUSE_INIT:
 	case OMP_CLAUSE_USE:
 	case OMP_CLAUSE_DESTROY:
+	  break;
+
+	case OMP_CLAUSE_DYN_GROUPPRIVATE:
+	  remove = true;
+	  sorry_at (OMP_CLAUSE_LOCATION (c),"%<dyn_groupprivate%> clause");
 	  break;
 
 	case OMP_CLAUSE_ORDER:
@@ -16335,6 +16371,7 @@ end_adjust_omp_map_clause:
 	case OMP_CLAUSE_FINALIZE:
 	case OMP_CLAUSE_INCLUSIVE:
 	case OMP_CLAUSE_EXCLUSIVE:
+	case OMP_CLAUSE_USES_ALLOCATORS:
 	  break;
 
 	case OMP_CLAUSE_NOHOST:

@@ -113,9 +113,9 @@ public:
   virtual bool get_operand (vrange &r, tree expr);
   virtual bool get_phi_operand (vrange &r, tree expr, edge e);
   virtual relation_kind query_relation (tree op1, tree op2);
-  virtual void register_relation (gimple *stmt, relation_kind k, tree op1,
+  virtual bool register_relation (gimple *stmt, relation_kind k, tree op1,
 				  tree op2);
-  virtual void register_relation (edge e, relation_kind k, tree op1,
+  virtual bool register_relation (edge e, relation_kind k, tree op1,
 				  tree op2);
   void register_outgoing_edges (gcond *, irange &lhs_range, edge e0, edge e1);
 protected:
@@ -144,9 +144,9 @@ class fur_depend : public fur_stmt
 {
 public:
   fur_depend (gimple *s, range_query *q = NULL, class ranger_cache *c = NULL);
-  virtual void register_relation (gimple *stmt, relation_kind k, tree op1,
+  virtual bool register_relation (gimple *stmt, relation_kind k, tree op1,
 				  tree op2) override;
-  virtual void register_relation (edge e, relation_kind k, tree op1,
+  virtual bool register_relation (edge e, relation_kind k, tree op1,
 				  tree op2) override;
 private:
   ranger_cache *m_cache;
@@ -182,6 +182,7 @@ protected:
   bool range_of_call (vrange &r, gcall *call, fur_source &src);
   bool range_of_cond_expr (vrange &r, gassign* cond, fur_source &src);
   bool range_of_address (prange &r, gimple *s, fur_source &src);
+  bool range_from_readonly_var (vrange &r, gimple *stmt);
   bool range_of_phi (vrange &r, gphi *phi, fur_source &src);
   void range_of_ssa_name_with_loop_info (vrange &, tree, class loop *, gphi *,
 					 fur_source &src);

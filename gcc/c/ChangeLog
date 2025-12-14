@@ -1,3 +1,130 @@
+2025-12-13  Jakub Jelinek  <jakub@redhat.com>
+
+	* c-parser.cc (c_parser_omp_clause_reduction): Provide fixit hints
+	for -Wdeprecated-openmp diagnostics.
+	(c_parser_omp_clause_linear): Likewise.
+	(c_parser_omp_clause_depend): Likewise.  Add HERE argument.
+	(c_parser_omp_clause_map): Provide fixit hints for -Wdeprecated-openmp
+	diagnostics.  Reset num_commas after the diagnostics.
+	(c_parser_omp_clause_proc_bind): Provide fixit hints for
+	-Wdeprecated-openmp diagnostics.
+	(c_parser_omp_all_clauses): Move -Wdeprecated-openmp diagnostics
+	for to vs. enter here, add fixit hints for it.  Adjust
+	c_parser_omp_clause_depend caller.
+	(c_parser_omp_depobj): Adjust c_parser_omp_clause_depend caller.
+	(c_parser_omp_master): Add MASTER_LOC argument.  Provide fixit hints
+	for -Wdeprecated-openmp diagnostics.
+	(c_parser_omp_parallel): Adjust c_parser_omp_master caller.
+	(c_parser_omp_declare_target): Don't emit -Wdeprecated-openmp
+	warning for to vs. enter here.
+	(c_parser_omp_metadirective): Provide fixit hints for
+	-Wdeprecated-openmp diagnostics.
+	(c_parser_omp_construct): Adjust c_parser_omp_master caller.
+
+2025-12-12  Chung-Lin Tang  <cltang@baylibre.com>
+	    Tobias Burnus  <tburnus@baylibre.com>
+	    Andrew Stubbs  <ams@baylibre.com>
+
+	* c-parser.cc (c_parser_omp_clause_uses_allocators): New function.
+	(c_parser_omp_clause_name, c_parser_omp_all_clauses,
+	OMP_TARGET_CLAUSE_MASK): Handle uses_allocators.
+	* c-typeck.cc (c_finish_omp_clauses): Likewise.
+
+2025-12-11  Jakub Jelinek  <jakub@redhat.com>
+
+	PR testsuite/123098
+	* c-parser.cc (c_parser_omp_clause_reduction): Only emit
+	-Wdeprecated-openmp warning for CPP_MINUS if is_omp.
+
+2025-12-11  Jakub Jelinek  <jakub@redhat.com>
+
+	* c-parser.cc (c_parser_omp_clause_reduction,
+	c_parser_omp_clause_linear, c_parser_omp_clause_depend,
+	c_parser_omp_clause_map, c_parser_omp_clause_proc_bind,
+	c_parser_omp_master, c_parser_omp_declare_target,
+	c_parser_omp_metadirective): Formatting fixes.
+
+2025-12-11  supers1ngular  <supers1ngular@baylibre.com>
+
+	* c-parser.cc (c_parser_omp_clause_reduction): Deprecate '-'
+	operator for reductions.
+	(c_parser_omp_clause_linear): Deprecate modifiers with parens.
+	(c_parser_omp_clause_depend): Deprecate 'sink' and 'source'
+	modifiers for 'depend' clause.
+	(c_parser_omp_clause_map): Map clause modifiers comma-separated.
+	(c_parser_omp_declare_target): Deprecate synonymous omp declare
+	target for omp begin declare target. Deprecate 'to' clause.
+	(c_parser_omp_metadirective): Deprecate default clause on
+	metadirectives.
+
+2025-12-11  supers1ngular  <supers1ngular@baylibre.com>
+
+	* c-parser.cc (c_parser_omp_clause_proc_bind): Deprecate master
+	affinity.
+	(c_parser_omp_master): Deprecate master construct.
+	(c_parser_transaction): Whitespace.
+
+2025-12-09  Qing Zhao  <qing.zhao@oracle.com>
+
+	PR c/122982
+	* c-typeck.cc (build_access_with_size_for_counted_by): Call
+	c_fully_fold on the first parameter.
+
+2025-12-09  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/123018
+	* c-decl.cc (finish_struct): Diagnose bit-fields with vector type.
+
+2025-12-05  Richard Biener  <rguenther@suse.de>
+
+	* gimple-parser.cc (c_parser_gimple_postfix_expression):
+	Parse optional clique : base specifier on __MEM.
+
+2025-12-05  Tobias Burnus  <tburnus@baylibre.com>
+
+	* c-parser.cc (c_parser_omp_clause_dyn_groupprivate): New.
+	(OMP_TARGET_CLAUSE_MASK): Add PRAGMA_OMP_CLAUSE_DYN_GROUPPRIVATE;
+	sort clauses alphabetically.
+	(c_parser_omp_clause_name, c_parser_omp_all_clauses):
+	Handle 'dyn_groupprivate' clause.
+	* c-typeck.cc (c_finish_omp_clauses): Likewise.
+
+2025-11-27  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/121506
+	* c-typeck.cc (c_type_tag): If TYPE_NAME is TYPE_DECL
+	with non-NULL DECL_NAME, return that.
+
+2025-11-26  Alejandro Colomar  <alx@kernel.org>
+
+	* c-parser.cc (c_parser_maxof_or_minof_expression): New func.
+	(c_parser_unary_expression): Add RID_MAXOF & RID_MINOF cases.
+	* c-tree.h (c_expr_maxof_type): New prototype.
+	(c_expr_minof_type): New prototype.
+	* c-typeck.cc (c_expr_maxof_type): New function.
+	(c_expr_minof_type): New function.
+
+2025-11-22  Sandra Loosemore  <sloosemore@baylibre.com>
+	    Julian Brown  <julian@codesourcery.com>
+
+	* c-decl.cc (current_omp_declare_variant_attribute): Define.
+	* c-lang.h (struct c_omp_declare_variant_attr): Declare.
+	(current_omp_declare_variant_attribute): Declare.
+	* c-parser.cc (struct omp_begin_declare_variant_map_entry): New.
+	(omp_begin_declare_variant_map): New.
+	(c_parser_skip_to_pragma_omp_end_declare_variant): New.
+	(c_parser_translation_unit): Check for "omp begin declare variant"
+	with no matching "end".  Record base functions for variants.
+	(c_parser_declaration_or_fndef): Handle functions in "omp begin
+	declare variant" block.
+	(c_finish_omp_declare_variant): Merge context selectors with
+	surrounding "omp begin declare variant".
+	(JOIN_STR): Define.
+	(omp_start_variant_function): New.
+	(omp_finish_variant_function): New.
+	(c_parser_omp_begin): Handle "omp begin declare variant".
+	(c_parser_omp_end): Likewise.
+
 2025-11-10  Alejandro Colomar  <alx@kernel.org>
 
 	* c-parser.cc (c_parser_sizeof_expression): Remove function.

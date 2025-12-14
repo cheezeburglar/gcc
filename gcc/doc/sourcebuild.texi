@@ -91,6 +91,9 @@ The Decimal Float support library.
 @item libffi
 The @code{libffi} library, used as part of the Go runtime library.
 
+@item libga68
+The Algol 68 runtime library.
+
 @item libgcc
 The GCC runtime library.
 
@@ -3378,6 +3381,10 @@ keyword}.
 @item bind_pic_locally
 Add the target-specific flags needed to enable functions to bind
 locally when using pic/PIC passes in the testsuite.
+
+@item check_function_bodies
+Add the target-specific flags needed to use
+@code{check-function-bodies} from @code{dg-final}.
 
 @item float@var{n}
 Add the target-specific flags needed to use the @code{_Float@var{n}} type.

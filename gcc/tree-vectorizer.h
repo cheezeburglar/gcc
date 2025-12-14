@@ -265,8 +265,12 @@ struct vect_simd_clone_data : vect_data {
   vect_simd_clone_data () = default;
   vect_simd_clone_data (vect_simd_clone_data &&other) = default;
 
+  /* Selected SIMD clone and clone for in-branch.  */
+  cgraph_node *clone;
+  cgraph_node *clone_inbranch;
+
   /* Selected SIMD clone's function info.  First vector element
-     is SIMD clone's function decl, followed by a pair of trees (base + step)
+     is NULL_TREE, followed by a pair of trees (base + step)
      for linear arguments (pair of NULLs for other arguments).  */
   auto_vec<tree> simd_clone_info;
 };
@@ -1241,6 +1245,10 @@ public:
      happen.  */
   auto_vec<gimple*> early_break_vuses;
 
+  /* The IV adjustment value for inductions that needs to be materialized
+     inside the relavent exit blocks in order to adjust for early break.  */
+  tree early_break_niters_var;
+
   /* Record statements that are needed to be live for early break vectorization
      but may not have an LC PHI node materialized yet in the exits.  */
   auto_vec<stmt_vec_info> early_break_live_ivs;
@@ -1308,6 +1316,7 @@ public:
   (L)->early_break_live_ivs
 #define LOOP_VINFO_EARLY_BRK_DEST_BB(L)    (L)->early_break_dest_bb
 #define LOOP_VINFO_EARLY_BRK_VUSES(L)      (L)->early_break_vuses
+#define LOOP_VINFO_EARLY_BRK_NITERS_VAR(L) (L)->early_break_niters_var
 #define LOOP_VINFO_LOOP_CONDS(L)           (L)->conds
 #define LOOP_VINFO_LOOP_IV_COND(L)         (L)->loop_iv_cond
 #define LOOP_VINFO_NO_DATA_DEPENDENCIES(L) (L)->no_data_dependencies
@@ -2487,8 +2496,7 @@ extern bool vect_is_simple_use (vec_info *, slp_tree,
 				tree *, stmt_vec_info * = NULL);
 extern bool vect_maybe_update_slp_op_vectype (slp_tree, tree);
 extern tree perm_mask_for_reverse (tree);
-extern bool supportable_widening_operation (vec_info*, code_helper,
-					    stmt_vec_info, tree, tree,
+extern bool supportable_widening_operation (code_helper, tree, tree, bool,
 					    code_helper*, code_helper*,
 					    int*, vec<tree> *);
 extern bool supportable_narrowing_operation (code_helper, tree, tree,
@@ -2635,8 +2643,6 @@ extern tree vect_create_addr_base_for_vector_ref (vec_info *,
 extern tree neutral_op_for_reduction (tree, code_helper, tree, bool = true);
 extern widest_int vect_iv_limit_for_partial_vectors (loop_vec_info loop_vinfo);
 bool vect_rgroup_iv_might_wrap_p (loop_vec_info, rgroup_controls *);
-/* Used in tree-vect-loop-manip.cc */
-extern bool vect_need_peeling_or_partial_vectors_p (loop_vec_info);
 /* Used in gimple-loop-interchange.c and tree-parloops.cc.  */
 extern bool check_reduction_path (dump_user_location_t, loop_p, gphi *, tree,
 				  enum tree_code);
@@ -2718,7 +2724,8 @@ extern tree cse_and_gimplify_to_preheader (loop_vec_info, tree);
 
 /* Nonlinear induction.  */
 extern tree vect_peel_nonlinear_iv_init (gimple_seq*, tree, tree,
-					 tree, enum vect_induction_op_type);
+					 tree, enum vect_induction_op_type,
+					 bool);
 
 /* In tree-vect-slp.cc.  */
 extern void vect_slp_init (void);
@@ -2760,7 +2767,7 @@ extern int vect_slp_child_index_for_operand (const gimple *, int op, bool);
 extern tree prepare_vec_mask (loop_vec_info, tree, tree, tree,
 			      gimple_stmt_iterator *);
 extern tree vect_get_mask_load_else (int, tree);
-extern bool vect_load_perm_consecutive_p (slp_tree, unsigned = 0);
+extern bool vect_load_perm_consecutive_p (slp_tree, unsigned = UINT_MAX);
 
 /* In tree-vect-patterns.cc.  */
 extern void

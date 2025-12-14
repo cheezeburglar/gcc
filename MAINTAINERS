@@ -35,7 +35,7 @@ Richard Biener                                  <rguenther@suse.de>
 Richard Earnshaw                                <richard.earnshaw@arm.com>
 Jakub Jelinek                                   <jakub@redhat.com>
 Richard Kenner                                  <kenner@nyu.edu>
-Jeff Law                                        <jlaw@ventanamicro.com>
+Jeff Law                                        <jefflaw@qti.qualcomm.com>
 Michael Meissner                                <gnu@the-meissners.org>
 Jason Merrill                                   <jason@redhat.com>
 David S. Miller                                 <davem@redhat.com>
@@ -173,6 +173,7 @@ objective-c/c++         Mike Stump              <mikestump@comcast.net>
 objective-c/c++         Iain Sandoe             <iain@sandoe.co.uk>
 Rust                    Arthur Cohen            <arthur.cohen@embecosm.com>
 Rust                    Philip Herron           <herron.philip@googlemail.com>
+Algol 68                Jose E. Marchesi        <jemarch@gnu.org>
 
                         Various Maintainers
 
@@ -181,6 +182,7 @@ libcpp                  Per Bothner             <per@bothner.com>
 libcpp                  All C and C++ front end maintainers
 libcpp                  David Malcolm           <dmalcolm@redhat.com>
 fp-bit                  Ian Lance Taylor        <ian@airs.com>
+libga68                 Jose E. Marchesi        <jemarch@gnu.org>
 libgcc                  Ian Lance Taylor        <ian@airs.com>
 libgo                   Ian Lance Taylor        <ian@airs.com>
 libgomp                 Jakub Jelinek           <jakub@redhat.com>
@@ -270,6 +272,7 @@ gdbhooks.py             David Malcolm           <dmalcolm@redhat.com>
 jit                     David Malcolm           <dmalcolm@redhat.com>
 gen* on machine desc    Richard Sandiford       <rdsandiford@googlemail.com>
 static analyzer         David Malcolm           <dmalcolm@redhat.com>
+forge integration       Claudio Bantaloukas     <claudio.bantaloukas@arm.com>
 
 Note that individuals who maintain parts of the compiler need approval to
 check in changes outside of the parts of the compiler they maintain.
@@ -692,6 +695,7 @@ Dragan Mladjenovic              draganm         <Dragan.Mladjenovic@syrmia.com>
 Alan Modra                      amodra          <amodra@gmail.com>
 Toon Moene                      toon            <toon@moene.org>
 Alexander Monakov               amonakov        <amonakov@ispras.ru>
+Pietro Monteiro                 pietro          <pietro@sociotechnical.xyz>
 Catherine Moore                 clm             <clm@codesourcery.com>
 Mikael Morin                    mikael          <mikael@gcc.gnu.org>
 James A. Morrison               phython         <phython@gcc.gnu.org>
@@ -703,6 +707,7 @@ Christoph Müllner               cmuellner       <christoph.muellner@vrull.eu>
 Steven Munroe                   munroesj        <munroesj52@gmail.com>
 Philippe De Muyter              -               <phdm@macqel.be>
 Joseph Myers                    jsm28           <josmyers@redhat.com>
+Nathan Myers                    ncm             <ncm@cantrip.org>
 Szabolcs Nagy                   nsz             <nsz@gcc.gnu.org>
 Victor Do Nascimento            victorldn       <victor.donascimento@arm.com>
 Quentin Neill                   qneill          <quentin.neill.gnu@gmail.com>
@@ -829,6 +834,7 @@ Mike Stump                      mrs             <mikestump@comcast.net>
 Jeff Sturm                      jsturm          <jsturm@gcc.gnu.org>
 YunQiang Su                     syq             <syq@gcc.gnu.org>
 Robert Suchanek                 rts             <rsuchy84@gmail.com>
+Supers1ngular                   -               <supers1ngular@baylibre.com>
 Andrew Sutton                   asutton         <andrew.n.sutton@gmail.com>
 Gabriele Svelto                 gsvelto         <gabriele.svelto@st.com>
 Torbjörn Svensson               azoff           <torbjorn.svensson@foss.st.com>
@@ -923,10 +929,11 @@ Jie Zhang                       jiez            <jzhang918@gmail.com>
 Yufeng Zhang                    yufeng          <yufeng.zhang@arm.com>
 Qing Zhao                       qinzhao         <qing.zhao@oracle.com>
 Shujing Zhao                    pzhao           <pearly.zhao@oracle.com>
-Pengxuan Zheng                  pzheng          <quic_pzheng@quicinc.com>
+Pengxuan Zheng                  pzheng          <pengxuan.zheng@oss.qualcomm.com>
 Juzhe Zhong                     -               <juzhe.zhong@rivai.ai>
 Roman Zhuykov                   zhroma          <zhroma@ispras.ru>
 Jon Ziegler                     jonz            <jonz@apple.com>
+Raphael Zinsly                  -               <rzinsly@qti.qualcomm.com>
 Roman Zippel                    zippel          <zippel@linux-m68k.org>
 Claudiu Zissulescu              claziss         <claziss@gmail.com>
 Josef Zlomek                    zlomek          <josef.zlomek@email.cz>
@@ -946,17 +953,21 @@ information.
 
 
 Soumya AR                                       <soumyaa@nvidia.com>
+Daniel Barboza                                  <dbarboza@qti.qualcomm.com>
+Daniel Barboza                                  <dbarboza@ventanamicro.com>
 Peter Bergner                                   <bergner@tenstorrent.com>
 Dhruv Chawla                                    <dhruvc@nvidia.com>
 Juergen Christ                                  <jchrist@linux.ibm.com>
 Giuseppe D'Angelo                               <giuseppe.dangelo@kdab.com>
 Robin Dapp                                      <rdapp.gcc@gmail.com>
+Robin Dapp                                      <rdapp@qti.qualcomm.com>
 Robin Dapp                                      <rdapp@ventanamicro.com>
 Aldy Hernandez                                  <aldy@quesejoda.com>
 Michal Jires                                    <mjires@suse.cz>
 Matthias Kretz                                  <m.kretz@gsi.de>
 Prathamesh Kulkarni                             <prathameshk@nvidia.com>
 Tim Lange                                       <mail@tim-lange.me>
+Jeff Law                                        <jefflaw@qti.qualcomm.com>
 Jeff Law                                        <jeffreyalaw@gmail.com>
 Jeff Law                                        <jlaw@tachyum.com>
 Jeff Law                                        <jlaw@ventanamicro.com>
@@ -966,6 +977,8 @@ Yuao Ma                                         <yuao@gcc.gnu.org>
 Matthew Malcomson                               <mmalcomson@nvidia.com>
 Immad Mir                                       <mir@sourceware.org>
 Gaius Mulley                                    <gaiusmod2@gmail.com>
+Shreya Munnangi                                 <smunnang@qti.qualcomm.com>
+Shreya Munnangi                                 <smunnangi1@ventanamicro.com>
 Szabolcs Nagy                                   <nsz@gcc.gnu.org>
 Mikael Pettersson                               <mikpelinux@gmail.com>
 Andrew Pinski                                   <andrew.pinski@oss.qualcomm.com>
@@ -987,4 +1000,7 @@ Kugan Vivekanandarajah                          <kvivekananda@nvidia.com>
 Jonathan Wakely                                 <jwakely@redhat.com>
 Alexander Westbrooks                            <alexanderw@gcc.gnu.org>
 Chung-Ju Wu                                     <jasonwucj@gmail.com>
+Pengxuan Zheng                                  <pengxuan.zheng@oss.qualcomm.com>
 Pengxuan Zheng                                  <quic_pzheng@quicinc.com>
+Raphael Zinsly                                  <rzinsly@qti.qualcomm.com>
+Raphael Zinsly                                  <rzinsly@ventanamicro.com>

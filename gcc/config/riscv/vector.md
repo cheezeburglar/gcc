@@ -139,7 +139,8 @@
 			  RVVM2x3HF,RVVM1x3HF,RVVMF2x3HF,RVVMF4x3HF,\
 			  RVVM4x2HF,RVVM2x2HF,RVVM1x2HF,RVVMF2x2HF,RVVMF4x2HF,\
 			  V1HI,V2HI,V4HI,V8HI,V16HI,V32HI,V64HI,V128HI,V256HI,V512HI,V1024HI,V2048HI,\
-			  V1HF,V2HF,V4HF,V8HF,V16HF,V32HF,V64HF,V128HF,V256HF,V512HF,V1024HF,V2048HF")
+			  V1HF,V2HF,V4HF,V8HF,V16HF,V32HF,V64HF,V128HF,V256HF,V512HF,V1024HF,V2048HF,\
+			  V1BF,V2BF,V4BF,V8BF,V16BF,V32BF,V64BF,V128BF,V256BF,V512BF,V1024BF,V2048BF")
 	 (const_int 16)
 	 (eq_attr "mode" "RVVM8SI,RVVM4SI,RVVM2SI,RVVM1SI,RVVMF2SI,\
 			  RVVM8SF,RVVM4SF,RVVM2SF,RVVM1SF,RVVMF2SF,\
@@ -446,6 +447,18 @@
 	 (eq_attr "mode" "V512HF") (symbol_ref "riscv_vector::get_vlmul(E_V512HFmode)")
 	 (eq_attr "mode" "V1024HF") (symbol_ref "riscv_vector::get_vlmul(E_V1024HFmode)")
 	 (eq_attr "mode" "V2048HF") (symbol_ref "riscv_vector::get_vlmul(E_V2048HFmode)")
+	 (eq_attr "mode" "V1BF") (symbol_ref "riscv_vector::get_vlmul(E_V1BFmode)")
+	 (eq_attr "mode" "V2BF") (symbol_ref "riscv_vector::get_vlmul(E_V2BFmode)")
+	 (eq_attr "mode" "V4BF") (symbol_ref "riscv_vector::get_vlmul(E_V4BFmode)")
+	 (eq_attr "mode" "V8BF") (symbol_ref "riscv_vector::get_vlmul(E_V8BFmode)")
+	 (eq_attr "mode" "V16BF") (symbol_ref "riscv_vector::get_vlmul(E_V16BFmode)")
+	 (eq_attr "mode" "V32BF") (symbol_ref "riscv_vector::get_vlmul(E_V32BFmode)")
+	 (eq_attr "mode" "V64BF") (symbol_ref "riscv_vector::get_vlmul(E_V64BFmode)")
+	 (eq_attr "mode" "V128BF") (symbol_ref "riscv_vector::get_vlmul(E_V128BFmode)")
+	 (eq_attr "mode" "V256BF") (symbol_ref "riscv_vector::get_vlmul(E_V256BFmode)")
+	 (eq_attr "mode" "V512BF") (symbol_ref "riscv_vector::get_vlmul(E_V512BFmode)")
+	 (eq_attr "mode" "V1024BF") (symbol_ref "riscv_vector::get_vlmul(E_V1024BFmode)")
+	 (eq_attr "mode" "V2048BF") (symbol_ref "riscv_vector::get_vlmul(E_V2048BFmode)")
 	 (eq_attr "mode" "V1SF") (symbol_ref "riscv_vector::get_vlmul(E_V1SFmode)")
 	 (eq_attr "mode" "V2SF") (symbol_ref "riscv_vector::get_vlmul(E_V2SFmode)")
 	 (eq_attr "mode" "V4SF") (symbol_ref "riscv_vector::get_vlmul(E_V4SFmode)")
@@ -762,6 +775,18 @@
 	 (eq_attr "mode" "V512HF") (symbol_ref "riscv_vector::get_ratio(E_V512HFmode)")
 	 (eq_attr "mode" "V1024HF") (symbol_ref "riscv_vector::get_ratio(E_V1024HFmode)")
 	 (eq_attr "mode" "V2048HF") (symbol_ref "riscv_vector::get_ratio(E_V2048HFmode)")
+	 (eq_attr "mode" "V1BF") (symbol_ref "riscv_vector::get_ratio(E_V1BFmode)")
+	 (eq_attr "mode" "V2BF") (symbol_ref "riscv_vector::get_ratio(E_V2BFmode)")
+	 (eq_attr "mode" "V4BF") (symbol_ref "riscv_vector::get_ratio(E_V4BFmode)")
+	 (eq_attr "mode" "V8BF") (symbol_ref "riscv_vector::get_ratio(E_V8BFmode)")
+	 (eq_attr "mode" "V16BF") (symbol_ref "riscv_vector::get_ratio(E_V16BFmode)")
+	 (eq_attr "mode" "V32BF") (symbol_ref "riscv_vector::get_ratio(E_V32BFmode)")
+	 (eq_attr "mode" "V64BF") (symbol_ref "riscv_vector::get_ratio(E_V64BFmode)")
+	 (eq_attr "mode" "V128BF") (symbol_ref "riscv_vector::get_ratio(E_V128BFmode)")
+	 (eq_attr "mode" "V256BF") (symbol_ref "riscv_vector::get_ratio(E_V256BFmode)")
+	 (eq_attr "mode" "V512BF") (symbol_ref "riscv_vector::get_ratio(E_V512BFmode)")
+	 (eq_attr "mode" "V1024BF") (symbol_ref "riscv_vector::get_ratio(E_V1024BFmode)")
+	 (eq_attr "mode" "V2048BF") (symbol_ref "riscv_vector::get_ratio(E_V2048BFmode)")
 	 (eq_attr "mode" "V1SF") (symbol_ref "riscv_vector::get_ratio(E_V1SFmode)")
 	 (eq_attr "mode" "V2SF") (symbol_ref "riscv_vector::get_ratio(E_V2SFmode)")
 	 (eq_attr "mode" "V4SF") (symbol_ref "riscv_vector::get_ratio(E_V4SFmode)")
@@ -2404,19 +2429,19 @@
    (set_attr "mode" "<MODE>")])
 
 (define_insn_and_split "*pred_strided_broadcast<mode>_zvfhmin"
-  [(set (match_operand:V_VLSF_ZVFHMIN   0 "register_operand"               "=vr,  vr,  vr,  vr")
-	(if_then_else:V_VLSF_ZVFHMIN
+  [(set (match_operand:V_VLSF_FALLBACK   0 "register_operand"               "=vr,  vr,  vr,  vr")
+	(if_then_else:V_VLSF_FALLBACK
 	  (unspec:<VM>
-	    [(match_operand:<VM>        1 "strided_broadcast_mask_operand" " vm,  vm, Wc1, Wc1")
-	     (match_operand             4 "vector_length_operand"          "rvl, rvl, rvl, rvl")
-	     (match_operand             5 "const_int_operand"              "  i,   i,   i,   i")
-	     (match_operand             6 "const_int_operand"              "  i,   i,   i,   i")
-	     (match_operand             7 "const_int_operand"              "  i,   i,   i,   i")
+	    [(match_operand:<VM>         1 "strided_broadcast_mask_operand" " vm,  vm, Wc1, Wc1")
+	     (match_operand              4 "vector_length_operand"          "rvl, rvl, rvl, rvl")
+	     (match_operand              5 "const_int_operand"              "  i,   i,   i,   i")
+	     (match_operand              6 "const_int_operand"              "  i,   i,   i,   i")
+	     (match_operand              7 "const_int_operand"              "  i,   i,   i,   i")
 	     (reg:SI VL_REGNUM)
 	     (reg:SI VTYPE_REGNUM)] UNSPEC_VPREDICATE)
-	  (vec_duplicate:V_VLSF_ZVFHMIN
-	    (match_operand:<VEL>        3 "strided_broadcast_operand"	   "  A,   A,   A,   A"))
-	  (match_operand:V_VLSF_ZVFHMIN 2 "vector_merge_operand"           " vu,   0,  vu,   0")))]
+	  (vec_duplicate:V_VLSF_FALLBACK
+	    (match_operand:<VEL>         3 "strided_broadcast_operand"	   "  A,   A,   A,   A"))
+	  (match_operand:V_VLSF_FALLBACK 2 "vector_merge_operand"           " vu,   0,  vu,   0")))]
   "TARGET_VECTOR"
   "@
    vlse<sew>.v\t%0,%3,zero,%1.t
@@ -2424,7 +2449,8 @@
    vlse<sew>.v\t%0,%3,zero
    vlse<sew>.v\t%0,%3,zero"
   "&& !strided_load_broadcast_p ()
-   && <VEL>mode == HFmode
+   && (<VEL>mode == HFmode
+       || <VEL>mode == BFmode)
    && can_create_pseudo_p ()"
   [(const_int 0)]
   {
@@ -4173,6 +4199,7 @@
   "TARGET_VECTOR"
   "vw<plus_minus:insn><any_extend:u>.wx\t%0,%3,%z4%p1"
   [(set_attr "type" "vi<widen_binop_insn_type>")
+   (set_attr "mode_idx" "3")
    (set_attr "mode" "<V_DOUBLE_TRUNC>")])
 
 (define_insn "@pred_single_widen_add<any_extend:su><mode>_extended_scalar"
@@ -4439,6 +4466,7 @@
   "TARGET_VECTOR"
   "v<insn>.vx\t%0,%3,%4%p1"
   [(set_attr "type" "<int_binop_insn_type>")
+   (set_attr "mode_idx" "3")
    (set_attr "mode" "<MODE>")])
 
 (define_insn "@pred_<optab><mode>_scalar"
@@ -4460,6 +4488,7 @@
   "TARGET_VECTOR"
   "v<insn>.vx\t%0,%3,%4%p1"
   [(set_attr "type" "<int_binop_insn_type>")
+   (set_attr "mode_idx" "3")
    (set_attr "mode" "<MODE>")])
 
 (define_expand "@pred_<optab><mode>_scalar"
@@ -4514,6 +4543,7 @@
   "TARGET_VECTOR"
   "v<insn>.vx\t%0,%3,%4%p1"
   [(set_attr "type" "<int_binop_insn_type>")
+   (set_attr "mode_idx" "3")
    (set_attr "mode" "<MODE>")])
 
 (define_insn "*pred_<optab><mode>_extended_scalar"
@@ -4536,6 +4566,7 @@
   "TARGET_VECTOR && !TARGET_64BIT"
   "v<insn>.vx\t%0,%3,%4%p1"
   [(set_attr "type" "<int_binop_insn_type>")
+   (set_attr "mode_idx" "3")
    (set_attr "mode" "<MODE>")])
 
 (define_expand "@pred_<optab><mode>_scalar"
@@ -4590,6 +4621,7 @@
   "TARGET_VECTOR"
   "v<insn>.vx\t%0,%3,%z4%p1"
   [(set_attr "type" "<int_binop_insn_type>")
+   (set_attr "mode_idx" "3")
    (set_attr "mode" "<MODE>")])
 
 (define_insn "*pred_<optab><mode>_extended_scalar"
@@ -4612,6 +4644,7 @@
   "TARGET_VECTOR && !TARGET_64BIT"
   "v<insn>.vx\t%0,%3,%z4%p1"
   [(set_attr "type" "<int_binop_insn_type>")
+   (set_attr "mode_idx" "3")
    (set_attr "mode" "<MODE>")])
 
 (define_insn "@pred_<sat_op><mode>"
@@ -4657,6 +4690,7 @@
   "TARGET_VECTOR"
   "v<sat_op>.vx\t%0,%3,%z4%p1"
   [(set_attr "type" "<sat_insn_type>")
+   (set_attr "mode_idx" "3")
    (set_attr "mode" "<MODE>")])
 
 (define_insn "@pred_<sat_op><mode>_scalar"
@@ -8643,7 +8677,7 @@
 	     (reg:SI VL_REGNUM)
 	     (reg:SI VTYPE_REGNUM)] UNSPEC_VPREDICATE)
 	  (unspec:VT
-	    [(match_operand 3 "pmode_reg_or_0_operand"   "   rJ,    rJ,    rJ")
+	    [(match_operand:VT 3 "memory_operand"	 "    m,     m,     m")
 	     (mem:BLK (scratch))] UNSPEC_VLEFF)
 	  (match_operand:VT 2 "vector_merge_operand"     "    0,    vu,    vu")))
    (set (reg:SI VL_REGNUM)
@@ -8658,7 +8692,7 @@
 	        [(match_dup 3) (mem:BLK (scratch))] UNSPEC_VLEFF)
 	     (match_dup 2))] UNSPEC_MODIFY_VL))]
   "TARGET_VECTOR"
-  "vlseg<nf>e<sew>ff.v\t%0,(%z3)%p1"
+  "vlseg<nf>e<sew>ff.v\t%0,%3%p1"
   [(set_attr "type" "vlsegdff")
    (set_attr "mode" "<MODE>")])
 

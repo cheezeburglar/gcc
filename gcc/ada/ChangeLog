@@ -1,3 +1,414 @@
+2025-12-11  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/123096
+	* exp_put_image.adb (Build_Record_Put_Image_Procedure): Call
+	Incomplete_Or_Partial_View with Partial_Only set to True.
+
+2025-12-11  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/123062
+	* sem_ch12.adb (Analyze_Subprogram_Instantiation): Also propagate
+	the Convention and Is_Exported flag onto the anonymous actual.
+
+2025-12-11  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/123088
+	* sem_aggr.adb (Resolve_Record_Aggregate): Add missing guard.
+
+2025-12-08  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/123037
+	* rtinit.c [__MINGW32__]: Include <stdlib.h> and not <windows.h>.
+	* rtfinal.c [__MINGW32__]: Do not include <windows.h>.
+
+2025-12-07  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/115349
+	* sem_attr.adb (Resolve_Attribute) <Attribute_Reduce>: Use the base
+	type as Accum_Type if the reducer is an operator from Standard and
+	the type is numeric.  Use the type of the first operand for other
+	operators.  Streamline the error message given for limited types.
+
+2025-12-06  Denis Mazzucato  <mazzucato@adacore.com>
+
+	* sem_attr.adb (Resolve_Attribute): Check if the reducer is a
+	procedure before giving the warning.
+
+2025-12-05  Javier Miranda  <miranda@adacore.com>
+
+	* einfo.ads (Has_Unsigned_Base_Range_Aspect): Update documentation.
+	(Has_Modular_Operations): New synthesized predicate.
+	(Has_Overflow_Operations): New synthesized predicate.
+	* einfo-utils.ads (Has_Modular_Operations): New function.
+	(Has_Overflow_Operations): New function.
+	* einfo-utils.adb (Is_Modular_Integer_Type): Undo previous patch.
+	(Is_Signed_Integer_Type): Undo previous patch.
+	(Has_Modular_Operations): New function.
+	(Has_Overflow_Operations): New function.
+	* checks.adb (Determine_Range): Replace selected occurrences of calls to
+	Is_Modular_Integer_Type by calls to Has_Modular_Operations, and calls to
+	Is_Signed_Integer_Type by calls to Has Overflow_Operations.
+	(Enable_Range_Check): Ditto.
+	(Insert_Valid_Check): Ditto.
+	* exp_aggr.adb (Others_Check): Ditto.
+	* exp_attr.adb (Expand_N_Attribute_Reference [Attribute_Pred,
+	Attribute_Succ]): Ditto.
+	* exp_ch4.adb (Expand_Compare_Minimize_Eliminate_Overflow): Ditto.
+	(Size_In_Storage_Elements): Ditto.
+	(Expand_N_Op_Abs): Ditto.
+	(Expand_N_Op_Expon): Ditto.
+	(Expand_N_Op_Minus): Ditto.
+	(Expand_N_Op_Multiply): Ditto.
+	(Expand_N_Op_Subtract): Ditto.
+	* freeze.adb (Freeze_Entity): Ditto.
+	* sem_aggr.adb (Report_Null_Array_Constraint_Error): Ditto plus
+	report specific error for index with unsigned_base_range aspect.
+	* sem_attr.adb (Check_Modular_Integer_Type): Ditto.
+	(Analyze_Attribute [Attribute_Pred, Attribute_Succ, Attribute_
+	Range_Length, Attribute_Small, Attribute_Reduce]): Ditto.
+	* sem_ch12.adb (Instantiate_Type): Ditto.
+	(Validate_Formal_Type_Default): Ditto.
+	* sem_ch13.adb (Valid_Empty): Ditto.
+	* sem_ch2.adb (Analyze_Integer_Literal): Ditto.
+	* sem_ch3.adb (Unsigned_Base_Range_Type_Declaration): Set attribute
+	Has_Unsigned_Base_Range_Aspect on the implicit base, and set Etype
+	of its first subtype E_Modular_Integer_Subtype.
+	* sem_ch4.adb (Analyze_Call): Ditto.
+	* sem_eval.adb (Check_Non_Static_Context_For_Overflow): Ditto.
+	(Eval_Arithmetic_Op): Ditto.
+	(Eval_Integer_Literal): Ditto.
+	(Eval_Logical_Op): Ditto.
+	(Eval_Op_Expon): Ditto.
+	(Eval_Op_Not): Ditto.
+	(Eval_Unary_Op): Ditto.
+	(Fold_Shift): Ditto.
+	(Test_Expression_Is_Foldable): Ditto.
+	* sem_intr.adb (Check_Shift): Ditto.
+	* sem_prag.adb (Analyze_Pragma [Pragma_Unsigned_Base_Range]): Add
+	assertion.
+	* sem_res.adb (Resolve_Logical_Op): Ditto.
+	(Resolve_Unary_Op): Ditto.
+	(Set_String_Literal_Subtype): Ditto.
+	* sem_type.adb (Covers): Ditto.
+	(Specific_Type): Ditto.
+	(Valid_Boolean_Arg): Ditto.
+	* sem_util.adb (Wrong_Type): Ditto
+	* style.adb (Check_Boolean_Operator): Ditto.
+
+2025-12-05  Ronan Desplanques  <desplanques@adacore.com>
+
+	* doc/gnat_rm/representation_clauses_and_pragmas.rst: Improve table.
+	* gnat_rm.texi: Regenerate.
+	* gnat_ugn.texi: Regenerate.
+
+2025-12-05  Viljar Indus  <indus@adacore.com>
+
+	* sem_util.adb (Get_Cursor_Type): use the
+	specific type for classwide container checks.
+
+2025-12-05  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* sem_ch12.adb (Remove_Parent): Only set the Is_Transient component
+	of the local scope stack entry.
+
+2025-12-05  Marc Poulhiès  <poulhies@adacore.com>
+
+	* doc/gnat_ugn/building_executable_programs_with_gnat.rst
+	(-gnato??): Remove redundant/confusing doc on floating-point
+	overflow.
+	* gnat_ugn.texi: Regenerate.
+
+2025-12-05  Tonu Naks  <naks@adacore.com>
+
+	* adaint.c: use the _tsopen macro when opening RO file
+
+2025-12-05  Denis Mazzucato  <mazzucato@adacore.com>
+
+	* sem_attr.adb
+	(Analyze_Attribute): Set the type of the attribute expression only when
+	not ambiguous (it will later be resolved correctly). Emit an error in
+	case the type is limited.
+	(Resolve_Attribute): Emit an error if the reducer has no entity.
+	(Get_Value_Subtype): Try to resolve the Value_Subtype of the aggregate
+	expression, and if it succeeds, set the candidate reducer subprogram.
+	(Is_Reducer_Subprogram): Check whether the selected candidate has a
+	proper reducer profile.
+	(Make_Array_Type): Return simple array type to resolve the array
+	aggregate against it.
+	(Resolve_Attribute): Reimplement the resolution of Reduce attribute,
+	including its prefix.
+	* sem_res.adb (Resolve_Declare_Expression): Save and restore variables
+	that may be hidden by the local declaration. Only setting the new
+	entities is problematic when dealing with copied trees where the ref is
+	lost (eg. when resolving array aggregates).
+	* exp_attr.adb (Expand_N_Attribute_Reference): Remove tricks to resolve
+	the reducer in case of faulty resolution as not needed anymore.
+
+2025-12-05  Iain Sandoe  <iain@sandoe.co.uk>
+
+	PR ada/115305
+	* Makefile.rtl: Use s-oslock__darwin instead of the Posix version.
+	* libgnat/s-oslock__darwin.ads: New file.
+
+2025-12-03  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/122960
+	* gcc-interface/Makefile.in (powerpc64-suse-linux): Remove kludge.
+
+2025-11-30  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	* gcc-interface/lang.opt.urls: Regenerate.
+
+2025-11-27  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* exp_ch6.adb (Expand_Actuals): Do not create activation chain and
+	master for build-in-place calls here but...
+	(Make_Build_In_Place_Call_In_Allocator): Use Unqual_Conv.
+	(Make_Build_In_Place_Call_In_Anonymous_Context): ...here instead.
+	Call Make_Build_In_Place_Call_In_Object_Declaration directly.
+	(Make_Build_In_Place_Iface_Call_In_Anonymous_Context): ...and here
+	instead.  Add missing rewriting of the call.
+
+2025-11-27  Ronan Desplanques  <desplanques@adacore.com>
+
+	* doc/gnat_ugn/about_this_guide.rst: Minor fixes
+	* gnat_ugn.texi: Regenerate.
+
+2025-11-27  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/122574
+	* doc/gnat_ugn/building_executable_programs_with_gnat.rst (-gnatwp):
+	Replace reference to -gnatN with -gnatn and adjust accordingly.
+	* inline.adb: Remove clauses for Exp_Tss.
+	(Has_Initialized_Type): Delete.
+	(Add_Inlined_Subprogram): Test that the Is_Inlined flag is still set
+	on the subprogram.
+	* usage.adb (Usage): Adjust description of -gnatwp.
+	* gnat_ugn.texi: Regenerate.
+
+2025-11-27  Denis Mazzucato  <mazzucato@adacore.com>
+
+	* sem_ch5.adb: Skip check for assignment that doesn't come from source.
+
+2025-11-27  Ronan Desplanques  <desplanques@adacore.com>
+
+	* exp_aggr.adb (Gen_Loop): Only preanalyze expressions we know won't
+	evaluated.
+
+2025-11-27  Tom Tromey  <tromey@adacore.com>
+
+	* repinfo.adb (Visit): New procedure.
+	(List_GCC_Expression): Rewrite.
+	* repinfo.ads (Visit): New generic procedure.
+
+2025-11-27  Ghjuvan Lacambre  <lacambre@adacore.com>
+
+	* sem_ch13.adb (Analyze_Code_Statement): Do not emit error
+	message when only checking relaxed semantics.
+
+2025-11-27  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* exp_ch7.adb (Build_Finalizer_Call): Delete.
+	(Build_Finalizer): Always insert the finalizer at the end of the
+	statement list in the non-package case.
+	(Expand_Cleanup_Actions): Attach the finalizer manually, if any.
+	* exp_smem.adb (Add_Shared_Var_Lock_Procs): Insert all the actions
+	directly in the transient scope.
+
+2025-11-27  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* exp_ch11.adb (Expand_N_Handled_Sequence_Of_Statement): Merge the
+	eslif condition with the if condition for cleanup actions.
+	* sem_ch6.adb (Analyze_Procedure_Call.Analyze_Call_And_Resolve): Get
+	rid of if statement whose condition is always true.
+	* sinfo.ads (Finally_Statements): Document their purpose.
+
+2025-11-27  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gen_il-gen-gen_nodes.adb (N_Extended_Return_Statement): Add
+	Activation_Chain_Entity semantic field.
+	* exp_ch3.adb (Build_Master): Use Build_Master_{Entity,Renaming} in
+	all cases.
+	(Expand_N_Object_Declaration): Small tweak.
+	* exp_ch6.adb (Make_Build_In_Place_Iface_Call_In_Allocator): Use
+	Build_Master_{Entity,Renaming} to build the master.
+	* exp_ch7.adb (Expand_N_Package_Declaration): Do not guard the call
+	to Build_Task_Activation_Call for the sake of consistency.
+	* exp_ch9.ads (Build_Class_Wide_Master): Delete.
+	(Find_Master_Scope): Likewise.
+	(Build_Protected_Subprogram_Call_Cleanup): Move to...
+	(First_Protected_Operation): Move to...
+	(Mark_Construct_As_Task_Master): New procedure.
+	* exp_ch9.adb (Build_Protected_Subprogram_Call_Cleanup): ...here.
+	(First_Protected_Operation): ...here.
+	(Build_Activation_Chain_Entity): Streamline handling of extended
+	return statements.
+	(Build_Class_Wide_Master): Delete.
+	(Build_Master_Entity): Streamline handling of extended return
+	statements and call Mark_Construct_As_Task_Master on the context.
+	(Build_Task_Activation_Call): Assert that the owner is not an
+	extended return statement.
+	(Find_Master_Scope): Delete.
+	(Mark_Construct_As_Task_Master): New procedure.
+	* sem_ch3.adb (Access_Definition): Use Build_Master_{Entity,Renaming}
+	in all cases to build a master.
+	* sem_ch6.adb (Check_Anonymous_Return): Rename to...
+	(Check_Anonymous_Access_Return_With_Tasks): ...this.  At the end,
+	call Mark_Construct_As_Task_Master on the parent node.
+	(Analyze_Subprogram_Body_Helper): Adjust to above renaming.
+	(Create_Extra_Formals): Do not set Has_Master_Entity here.
+	* sinfo.ads (Activation_Chain_Entity): Adjust description.
+
+2025-11-27  Bob Duff  <duff@adacore.com>
+
+	* sem_ch13.adb (Aspect_Annotate): Avoid disturbing the tree of the
+	aspect.
+	* vast.adb: Enable Check_Parent_Present.
+	* exp_ch6.adb (Validate_Subprogram_Calls): Minor reformatting.
+
+2025-11-27  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* exp_ch4.adb (Expand_N_Case_Expression): When not optimizing for a
+	specific context, call Make_Build_In_Place_Call_In_Anonymous_Context
+	on expressions of alternatives when they are calls to BIP functions.
+	(Expand_N_If_Expression): Likewise for the Then & Else expressions.
+
+2025-11-27  Bob Duff  <duff@adacore.com>
+
+	* frontend.adb: Move call to VAST from here...
+	* gnat1drv.adb: ...to here.
+	* vast.ads (VAST_If_Enabled): Rename main entry point of VAST from
+	VAST to VAST_If_Enabled.
+	* vast.adb: Miscellaneous improvements. Mostly debugging
+	improvements. Also enable Check_Error_Nodes. Also add checks:
+	Check_FE_Only, Check_Scope_Present, Check_Scope_Correct.
+	* debug.ads: Minor comment tweaks. The comment, "In the checks off
+	version of debug, the call to Set_Debug_Flag is always a null
+	operation." appears to be false, so is removed.
+	* debug.adb: Minor: Remove some code duplication.
+	* sinfo-utils.adb (nnd): Add comment warning about C vs. Ada
+	confusion.
+
+2025-11-27  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* exp_ch6.ads (Needs_BIP_Task_Actuals): Adjust description.
+	* exp_ch6.adb (Expand_N_Extended_Return_Statement): Move activation
+	chain for every build-in-place function with task formal parameters
+	when the type of the return object might have tasks.
+
+2025-11-27  Ronan Desplanques  <desplanques@adacore.com>
+
+	* libgnat/s-dwalin.ads (Display_Mode_Type): New enumerated type.
+	(Symbolic_Traceback): Use new type in profile.
+	* libgnat/s-dwalin.adb (Symbolic_Traceback): Use new type in profile
+	and adapt body.
+	* libgnat/s-trasym__dwarf.adb (Multi_Module_Symbolic_Traceback): Fix
+	wrong call in body of one overload. Use new type in profile. Adapt
+	body.
+	(Symbolic_Traceback, Symbolic_Traceback_No_Lock,
+	Module_Symbolic_Traceback): Use new type in profile and adapt body.
+	(Calling_Entity): Adapt body.
+
+2025-11-24  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/81106
+	* gnatchop.adb (Gnatchop): If present in the source file, output
+	the BOM at the start of every compilation unit.
+
+2025-11-24  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/33994
+	* gcc-interface/utils.cc (convert) <INTEGER_TYPE>: Call
+	int_const_convert if the expression is an integer constant.
+
+2025-11-21  Bob Duff  <duff@adacore.com>
+
+	* exp_ch5.adb (Expand_Formal_Container_Loop):
+	Preanalyze block with empty statements; then set
+	the statements later before doing Analyze of the
+	block.
+
+2025-11-21  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* exp_aggr.adb (Expand_Array_Aggregate): Remove obsolete call to
+	Establish_Transient_Scope for an allocator in a loop.
+	* exp_ch7.adb (Establish_Transient_Scope): Adjust description.
+
+2025-11-21  Piotr Trojanek  <trojanek@adacore.com>
+
+	* lib-xref.adb (Output_References): Put local array object on the heap.
+
+2025-11-21  Viljar Indus  <indus@adacore.com>
+
+	* erroutc.adb (Is_Redundant_Error_Message): Avoid non-serious errors
+	masking fatal errors.
+
+2025-11-21  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* exp_ch6.ads (BIP_Formal_Kind): Update description of some values.
+
+2025-11-21  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* exp_ch4.adb (Expand_N_Op_Eq): Use No instead of not Present.
+	(Optimize_Length_Comparison): Initialize Is_Zero and Comp variables.
+	(Safe_In_Place_Array_Op): Do not use local variable to pass data to
+	nested function Is_Safe_Operand.
+
+2025-11-21  Javier Miranda  <miranda@adacore.com>
+
+	* sem_ch6.adb (Create_Extra_Formals): Do not add extra formals to
+	anonymous access to subprogram types defined in the profile of
+	subprograms that have foreign convention.
+
+2025-11-21  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* exp_ch3.adb (Expand_N_Object_Declaration): Delete ancient comment.
+	* exp_ch6.adb (Expand_Call_Helper): Do not establish a transient
+	scope for build-in-place functions in anonymous contexts here...
+	(Make_Build_In_Place_Call_In_Anonymous_Context): ...but here instead.
+	* sem_attr.adb (Resolve_Attribute) <Attribute_Range>: Remove obsolete
+	code dealing with transient scopes.
+	* sem_res.adb (Resolve_Actuals): Likewise.
+	(Resolve_Call): Adjust comment on the strategy for transient scopes.
+
+2025-11-21  Bob Duff  <duff@adacore.com>
+
+	* exp_ch5.adb (Expand_Formal_Container_Loop):
+	Analyze Init_Decl in the correct scope. Remove patch-up
+	code that was needed because we were using the wrong scope.
+	* exp_ch7.adb (Process_Object_Declaration):
+	Remove code to unique-ify the name of Master_Node_Id;
+	no longer needed because of change to exp_ch5.adb.
+	* sem_warn.adb (Check_References):
+	Suppress warnings during preanalysis, because we don't
+	have complete information yet; otherwise, the new Preanalyze
+	call in exp_ch5.adb generates bogus warnings.
+
+2025-11-21  Steve Baird  <baird@adacore.com>
+
+	* libgnat/a-cobove.adb
+	(Append): Add an equivalent fast path for the case where tampering
+	checks are suppressed.
+
+2025-11-21  Viljar Indus  <indus@adacore.com>
+
+	* freeze.adb (Freeze_Profile): Improve -gnatwx message.
+
+2025-11-21  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* repinfo.adb (List_Location): Do not output the final comma.
+	(List_Common_Type_Info): Adjust to above change.  Do not output
+	"??" for an unknown alignment.
+	(List_Entities): Do not output generic types.
+	(List_Object_Info): Adjust to above change.
+	(List_Subprogram_Info): Likewise.
+
+2025-11-21  Viljar Indus  <indus@adacore.com>
+
+	* sem_ch4.adb (Analyze_Call): ensure we generate a reference to the
+	non limited view of the return type to avoid scenarios where
+	the with-ed unit is not considered referenced.
+
 2025-11-18  Denis Mazzucato  <mazzucato@adacore.com>
 
 	* gcc-interface/decl.cc

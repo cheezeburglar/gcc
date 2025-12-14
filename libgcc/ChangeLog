@@ -1,3 +1,44 @@
+2025-12-12  mengqinggang  <mengqinggang@loongson.cn>
+
+	* configure: Regenerate.
+	* configure.ac:
+	* config/loongarch/t-crtstuff-la32: New file.
+	* config/loongarch/t-crtstuff: Rename to t-crtstuff-la64.
+	* config/loongarch/t-crtstuff-la64: New file.
+
+2025-12-09  John Ericson  <git@JohnEricson.me>
+
+	* config/rs6000/t-slibgcc-aix: Instead of using a
+	TARGET_SYSTEM_ROOT make variable, just define a shell variable
+	as part of the rule and use that.
+
+2025-12-09  John Ericson  <git@JohnEricson.me>
+
+	* Makefile.in: Define NO_PIE_CFLAGS make variable via autoconf
+	substitution.
+	* configure: Regenerate.
+	* configure.ac: New configure check to define NO_PIE_CFLAGS
+	using the algorithm Andrew asked for in the linked mail.
+
+2025-12-09  John Ericson  <git@johnericson.me>
+
+	* configure: Regenerate.
+	* configure.ac: Use GCC_AC_THREAD_MODEL instead of hand-rolled
+
+2025-11-27  Lulu Cheng  <chenglulu@loongson.cn>
+
+	* config/loongarch/cpuinfo.c (HWCAP_LOONGARCH_LSX): Define
+	it if it is not defined.
+	(HWCAP_LOONGARCH_LASX): Likewise.
+
+2025-11-21  LIU Hao  <lh_mouse@126.com>
+
+	PR target/122275
+	* config/i386/32/dfp-machine.h (DFP_GET_ROUNDMODE): Change `_frnd_orig` to
+	`unsigned short` for x87 control word.
+	(DFP_SET_ROUNDMODE): Manipulate the x87 control word as `unsigned short`,
+	and manipulate the MXCSR as `unsigned int`.
+
 2025-11-11  Lulu Cheng  <chenglulu@loongson.cn>
 
 	* config/loongarch/t-loongarch64: Add cpuinfo.c to LIB2ADD.

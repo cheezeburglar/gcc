@@ -3050,6 +3050,18 @@ TraitItemType::as_string () const
 
   str += "\ntype " + name.as_string ();
 
+  if (has_generics ())
+    {
+      str += "<";
+      for (size_t i = 0; i < generic_params.size (); i++)
+	{
+	  if (i > 0)
+	    str += ", ";
+	  str += generic_params[i]->as_string ();
+	}
+      str += ">";
+    }
+
   str += "\n Type param bounds: ";
   if (!has_type_param_bounds ())
     {
@@ -4163,16 +4175,10 @@ Attribute::check_cfg_predicate (const Session &session) const
   auto string_path = path.as_string ();
   /* assume that cfg predicate actually can exist, i.e. attribute has cfg or
    * cfg_attr path */
-  if (!has_attr_input ()
-      || (string_path != Values::Attributes::CFG
-	  && string_path != Values::Attributes::CFG_ATTR))
+  if (!has_attr_input ())
     {
-      // DEBUG message
-      rust_debug (
-	"tried to check cfg predicate on attr that either has no input "
-	"or invalid path. attr: '%s'",
-	as_string ().c_str ());
-
+      rust_error_at (path.get_locus (), "%qs is not followed by parentheses",
+		     string_path.c_str ());
       return false;
     }
 
@@ -4181,9 +4187,7 @@ Attribute::check_cfg_predicate (const Session &session) const
     return false;
 
   auto &meta_item = static_cast<AttrInputMetaItemContainer &> (*attr_input);
-  if (meta_item.get_items ().empty ()
-      && (string_path == Values::Attributes::CFG
-	  || string_path == Values::Attributes::CFG_ATTR))
+  if (meta_item.get_items ().empty ())
     {
       rust_error_at (path.get_locus (), "malformed %<%s%> attribute input",
 		     string_path.c_str ());

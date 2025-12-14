@@ -24,7 +24,7 @@ struct U
 };
 
 // n5008 inplace.vector.overview says for inplace_vector<T, 0>
-// provides trivial copy/move/default cosntructpr regardless of T
+// provides trivial copy/move/default constructor regardless of T
 struct Z
 {
   constexpr Z(int) {}
@@ -52,11 +52,13 @@ static_assert(!std::is_trivially_default_constructible_v<std::inplace_vector<N, 
 static_assert(!std::is_trivially_default_constructible_v<std::inplace_vector<D, 2>>);
 static_assert(!std::is_trivially_default_constructible_v<std::inplace_vector<U, 2>>);
 
+#if !_GLIBCXX_DEBUG
 static_assert(std::is_trivially_destructible_v<std::inplace_vector<int, 2>>);
 static_assert(std::is_trivially_destructible_v<std::inplace_vector<X, 2>>);
 static_assert(std::is_trivially_destructible_v<std::inplace_vector<N, 2>>);
 static_assert(!std::is_trivially_destructible_v<std::inplace_vector<D, 2>>);
 static_assert(std::is_trivially_destructible_v<std::inplace_vector<U, 2>>);
+#endif
 
 static_assert(std::is_nothrow_default_constructible_v<std::inplace_vector<int, 0>>);
 static_assert(std::is_nothrow_default_constructible_v<std::inplace_vector<X, 0>>);
@@ -164,10 +166,9 @@ test_n()
   VERIFY( z0.begin() == z0.end() );
 
 #ifdef __cpp_exceptions
-#ifdef __cpp_lib_constexpr_exceptions
-#error remove the consteval check
-#endif
+#ifndef __cpp_lib_constexpr_exceptions
   if not consteval {
+#endif
     try
     {
       std::inplace_vector<int, 2> ct(3);
@@ -186,7 +187,9 @@ test_n()
     {
     }
 
+#ifndef __cpp_lib_constexpr_exceptions
   }
+#endif
 #endif
 
 #ifdef __cpp_lib_constexpr_inplace_vector
@@ -241,10 +244,9 @@ test_n_val()
   VERIFY( z0.begin() == z0.end() );
 
 #ifdef __cpp_exceptions
-#ifdef __cpp_lib_constexpr_exceptions
-#error remove the consteval check
-#endif
+#ifndef __cpp_lib_constexpr_exceptions
   if not consteval {
+#endif
     try
     {
       std::inplace_vector<int, 2> ct(3, 11);
@@ -262,7 +264,9 @@ test_n_val()
     catch (std::bad_alloc const&)
     {
     }
+#ifndef __cpp_lib_constexpr_exceptions
   }
+#endif
 #endif
 
 #ifdef __cpp_lib_constexpr_inplace_vector
@@ -317,10 +321,9 @@ test_initializer_list()
   VERIFY( z0.begin() == z0.end() );
 
 #ifdef __cpp_exceptions
-#ifdef __cpp_lib_constexpr_exceptions
-#error remove the consteval check
-#endif
+#ifndef __cpp_lib_constexpr_exceptions
   if not consteval {
+#endif
     try
     {
       std::inplace_vector<int, 2> ct{11, 22, 33};
@@ -338,7 +341,9 @@ test_initializer_list()
     catch (std::bad_alloc const&)
     {
     }
+#ifndef __cpp_lib_constexpr_exceptions
   }
+#endif
 #endif
 
 #ifdef __cpp_lib_constexpr_inplace_vector

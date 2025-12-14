@@ -4180,7 +4180,9 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
 		  tree type = TREE_TYPE (decl);
 		  if (n->sym->ts.type == BT_CHARACTER
 		      && n->sym->ts.deferred
-		      && n->sym->attr.omp_declare_target
+		      && (n->sym->attr.omp_declare_target
+			  || n->sym->attr.omp_declare_target_link
+			  || n->sym->attr.omp_declare_target_local)
 		      && (always_modifier || n->sym->attr.pointer)
 		      && op != EXEC_OMP_TARGET_EXIT_DATA
 		      && n->u.map.op != OMP_MAP_DELETE
@@ -5091,7 +5093,8 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
 	    }
 	  break;
 	case OMP_LIST_USES_ALLOCATORS:
-	  /* Ignore pre-defined allocators as no special treatment is needed. */
+	  /* Ignore omp_null_allocator and pre-defined allocators as no
+	     special treatment is needed. */
 	  for (; n != NULL; n = n->next)
 	    if (n->sym->attr.flavor == FL_VARIABLE)
 	      break;
@@ -5260,6 +5263,37 @@ gfc_trans_omp_clauses (stmtblock_t *block, gfc_omp_clauses *clauses,
 
       c = build_omp_clause (gfc_get_location (&where), OMP_CLAUSE_NUM_THREADS);
       OMP_CLAUSE_NUM_THREADS_EXPR (c) = num_threads;
+      omp_clauses = gfc_trans_add_clause (c, omp_clauses);
+    }
+
+  if (clauses->dyn_groupprivate)
+    {
+      gfc_init_se (&se, NULL);
+      gfc_conv_expr (&se, clauses->dyn_groupprivate);
+      gfc_add_block_to_block (block, &se.pre);
+      tree expr = (CONSTANT_CLASS_P (se.expr) || DECL_P (se.expr)
+		   ? se.expr : gfc_evaluate_now (se.expr, block));
+      gfc_add_block_to_block (block, &se.post);
+
+      enum omp_clause_fallback_kind kind = OMP_CLAUSE_FALLBACK_UNSPECIFIED;
+      switch (clauses->fallback)
+	{
+	case OMP_FALLBACK_ABORT:
+	  kind = OMP_CLAUSE_FALLBACK_ABORT;
+	  break;
+	case OMP_FALLBACK_DEFAULT_MEM:
+	  kind = OMP_CLAUSE_FALLBACK_DEFAULT_MEM;
+	  break;
+	case OMP_FALLBACK_NULL:
+	  kind = OMP_CLAUSE_FALLBACK_NULL;
+	  break;
+	case OMP_FALLBACK_NONE:
+	  break;
+	}
+      c = build_omp_clause (gfc_get_location (&where),
+			    OMP_CLAUSE_DYN_GROUPPRIVATE);
+      OMP_CLAUSE_DYN_GROUPPRIVATE_KIND (c) = kind;
+      OMP_CLAUSE_DYN_GROUPPRIVATE_EXPR (c) = expr;
       omp_clauses = gfc_trans_add_clause (c, omp_clauses);
     }
 

@@ -9,7 +9,7 @@ enum class CustomIndexKind
   RValue,
 };
 
-template<CustomIndexKind Kind>
+template<CustomIndexKind Kind, bool Copyable = false>
   class CustomIndexType
   {
   public:
@@ -18,15 +18,24 @@ template<CustomIndexKind Kind>
     : value(i)
     { }
 
-    CustomIndexType() = delete;
-    CustomIndexType(const CustomIndexType&) = delete;
-    CustomIndexType(CustomIndexType&&) = delete;
+    CustomIndexType() requires(Copyable) = default;
+    CustomIndexType() requires(!Copyable) = delete;
 
-    const CustomIndexType&
-    operator=(const CustomIndexType&) = delete;
+    CustomIndexType(const CustomIndexType&) requires(Copyable) = default;
+    CustomIndexType(const CustomIndexType&) requires(!Copyable) = delete;
 
-    const CustomIndexType&
-    operator=(CustomIndexType&&) = delete;
+    CustomIndexType(CustomIndexType&&) requires(Copyable) = default;
+    CustomIndexType(CustomIndexType&&) requires(!Copyable) = delete;
+
+    CustomIndexType&
+    operator=(const CustomIndexType&) requires(Copyable) = default;
+    CustomIndexType&
+    operator=(const CustomIndexType&) requires(!Copyable) = delete;
+
+    CustomIndexType&
+    operator=(CustomIndexType&&) requires(Copyable) = default;
+    CustomIndexType&
+    operator=(CustomIndexType&&) requires(!Copyable) = delete;
 
     constexpr
     operator int() const noexcept
@@ -59,5 +68,14 @@ using RValueInt = CustomIndexType<CustomIndexKind::RValue>;
 
 struct NotIntLike
 { };
+
+struct StructuralInt
+{
+  constexpr
+  operator int() const noexcept
+  { return value; }
+
+  int value;
+};
 
 #endif // TEST_MDSPAN_INT_LIKE_H

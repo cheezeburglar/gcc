@@ -1,3 +1,284 @@
+2025-12-12  Tobias Burnus  <tburnus@baylibre.com>
+
+	* openmp.cc (gfc_match_omp_clause_uses_allocators): Mention
+	new syntax in deprecation warning.
+
+2025-12-12  Tobias Burnus  <tburnus@baylibre.com>
+
+	* intrinsic.texi (OpenMP Modules OMP_LIB and OMP_LIB_KINDS): Link
+	also to OpenMP 6.0, move 'partially supported' to the end of the
+	list of OpenMP versions. Mark 'omp_lock_hint_...' and
+	'omp_atv_sequential' constants as deprecated.
+
+2025-12-12  Chung-Lin Tang  <cltang@baylibre.com>
+	    Tobias Burnus  <tburnus@baylibre.com>
+	    Andrew Stubbs  <ams@baylibre.com>
+
+	* openmp.cc (resolve_omp_clauses): Handle omp_null_allocator.
+	* trans-openmp.cc (gfc_trans_omp_clauses): Mention it in a comment.
+
+2025-12-11  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/107406
+	* parse.cc (check_component): Adjust the error check to
+	require a codimension if the allocatable type has
+	a non-coarray LOCK_TYPE component.
+
+2025-12-11  Jakub Jelinek  <jakub@redhat.com>
+
+	PR testsuite/123098
+	* openmp.cc (gfc_match_omp_clause_reduction): Only emit
+	-Wdeprecated-openmp warning for '-' if !openacc.
+
+2025-12-11  Jakub Jelinek  <jakub@redhat.com>
+
+	* openmp.cc (gfc_match_omp_clause_reduction,
+	gfc_match_omp_clause_uses_allocators, gfc_match_omp_clauses,
+	match_omp_metadirective, gfc_match_omp_parallel_master,
+	gfc_match_omp_parallel_master_taskloop,
+	gfc_match_omp_parallel_master_taskloop_simd,
+	gfc_match_omp_master, gfc_match_omp_master_taskloop,
+	gfc_match_omp_master_taskloop_simd, resolve_omp_clauses): Formatting
+	fixes.
+
+2025-12-11  Jakub Jelinek  <jakub@redhat.com>
+
+	* trans-expr.cc (gfc_conv_procedure_call): Fix comment typo, passe
+	-> pass.
+
+2025-12-11  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/107142
+	* match.cc (gfc_match_type_spec): Change original declaration
+	to static match_type_spec and call from gfc_match_type_spec,
+	where the gfc_current_ns is stashed and restored after call.
+	(gfc_match_type_is): Before emitting the syntax error message
+	check if there are any pending error messages and use them
+	instead.
+
+2025-12-11  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/110012
+	* decl.cc (gfc_get_pdt_instance): Continue to loop through the
+	type parameters components if param_list is null and the
+	parameter is not KIND with a default initializer.
+	* resolve.cc (resolve_fl_derived): If the data component is a
+	PDT template, find the instance and build the class.
+
+2025-12-11  supers1ngular  <supers1ngular@baylibre.com>
+
+	* gfortran.texi: Bump version and clarify implementation status.
+	* intrinsic.texi: Bump version and note deprecation of
+	'omp_proc_bind_master'.
+
+2025-12-11  supers1ngular  <supers1ngular@baylibre.com>
+
+	* openmp.cc (gfc_match_omp_clause_reduction): Deprecate '-'
+	operator for reductions.
+	(gfc_match_omp_clause_uses_allocators): Deprecate
+	allocator(traits) pattern for 'uses_allocators'.
+	(gfc_match_omp_clauses): Deprecate 'sink' and 'source' for
+	'depend' clause. Deprecate list items as arguments with 'linear'
+	clause. Deprecate non-comma-separated modifiers for the map
+	clause. Deprecate 'to' clause with declare target.
+	(gfc_match_omp_declare_target): Whitespace.
+	(match_omp_metadirective): Deprecate 'default' clause on
+	metadirectives.
+	(resolve_omp_clauses): Deprecate executable allocate directives.
+
+2025-12-11  supers1ngular  <supers1ngular@baylibre.com>
+
+	* cpp.cc (cpp_define_builtins): Bump _OPENMP version.
+	* invoke.texi: Update docs for '-Wdeprecated-openmp'.
+	* lang.opt (Wdeprecated-openmp): Add warning.
+	* lang.opt.urls: Regenerated.
+	* openmp.cc (gfc_match_omp_clauses): Deprecate master affinity
+	policy.
+	(gfc_match_omp_parallel_master): Deprecate master construct.
+	(gfc_match_omp_parallel_master_taskloop): Ditto.
+	(gfc_match_omp_parallel_master_taskloop_simd): Ditto.
+	(gfc_match_omp_master): Ditto.
+	(gfc_match_omp_master_taskloop): Ditto.
+	(gfc_match_omp_master_taskloop_simd): Ditto.
+	(resolve_omp_clauses): Warn for deprecated use of
+	{use,is}_device_ptr.
+
+2025-12-08  Harald Anlauf  <anlauf@gmx.de>
+	    Steven G. Kargl  <kargl@gcc.gnu.org>
+
+	PR fortran/123025
+	* decl.cc (match_char_length): Add a check for the
+	obsolete '*' style of character declarations in the
+	alternate branch of checking so we dont miss two
+	use cases:
+
+2025-12-06  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/122693
+	* array.cc (gfc_match_array_constructor): Stash and restore
+	gfc_current_ns after the call to 'gfc_match_type_spec'.
+
+2025-12-06  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/122670
+	* decl.cc (gfc_get_pdt_instance): Ensure that, in an interface
+	body, PDT instances imported implicitly if the template has
+	been explicitly imported.
+	* module.cc (read_module): If a PDT template appears in a use
+	only statement, implicitly add the instances as well.
+
+2025-12-06  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/122669
+	* resolve.cc (resolve_allocate_deallocate): Mold expressions
+	with an array reference and a constant size must be resolved
+	for each allocate object.
+
+2025-12-06  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/122578
+	* primary.cc (gfc_match_varspec): Try to resolve a typebound
+	generic procedure selector expression to provide the associate
+	name with a type. Also, resolve component calls. In both cases,
+	make a copy of the selector expression to guard against changes
+	made by gfc_resolve_expr.
+
+2025-12-05  Harald Anlauf  <anlauf@gmx.de>
+
+	PR fortran/122977
+	* expr.cc (gfc_is_simply_contiguous): For an associate variable
+	check whether the associate target is contiguous.
+	* resolve.cc (resolve_symbol): Skip array type check for an
+	associate variable when	the target has the contiguous attribute.
+
+2025-12-05  Tobias Burnus  <tburnus@baylibre.com>
+
+	* openmp.cc (resolve_omp_clauses): Permit zero with
+	DYN_GROUPPRIVATE clause.
+	* trans-openmp.cc (fallback): Generate TREE code
+	for DYN_GROUPPRIVATE and remove 'sorry'.
+
+2025-12-03  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/103371
+	* decl.cc (gfc_get_pdt_instance): Remove the requirement that
+	PDT components be of the same type as the enclosing type. Apply
+	initializers other than the default to PDT components.
+	* primary.cc (gfc_match_rvalue): Make combination of the two
+	actual_arglists conditional on 'type_spec_list' having been
+	seen as well together with applying component names to all the
+	arguments.
+	* trans-decl.cc (gfc_init_default_dt): Add 'pdt_ok' to the args
+	and use it to signal that a PDT can be default initialized.
+	(gfc_init_default_pdt): New function to check that a pdt is OK
+	for default intialization before calling gfc_init_default_dt.
+	(gfc_trans_deferred_vars): Use gfc_init_default_pdt.
+	* trans.h: Add bool 'pdt_ok' to prototype with defaul value of
+	false.
+
+2025-12-01  Christopher Albert  <albert@tugraz.at>
+	    Harald Anlauf  <anlauf@gcc.gnu.org>
+
+	PR fortran/107721
+	PR fortran/102417
+	* arith.cc (eval_intrinsic): Call gfc_check_constructor_type on
+	array constructor operands with explicit type-spec to ensure
+	element type conversion before operations.  Resolve character
+	array constructors before CONCAT operations.
+	(reduce_binary_ac, reduce_binary_ca, reduce_binary_aa): Preserve
+	character length info in result arrays.
+	* array.cc (check_constructor_type): Simplify non-constant
+	expressions before type checking to handle parenthesized elements.
+	Handle nested character array constructors with explicit type-spec
+	when outer constructor has no type-spec.
+	(gfc_resolve_character_array_constructor): Recursively propagate
+	type-spec to nested array constructors.  If the nested constructor
+	has an explicit type-spec, resolve it first before propagating
+	the outer type-spec.
+
+2025-12-01  Tobias Burnus  <tburnus@baylibre.com>
+
+	* gfortran.texi (Default exponents): Remove spurious @menu entry.
+
+2025-11-30  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	* lang.opt.urls: Regenerate.
+
+2025-11-28  Tobias Burnus  <tburnus@baylibre.com>
+
+	PR c/122892
+	* openmp.cc (gfc_resolve_omp_allocate): Reject non-local
+	static variables with cgroup/pteam/thread allocators.
+	* parse.cc: Permit OMP ALLOCATE in BLOCK DATA.
+
+2025-11-26  Tobias Burnus  <tburnus@baylibre.com>
+
+	* dump-parse-tree.cc (show_attr): Handle OpenMP's 'local' clause
+	and the 'groupprivate' directive.
+	(show_omp_clauses): Handle dyn_groupprivate.
+	* frontend-passes.cc (gfc_code_walker): Walk dyn_groupprivate.
+	* gfortran.h (enum gfc_statement): Add ST_OMP_GROUPPRIVATE.
+	(enum gfc_omp_fallback, gfc_add_omp_groupprivate,
+	gfc_add_omp_declare_target_local): New.
+	* match.h (gfc_match_omp_groupprivate): New.
+	* module.cc (enum ab_attribute, mio_symbol_attribute, load_commons,
+	write_common_0): Handle 'groupprivate' + declare target's 'local'.
+	* openmp.cc (gfc_omp_directives): Add 'groupprivate'.
+	(gfc_free_omp_clauses): Free dyn_groupprivate.
+	(enum omp_mask2): Add OMP_CLAUSE_LOCAL and OMP_CLAUSE_DYN_GROUPPRIVATE.
+	(gfc_match_omp_clauses): Match them.
+	(OMP_TARGET_CLAUSES): Add OMP_CLAUSE_DYN_GROUPPRIVATE.
+	(OMP_DECLARE_TARGET_CLAUSES): Add OMP_CLAUSE_LOCAL.
+	(gfc_match_omp_declare_target): Handle groupprivate + fixes.
+	(gfc_match_omp_threadprivate): Code move to and calling now ...
+	(gfc_match_omp_thread_group_private): ... this new function.
+	Also handle groupprivate.
+	(gfc_match_omp_groupprivate): New.
+	(resolve_omp_clauses): Resolve dyn_groupprivate.
+	* parse.cc (decode_omp_directive): Match groupprivate.
+	(case_omp_decl, parse_spec, gfc_ascii_statement): Handle it.
+	* resolve.cc (resolve_symbol): Handle groupprivate.
+	* symbol.cc (gfc_check_conflict, gfc_copy_attr): Handle 'local'
+	and 'groupprivate'.
+	(gfc_add_omp_groupprivate, gfc_add_omp_declare_target_local): New.
+	* trans-common.cc (build_common_decl,
+	accumulate_equivalence_attributes): Print 'sorry' for
+	groupprivate and declare target's local.
+	* trans-decl.cc (add_attributes_to_decl): Likewise..
+	* trans-openmp.cc (gfc_trans_omp_clauses): Print 'sorry' for
+	dyn_groupprivate.
+	(fallback): Process declare target with link/local as
+	done for 'enter'.
+
+2025-11-26  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/104650
+	* decl.cc (gfc_get_pdt_instance): If the PDT template has
+	finalizers, make a new f2k_derived namespace for this intance
+	and copy the template namespace into it. Set the instance
+	template_sym field to point to the template.
+	* expr.cc (gfc_check_pointer_assign): Allow array value pointer
+	lvalues to point to scalar null expressions in initialization.
+	* gfortran.h : Add the template_sym field to gfc_symbol.
+	* resolve.cc (gfc_resolve_finalizers): For a pdt_type, copy the
+	final subroutines with the same type argument into the pdt_type
+	finalizer list. Prevent final subroutine type checking and
+	creation of the vtab for pdt_templates.
+	* symbol.cc (gfc_free_symbol): Do not call gfc_free_namespace
+	for pdt_type with finalizers. Instead, free the finalizers and
+	the namespace.
+
+2025-11-24  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/122766
+	* decl.cc (gfc_match_decl_type_spec): A pdt_type found while
+	parsing a contains section can only arise from the typespec of
+	a function declaration. This can be retained in the typespec.
+	Once we are parsing the function, the first reference to this
+	derived type will find that it has no symtree. Provide it with
+	one so that gfc_use_derived does not complain and, again,retain
+	it in the typespec.
+
 2025-11-18  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
 
 	PR fortran/32365

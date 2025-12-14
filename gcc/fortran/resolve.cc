@@ -9799,8 +9799,10 @@ done_errmsg:
       /* Resolving the expr3 in the loop over all objects to allocate would
 	 execute loop invariant code for each loop item.  Therefore do it just
 	 once here.  */
+      mpz_t nelem;
       if (code->expr3 && code->expr3->mold
-	  && code->expr3->ts.type == BT_DERIVED)
+	  && code->expr3->ts.type == BT_DERIVED
+	  && !(code->expr3->ref && gfc_array_size (code->expr3, &nelem)))
 	{
 	  /* Default initialization via MOLD (non-polymorphic).  */
 	  gfc_expr *rhs = gfc_default_initializer (&code->expr3->ts);
@@ -15836,7 +15838,7 @@ check_formal:
 static bool
 gfc_resolve_finalizers (gfc_symbol* derived, bool *finalizable)
 {
-  gfc_finalizer* list;
+  gfc_finalizer *list, *pdt_finalizers = NULL;
   gfc_finalizer** prev_link; /* For removing wrong entries from the list.  */
   bool result = true;
   bool seen_scalar = false;
@@ -15864,6 +15866,41 @@ gfc_resolve_finalizers (gfc_symbol* derived, bool *finalizable)
       if (finalizable)
 	*finalizable = false;
       return true;
+    }
+
+  /* If a PDT has finalizers, the pdt_type's f2k_derived is a copy of that of
+     the template. If the finalizers field has the same value, it needs to be
+     supplied with finalizers of the same pdt_type.  */
+  if (derived->attr.pdt_type
+      && derived->template_sym
+      && derived->template_sym->f2k_derived
+      && (pdt_finalizers = derived->template_sym->f2k_derived->finalizers)
+      && derived->f2k_derived->finalizers == pdt_finalizers)
+    {
+      gfc_finalizer *tmp = NULL;
+      derived->f2k_derived->finalizers = NULL;
+      prev_link = &derived->f2k_derived->finalizers;
+      for (list = pdt_finalizers; list; list = list->next)
+	{
+	  gfc_formal_arglist *args = gfc_sym_get_dummy_args (list->proc_sym);
+	  if (args->sym
+	      && args->sym->ts.type == BT_DERIVED
+	      && args->sym->ts.u.derived
+	      && !strcmp (args->sym->ts.u.derived->name, derived->name))
+	    {
+	      tmp = gfc_get_finalizer ();
+	      *tmp = *list;
+	      tmp->next = NULL;
+	      if (*prev_link)
+		{
+		  (*prev_link)->next = tmp;
+		  prev_link = &tmp;
+		}
+	      else
+		*prev_link = tmp;
+	      list->proc_tree = gfc_find_sym_in_symtree (list->proc_sym);
+	    }
+	}
     }
 
   /* Walk over the list of finalizer-procedures, check them, and if any one
@@ -15922,7 +15959,8 @@ gfc_resolve_finalizers (gfc_symbol* derived, bool *finalizable)
 	}
 
       /* This argument must be of our type.  */
-      if (arg->ts.type != BT_DERIVED || arg->ts.u.derived != derived)
+      if (!derived->attr.pdt_template
+	  && (arg->ts.type != BT_DERIVED || arg->ts.u.derived != derived))
 	{
 	  gfc_error ("Argument of FINAL procedure at %L must be of type %qs",
 		     &arg->declared_at, derived->name);
@@ -15977,7 +16015,7 @@ gfc_resolve_finalizers (gfc_symbol* derived, bool *finalizable)
 	  /* Argument list might be empty; that is an error signalled earlier,
 	     but we nevertheless continued resolving.  */
 	  dummy_args = gfc_sym_get_dummy_args (i->proc_sym);
-	  if (dummy_args)
+	  if (dummy_args && !derived->attr.pdt_template)
 	    {
 	      gfc_symbol* i_arg = dummy_args->sym;
 	      const int i_rank = (i_arg->as ? i_arg->as->rank : 0);
@@ -16025,9 +16063,13 @@ error:
 		 " rank finalizer has been declared",
 		 derived->name, &derived->declared_at);
 
-  vtab = gfc_find_derived_vtab (derived);
-  c = vtab->ts.u.derived->components->next->next->next->next->next;
-  gfc_set_sym_referenced (c->initializer->symtree->n.sym);
+  if (!derived->attr.pdt_template)
+    {
+      vtab = gfc_find_derived_vtab (derived);
+      c = vtab->ts.u.derived->components->next->next->next->next->next;
+      if (c && c->initializer && c->initializer->symtree && c->initializer->symtree->n.sym)
+	gfc_set_sym_referenced (c->initializer->symtree->n.sym);
+    }
 
   if (finalizable)
     *finalizable = true;
@@ -17586,6 +17628,22 @@ resolve_fl_derived (gfc_symbol *sym)
       gfc_component *data = gfc_find_component (sym, "_data", true, true, NULL);
       gfc_component *vptr = gfc_find_component (sym, "_vptr", true, true, NULL);
 
+      if (data->ts.u.derived->attr.pdt_template)
+	{
+	  match m;
+	  m = gfc_get_pdt_instance (sym->param_list, &data->ts.u.derived,
+				    &data->param_list);
+	  if (m != MATCH_YES
+	      || !gfc_build_class_symbol (&sym->ts, &sym->attr, &sym->as))
+	    {
+	      gfc_error ("Failed to build PDT class component at %L",
+			 &sym->declared_at);
+	      return false;
+	    }
+	  data = gfc_find_component (sym, "_data", true, true, NULL);
+	  vptr = gfc_find_component (sym, "_vptr", true, true, NULL);
+	}
+
       /* Nothing more to do for unlimited polymorphic entities.  */
       if (data->ts.u.derived->attr.unlimited_polymorphic)
 	{
@@ -17597,7 +17655,7 @@ resolve_fl_derived (gfc_symbol *sym)
 	  gfc_symbol *vtab = gfc_find_derived_vtab (data->ts.u.derived);
 	  gcc_assert (vtab);
 	  vptr->ts.u.derived = vtab->ts.u.derived;
-	  if (!resolve_fl_derived0 (vptr->ts.u.derived))
+	  if (vptr->ts.u.derived && !resolve_fl_derived0 (vptr->ts.u.derived))
 	    return false;
 	}
     }
@@ -18103,6 +18161,7 @@ skip_interfaces:
 
   /* F2008, C530.  */
   if (sym->attr.contiguous
+      && !sym->attr.associate_var
       && (!class_attr.dimension
 	  || (as->type != AS_ASSUMED_SHAPE && as->type != AS_ASSUMED_RANK
 	      && !class_attr.pointer)))
@@ -18674,17 +18733,30 @@ skip_interfaces:
     }
 
   /* Check threadprivate restrictions.  */
-  if (sym->attr.threadprivate
+  if ((sym->attr.threadprivate || sym->attr.omp_groupprivate)
       && !(sym->attr.save || sym->attr.data || sym->attr.in_common)
       && !(sym->ns->save_all && !sym->attr.automatic)
       && sym->module == NULL
       && (sym->ns->proc_name == NULL
 	  || (sym->ns->proc_name->attr.flavor != FL_MODULE
 	      && !sym->ns->proc_name->attr.is_main_program)))
-    gfc_error ("Threadprivate at %L isn't SAVEd", &sym->declared_at);
+    {
+      if (sym->attr.threadprivate)
+	gfc_error ("Threadprivate at %L isn't SAVEd", &sym->declared_at);
+      else
+	gfc_error ("OpenMP groupprivate variable %qs at %L must have the SAVE "
+		   "attribute", sym->name, &sym->declared_at);
+    }
+
+  if (sym->attr.omp_groupprivate && sym->value)
+    gfc_error ("!$OMP GROUPPRIVATE variable %qs at %L must not have an "
+	       "initializer", sym->name, &sym->declared_at);
 
   /* Check omp declare target restrictions.  */
-  if (sym->attr.omp_declare_target
+  if ((sym->attr.omp_declare_target
+       || sym->attr.omp_declare_target_link
+       || sym->attr.omp_declare_target_local)
+      && !sym->attr.omp_groupprivate  /* already warned.  */
       && sym->attr.flavor == FL_VARIABLE
       && !sym->attr.save
       && !(sym->ns->save_all && !sym->attr.automatic)

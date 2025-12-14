@@ -397,6 +397,8 @@ const struct c_common_resword c_common_reswords[] =
   { "_Alignas",		RID_ALIGNAS,   D_CONLY },
   { "_Alignof",		RID_ALIGNOF,   D_CONLY },
   { "_Countof",		RID_COUNTOF,   D_CONLY },
+  { "_Maxof",		RID_MAXOF,     D_CONLY },
+  { "_Minof",		RID_MINOF,     D_CONLY },
   { "_Atomic",		RID_ATOMIC,    D_CONLY },
   { "_BitInt",		RID_BITINT,    D_CONLY },
   { "_Bool",		RID_BOOL,      D_CONLY },
@@ -3943,14 +3945,40 @@ c_common_get_alias_set (tree t)
   /* The C standard specifically allows aliasing between signed and
      unsigned variants of the same type.  We treat the signed
      variant as canonical.  */
-  if ((TREE_CODE (t) == INTEGER_TYPE || TREE_CODE (t) == BITINT_TYPE)
-      && TYPE_UNSIGNED (t))
+  if (TREE_CODE (t) == INTEGER_TYPE || TREE_CODE (t) == BITINT_TYPE)
     {
-      tree t1 = c_common_signed_type (t);
-
-      /* t1 == t can happen for boolean nodes which are always unsigned.  */
-      if (t1 != t)
-	return get_alias_set (t1);
+      /* For normal INTEGER_TYPEs (except ones built by
+	 build_nonstandard_integer_type), both signed and unsigned variants
+	 of the type are always reachable from GTY roots, so just calling
+	 get_alias_set on the signed type is ok.  For BITINT_TYPE and
+	 non-standard INTEGER_TYPEs, only unsigned could be used and the
+	 corresponding signed type could be created on demand and garbage
+	 collected as unused, so the alias set of unsigned type could keep
+	 changing.
+	 Avoid that by remembering the signed type alias set in
+	 TYPE_ALIAS_SET and also when being asked about !TYPE_UNSIGNED
+	 check if there isn't a corresponding unsigned type with
+	 TYPE_ALIAS_SET_KNOWN_P.  */
+      if (TYPE_UNSIGNED (t))
+	{
+	  /* There is no signed _BitInt(1).  */
+	  if (TREE_CODE (t) == BITINT_TYPE && TYPE_PRECISION (t) == 1)
+	    return -1;
+	  tree t1 = c_common_signed_type (t);
+	  gcc_checking_assert (t != t1);
+	  TYPE_ALIAS_SET (t) = get_alias_set (t1);
+	  return TYPE_ALIAS_SET (t);
+	}
+      else
+	{
+	  tree t1 = c_common_unsigned_type (t);
+	  gcc_checking_assert (t != t1);
+	  if (TYPE_ALIAS_SET_KNOWN_P (t1))
+	    {
+	      TYPE_ALIAS_SET (t) = TYPE_ALIAS_SET (t1);
+	      return TYPE_ALIAS_SET (t);
+	    }
+	}
     }
 
   return -1;
@@ -4136,6 +4164,48 @@ c_countof_type (location_t loc, tree type)
      which is just a typedef for an ordinary integer type.  */
   value = fold_convert_loc (loc, size_type_node, value);
   return value;
+}
+
+/* Implement the _Maxof operator:
+   Return the maximum representable value of an integer type.  */
+
+tree
+c_maxof_type (location_t loc, tree type)
+{
+  if (!INTEGRAL_TYPE_P (type))
+    {
+      error_at (loc, "invalid application of %<_Maxof%> to type %qT", type);
+      return error_mark_node;
+    }
+  if (!COMPLETE_TYPE_P (type))
+    {
+      error_at (loc, "invalid application of %<_Maxof%> to incomplete type %qT",
+		type);
+      return error_mark_node;
+    }
+
+  return TYPE_MAX_VALUE (type);
+}
+
+/* Implement the _Minof operator:
+   Return the minimum representable value of an integer type.  */
+
+tree
+c_minof_type (location_t loc, tree type)
+{
+  if (!INTEGRAL_TYPE_P (type))
+    {
+      error_at (loc, "invalid application of %<_Minof%> to type %qT", type);
+      return error_mark_node;
+    }
+  if (!COMPLETE_TYPE_P (type))
+    {
+      error_at (loc, "invalid application of %<_Minof%> to incomplete type %qT",
+		type);
+      return error_mark_node;
+    }
+
+  return TYPE_MIN_VALUE (type);
 }
 
 /* Handle C and C++ default attributes.  */

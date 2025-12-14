@@ -134,6 +134,7 @@ extern bool poly_int_binop (poly_wide_int &res, enum tree_code,
 			    const_tree, const_tree, signop,
 			    wi::overflow_type *);
 extern tree int_const_binop (enum tree_code, const_tree, const_tree, int = 1);
+extern tree int_const_convert (tree, const_tree, int = 1);
 #define build_fold_addr_expr(T)\
         build_fold_addr_expr_loc (UNKNOWN_LOCATION, (T))
 extern tree build_fold_addr_expr_loc (location_t, tree);
@@ -222,7 +223,7 @@ extern bool merge_ranges (int *, tree *, tree *, int, tree, tree, int,
 extern tree sign_bit_p (tree, const_tree);
 extern bool simple_condition_p (tree);
 extern tree exact_inverse (tree, tree);
-extern bool expr_not_equal_to (tree t, const wide_int &);
+extern bool expr_not_equal_to (tree t, const wide_int &, gimple * = NULL);
 extern tree const_unop (enum tree_code, tree, tree);
 extern tree vector_const_binop (enum tree_code, tree, tree,
 				tree (*) (enum tree_code, tree, tree));

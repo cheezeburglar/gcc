@@ -178,7 +178,7 @@ check-compile: testsuite_files ${compile_script}
 
 # Runs the testsuite/performance tests.
 # Some of these tests create large (~75MB) files, allocate huge
-# ammounts of memory, or otherwise tie up machine resources. Thus,
+# amounts of memory, or otherwise tie up machine resources. Thus,
 # running this is off by default.
 # XXX Need to add dependency on libtestc++.a
 check_performance_script=${glibcxx_srcdir}/scripts/check_performance
@@ -247,7 +247,7 @@ check-performance-parallel: testsuite_files_performance ${performance_script}
 # By adding these files here, automake will remove them for 'make clean'
 CLEANFILES = *.txt *.tst *.exe core* filebuf_* tmp* ostream_* *.log *.sum \
 	     testsuite_* site.exp abi_check baseline_symbols *TEST* *.dat \
-	     *.ii *.s *.o *.cc *.x *.a *.so *.xml *.raw *.out *.gdb
+	     *.ii *.s *.o *.cc *.x *.a *.so *.xml *.raw *.out *.gdb gcm.cache
 
 # To remove directories.
 clean-local:

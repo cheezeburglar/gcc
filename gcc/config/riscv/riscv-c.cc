@@ -165,15 +165,6 @@ riscv_cpu_cpp_builtins (cpp_reader *pfile)
   if (!subset_list)
     return;
 
-  /* Define profile macro if a profile was used.  */
-  const char *profile_name = subset_list->get_profile_name ();
-  if (profile_name)
-    {
-      char *profile_macro = (char *)alloca (strlen (profile_name) + 10);
-      sprintf (profile_macro, "__riscv_%s", profile_name);
-      builtin_define (profile_macro);
-    }
-
   size_t max_ext_len = 0;
 
   /* Figure out the max length of extension name for reserving buffer.   */
@@ -220,6 +211,49 @@ riscv_pragma_intrinsic (cpp_reader *)
     }
   else
     error ("unknown %<#pragma riscv intrinsic%> option %qs", name);
+}
+
+/* Implement TARGETM.TARGET_OPTION.PRAGMA_PARSE.  */
+
+static bool
+riscv_pragma_target_parse (tree args, tree pop_target)
+{
+  /* If args is not NULL then process it and setup the target-specific
+     information that it specifies.  */
+  if (args)
+    {
+      if (!riscv_process_target_attr_for_pragma (args))
+	return false;
+
+      riscv_override_options_internal (&global_options);
+    }
+  /* args is NULL, restore to the state described in pop_target.  */
+  else
+    {
+      pop_target = pop_target ? pop_target : target_option_default_node;
+      cl_target_option_restore (&global_options, &global_options_set,
+				TREE_TARGET_OPTION (pop_target));
+    }
+
+  target_option_current_node
+    = build_target_option_node (&global_options, &global_options_set);
+
+  riscv_reset_previous_fndecl ();
+
+  /* For the definitions, ensure all newly defined macros are considered
+     as used for -Wunused-macros.  There is no point warning about the
+     compiler predefined macros.  */
+  cpp_options *cpp_opts = cpp_get_options (parse_in);
+  unsigned char saved_warn_unused_macros = cpp_opts->warn_unused_macros;
+  cpp_opts->warn_unused_macros = 0;
+
+  cpp_force_token_locations (parse_in, BUILTINS_LOCATION);
+  riscv_cpu_cpp_builtins (parse_in);
+  cpp_stop_forcing_token_locations (parse_in);
+
+  cpp_opts->warn_unused_macros = saved_warn_unused_macros;
+
+  return true;
 }
 
 /* Implement TARGET_CHECK_BUILTIN_CALL.  */
@@ -281,5 +315,6 @@ riscv_register_pragmas (void)
 {
   targetm.resolve_overloaded_builtin = riscv_resolve_overloaded_builtin;
   targetm.check_builtin_call = riscv_check_builtin_call;
+  targetm.target_option.pragma_parse = riscv_pragma_target_parse;
   c_register_pragma ("riscv", "intrinsic", riscv_pragma_intrinsic);
 }

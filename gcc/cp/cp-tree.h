@@ -1946,6 +1946,11 @@ struct GTY(()) cp_omp_begin_assumes_data {
   bool attr_syntax;
 };
 
+struct GTY(()) cp_omp_declare_variant_attr {
+  bool attr_syntax;
+  tree selector;
+};
+
 /* Global state.  */
 
 struct GTY(()) saved_scope {
@@ -1998,6 +2003,7 @@ struct GTY(()) saved_scope {
   hash_map<tree, tree> *GTY((skip)) x_local_specializations;
   vec<cp_omp_declare_target_attr, va_gc> *omp_declare_target_attribute;
   vec<cp_omp_begin_assumes_data, va_gc> *omp_begin_assumes;
+  vec<cp_omp_declare_variant_attr, va_gc> *omp_declare_variant_attribute;
 
   struct saved_scope *prev;
 };
@@ -7180,7 +7186,6 @@ extern bool type_build_ctor_call		(tree);
 extern bool type_build_dtor_call		(tree);
 extern void explain_non_literal_class		(tree);
 extern void inherit_targ_abi_tags		(tree);
-extern void maybe_delete_defaulted_fn		(tree, tree);
 extern void defaulted_late_check		(tree, tristate = tristate::unknown ());
 extern bool defaultable_fn_check		(tree);
 extern void check_abi_tags			(tree);
@@ -8285,6 +8290,7 @@ extern void finish_static_assert                (tree, tree, location_t,
 						 bool, bool, bool = false);
 extern tree finish_decltype_type                (tree, bool, tsubst_flags_t);
 extern tree fold_builtin_is_corresponding_member (location_t, int, tree *);
+extern bool pointer_interconvertible_base_of_p	(tree, tree, bool = false);
 extern tree fold_builtin_is_pointer_inverconvertible_with_class (location_t, int, tree *);
 extern tree finish_structured_binding_size	(location_t, tree, tsubst_flags_t);
 extern tree finish_trait_expr			(location_t, enum cp_trait_kind, tree, tree);
@@ -8361,7 +8367,7 @@ extern bool std_layout_type_p			(const_tree);
 extern bool trivial_type_p			(const_tree);
 extern bool implicit_lifetime_type_p		(tree);
 extern bool trivially_copyable_p		(const_tree);
-extern bool type_has_unique_obj_representations (const_tree);
+extern bool type_has_unique_obj_representations (const_tree, bool = false);
 extern bool scalarish_type_p			(const_tree);
 extern bool structural_type_p			(tree, bool = false);
 extern bool type_has_nontrivial_default_init	(const_tree);
@@ -8534,7 +8540,7 @@ extern bool same_type_ignoring_top_level_qualifiers_p (tree, tree);
 extern bool similar_type_p			(tree, tree);
 extern bool cp_comp_parm_types			(tree, tree);
 extern bool next_common_initial_sequence	(tree &, tree &);
-extern bool layout_compatible_type_p		(tree, tree);
+extern bool layout_compatible_type_p		(tree, tree, bool = false);
 extern bool compparms				(const_tree, const_tree);
 extern int comp_cv_qualification		(const_tree, const_tree);
 extern int comp_cv_qualification		(int, int);

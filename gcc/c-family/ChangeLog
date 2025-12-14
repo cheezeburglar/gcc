@@ -1,3 +1,82 @@
+2025-12-12  Chung-Lin Tang  <cltang@baylibre.com>
+	    Tobias Burnus  <tburnus@baylibre.com>
+	    Andrew Stubbs  <ams@baylibre.com>
+
+	* c-omp.cc (c_omp_split_clauses): Hande uses_allocators.
+	* c-pragma.h (enum pragma_omp_clause): Add
+	PRAGMA_OMP_CLAUSE_USES_ALLOCATORS.
+
+2025-12-11  supers1ngular  <supers1ngular@baylibre.com>
+
+	* c-cppbuiltin.cc (c_cpp_builtins): Bump _OPENMP version.
+	* c.opt (Wdeprecated-openmp): Add warning.
+	* c.opt.urls: Regenerated.
+
+2025-12-05  Tobias Burnus  <tburnus@baylibre.com>
+
+	* c-omp.cc (c_omp_split_clauses): Handle
+	OMP_CLAUSE_DYN_GROUPPRIVATE, sort target clauses
+	alphabetically.
+	* c-pragma.h (enum pragma_omp_clause): Add
+	PRAGMA_OMP_CLAUSE_DYN_GROUPPRIVATE.
+
+2025-11-30  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	* c.opt.urls: Regenerate.
+
+2025-11-26  Alejandro Colomar  <alx@kernel.org>
+
+	* c-common.cc (c_common_reswords): Add _Maxof & _Minof keywords.
+	(c_maxof_type, c_minof_type): New functions.
+	* c-common.def (MAXOF_EXPR, MINOF_EXPR): New trees.
+	* c-common.h (enum rid): Add RID_MAXOF & RID_MINOF constants.
+	(c_maxof_type, c_minof_type): New prototypes.
+
+2025-11-26  Jakub Jelinek  <jakub@redhat.com>
+
+	* c-opts.cc (c_common_init_options): Call set_std_cxx20 rather than
+	set_std_cxx17.
+	* c.opt (std=c++2a): Change description to deprecated option wording.
+	(std=c++20): Remove experimental support part.
+	(std=c++2b): Change description to deprecated option wording.
+	(std=gnu++2a): Likewise.
+	(std=gnu++20): Remove experimental support part.
+	(std=gnu++2b): Change description to deprecated option wording.
+
+2025-11-25  Jason Merrill  <jason@redhat.com>
+
+	* c.opt: Add --compile-std-module.
+
+2025-11-25  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/120052
+	* c-ubsan.cc (ubsan_instrument_bounds): For VLAs use
+	1 instead of 0 as first IFN_UBSAN_BOUNDS argument and only
+	use the addend without TYPE_MAX_VALUE (TYPE_DOMAIN (type))
+	in the 3rd argument.
+
+2025-11-25  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/122624
+	* c-common.cc (c_common_get_alias_set): Fix up handling of BITINT_TYPE
+	and non-standard INTEGER_TYPEs.  For unsigned _BitInt(1) always return
+	-1.  For other unsigned types set TYPE_ALIAS_SET to get_alias_set of
+	corresponding signed type and return that.  For signed types check if
+	corresponding unsigned type has TYPE_ALIAS_SET_KNOWN_P and if so copy
+	its TYPE_ALIAS_SET and return that.
+
+2025-11-25  Kito Cheng  <kito.cheng@sifive.com>
+
+	* c-opts.cc (c_common_post_options): Skip register_include_chains
+	when cpp_opts->preprocessed is set.
+
+2025-11-22  Sandra Loosemore  <sloosemore@baylibre.com>
+	    Julian Brown  <julian@codesourcery.com>
+	    waffl3x  <waffl3x@baylibre.com>
+
+	* c-omp.cc (c_omp_directives): Uncomment "begin declare variant"
+	and "end declare variant".
+
 2025-11-11  Alejandro Colomar  <alx@kernel.org>
 
 	* c-warn.cc (warn_parms_array_mismatch): Split out body of

@@ -4872,16 +4872,19 @@ package body Freeze is
                if Nkind (Original_Node (Parent (E))) = N_Full_Type_Declaration
                then
                   Warn_Node := Parent (E);
-
-                  if Formal = First_Formal (E) then
-                     Error_Msg_NE ("??in inherited operation&", Warn_Node, E);
-                  end if;
                else
                   Warn_Node := Formal;
                end if;
 
                Error_Msg_NE ("?x?type of argument& is unconstrained array",
                   Warn_Node, Formal);
+
+               if Nkind (Original_Node (Parent (E))) = N_Full_Type_Declaration
+                 and then Formal = First_Formal (E)
+               then
+                  Error_Msg_NE ("\?x?in inherited operation&", Warn_Node, E);
+               end if;
+
                Error_Msg_N ("\?x?foreign caller must pass bounds explicitly",
                   Warn_Node);
                Error_Msg_Qual_Level := 0;
@@ -7710,7 +7713,7 @@ package body Freeze is
          elsif Is_Integer_Type (E) then
             Adjust_Esize_For_Alignment (E);
 
-            if Is_Modular_Integer_Type (E) then
+            if Has_Modular_Operations (E) then
                --  Standard_Address has been built with the assumption that its
                --  modulus was System_Address_Size, but this is not a universal
                --  property and may need to be corrected.

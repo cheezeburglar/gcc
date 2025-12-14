@@ -1611,9 +1611,7 @@ package body Sem_Ch6 is
 
    procedure Analyze_Procedure_Call (N : Node_Id) is
       procedure Analyze_Call_And_Resolve;
-      --  Do Analyze and Resolve calls for procedure call. At the end, check
-      --  for illegal order dependence.
-      --  ??? where is the check for illegal order dependencies?
+      --  Do Analyze and Resolve for procedure call
 
       ------------------------------
       -- Analyze_Call_And_Resolve --
@@ -1621,12 +1619,8 @@ package body Sem_Ch6 is
 
       procedure Analyze_Call_And_Resolve is
       begin
-         if Nkind (N) = N_Procedure_Call_Statement then
-            Analyze_Call (N);
-            Resolve (N, Standard_Void_Type);
-         else
-            Analyze (N);
-         end if;
+         Analyze_Call (N);
+         Resolve (N, Standard_Void_Type);
       end Analyze_Call_And_Resolve;
 
       --  Local variables
@@ -2434,11 +2428,11 @@ package body Sem_Ch6 is
       procedure Build_Subprogram_Declaration;
       --  Create a matching subprogram declaration for subprogram body N
 
-      procedure Check_Anonymous_Return;
-      --  Ada 2005: if a function returns an access type that denotes a task,
-      --  or a type that contains tasks, we must create a master entity for
-      --  the anonymous type, which typically will be used in an allocator
-      --  in the body of the function.
+      procedure Check_Anonymous_Access_Return_With_Tasks;
+      --  If a function returns an anonymous access type that designates a task
+      --  or a type that contains tasks, create a master entity in the function
+      --  for the anonymous access type, and also mark the construct enclosing
+      --  the function as a task master.
 
       procedure Check_Inline_Pragma (Spec : in out Node_Id);
       --  Look ahead to recognize a pragma that may appear after the body.
@@ -2795,13 +2789,12 @@ package body Sem_Ch6 is
          Body_Id := Analyze_Subprogram_Specification (Body_Spec);
       end Build_Subprogram_Declaration;
 
-      ----------------------------
-      -- Check_Anonymous_Return --
-      ----------------------------
+      ----------------------------------------------
+      -- Check_Anonymous_Access_Return_With_Tasks --
+      ----------------------------------------------
 
-      procedure Check_Anonymous_Return is
+      procedure Check_Anonymous_Access_Return_With_Tasks is
          Decl : Node_Id;
-         Par  : Node_Id;
          Scop : Entity_Id;
 
       begin
@@ -2837,29 +2830,14 @@ package body Sem_Ch6 is
                Set_Declarations (N, New_List (Decl));
             end if;
 
-            Set_Master_Id (Etype (Scop), Defining_Identifier (Decl));
             Set_Has_Master_Entity (Scop);
+            Set_Master_Id (Etype (Scop), Defining_Identifier (Decl));
 
-            --  Now mark the containing scope as a task master
+            --  Now mark the enclosing construct as a task master
 
-            Par := N;
-            while Nkind (Par) /= N_Compilation_Unit loop
-               Par := Parent (Par);
-               pragma Assert (Present (Par));
-
-               --  If we fall off the top, we are at the outer level, and
-               --  the environment task is our effective master, so nothing
-               --  to mark.
-
-               if Nkind (Par)
-                    in N_Task_Body | N_Block_Statement | N_Subprogram_Body
-               then
-                  Set_Is_Task_Master (Par, True);
-                  exit;
-               end if;
-            end loop;
+            Mark_Construct_As_Task_Master (Parent (N));
          end if;
-      end Check_Anonymous_Return;
+      end Check_Anonymous_Access_Return_With_Tasks;
 
       -------------------------
       -- Check_Inline_Pragma --
@@ -4476,7 +4454,12 @@ package body Sem_Ch6 is
          Install_Private_With_Clauses (Body_Id);
       end if;
 
-      Check_Anonymous_Return;
+      --  If a function returns an anonymous access type that designates a task
+      --  or a type that contains tasks, we must create a master entity for the
+      --  anonymous access type, which typically will be used for an allocator
+      --  in the body of the function.
+
+      Check_Anonymous_Access_Return_With_Tasks;
 
       --  Set the Protected_Formal field of each extra formal of the protected
       --  subprogram to reference the corresponding extra formal of the
@@ -9077,6 +9060,17 @@ package body Sem_Ch6 is
       then
          Freeze_Extra_Formals (E);
          return;
+
+      elsif Ekind (Ref_E) in E_Subprogram_Type
+        and then Is_Itype (Ref_E)
+        and then Nkind (Associated_Node_For_Itype (Ref_E)) in
+                   N_Function_Specification
+                 | N_Procedure_Specification
+        and then Has_Foreign_Convention
+                   (Defining_Entity (Associated_Node_For_Itype (Ref_E)))
+      then
+         Freeze_Extra_Formals (E);
+         return;
       end if;
 
       --  If the subprogram is a predefined dispatching subprogram then don't
@@ -9408,10 +9402,6 @@ package body Sem_Ch6 is
                  Add_Extra_Formal
                    (E, Standard_Integer,
                     E, BIP_Formal_Suffix (BIP_Task_Master));
-
-               if Needs_BIP_Task_Actuals (Ref_E) then
-                  Set_Has_Master_Entity (E);
-               end if;
 
                Discard :=
                  Add_Extra_Formal

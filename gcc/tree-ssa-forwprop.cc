@@ -1791,7 +1791,6 @@ do_simple_agr_dse (gassign *stmt, bool full_walk)
   /* Only handle clobbers of a full decl.  */
   if (!DECL_P (lhs))
     return;
-  clobber_kind kind = (clobber_kind)CLOBBER_KIND (gimple_assign_rhs1 (stmt));
   ao_ref_init (&read, lhs);
   tree vuse = gimple_vuse (stmt);
   unsigned limit = full_walk ? param_sccvn_max_alias_queries_per_access : 4;
@@ -1813,20 +1812,20 @@ do_simple_agr_dse (gassign *stmt, bool full_walk)
 	  basic_block ubb = gimple_bb (use_stmt);
 	  if (stmt == use_stmt)
 	    continue;
-	  /* If the use is the same kind of clobber for lhs,
+	  /* If the use is a clobber for lhs,
 	     then it can be safely skipped; this happens with eh
 	     and sometimes jump threading.  */
-	  if (gimple_clobber_p (use_stmt, kind)
+	  if (gimple_clobber_p (use_stmt)
 	      && lhs == gimple_assign_lhs (use_stmt))
 	    continue;
 	  /* If the use is a phi and it is single use then check if that single use
-	     is a clobber of the same kind and lhs is the same.  */
+	     is a clobber and lhs is the same.  */
 	  if (gphi *use_phi = dyn_cast<gphi*>(use_stmt))
 	    {
 	      use_operand_p ou;
 	      gimple *ostmt;
 	      if (single_imm_use (gimple_phi_result (use_phi), &ou, &ostmt)
-		  && gimple_clobber_p (ostmt, kind)
+		  && gimple_clobber_p (ostmt)
 	          && lhs == gimple_assign_lhs (ostmt))
 		continue;
 	      /* A phi node will never be dominating the clobber.  */
@@ -1842,10 +1841,57 @@ do_simple_agr_dse (gassign *stmt, bool full_walk)
 	    return;
 	}
       vuse = gimple_vuse (ostmt);
-
+      /* This is a call with an assignment to the clobber decl,
+	 remove the lhs or the whole stmt if it was pure/const. */
+      if (is_a <gcall*>(ostmt)
+	  && lhs == gimple_call_lhs (ostmt))
+	{
+	  /* Don't remove stores/statements that are needed for non-call
+	      eh to work.  */
+	  if (stmt_unremovable_because_of_non_call_eh_p (cfun, ostmt))
+	    return;
+	  /* If we delete a stmt that could throw, mark the block
+	     in to_purge to cleanup afterwards.  */
+	  if (stmt_could_throw_p (cfun, ostmt))
+	    bitmap_set_bit (to_purge, obb->index);
+	  int flags = gimple_call_flags (ostmt);
+	  if ((flags & (ECF_PURE|ECF_CONST|ECF_NOVOPS))
+	      && !(flags & (ECF_LOOPING_CONST_OR_PURE)))
+	    {
+	       gimple_stmt_iterator gsi = gsi_for_stmt (ostmt);
+	       if (dump_file && (dump_flags & TDF_DETAILS))
+		{
+		  fprintf (dump_file, "Removing dead call store stmt ");
+		  print_gimple_stmt (dump_file, ostmt, 0);
+		  fprintf (dump_file, "\n");
+		}
+	      unlink_stmt_vdef (ostmt);
+	      release_defs (ostmt);
+	      gsi_remove (&gsi, true);
+	      statistics_counter_event (cfun, "delete call dead store", 1);
+	      /* Only remove the first store previous statement. */
+	      return;
+	    }
+	  /* Make sure we do not remove a return slot we cannot reconstruct
+	     later.  */
+	  if (gimple_call_return_slot_opt_p (as_a <gcall *>(ostmt))
+	      && (TREE_ADDRESSABLE (TREE_TYPE (gimple_call_fntype (ostmt)))
+		  || !poly_int_tree_p
+		      (TYPE_SIZE (TREE_TYPE (gimple_call_fntype (ostmt))))))
+	    return;
+	  if (dump_file && (dump_flags & TDF_DETAILS))
+	    {
+	      fprintf (dump_file, "Removing lhs of call stmt ");
+	      print_gimple_stmt (dump_file, ostmt, 0);
+	      fprintf (dump_file, "\n");
+	    }
+	  gimple_call_set_lhs (ostmt, NULL_TREE);
+	  update_stmt (ostmt);
+	  statistics_counter_event (cfun, "removed lhs call", 1);
+	  return;
+	}
       /* This an assignment store to the clobbered decl,
-	 then maybe remove it. A call is not handled here as
-	 the rhs will not make a difference for SRA. */
+	 then maybe remove it. */
       if (is_a <gassign*>(ostmt)
 	  && gimple_store_p (ostmt)
 	  && !gimple_clobber_p (ostmt)
@@ -3827,11 +3873,11 @@ simplify_vector_constructor (gimple_stmt_iterator *gsi)
       if (op1
 	  && TREE_CODE ((ref = TREE_OPERAND (op1, 0))) == SSA_NAME
 	  && VECTOR_TYPE_P (TREE_TYPE (ref))
-	  && (useless_type_conversion_p (TREE_TYPE (op1),
-					TREE_TYPE (TREE_TYPE (ref)))
+	  && (tree_nop_conversion_p (TREE_TYPE (op1),
+				     TREE_TYPE (TREE_TYPE (ref)))
 	      || (VECTOR_TYPE_P (TREE_TYPE (op1))
-		  && useless_type_conversion_p (TREE_TYPE (TREE_TYPE (op1)),
-						TREE_TYPE (TREE_TYPE (ref)))
+		  && tree_nop_conversion_p (TREE_TYPE (TREE_TYPE (op1)),
+					    TREE_TYPE (TREE_TYPE (ref)))
 		  && TYPE_VECTOR_SUBPARTS (TREE_TYPE (op1))
 			.is_constant (&nsubelts)))
 	  && constant_multiple_p (bit_field_size (op1), nsubelts,
@@ -4055,8 +4101,8 @@ simplify_vector_constructor (gimple_stmt_iterator *gsi)
 	    {
 	      gcc_assert (known_eq (TYPE_VECTOR_SUBPARTS (type),
 				    TYPE_VECTOR_SUBPARTS (src_type))
-			  && useless_type_conversion_p (TREE_TYPE (type),
-							TREE_TYPE (src_type)));
+			  && tree_nop_conversion_p (TREE_TYPE (type),
+						    TREE_TYPE (src_type)));
 	      tree rhs = build1 (VIEW_CONVERT_EXPR, type, orig[0]);
 	      orig[0] = make_ssa_name (type);
 	      gassign *assign = gimple_build_assign (orig[0], rhs);
@@ -4137,24 +4183,45 @@ simplify_vector_constructor (gimple_stmt_iterator *gsi)
 	  /* ???  We can see if we can safely convert to the original
 	     element type.  */
 	  converted_orig1 = conv_code != ERROR_MARK;
+	  tree target_type = converted_orig1 ? type : perm_type;
+	  tree nonconstant_for_splat = one_nonconstant;
+	  /* If there's a nop conversion between the target element type and
+	     the nonconstant's type, convert it.  */
+	  if (!useless_type_conversion_p (TREE_TYPE (target_type),
+					  TREE_TYPE (one_nonconstant)))
+	    nonconstant_for_splat
+	      = gimple_build (&stmts, NOP_EXPR, TREE_TYPE (target_type),
+			      one_nonconstant);
 	  orig[1] = gimple_build_vector_from_val (&stmts, UNKNOWN_LOCATION,
-						  converted_orig1
-						  ? type : perm_type,
-						  one_nonconstant);
+						  target_type,
+						  nonconstant_for_splat);
 	}
       else if (orig[1] == error_mark_node)
 	{
 	  /* ???  See if we can convert the vector to the original type.  */
 	  converted_orig1 = conv_code != ERROR_MARK;
 	  unsigned n = converted_orig1 ? nelts : refnelts;
-	  tree_vector_builder vec (converted_orig1
-				   ? type : perm_type, n, 1);
+	  tree target_type = converted_orig1 ? type : perm_type;
+	  tree_vector_builder vec (target_type, n, 1);
 	  for (unsigned i = 0; i < n; ++i)
 	    if (i < nelts && constants[i])
-	      vec.quick_push (constants[i]);
+	      {
+		tree constant = constants[i];
+		/* If there's a nop conversion, convert the constant.  */
+		if (!useless_type_conversion_p (TREE_TYPE (target_type),
+						TREE_TYPE (constant)))
+		  constant = fold_convert (TREE_TYPE (target_type), constant);
+		vec.quick_push (constant);
+	      }
 	    else
-	      /* ??? Push a don't-care value.  */
-	      vec.quick_push (one_constant);
+	      {
+		/* ??? Push a don't-care value.  */
+		tree constant = one_constant;
+		if (!useless_type_conversion_p (TREE_TYPE (target_type),
+						TREE_TYPE (constant)))
+		  constant = fold_convert (TREE_TYPE (target_type), constant);
+		vec.quick_push (constant);
+	      }
 	  orig[1] = vec.build ();
 	}
       tree blend_op2 = NULL_TREE;
@@ -4178,6 +4245,16 @@ simplify_vector_constructor (gimple_stmt_iterator *gsi)
 	    return false;
 	  blend_op2 = vec_perm_indices_to_tree (mask_type, indices);
 	}
+
+      /* For a real orig[1] (no splat, constant etc.) we might need to
+	 nop-convert it.  Do so here.  */
+      if (orig[1] && orig[1] != error_mark_node
+	  && !useless_type_conversion_p (perm_type, TREE_TYPE (orig[1]))
+	  && tree_nop_conversion_p (TREE_TYPE (perm_type),
+				    TREE_TYPE (TREE_TYPE (orig[1]))))
+	orig[1] = gimple_build (&stmts, VIEW_CONVERT_EXPR, perm_type,
+				orig[1]);
+
       tree orig1_for_perm
 	= converted_orig1 ? build_zero_cst (perm_type) : orig[1];
       tree res = gimple_build (&stmts, VEC_PERM_EXPR, perm_type,
@@ -4192,8 +4269,8 @@ simplify_vector_constructor (gimple_stmt_iterator *gsi)
 	{
 	  gcc_assert (known_eq (TYPE_VECTOR_SUBPARTS (type),
 				TYPE_VECTOR_SUBPARTS (perm_type))
-		      && useless_type_conversion_p (TREE_TYPE (type),
-						    TREE_TYPE (perm_type)));
+		      && tree_nop_conversion_p (TREE_TYPE (type),
+						TREE_TYPE (perm_type)));
 	  res = gimple_build (&stmts, VIEW_CONVERT_EXPR, type, res);
 	}
       /* Blend in the actual constant.  */

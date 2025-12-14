@@ -453,6 +453,14 @@ Minimal fall-through edge probability in percentage used to add BB to inheritanc
 Common Joined UInteger Var(param_lra_max_considered_reload_pseudos) Init(500) Param Optimization
 The max number of reload pseudos which are considered during spilling a non-reload pseudo.
 
+-param=lra-max-pseudos-points-log2-considered-for-preferences=
+Common Joined UInteger Var(lra_max_pseudos_points_log2_considered_for_preferences) Init(30) IntegerRange(0, 31) Param Optimization
+The maximum log2(number of reload pseudos * number of program points) threshold
+when preferences for other reload pseudos are still considered. Taking these
+preferences into account helps to improve register allocation. However, for
+very large functions, a large value can result in significant compilation time
+and memory consumption. The default value is 30.
+
 -param=lto-max-partition=
 Common Joined UInteger Var(param_max_partition_size) Init(1000000) Param
 Maximal size of a partition for LTO (in estimated instructions).
@@ -1268,6 +1276,10 @@ The scaling multiplier as a percentage to apply to all scalar loop costing when 
 -param=vrp-block-limit=
 Common Joined UInteger Var(param_vrp_block_limit) Init(150000) Optimization Param
 Maximum number of basic blocks before VRP switches to a fast model with less memory requirements.
+
+-param=vrp-cstload-limit=
+Common Joined UInteger Var(param_vrp_cstload_limit) Init(32) IntegerRange(0, 255) Optimization Param
+Maximum number of steps when inferring a value range from a load from a constant aggregate.
 
 -param=vrp-sparse-threshold=
 Common Joined UInteger Var(param_vrp_sparse_threshold) Init(3000) Optimization Param

@@ -5700,8 +5700,6 @@ arm_canonicalize_comparison (int *code, rtx *op0, rtx *op1,
   if (mode == VOIDmode)
     mode = GET_MODE (*op1);
 
-  maxval = (HOST_WIDE_INT_1U << (GET_MODE_BITSIZE (mode) - 1)) - 1;
-
   /* For floating-point comparisons, prefer >= and > over <= and < since
      the former are supported by VSEL on some architectures.  Only do this
      if both operands are registers.  */
@@ -5717,6 +5715,13 @@ arm_canonicalize_comparison (int *code, rtx *op0, rtx *op1,
       *code = (int) swap_condition ((rtx_code)*code);
       return;
     }
+
+  /* Everything below assumes an integer mode.  */
+  if (GET_MODE_CLASS (mode) != MODE_INT
+      || GET_MODE_BITSIZE (mode) > HOST_BITS_PER_WIDE_INT)
+    return;
+
+  maxval = (HOST_WIDE_INT_1U << (GET_MODE_BITSIZE (mode) - 1)) - 1;
 
   /* For DImode, we have GE/LT/GEU/LTU comparisons (with cmp/sbc).  In
      ARM mode we can also use cmp/cmpeq for GTU/LEU.  GT/LE must be
@@ -24064,7 +24069,7 @@ arm_print_condition (FILE *stream)
 
 
 /* Globally reserved letters: acln
-   Puncutation letters currently used: @_|?().!#
+   Puncutation letters currently used: @_-|?().!#
    Lower case letters currently used: bcdefhimpqtvwxyz
    Upper case letters currently used: ABCDEFGHIJKLMOPQRSTUV
    Letters previously used, but now deprecated/obsolete: sNWXYZ.
@@ -24096,6 +24101,11 @@ arm_print_operand (FILE *stream, rtx x, int code)
 
     case '_':
       fputs (user_label_prefix, stream);
+      return;
+    case '-':
+#ifdef LOCAL_LABEL_PREFIX
+      fputs (LOCAL_LABEL_PREFIX, stream);
+#endif
       return;
 
     case '|':
@@ -24913,9 +24923,9 @@ arm_print_operand_punct_valid_p (unsigned char code)
 {
   return (code == '@' || code == '|' || code == '.'
 	  || code == '(' || code == ')' || code == '#'
+	  || code == '-' || code == '_'
 	  || (TARGET_32BIT && (code == '?'))
-	  || (TARGET_THUMB2 && (code == '!'))
-	  || (TARGET_THUMB && (code == '_')));
+	  || (TARGET_THUMB2 && (code == '!')));
 }
 
 /* Target hook for assembling integer objects.  The ARM version needs to

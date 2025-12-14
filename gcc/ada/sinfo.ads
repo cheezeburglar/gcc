@@ -757,8 +757,8 @@ package Sinfo is
    --    When tasks are declared in the corresponding declarative region this
    --    entity is located by name (its name is always _Chain) and the declared
    --    tasks are added to the chain. Note that N_Extended_Return_Statement
-   --    does not have this attribute, although it does have an activation
-   --    chain. This chain is used to store the tasks temporarily, and is not
+   --    also has this attribute, although it is not really a task activator:
+   --    this chain is only used to store the tasks temporarily, and is not
    --    used for activating them. On successful completion of the return
    --    statement, the tasks are moved to the caller's chain, and the caller
    --    activates them.
@@ -1274,8 +1274,9 @@ package Sinfo is
    --    that references the file the external initializer points to.
 
    --  Finally_Statements
-   --    Present in N_Handled_Statement_Sequences nodes. Points to a list
-   --    containing statements.
+   --    Present in N_Handled_Sequence_Of_Statements nodes. Points to a list
+   --    of statements to be executed on all possible execution paths on exit
+   --    to the sequence of statements.
 
    --  First_Inlined_Subprogram
    --    Present in the N_Compilation_Unit node for the main program. Points
@@ -6920,10 +6921,11 @@ package Sinfo is
       --  Statements
       --  End_Label (set to Empty if expander generated)
       --  Exception_Handlers (set to No_List if none present)
+      --  Finally_Statements (set to No_List if no finally statements)
       --  At_End_Proc (set to Empty if no clean up procedure)
 
-      --  Note: A Handled_Sequence_Of_Statements can contain both
-      --  Exception_Handlers and an At_End_Proc.
+      --  Note: An N_Handled_Sequence_Of_Statements node can simultaneously
+      --  contain Exception_Handlers, Finally_Statements and an At_End_Proc.
 
       --  Note: the parent always contains a Declarations field which contains
       --  declarations associated with the handled sequence of statements. This

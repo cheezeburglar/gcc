@@ -10399,12 +10399,17 @@ package body Sem_Util is
       Func     : Entity_Id;
       First_Op : Entity_Id;
       Cursor   : Entity_Id;
+      Specific_Type : Entity_Id := Typ;
 
    begin
       --  If error already detected, return
 
       if Error_Posted (Aspect) then
          return Any_Type;
+      end if;
+
+      if Is_Class_Wide_Type (Specific_Type) then
+         Specific_Type := Etype (Typ);
       end if;
 
       --  The cursor type for an Iterable aspect is the return type of a
@@ -10437,12 +10442,13 @@ package body Sem_Util is
       --  is created for it, check that the base type of the first formal
       --  of First matches the base type of the domain.
 
-      Func := First_Entity (Scope (Typ));
+      Func := First_Entity (Scope (Specific_Type));
       while Present (Func) loop
          if Chars (Func) = Chars (First_Op)
            and then Ekind (Func) = E_Function
            and then Present (First_Formal (Func))
-           and then Base_Type (Etype (First_Formal (Func))) = Base_Type (Typ)
+           and then Base_Type (Etype (First_Formal (Func)))
+                    = Base_Type (Specific_Type)
            and then No (Next_Formal (First_Formal (Func)))
          then
             if Cursor /= Any_Type then
@@ -30732,7 +30738,7 @@ package body Sem_Util is
          --  of the same modular type, and (M1 and M2) = 0 was intended.
 
          if Expec_Type = Standard_Boolean
-           and then Is_Modular_Integer_Type (Found_Type)
+           and then Has_Modular_Operations (Found_Type)
            and then Nkind (Parent (Expr)) in N_Op_And | N_Op_Or | N_Op_Xor
            and then Nkind (Right_Opnd (Parent (Expr))) in N_Op_Compare
          then

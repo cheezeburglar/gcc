@@ -1163,6 +1163,20 @@ static const struct mips_rtx_cost_data
     COSTS_N_INSNS (8),            /* int_div_di */
 		    2,            /* branch_cost */
 		    4             /* memory_latency */
+  },
+  { /* Allegrex */
+    /* Has hard-float support for single precision only. */
+    COSTS_N_INSNS (5),            /* fp_add */
+    COSTS_N_INSNS (5),            /* fp_mult_sf */
+    COSTS_N_INSNS (256),          /* fp_mult_df */
+    COSTS_N_INSNS (30),           /* fp_div_sf */
+    COSTS_N_INSNS (256),          /* fp_div_df */
+    COSTS_N_INSNS (7) ,           /* int_mult_si */
+    COSTS_N_INSNS (27),           /* int_mult_di */
+    COSTS_N_INSNS (21),           /* int_div_si */
+    COSTS_N_INSNS (256),          /* int_div_di */
+		     2,           /* branch_cost */
+		     4            /* memory_latency */
   }
 };
 
@@ -3315,7 +3329,7 @@ mips_unspec_address_offset (rtx base, rtx offset,
 			    enum mips_symbol_type symbol_type)
 {
   base = gen_rtx_UNSPEC (Pmode, gen_rtvec (1, base),
-			 UNSPEC_ADDRESS_FIRST + symbol_type);
+			 UNSPEC_ADDRESS_FIRST + (int) symbol_type);
   if (offset != const0_rtx)
     base = gen_rtx_PLUS (Pmode, base, offset);
   return gen_rtx_CONST (Pmode, base);

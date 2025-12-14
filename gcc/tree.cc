@@ -398,6 +398,8 @@ unsigned const char omp_clause_num_ops[] =
   0, /* OMP_CLAUSE_NOHOST */
   1, /* OMP_CLAUSE_NOVARIANTS */
   1, /* OMP_CLAUSE_NOCONTEXT */
+  1, /* OMP_CLAUSE_DYN_GROUPPRIVATE  */
+  3, /* OMP_CLAUSE_USES_ALLOCATORS */
 };
 
 const char * const omp_clause_code_name[] =
@@ -501,6 +503,8 @@ const char * const omp_clause_code_name[] =
   "nohost",
   "novariants",
   "nocontext",
+  "dyn_groupprivate",
+  "uses_allocators",
 };
 
 /* Unless specific to OpenACC, we tend to internally maintain OpenMP-centric
@@ -7414,9 +7418,8 @@ build_bitint_type (unsigned HOST_WIDE_INT precision, int unsignedp)
   else
     fixup_signed_type (itype);
 
-  inchash::hash hstate;
-  inchash::add_expr (TYPE_MAX_VALUE (itype), hstate);
-  ret = type_hash_canon (hstate.end (), itype);
+  hashval_t hash = type_hash_canon_hash (itype);
+  ret = type_hash_canon (hash, itype);
   if (precision <= MAX_INT_CACHED_PREC)
     (*bitint_type_cache)[precision + unsignedp] = ret;
 

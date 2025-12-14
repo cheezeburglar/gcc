@@ -4159,12 +4159,18 @@ static bool
 ix86_expand_sse_fp_minmax (rtx dest, enum rtx_code code, rtx cmp_op0,
 			   rtx cmp_op1, rtx if_true, rtx if_false)
 {
-  machine_mode mode;
+  machine_mode mode = GET_MODE (dest);
   bool is_min;
   rtx tmp;
 
   if (code == LT)
     ;
+  else if (code == LE && !HONOR_NANS (mode))
+    {
+      /* We can swap LE to GE and then invert to LT.  */
+      std::swap (cmp_op0, cmp_op1);
+      std::swap (if_true, if_false);
+    }
   else if (code == UNGE)
     std::swap (if_true, if_false);
   else
@@ -4177,7 +4183,6 @@ ix86_expand_sse_fp_minmax (rtx dest, enum rtx_code code, rtx cmp_op0,
   else
     return false;
 
-  mode = GET_MODE (dest);
   if (immediate_operand (if_false, mode))
     if_false = force_reg (mode, if_false);
   if (immediate_operand (if_true, mode))
@@ -27125,17 +27130,15 @@ ix86_gen_ccmp_next (rtx_insn **prep_seq, rtx_insn **gen_seq, rtx prev,
   struct expand_operand ops[5];
   int dfv;
 
-  push_to_sequence (*prep_seq);
-  expand_operands (treeop0, treeop1, NULL_RTX, &op0, &op1, EXPAND_NORMAL);
-
-  cmp_mode = op_mode = GET_MODE (op0);
+  /* Exit early for non integer modes to avoid O(n^2) part of expand_operands. */
+  cmp_mode = op_mode = TYPE_MODE (TREE_TYPE (treeop0));
 
   if (!(op_mode == DImode || op_mode == SImode || op_mode == HImode
 	|| op_mode == QImode))
-    {
-      end_sequence ();
-      return NULL_RTX;
-    }
+    return NULL_RTX;
+
+  push_to_sequence (*prep_seq);
+  expand_operands (treeop0, treeop1, NULL_RTX, &op0, &op1, EXPAND_NORMAL);
 
   icode = code_for_ccmp (op_mode);
 

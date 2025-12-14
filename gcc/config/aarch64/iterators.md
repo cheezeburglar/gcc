@@ -841,6 +841,10 @@
     UNSPEC_SSHLL	; Used in aarch64-simd.md.
     UNSPEC_USHLL	; Used in aarch64-simd.md.
     UNSPEC_ADDP		; Used in aarch64-simd.md.
+    UNSPEC_CMP_ALL	; Used in aarch64-simd.md.
+    UNSPEC_CMP_ANY	; Used in aarch64-simd.md.
+    UNSPEC_COND_CMP_ALL	; Used in aarch64-simd.md.
+    UNSPEC_COND_CMP_ANY	; Used in aarch64-simd.md.
     UNSPEC_TBL		; Used in vector permute patterns.
     UNSPEC_TBLQ		; Used in vector permute patterns.
     UNSPEC_TBX		; Used in vector permute patterns.
@@ -2628,6 +2632,12 @@
 			 (VNx16SI "vnx4bi") (VNx16SF "vnx4bi")
 			 (VNx8DI "vnx2bi") (VNx8DF "vnx2bi")])
 
+;; Map mode to suffix for using an SVE comparison
+(define_mode_attr sve_cmp_suff [(V8QI "_int") (V16QI "_int")
+			       (V4HI "_int") (V8HI "_int") (V2SI "_int")
+			       (V4SI "_int") (V2DI "_int")
+			       (V2SF "_float") (V4SF "_float") (V2DF "_float")])
+
 (define_mode_attr VDOUBLE [(VNx16QI "VNx32QI")
 			   (VNx8HI "VNx16HI") (VNx8HF "VNx16HF")
 			   (VNx8BF "VNx16BF")
@@ -2842,6 +2852,8 @@
 (define_code_iterator MAXMIN_NOUMAX [smax smin umin])
 
 (define_code_iterator FMAXMIN [smax smin])
+
+(define_code_iterator UMAXMIN [umax umin])
 
 ;; Signed and unsigned max operations.
 (define_code_iterator USMAX [smax umax])
@@ -3131,6 +3143,9 @@
 
 (define_code_attr maxminand [(smax "bic") (smin "and")])
 
+(define_code_attr ovf_add_cmp [(umax "geu") (umin "ltu")])
+(define_code_attr udf_sub_cmp [(umax "ltu") (umin "geu")])
+
 ;; MLA/MLS attributes.
 (define_code_attr as [(ss_plus "a") (ss_minus "s")])
 
@@ -3287,6 +3302,9 @@
 (define_int_iterator HADD [UNSPEC_SHADD UNSPEC_UHADD])
 
 (define_int_iterator RHADD [UNSPEC_SRHADD UNSPEC_URHADD])
+
+(define_int_iterator CBRANCH_CMP [UNSPEC_CMP_ALL UNSPEC_CMP_ANY])
+(define_int_iterator COND_CBRANCH_CMP [UNSPEC_COND_CMP_ALL UNSPEC_COND_CMP_ANY])
 
 (define_int_iterator BSL_DUP [1 2])
 
@@ -4231,7 +4249,16 @@
 			(UNSPEC_COND_SCVTF "float")
 			(UNSPEC_COND_SMAX "smax")
 			(UNSPEC_COND_SMIN "smin")
-			(UNSPEC_COND_UCVTF "floatuns")])
+			(UNSPEC_COND_UCVTF "floatuns")
+			(UNSPEC_CMP_ALL "vec_cbranch_all")
+			(UNSPEC_CMP_ANY "vec_cbranch_any")
+			(UNSPEC_COND_CMP_ALL "cond_vec_cbranch_all")
+			(UNSPEC_COND_CMP_ANY "cond_vec_cbranch_any")])
+
+(define_int_attr cbranch_op [(UNSPEC_CMP_ALL "EQ")
+			     (UNSPEC_CMP_ANY "NE")
+			     (UNSPEC_COND_CMP_ALL "EQ")
+			     (UNSPEC_COND_CMP_ANY "NE")])
 
 (define_int_attr fmaxmin [(UNSPEC_FMAX "fmax_nan")
 			  (UNSPEC_FMAXNM "fmax")
@@ -5142,3 +5169,7 @@
    (UNSPEC_F2CVT "f2cvt")
    (UNSPEC_F1CVTLT "f1cvtlt")
    (UNSPEC_F2CVTLT "f2cvtlt")])
+
+;; Operand numbers for commutative operations
+(define_int_iterator ovf_commutate [1 2])
+(define_int_attr ovf_comm_opp [(1 "2") (2 "1")])

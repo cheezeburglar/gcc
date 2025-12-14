@@ -3623,6 +3623,7 @@ struct infile
   struct compiler *incompiler;
   bool compiled;
   bool preprocessed;
+  bool artificial;
 };
 
 /* Also a vector of input files specified.  */
@@ -3826,10 +3827,11 @@ alloc_infile (void)
    infiles.  */
 
 static void
-add_infile (const char *name, const char *language)
+add_infile (const char *name, const char *language, bool art = false)
 {
   alloc_infile ();
   infiles[n_infiles].name = name;
+  infiles[n_infiles].artificial = art;
   infiles[n_infiles++].language = language;
 }
 
@@ -4649,11 +4651,13 @@ driver_handle_option (struct gcc_options *opts,
     case OPT_static_libgfortran:
     case OPT_static_libquadmath:
     case OPT_static_libphobos:
+    case OPT_static_libga68:
     case OPT_static_libgm2:
     case OPT_static_libstdc__:
       /* These are always valid; gcc.cc itself understands the first two
 	 gfortranspec.cc understands -static-libgfortran,
 	 libgfortran.spec handles -static-libquadmath,
+	 a68spec.cc understands -static-libga68,
 	 d-spec.cc understands -static-libphobos,
 	 gm2spec.cc understands -static-libgm2,
 	 and g++spec.cc understands -static-libstdc++.  */
@@ -4998,7 +5002,8 @@ process_command (unsigned int decoded_options_count,
 #ifdef HAVE_TARGET_OBJECT_SUFFIX
 	  arg = convert_filename (arg, 0, access (arg, F_OK));
 #endif
-	  add_infile (arg, spec_lang);
+	  add_infile (arg, spec_lang,
+		      decoded_options[j].mask == CL_DRIVER);
 
 	  continue;
 	}
@@ -7882,7 +7887,7 @@ out:
 }
 
 /* This routine reads lines from IN file, adds C++ style comments
-   at the begining of each line and writes result into OUT.  */
+   at the beginning of each line and writes result into OUT.  */
 
 static void
 insert_comments (const char *file_in, const char *file_out)
@@ -8983,6 +8988,10 @@ driver::prepare_infiles ()
 
       if (lang_n_infiles > 0 && compiler != input_file_compiler
 	  && infiles[i].language && infiles[i].language[0] != '*')
+	infiles[i].incompiler = compiler;
+      else if (infiles[i].artificial)
+	/* Leave lang_n_infiles alone so files added by the driver don't
+	   interfere with -c -o.  */
 	infiles[i].incompiler = compiler;
       else if (compiler)
 	{

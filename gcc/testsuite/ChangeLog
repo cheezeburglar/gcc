@@ -1,3 +1,3878 @@
+2025-12-13  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* algol68/execute/modules/module1.a68: Also test contracted
+	forms.
+	* algol68/execute/modules/module3.a68: Likewise.
+	* algol68/execute/modules/module5.a68: Likewise.
+	* algol68/execute/modules/program-1.a68: Likewise.
+
+2025-12-13  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	PR tree-optimization/122734
+	* gcc.dg/tree-ssa/20030711-1.c: Update.
+	* gcc.dg/tree-ssa/copy-headers-10.c: New test.
+	* gcc.dg/tree-ssa/copy-headers-11.c: New test.
+	* gcc.dg/tree-ssa/copy-headers-12.c: New test.
+
+2025-12-13  Jakub Jelinek  <jakub@redhat.com>
+
+	* g++.dg/gomp/deprecate-1.C: New test.
+
+2025-12-13  Jakub Jelinek  <jakub@redhat.com>
+
+	* c-c++-common/gomp/52-deps.c: Change locations of 2 warnings for C.
+	* gcc.dg/gomp/deprecate-1.c: New test.
+
+2025-12-13  Alexandre Oliva  <oliva@adacore.com>
+
+	* lib/gnat.exp (gnat_init): Set gcc_warning_prefix and
+	gcc_error_prefix.
+
+2025-12-13  Alexandre Oliva  <oliva@adacore.com>
+
+	PR tree-optimization/119293
+	* gcc.dg/vect/vect-121.c: XFAIL on ia32.
+
+2025-12-12  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* g++.dg/ext/is_constructible9.C: Add to testcase.
+
+2025-12-12  Chung-Lin Tang  <cltang@baylibre.com>
+	    Tobias Burnus  <tburnus@baylibre.com>
+	    Andrew Stubbs  <ams@baylibre.com>
+
+	* c-c++-common/gomp/uses_allocators-1.c: New test.
+	* c-c++-common/gomp/uses_allocators-2.c: New test.
+	* c-c++-common/gomp/uses_allocators-4.c: New test.
+	* c-c++-common/gomp/uses_allocators-7.c: New test.
+	* g++.dg/gomp/deprecate-2.C: New test.
+	* g++.dg/gomp/uses_allocators-1.C: New test.
+	* gcc.dg/gomp/deprecate-2.c: New test.
+
+2025-12-12  Stefan Schulze Frielinghaus  <stefansf@gcc.gnu.org>
+
+	* g++.target/s390/builtin-array-arg-1.C: New test.
+	* gcc.target/s390/builtin-array-arg-1.c: New test.
+
+2025-12-12  David Malcolm  <dmalcolm@redhat.com>
+
+	PR analyzer/122003
+	* c-c++-common/analyzer/allocation-size-multiline-1.c: Update for split
+	of region creation events.
+	* c-c++-common/analyzer/bzip2-arg-parse-1.c: Drop test for enode
+	merging.  Add -Wno-analyzer-too-complex.
+	* c-c++-common/analyzer/coreutils-cksum-pr108664.c: Add
+	-Wno-analyzer-symbol-too-complex.  Add dg-bogus for false +ve seen
+	during patch development.
+	* c-c++-common/analyzer/coreutils-group_number.c: New test.
+	* c-c++-common/analyzer/data-model-20.c: Mark warnings as xfail.
+	* c-c++-common/analyzer/deref-before-check-qemu-qtest_rsp_args.c:
+	Add xfails.
+	* c-c++-common/analyzer/dot-output.c: Update for changes to dumps.
+	* c-c++-common/analyzer/fd-symbolic-socket.c: Update for
+	improvements to locations of leaks.
+	* c-c++-common/analyzer/fibonacci.c: Update regex.
+	* c-c++-common/analyzer/flex-with-call-summaries.c: Add xfail.
+	* c-c++-common/analyzer/flex-without-call-summaries.c: Add
+	-Wno-analyzer-symbol-too-complex.  Add xfail.
+	* c-c++-common/analyzer/infinite-recursion-5.c: Disable cases that
+	now explode the analysis.
+	* c-c++-common/analyzer/infinite-recursion-pr108524-2.c: Remove
+	xfail.
+	* c-c++-common/analyzer/invalid-shift-1.c: Remove xfails with c++26.
+	* c-c++-common/analyzer/ipa-callbacks-1.c: New test.
+	* c-c++-common/analyzer/loop-4.c: Expect incorrect UNKNOWN within
+	loop.  Update expected number of enodes.
+	* c-c++-common/analyzer/loop-n-down-to-1-by-1.c: Expect incorrect
+	UNKNOWN within loop.
+	* c-c++-common/analyzer/loop.c: Drop xfail.
+	* c-c++-common/analyzer/out-of-bounds-coreutils.c: Expect infinite
+	loop warning.
+	* c-c++-common/analyzer/paths-4.c: Update expected number of
+	enodes.
+	* c-c++-common/analyzer/pr94362-1.c: Drop -Wno-analyzer-too-complex.
+	* c-c++-common/analyzer/pr94851-2.c: Add xfail.
+	* c-c++-common/analyzer/pr96650-1-notrans.c: Add
+	-Wno-analyzer-too-complex.
+	* c-c++-common/analyzer/pr98628.c: Likewise.
+	* c-c++-common/analyzer/pr99774-1.c: Likewise.
+	* c-c++-common/analyzer/pragma-2.c: Expect double-free warning.
+	* c-c++-common/analyzer/realloc-1.c: Move expected location of
+	leak from trailing "}" to realloc call.
+	* c-c++-common/analyzer/sock-1.c: Add -fno-exceptions.
+	* c-c++-common/analyzer/sprintf-2.c: Add __attribute__ nonnull to
+	decl.
+	* c-c++-common/analyzer/sprintf-concat.c: Move expected location
+	of leak of p from sprintf to trailing "}".
+	* c-c++-common/analyzer/stdarg-sentinel-1.c: Drop
+	-Wno-analyzer-too-complex.
+	* c-c++-common/analyzer/strncpy-1.c: Add __attribute__ nonnull to
+	decl.
+	* c-c++-common/analyzer/strstr-1.c: Likewise.
+	* g++.dg/analyzer/analyzer.exp: Drop -fanalyzer-call-summaries.
+	* g++.dg/analyzer/fanalyzer-show-events-in-system-headers-default.C:
+	Update expected messages.
+	* g++.dg/analyzer/fanalyzer-show-events-in-system-headers-no.C:
+	Likewise.
+	* g++.dg/analyzer/fanalyzer-show-events-in-system-headers.C: Likewise.
+	* g++.dg/analyzer/pr94028.C: Move expected location of leak
+	warning to where return value of f is discarded within m.
+	* g++.dg/analyzer/pr96641.C: Expect infinite recursion warning.
+	* gcc.dg/analyzer/CWE-131-examples.c: Add
+	-Wno-analyzer-too-complex.
+	* gcc.dg/analyzer/abs-1.c (test_2): Fix return type.
+	* gcc.dg/analyzer/analyzer-decls.h: Reformat.  Add
+	__attribute__ ((nothrow)) to all functions.
+	* gcc.dg/analyzer/analyzer.exp: Drop -fanalyzer-call-summaries.
+	* gcc.dg/analyzer/boxed-malloc-1.c: Fix return types.
+	* gcc.dg/analyzer/call-summaries-2.c: Likewise.
+	* gcc.dg/analyzer/combined-conditionals-1.c: Likewise.
+	* gcc.dg/analyzer/compound-assignment-2.c: Expect warning about
+	missing return.
+	* gcc.dg/analyzer/compound-assignment-3.c: Likewise.
+	* gcc.dg/analyzer/conditionals-3.c: Fix return type.
+	* gcc.dg/analyzer/data-model-1.c: Likewise.
+	* gcc.dg/analyzer/data-model-15.c: Likewise.
+	* gcc.dg/analyzer/data-model-17.c: Likewise.
+	* gcc.dg/analyzer/data-model-20a.c: Remove xfail from bogus leak.
+	* gcc.dg/analyzer/data-model-7.c: Fix return type.
+	* gcc.dg/analyzer/doom-d_main-IdentifyVersion.c: Add xfail to some
+	of the leak msgs.
+	* gcc.dg/analyzer/doom-s_sound-pr108867.c: Add xfail.
+	* gcc.dg/analyzer/edges-1.c: Update for improvements to location
+	of leak.
+	* gcc.dg/analyzer/error-1.c: Fix return type.
+	* gcc.dg/analyzer/explode-1.c: Drop xfail.  Expect uninit and
+	double-free warnings.
+	* gcc.dg/analyzer/explode-2.c: Add xfail.
+	* gcc.dg/analyzer/explode-3.c: Drop xfail.  Expect uninit and
+	double-free warnings.
+	* gcc.dg/analyzer/fd-datagram-socket.c: Move expected location of
+	leaks to closing "}"s.
+	* gcc.dg/analyzer/fd-glibc-byte-stream-connection-server.c: Add
+	false +ve leak message, due to not considering that program is
+	about to exit.
+	* gcc.dg/analyzer/fd-stream-socket.c: Move expected location of
+	leaks to closing "}"s.
+	* gcc.dg/analyzer/malloc-1.c: Fix return types.
+	* gcc.dg/analyzer/malloc-many-paths-2.c: Likewise.
+	* gcc.dg/analyzer/malloc-paths-10.c: Likewise.
+	* gcc.dg/analyzer/malloc-vs-local-4.c: Likewise.
+	* gcc.dg/analyzer/memset-CVE-2017-18549-1.c: Likewise.
+	* gcc.dg/analyzer/null-deref-pr102671-1.c: Enable
+	-fanalyzer-call-summaries.
+	* gcc.dg/analyzer/null-deref-pr102671-2.c: Remove xfail.
+	* gcc.dg/analyzer/pr101143.c: Fix return type.
+	* gcc.dg/analyzer/pr101837.c: Fix return type.  Add warning about
+	missing return.
+	* gcc.dg/analyzer/pr101983-not-main.c: Fix return type.
+	* gcc.dg/analyzer/pr103892.c: Enable -fanalyzer-call-summaries.
+	* gcc.dg/analyzer/pr104224.c: Add xfails.
+	* gcc.dg/analyzer/pr104434-nonconst.c: Likewise.
+	* gcc.dg/analyzer/pr93032-mztools-signed-char.c: Increase
+	exploration limits by a factor of 5.
+	* gcc.dg/analyzer/pr93032-mztools-unsigned-char.c: Likewise.
+	* gcc.dg/analyzer/pr93355-localealias-feasibility-2.c: Fix return type.
+	* gcc.dg/analyzer/pr93355-localealias.c: Add xfail.  Add expected
+	leak true +ve and uninit false +ve.
+	* gcc.dg/analyzer/pr94579.c: Add warning about missing return.
+	* gcc.dg/analyzer/pr98599-a.c: Add missing return stmts.
+	* gcc.dg/analyzer/pr99771-1.c: Fix expected locations of leaks.
+	* gcc.dg/analyzer/pr99774-2.c: Likewise.
+	* gcc.dg/analyzer/sensitive-1.c: Fix return types.
+	* gcc.dg/analyzer/state-diagram-1-sarif.py: Update.
+	* gcc.dg/analyzer/stdarg-1.c
+	(__analyzer_test_not_enough_args_2_middle): Add test coverage for
+	wording of call event with variadic args.
+	* gcc.dg/analyzer/strcmp-1.c: Fix return types.
+	* gcc.dg/analyzer/strcpy-1.c: Likewise.
+	* gcc.dg/analyzer/switch-enum-taint-1.c: Add warning about missing
+	return.
+	* gcc.dg/analyzer/switch.c: Fix return types.
+	* gcc.dg/analyzer/taint-assert.c: Likewise.
+	* gcc.dg/analyzer/taint-write-offset-1.c: Likewise.
+	* gcc.dg/analyzer/torture/analyzer-torture.exp: Drop
+	-fanalyzer-call-summaries.
+	* gcc.dg/analyzer/torture/boxed-ptr-1.c: Fix return type.
+	* gcc.dg/analyzer/torture/fold-ptr-arith-pr105784.c: Add
+	-Wno-analyzer-too-complex.
+	* gcc.dg/analyzer/torture/loop-inc-ptr-1.c: Skip at -O3 to avoid
+	changes to enode count.
+	* gcc.dg/analyzer/torture/pr102225.c: Consolidate on one line to
+	avoid caring about precise location of leak warning.
+	* gcc.dg/analyzer/torture/pr93379.c: Skip on -fno-fat-lto-objects.
+	Add warning about uninit.
+	* gcc.dg/analyzer/torture/stdarg-4.c: Replace UNKNOWN with
+	symbolic sum of params.
+	* gcc.dg/analyzer/untracked-1.c: Fix return type.
+	* gcc.dg/analyzer/use-after-free.c: Likewise.
+	* gcc.dg/analyzer/zlib-3.c: Add xfails.
+	* gcc.dg/plugin/analyzer_cpython_plugin.cc
+	(class refcnt_stmt_finder): Eliminate.
+	(check_refcnt): ...in favor of a call to
+	make_ploc_fixer_for_epath_for_leak_diagnostic.
+	* gcc.dg/plugin/analyzer_gil_plugin.cc: Update for
+	location-handling changes.
+	* gcc.dg/plugin/infoleak-CVE-2011-1078-1.c: Add missing
+	"return 0;".
+	* gcc.dg/plugin/infoleak-CVE-2011-1078-2.c: Fix return types.
+	* gcc.dg/plugin/infoleak-CVE-2017-18549-1.c: Likewise.
+	* gdc.dg/analyzer/analyzer.exp: Drop -fanalyzer-call-summaries.
+	* gfortran.dg/analyzer/analyzer.exp: Likewise.
+	* gfortran.dg/analyzer/uninit-pr63311.f90: Add
+	-Wno-analyzer-too-complex.
+
+2025-12-12  Jakub Jelinek  <jakub@redhat.com>
+
+	PR rtl-optimization/121852
+	* gcc.dg/pr121852.c: New test.
+
+2025-12-12  Tejas Belagod  <tejas.belagod@arm.com>
+	    Tamar Christina  <tamar.christina@arm.com>
+
+	* g++.target/aarch64/sve/acle/general-c++/svbool_ternary.C: New test.
+
+2025-12-12  Jakub Jelinek  <jakub@redhat.com>
+
+	PR testsuite/123098
+	* gcc.dg/debug/dwarf2/omp-fesdr.c: Use #pragma omp masked
+	instead of #pragma omp master.
+	* g++.dg/debug/dwarf2/omp-fesdr.C: Likewise.
+
+2025-12-12  mengqinggang  <mengqinggang@loongson.cn>
+
+	* gcc.target/loongarch/la64/add-const.c: New test.
+	* gcc.target/loongarch/la64/alsl-cost.c: New test.
+	* gcc.target/loongarch/la64/alsl_wu.c: New test.
+	* gcc.target/loongarch/la64/and-large-immediate-opt.c: New test.
+	* gcc.target/loongarch/la64/arch-func-attr-1.c: New test.
+	* gcc.target/loongarch/la64/arch-pragma-attr-1.c: New test.
+	* gcc.target/loongarch/la64/attr-model-1.c: New test.
+	* gcc.target/loongarch/la64/attr-model-2.c: New test.
+	* gcc.target/loongarch/la64/attr-model-3.c: New test.
+	* gcc.target/loongarch/la64/attr-model-4.c: New test.
+	* gcc.target/loongarch/la64/attr-model-5.c: New test.
+	* gcc.target/loongarch/la64/attr-model-diag.c: New test.
+	* gcc.target/loongarch/la64/attr-model-test.c: New test.
+	* gcc.target/loongarch/la64/bitint-alignments.c: New test.
+	* gcc.target/loongarch/la64/bitint-args.c: New test.
+	* gcc.target/loongarch/la64/bitint-sizes.c: New test.
+	* gcc.target/loongarch/la64/bitwise-shift-reassoc.c: New test.
+	* gcc.target/loongarch/la64/bitwise_extend.c: New test.
+	* gcc.target/loongarch/la64/bstrins-1.c: New test.
+	* gcc.target/loongarch/la64/bstrins-2.c: New test.
+	* gcc.target/loongarch/la64/bstrins-3.c: New test.
+	* gcc.target/loongarch/la64/bstrins-4.c: New test.
+	* gcc.target/loongarch/la64/bstrpick_alsl_paired.c: New test.
+	* gcc.target/loongarch/la64/bytepick_combine.c: New test.
+	* gcc.target/loongarch/la64/bytepick_shift_128.c: New test.
+	* gcc.target/loongarch/la64/can_inline_1.c: New test.
+	* gcc.target/loongarch/la64/can_inline_2.c: New test.
+	* gcc.target/loongarch/la64/can_inline_3.c: New test.
+	* gcc.target/loongarch/la64/can_inline_4.c: New test.
+	* gcc.target/loongarch/la64/can_inline_5.c: New test.
+	* gcc.target/loongarch/la64/can_inline_6.c: New test.
+	* gcc.target/loongarch/la64/cmodel-extreme-1.c: New test.
+	* gcc.target/loongarch/la64/cmodel-extreme-2.c: New test.
+	* gcc.target/loongarch/la64/cmodel-func-attr-1.c: New test.
+	* gcc.target/loongarch/la64/cmodel-pragma-attr-1.c: New test.
+	* gcc.target/loongarch/la64/cmov_ii.c: New test.
+	* gcc.target/loongarch/la64/compare-both-non-zero.c: New test.
+	* gcc.target/loongarch/la64/conditional-move-opt-1.c: New test.
+	* gcc.target/loongarch/la64/conditional-move-opt-2.c: New test.
+	* gcc.target/loongarch/la64/conditional-move-opt-3.c: New test.
+	* gcc.target/loongarch/la64/const-double-zero-stx.c: New test.
+	* gcc.target/loongarch/la64/crc-sext.c: New test.
+	* gcc.target/loongarch/la64/direct-extern-1.c: New test.
+	* gcc.target/loongarch/la64/div-div32.c: New test.
+	* gcc.target/loongarch/la64/div-no-div32.c: New test.
+	* gcc.target/loongarch/la64/divf.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-auto-extreme-tls-desc.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-auto-lto.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-auto-single-load-store-2.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-auto-single-load-store-3.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-auto-single-load-store-no-anchor.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-auto-single-load-store.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-auto-tls-desc.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-auto-tls-ld-gd.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-auto-tls-le-ie.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-extreme-auto-tls-ld-gd.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-extreme-tls-desc.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-medium-auto-tls-ld-gd.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-medium-call36-auto-tls-ld-gd.c: New test.
+	* gcc.target/loongarch/la64/explicit-relocs-tls-desc.c: New test.
+	* gcc.target/loongarch/la64/extendsidi2-combine.c: New test.
+	* gcc.target/loongarch/la64/fclass-compile.c: New test.
+	* gcc.target/loongarch/la64/fclass-run.c: New test.
+	* gcc.target/loongarch/la64/flogb.c: New test.
+	* gcc.target/loongarch/la64/flt-abi-isa-1.c: New test.
+	* gcc.target/loongarch/la64/flt-abi-isa-2.c: New test.
+	* gcc.target/loongarch/la64/flt-abi-isa-3.c: New test.
+	* gcc.target/loongarch/la64/flt-abi-isa-4.c: New test.
+	* gcc.target/loongarch/la64/frint.c: New test.
+	* gcc.target/loongarch/la64/fscaleb.c: New test.
+	* gcc.target/loongarch/la64/ftint-no-inexact.c: New test.
+	* gcc.target/loongarch/la64/ftint.c: New test.
+	* gcc.target/loongarch/la64/func-call-1.c: New test.
+	* gcc.target/loongarch/la64/func-call-2.c: New test.
+	* gcc.target/loongarch/la64/func-call-3.c: New test.
+	* gcc.target/loongarch/la64/func-call-4.c: New test.
+	* gcc.target/loongarch/la64/func-call-5.c: New test.
+	* gcc.target/loongarch/la64/func-call-6.c: New test.
+	* gcc.target/loongarch/la64/func-call-7.c: New test.
+	* gcc.target/loongarch/la64/func-call-8.c: New test.
+	* gcc.target/loongarch/la64/func-call-extreme-1.c: New test.
+	* gcc.target/loongarch/la64/func-call-extreme-2.c: New test.
+	* gcc.target/loongarch/la64/func-call-extreme-3.c: New test.
+	* gcc.target/loongarch/la64/func-call-extreme-4.c: New test.
+	* gcc.target/loongarch/la64/func-call-extreme-5.c: New test.
+	* gcc.target/loongarch/la64/func-call-extreme-6.c: New test.
+	* gcc.target/loongarch/la64/func-call-medium-1.c: New test.
+	* gcc.target/loongarch/la64/func-call-medium-2.c: New test.
+	* gcc.target/loongarch/la64/func-call-medium-3.c: New test.
+	* gcc.target/loongarch/la64/func-call-medium-5.c: New test.
+	* gcc.target/loongarch/la64/func-call-medium-6.c: New test.
+	* gcc.target/loongarch/la64/func-call-medium-7.c: New test.
+	* gcc.target/loongarch/la64/func-call-medium-8.c: New test.
+	* gcc.target/loongarch/la64/func-call-medium-call36-1.c: New test.
+	* gcc.target/loongarch/la64/func-call-medium-call36.c: New test.
+	* gcc.target/loongarch/la64/imm-load.c: New test.
+	* gcc.target/loongarch/la64/imm-load1.c: New test.
+	* gcc.target/loongarch/la64/invariant-recip.c: New test.
+	* gcc.target/loongarch/la64/la64.exp: New test.
+	* gcc.target/loongarch/la64/larch-frecipe-builtin.c: New test.
+	* gcc.target/loongarch/la64/larch-frecipe-intrinsic.c: New test.
+	* gcc.target/loongarch/la64/lasx-func-attr-1.c: New test.
+	* gcc.target/loongarch/la64/lasx-pragma-attr-1.c: New test.
+	* gcc.target/loongarch/la64/lsx-func-attr-1.c: New test.
+	* gcc.target/loongarch/la64/lsx-pragma-attr-1.c: New test.
+	* gcc.target/loongarch/la64/math-float-128.c: New test.
+	* gcc.target/loongarch/la64/mem-and-mask-opt.c: New test.
+	* gcc.target/loongarch/la64/memcpy-vec-1.c: New test.
+	* gcc.target/loongarch/la64/memcpy-vec-2.c: New test.
+	* gcc.target/loongarch/la64/memcpy-vec-3.c: New test.
+	* gcc.target/loongarch/la64/mode-tieable-opt.c: New test.
+	* gcc.target/loongarch/la64/mov-zero-2.c: New test.
+	* gcc.target/loongarch/la64/movcf2gr-via-fr.c: New test.
+	* gcc.target/loongarch/la64/movcf2gr.c: New test.
+	* gcc.target/loongarch/la64/mul-const-reduction.c: New test.
+	* gcc.target/loongarch/la64/mulh_wu.c: New test.
+	* gcc.target/loongarch/la64/mulw_d_w.c: New test.
+	* gcc.target/loongarch/la64/mulw_d_wu.c: New test.
+	* gcc.target/loongarch/la64/pr109465-1.c: New test.
+	* gcc.target/loongarch/la64/pr109465-2.c: New test.
+	* gcc.target/loongarch/la64/pr109465-3.c: New test.
+	* gcc.target/loongarch/la64/pr113148.c: New test.
+	* gcc.target/loongarch/la64/pr114861.c: New test.
+	* gcc.target/loongarch/la64/pr118561.c: New test.
+	* gcc.target/loongarch/la64/pr118828-2.c: New test.
+	* gcc.target/loongarch/la64/pr118828-3.c: New test.
+	* gcc.target/loongarch/la64/pr118828-4.c: New test.
+	* gcc.target/loongarch/la64/pr118828.c: New test.
+	* gcc.target/loongarch/la64/pr118843.c: New test.
+	* gcc.target/loongarch/la64/pr119127.c: New test.
+	* gcc.target/loongarch/la64/pr121542.c: New test.
+	* gcc.target/loongarch/la64/pr121634.c: New test.
+	* gcc.target/loongarch/la64/pr121875.c: New test.
+	* gcc.target/loongarch/la64/prolog-opt.c: New test.
+	* gcc.target/loongarch/la64/recip-divf.c: New test.
+	* gcc.target/loongarch/la64/recip-sqrtf.c: New test.
+	* gcc.target/loongarch/la64/relocs-symbol-noaddend.c: New test.
+	* gcc.target/loongarch/la64/revb.c: New test.
+	* gcc.target/loongarch/la64/rotl-with-rotr.c: New test.
+	* gcc.target/loongarch/la64/rotrw.c: New test.
+	* gcc.target/loongarch/la64/sign-extend-1.c: New test.
+	* gcc.target/loongarch/la64/sign-extend-2.c: New test.
+	* gcc.target/loongarch/la64/sign-extend-3.c: New test.
+	* gcc.target/loongarch/la64/sign-extend-4.c: New test.
+	* gcc.target/loongarch/la64/sign-extend-5.c: New test.
+	* gcc.target/loongarch/la64/sign-extend-6.c: New test.
+	* gcc.target/loongarch/la64/sign-extend-bitwise.c: New test.
+	* gcc.target/loongarch/la64/sign_extend_ashift.c: New test.
+	* gcc.target/loongarch/la64/slt-sign-extend.c: New test.
+	* gcc.target/loongarch/la64/smuldi3_highpart.c: New test.
+	* gcc.target/loongarch/la64/spill-less.c: New test.
+	* gcc.target/loongarch/la64/sqrtf.c: New test.
+	* gcc.target/loongarch/la64/switch-qi.c: New test.
+	* gcc.target/loongarch/la64/tls-extreme-macro.c: New test.
+	* gcc.target/loongarch/la64/tls-gd-noplt.c: New test.
+	* gcc.target/loongarch/la64/tls-ie-extreme.c: New test.
+	* gcc.target/loongarch/la64/tls-ie-norelax.c: New test.
+	* gcc.target/loongarch/la64/tls-ie-relax.c: New test.
+	* gcc.target/loongarch/la64/tls-le-relax.c: New test.
+	* gcc.target/loongarch/la64/widen-mul-rtx-cost-signed.c: New test.
+	* gcc.target/loongarch/la64/widen-mul-rtx-cost-unsigned.c: New test.
+	* gcc.target/loongarch/la64/zero-size-field-pass.c: New test.
+	* gcc.target/loongarch/la64/zero-size-field-ret.c: New test.
+	* gcc.target/loongarch/vector/lasx/abd-lasx.c: New test.
+	* gcc.target/loongarch/vector/lasx/avg-ceil-lasx.c: New test.
+	* gcc.target/loongarch/vector/lasx/avg-floor-lasx.c: New test.
+	* gcc.target/loongarch/vector/lasx/fnmam4-vec.c: New test.
+	* gcc.target/loongarch/vector/lasx/lasx-andn-iorn.c: New test.
+	* gcc.target/loongarch/vector/lasx/lasx-extract-even_odd-opt.c: New test.
+	* gcc.target/loongarch/vector/lasx/lasx-func-attr-2.c: New test.
+	* gcc.target/loongarch/vector/lasx/lasx-pragma-attr-2.c: New test.
+	* gcc.target/loongarch/vector/lasx/lasx-reduc-1.c: New test.
+	* gcc.target/loongarch/vector/lasx/lasx-xvpermi_q-opt.c: New test.
+	* gcc.target/loongarch/vector/lasx/pr112476-2.c: New test.
+	* gcc.target/loongarch/vector/lasx/pr112476-4.c: New test.
+	* gcc.target/loongarch/vector/lasx/pr113033.c: New test.
+	* gcc.target/loongarch/vector/lasx/pragma-push-pop.c: New test.
+	* gcc.target/loongarch/vector/lasx/rotl-with-xvrotr-b.c: New test.
+	* gcc.target/loongarch/vector/lasx/rotl-with-xvrotr-d.c: New test.
+	* gcc.target/loongarch/vector/lasx/rotl-with-xvrotr-h.c: New test.
+	* gcc.target/loongarch/vector/lasx/rotl-with-xvrotr-w.c: New test.
+	* gcc.target/loongarch/vector/lasx/sad-lasx.c: New test.
+	* gcc.target/loongarch/vector/lasx/strict-align.c: New test.
+	* gcc.target/loongarch/vector/lasx/vec_pack_unpack_256.c: New test.
+	* gcc.target/loongarch/vector/lasx/vec_reduc_half.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-extract.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-frint-no-inexact.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-frint.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-ftint-no-inexact.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-ftint.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-ld-st-imm12.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-muh.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-rotr.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-shuf-fp.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-slp-two-operator.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-widen-add.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-widen-mul.c: New test.
+	* gcc.target/loongarch/vector/lasx/vect-widen-sub.c: New test.
+	* gcc.target/loongarch/vector/lasx/vfmax-vfmin.c: New test.
+	* gcc.target/loongarch/vector/lasx/vrepli.c: New test.
+	* gcc.target/loongarch/vector/lasx/wide-mul-reduc-1.c: New test.
+	* gcc.target/loongarch/vector/lasx/wide-mul-reduc-2.c: New test.
+	* gcc.target/loongarch/vector/lasx/xvfcmp-d.c: New test.
+	* gcc.target/loongarch/vector/lasx/xvfcmp-f.c: New test.
+	* gcc.target/loongarch/vector/lsx/abd-lsx.c: New test.
+	* gcc.target/loongarch/vector/lsx/avg-ceil-lsx.c: New test.
+	* gcc.target/loongarch/vector/lsx/avg-floor-lsx.c: New test.
+	* gcc.target/loongarch/vector/lsx/lsx-andn-iorn.c: New test.
+	* gcc.target/loongarch/vector/lsx/lsx-func-attr-2.c: New test.
+	* gcc.target/loongarch/vector/lsx/lsx-pragma-attr-2.c: New test.
+	* gcc.target/loongarch/vector/lsx/mov-zero-1.c: New test.
+	* gcc.target/loongarch/vector/lsx/popcnt.c: New test.
+	* gcc.target/loongarch/vector/lsx/popcount.c: New test.
+	* gcc.target/loongarch/vector/lsx/pr112476-1.c: New test.
+	* gcc.target/loongarch/vector/lsx/pr112476-3.c: New test.
+	* gcc.target/loongarch/vector/lsx/pr119084.c: New test.
+	* gcc.target/loongarch/vector/lsx/pr121064.c: New test.
+	* gcc.target/loongarch/vector/lsx/pr122097.c: New test.
+	* gcc.target/loongarch/vector/lsx/rotl-with-vrotr-b.c: New test.
+	* gcc.target/loongarch/vector/lsx/rotl-with-vrotr-d.c: New test.
+	* gcc.target/loongarch/vector/lsx/rotl-with-vrotr-h.c: New test.
+	* gcc.target/loongarch/vector/lsx/rotl-with-vrotr-w.c: New test.
+	* gcc.target/loongarch/vector/lsx/sad-lsx.c: New test.
+	* gcc.target/loongarch/vector/lsx/vec_pack_unpack_128.c: New test.
+	* gcc.target/loongarch/vector/lsx/vect-frint-scalar-no-inexact.c: New test.
+	* gcc.target/loongarch/vector/lsx/vect-frint-scalar.c: New test.
+	* gcc.target/loongarch/vector/lsx/vect-shift-imm-round.c: New test.
+	* gcc.target/loongarch/vector/lsx/vector-func-attr-1.c: New test.
+	* gcc.target/loongarch/vector/lsx/vector-pragma-attr-1.c: New test.
+	* gcc.target/loongarch/vector/lsx/vfcmp-d.c: New test.
+	* gcc.target/loongarch/vector/lsx/vfcmp-f.c: New test.
+	* gcc.target/loongarch/vector/lsx/xorsign-run.c: New test.
+	* gcc.target/loongarch/vector/lsx/xorsign.c: New test.
+
+2025-12-12  mengqinggang  <mengqinggang@loongson.cn>
+
+	* g++.target/loongarch/bytepick.C: Skip on LA32.
+	* g++.target/loongarch/got-load.C: Likewise.
+	* g++.target/loongarch/pr106828.C: Likewise.
+	* g++.target/loongarch/vect-ashr-lshr.C: Add loongarch_asx check.
+	* gcc.dg/ifcvt-4.c: Skip on LA32.
+	* gcc.dg/stack-usage-1.c: Change __loongarch_lp64 to __loongarch__.
+	* gcc.dg/tree-ssa/gen-vect-2.c: Skip on LoongArch.
+	* gcc.dg/tree-ssa/gen-vect-25.c: Likewise.
+	* gcc.dg/tree-ssa/pr83403-1.c: Add dg-additional-options.
+	* gcc.dg/tree-ssa/pr83403-2.c: Likewise.
+	* gcc.target/loongarch/float-load.c: Add hard_float check.
+	* gcc.target/loongarch/larch-builtin.c: Skip some check on LA32.
+	* gcc.target/loongarch/pr115752.c: Add hard_float check.
+	* gcc.target/loongarch/vector/loongarch-vector.exp: Add
+	check_effective_target_loongarch_sx.
+	* lib/target-supports.exp: Add hard float condition to
+	check_effective_target_scalar_all_fma.
+	Disable loongarch for check_effective_target_vect_cmdline_needed.
+	Add check_effective_target_loongarch_sx condition to
+	check_vect_support_and_set_flags.
+	* gcc.target/loongarch/abd-lasx.c: Removed.
+	* gcc.target/loongarch/abd-lsx.c: Removed.
+	* gcc.target/loongarch/add-const.c: Removed.
+	* gcc.target/loongarch/alsl-cost.c: Removed.
+	* gcc.target/loongarch/alsl_wu.c: Removed.
+	* gcc.target/loongarch/and-large-immediate-opt.c: Removed.
+	* gcc.target/loongarch/arch-func-attr-1.c: Removed.
+	* gcc.target/loongarch/arch-pragma-attr-1.c: Removed.
+	* gcc.target/loongarch/attr-model-1.c: Removed.
+	* gcc.target/loongarch/attr-model-2.c: Removed.
+	* gcc.target/loongarch/attr-model-3.c: Removed.
+	* gcc.target/loongarch/attr-model-4.c: Removed.
+	* gcc.target/loongarch/attr-model-5.c: Removed.
+	* gcc.target/loongarch/attr-model-diag.c: Removed.
+	* gcc.target/loongarch/attr-model-test.c: Removed.
+	* gcc.target/loongarch/avg-ceil-lasx.c: Removed.
+	* gcc.target/loongarch/avg-ceil-lsx.c: Removed.
+	* gcc.target/loongarch/avg-floor-lasx.c: Removed.
+	* gcc.target/loongarch/avg-floor-lsx.c: Removed.
+	* gcc.target/loongarch/bitint-alignments.c: Removed.
+	* gcc.target/loongarch/bitint-args.c: Removed.
+	* gcc.target/loongarch/bitint-sizes.c: Removed.
+	* gcc.target/loongarch/bitwise-shift-reassoc.c: Removed.
+	* gcc.target/loongarch/bitwise_extend.c: Removed.
+	* gcc.target/loongarch/bstrins-1.c: Removed.
+	* gcc.target/loongarch/bstrins-2.c: Removed.
+	* gcc.target/loongarch/bstrins-3.c: Removed.
+	* gcc.target/loongarch/bstrins-4.c: Removed.
+	* gcc.target/loongarch/bstrpick_alsl_paired.c: Removed.
+	* gcc.target/loongarch/bytepick_combine.c: Removed.
+	* gcc.target/loongarch/bytepick_shift_128.c: Removed.
+	* gcc.target/loongarch/can_inline_1.c: Removed.
+	* gcc.target/loongarch/can_inline_2.c: Removed.
+	* gcc.target/loongarch/can_inline_3.c: Removed.
+	* gcc.target/loongarch/can_inline_4.c: Removed.
+	* gcc.target/loongarch/can_inline_5.c: Removed.
+	* gcc.target/loongarch/can_inline_6.c: Removed.
+	* gcc.target/loongarch/cmodel-extreme-1.c: Removed.
+	* gcc.target/loongarch/cmodel-extreme-2.c: Removed.
+	* gcc.target/loongarch/cmodel-func-attr-1.c: Removed.
+	* gcc.target/loongarch/cmodel-pragma-attr-1.c: Removed.
+	* gcc.target/loongarch/cmov_ii.c: Removed.
+	* gcc.target/loongarch/compare-both-non-zero.c: Removed.
+	* gcc.target/loongarch/conditional-move-opt-1.c: Removed.
+	* gcc.target/loongarch/conditional-move-opt-2.c: Removed.
+	* gcc.target/loongarch/conditional-move-opt-3.c: Removed.
+	* gcc.target/loongarch/const-double-zero-stx.c: Removed.
+	* gcc.target/loongarch/crc-sext.c: Removed.
+	* gcc.target/loongarch/direct-extern-1.c: Removed.
+	* gcc.target/loongarch/div-div32.c: Removed.
+	* gcc.target/loongarch/div-no-div32.c: Removed.
+	* gcc.target/loongarch/divf.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-auto-extreme-tls-desc.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-auto-lto.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-auto-single-load-store-2.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-auto-single-load-store-3.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-auto-single-load-store-no-anchor.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-auto-single-load-store.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-auto-tls-desc.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-auto-tls-ld-gd.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-auto-tls-le-ie.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-extreme-auto-tls-ld-gd.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-extreme-tls-desc.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-medium-auto-tls-ld-gd.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-medium-call36-auto-tls-ld-gd.c: Removed.
+	* gcc.target/loongarch/explicit-relocs-tls-desc.c: Removed.
+	* gcc.target/loongarch/extendsidi2-combine.c: Removed.
+	* gcc.target/loongarch/fclass-compile.c: Removed.
+	* gcc.target/loongarch/fclass-run.c: Removed.
+	* gcc.target/loongarch/flogb.c: Removed.
+	* gcc.target/loongarch/flt-abi-isa-1.c: Removed.
+	* gcc.target/loongarch/flt-abi-isa-2.c: Removed.
+	* gcc.target/loongarch/flt-abi-isa-3.c: Removed.
+	* gcc.target/loongarch/flt-abi-isa-4.c: Removed.
+	* gcc.target/loongarch/fnmam4-vec.c: Removed.
+	* gcc.target/loongarch/frint.c: Removed.
+	* gcc.target/loongarch/fscaleb.c: Removed.
+	* gcc.target/loongarch/ftint-no-inexact.c: Removed.
+	* gcc.target/loongarch/ftint.c: Removed.
+	* gcc.target/loongarch/func-call-1.c: Removed.
+	* gcc.target/loongarch/func-call-2.c: Removed.
+	* gcc.target/loongarch/func-call-3.c: Removed.
+	* gcc.target/loongarch/func-call-4.c: Removed.
+	* gcc.target/loongarch/func-call-5.c: Removed.
+	* gcc.target/loongarch/func-call-6.c: Removed.
+	* gcc.target/loongarch/func-call-7.c: Removed.
+	* gcc.target/loongarch/func-call-8.c: Removed.
+	* gcc.target/loongarch/func-call-extreme-1.c: Removed.
+	* gcc.target/loongarch/func-call-extreme-2.c: Removed.
+	* gcc.target/loongarch/func-call-extreme-3.c: Removed.
+	* gcc.target/loongarch/func-call-extreme-4.c: Removed.
+	* gcc.target/loongarch/func-call-extreme-5.c: Removed.
+	* gcc.target/loongarch/func-call-extreme-6.c: Removed.
+	* gcc.target/loongarch/func-call-medium-1.c: Removed.
+	* gcc.target/loongarch/func-call-medium-2.c: Removed.
+	* gcc.target/loongarch/func-call-medium-3.c: Removed.
+	* gcc.target/loongarch/func-call-medium-5.c: Removed.
+	* gcc.target/loongarch/func-call-medium-6.c: Removed.
+	* gcc.target/loongarch/func-call-medium-7.c: Removed.
+	* gcc.target/loongarch/func-call-medium-8.c: Removed.
+	* gcc.target/loongarch/func-call-medium-call36-1.c: Removed.
+	* gcc.target/loongarch/func-call-medium-call36.c: Removed.
+	* gcc.target/loongarch/imm-load.c: Removed.
+	* gcc.target/loongarch/imm-load1.c: Removed.
+	* gcc.target/loongarch/invariant-recip.c: Removed.
+	* gcc.target/loongarch/larch-frecipe-builtin.c: Removed.
+	* gcc.target/loongarch/larch-frecipe-intrinsic.c: Removed.
+	* gcc.target/loongarch/lasx-andn-iorn.c: Removed.
+	* gcc.target/loongarch/lasx-extract-even_odd-opt.c: Removed.
+	* gcc.target/loongarch/lasx-func-attr-1.c: Removed.
+	* gcc.target/loongarch/lasx-func-attr-2.c: Removed.
+	* gcc.target/loongarch/lasx-pragma-attr-1.c: Removed.
+	* gcc.target/loongarch/lasx-pragma-attr-2.c: Removed.
+	* gcc.target/loongarch/lasx-reduc-1.c: Removed.
+	* gcc.target/loongarch/lasx-xvpermi_q-opt.c: Removed.
+	* gcc.target/loongarch/lsx-andn-iorn.c: Removed.
+	* gcc.target/loongarch/lsx-func-attr-1.c: Removed.
+	* gcc.target/loongarch/lsx-func-attr-2.c: Removed.
+	* gcc.target/loongarch/lsx-pragma-attr-1.c: Removed.
+	* gcc.target/loongarch/lsx-pragma-attr-2.c: Removed.
+	* gcc.target/loongarch/math-float-128.c: Removed.
+	* gcc.target/loongarch/mem-and-mask-opt.c: Removed.
+	* gcc.target/loongarch/memcpy-vec-1.c: Removed.
+	* gcc.target/loongarch/memcpy-vec-2.c: Removed.
+	* gcc.target/loongarch/memcpy-vec-3.c: Removed.
+	* gcc.target/loongarch/mode-tieable-opt.c: Removed.
+	* gcc.target/loongarch/mov-zero-1.c: Removed.
+	* gcc.target/loongarch/mov-zero-2.c: Removed.
+	* gcc.target/loongarch/movcf2gr-via-fr.c: Removed.
+	* gcc.target/loongarch/movcf2gr.c: Removed.
+	* gcc.target/loongarch/mul-const-reduction.c: Removed.
+	* gcc.target/loongarch/mulh_wu.c: Removed.
+	* gcc.target/loongarch/mulw_d_w.c: Removed.
+	* gcc.target/loongarch/mulw_d_wu.c: Removed.
+	* gcc.target/loongarch/popcnt.c: Removed.
+	* gcc.target/loongarch/popcount.c: Removed.
+	* gcc.target/loongarch/pr109465-1.c: Removed.
+	* gcc.target/loongarch/pr109465-2.c: Removed.
+	* gcc.target/loongarch/pr109465-3.c: Removed.
+	* gcc.target/loongarch/pr112476-1.c: Removed.
+	* gcc.target/loongarch/pr112476-2.c: Removed.
+	* gcc.target/loongarch/pr112476-3.c: Removed.
+	* gcc.target/loongarch/pr112476-4.c: Removed.
+	* gcc.target/loongarch/pr113033.c: Removed.
+	* gcc.target/loongarch/pr113148.c: Removed.
+	* gcc.target/loongarch/pr114861.c: Removed.
+	* gcc.target/loongarch/pr118561.c: Removed.
+	* gcc.target/loongarch/pr118828-2.c: Removed.
+	* gcc.target/loongarch/pr118828-3.c: Removed.
+	* gcc.target/loongarch/pr118828-4.c: Removed.
+	* gcc.target/loongarch/pr118828.c: Removed.
+	* gcc.target/loongarch/pr118843.c: Removed.
+	* gcc.target/loongarch/pr119084.c: Removed.
+	* gcc.target/loongarch/pr119127.c: Removed.
+	* gcc.target/loongarch/pr121064.c: Removed.
+	* gcc.target/loongarch/pr121542.c: Removed.
+	* gcc.target/loongarch/pr121634.c: Removed.
+	* gcc.target/loongarch/pr121875.c: Removed.
+	* gcc.target/loongarch/pr122097.c: Removed.
+	* gcc.target/loongarch/pragma-push-pop.c: Removed.
+	* gcc.target/loongarch/prolog-opt.c: Removed.
+	* gcc.target/loongarch/recip-divf.c: Removed.
+	* gcc.target/loongarch/recip-sqrtf.c: Removed.
+	* gcc.target/loongarch/relocs-symbol-noaddend.c: Removed.
+	* gcc.target/loongarch/revb.c: Removed.
+	* gcc.target/loongarch/rotl-with-rotr.c: Removed.
+	* gcc.target/loongarch/rotl-with-vrotr-b.c: Removed.
+	* gcc.target/loongarch/rotl-with-vrotr-d.c: Removed.
+	* gcc.target/loongarch/rotl-with-vrotr-h.c: Removed.
+	* gcc.target/loongarch/rotl-with-vrotr-w.c: Removed.
+	* gcc.target/loongarch/rotl-with-xvrotr-b.c: Removed.
+	* gcc.target/loongarch/rotl-with-xvrotr-d.c: Removed.
+	* gcc.target/loongarch/rotl-with-xvrotr-h.c: Removed.
+	* gcc.target/loongarch/rotl-with-xvrotr-w.c: Removed.
+	* gcc.target/loongarch/rotrw.c: Removed.
+	* gcc.target/loongarch/sad-lasx.c: Removed.
+	* gcc.target/loongarch/sad-lsx.c: Removed.
+	* gcc.target/loongarch/sign-extend-1.c: Removed.
+	* gcc.target/loongarch/sign-extend-2.c: Removed.
+	* gcc.target/loongarch/sign-extend-3.c: Removed.
+	* gcc.target/loongarch/sign-extend-4.c: Removed.
+	* gcc.target/loongarch/sign-extend-5.c: Removed.
+	* gcc.target/loongarch/sign-extend-6.c: Removed.
+	* gcc.target/loongarch/sign-extend-bitwise.c: Removed.
+	* gcc.target/loongarch/sign_extend_ashift.c: Removed.
+	* gcc.target/loongarch/slt-sign-extend.c: Removed.
+	* gcc.target/loongarch/smuldi3_highpart.c: Removed.
+	* gcc.target/loongarch/spill-less.c: Removed.
+	* gcc.target/loongarch/sqrtf.c: Removed.
+	* gcc.target/loongarch/strict-align.c: Removed.
+	* gcc.target/loongarch/switch-qi.c: Removed.
+	* gcc.target/loongarch/tls-extreme-macro.c: Removed.
+	* gcc.target/loongarch/tls-gd-noplt.c: Removed.
+	* gcc.target/loongarch/tls-ie-extreme.c: Removed.
+	* gcc.target/loongarch/tls-ie-norelax.c: Removed.
+	* gcc.target/loongarch/tls-ie-relax.c: Removed.
+	* gcc.target/loongarch/tls-le-relax.c: Removed.
+	* gcc.target/loongarch/vec_pack_unpack_128.c: Removed.
+	* gcc.target/loongarch/vec_pack_unpack_256.c: Removed.
+	* gcc.target/loongarch/vec_reduc_half.c: Removed.
+	* gcc.target/loongarch/vect-extract.c: Removed.
+	* gcc.target/loongarch/vect-frint-no-inexact.c: Removed.
+	* gcc.target/loongarch/vect-frint-scalar-no-inexact.c: Removed.
+	* gcc.target/loongarch/vect-frint-scalar.c: Removed.
+	* gcc.target/loongarch/vect-frint.c: Removed.
+	* gcc.target/loongarch/vect-ftint-no-inexact.c: Removed.
+	* gcc.target/loongarch/vect-ftint.c: Removed.
+	* gcc.target/loongarch/vect-ld-st-imm12.c: Removed.
+	* gcc.target/loongarch/vect-muh.c: Removed.
+	* gcc.target/loongarch/vect-rotr.c: Removed.
+	* gcc.target/loongarch/vect-shift-imm-round.c: Removed.
+	* gcc.target/loongarch/vect-shuf-fp.c: Removed.
+	* gcc.target/loongarch/vect-slp-two-operator.c: Removed.
+	* gcc.target/loongarch/vect-widen-add.c: Removed.
+	* gcc.target/loongarch/vect-widen-mul.c: Removed.
+	* gcc.target/loongarch/vect-widen-sub.c: Removed.
+	* gcc.target/loongarch/vector-func-attr-1.c: Removed.
+	* gcc.target/loongarch/vector-pragma-attr-1.c: Removed.
+	* gcc.target/loongarch/vfcmp-d.c: Removed.
+	* gcc.target/loongarch/vfcmp-f.c: Removed.
+	* gcc.target/loongarch/vfmax-vfmin.c: Removed.
+	* gcc.target/loongarch/vrepli.c: Removed.
+	* gcc.target/loongarch/wide-mul-reduc-1.c: Removed.
+	* gcc.target/loongarch/wide-mul-reduc-2.c: Removed.
+	* gcc.target/loongarch/widen-mul-rtx-cost-signed.c: Removed.
+	* gcc.target/loongarch/widen-mul-rtx-cost-unsigned.c: Removed.
+	* gcc.target/loongarch/xorsign-run.c: Removed.
+	* gcc.target/loongarch/xorsign.c: Removed.
+	* gcc.target/loongarch/xvfcmp-d.c: Removed.
+	* gcc.target/loongarch/xvfcmp-f.c: Removed.
+	* gcc.target/loongarch/zero-size-field-pass.c: Removed.
+	* gcc.target/loongarch/zero-size-field-ret.c: Removed.
+
+2025-12-12  mengqinggang  <mengqinggang@loongson.cn>
+
+	* gcc.target/loongarch/la32/memcpy.c: New test.
+
+2025-12-12  Jiajie Chen  <c@jia.je>
+
+	* gcc.target/loongarch/la32/trunc_int_for_mode.c: New test.
+
+2025-12-12  mengqinggang  <mengqinggang@loongson.cn>
+
+	* gcc.target/loongarch/la32/and.c: New test.
+	* gcc.target/loongarch/la32/la32.exp: New test.
+
+2025-12-12  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* algol68/execute/manorboy.a68: New file.
+
+2025-12-11  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/107406
+	* gfortran.dg/coarray_lock_3.f90: Remove dg-error on
+	valid code.
+	* gfortran.dg/coarray_lock_4.f90: Likewise.
+	* gfortran.dg/coarray_lock_5.f90: Likwise
+	Co-Authored by: Andre Vehreschild <vehre@gcc.gnu.org>
+
+2025-12-11  Jakub Jelinek  <jakub@redhat.com>
+
+	PR testsuite/123098
+	* gcc.dg/vect/vect-simd-clone-15.c (foo): Use OpenMP 5.2
+	syntax for linear clause.
+	* g++.dg/vect/simd-clone-6.cc (foo): Likewise.
+	* c-c++-common/goacc-gomp/pr93465-1.c: Use
+	#pragma omp begin declare target instead of
+	#pragma omp declare target.
+	* c-c++-common/goacc-gomp/nesting-fail-1.c: Use #pragma omp masked
+	instead of #pragma omp master.
+	* gfortran.dg/goacc-gomp/pr102330-1.f90 (r1): Use
+	!$omp masked taskloop simd instead of !$omp master taskloop simd.
+	* gfortran.dg/vect/pr86421.f90 (foo): Use OpenMP 5.2 syntax for
+	linear clause.
+	* gfortran.dg/gomp/allocate-16.f90: Use \\\$ instead of $ in dg-error
+	and use relative line numbers instead of absolute.
+	* gfortran.dg/gomp/groupprivate-2.f90: Add -Wno-deprecated-openmp
+	to dg-additional-options.
+	* gfortran.dg/gomp/groupprivate-5.f90: Likewise.
+	* gfortran.dg/goacc/pr93329.f90: Likewise.
+
+2025-12-11  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gnat.dg/specs/put_image2.ads: New test.
+
+2025-12-11  Jakub Jelinek  <jakub@redhat.com>
+
+	PR libstdc++/121114
+	* g++.dg/tree-ssa/pr110819.C: Guard scan-tree-dump-not delete on
+	c++23_down and add comment explaining why C++26 fails that.
+	* g++.dg/tree-ssa/pr96945.C: Likewise.
+	* g++.dg/tree-ssa/pr109442.C: Likewise.
+	* g++.dg/tree-ssa/pr116868.C: Likewise.
+	* g++.dg/tree-ssa/pr58483.C: Likewise.
+
+2025-12-11  Jakub Jelinek  <jakub@redhat.com>
+
+	* gfortran.dg/interface_16.f90: Fix comment typo,calll -> call.
+
+2025-12-11  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/107142
+	* gfortran.dg/pdt_78.f03: New test.
+
+2025-12-11  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/110012
+	* gfortran.dg/pdt_77.f03: New test.
+
+2025-12-11  Jason Merrill  <jason@redhat.com>
+
+	* lib/g++-dg.exp: Handle "modules" std.
+	* lib/target-supports.exp (check_effective_target_modules): New.
+
+2025-12-11  supers1ngular  <supers1ngular@baylibre.com>
+
+	* gfortran.dg/gomp/allocate-14.f90: Suppress warnings.
+	* gfortran.dg/gomp/allocate-16.f90: Ditto.
+	* gfortran.dg/gomp/allocate-5.f90: Ditto.
+	* gfortran.dg/gomp/allocate-6.f90: Ditto.
+	* gfortran.dg/gomp/allocate-7.f90: Ditto.
+	* gfortran.dg/gomp/allocators-3.f90: Ditto.
+	* gfortran.dg/gomp/declare-simd-2.f90: Ditto.
+	* gfortran.dg/gomp/declare-simd-6.f90: Ditto.
+	* gfortran.dg/gomp/declare-target-1.f90: Ditto.
+	* gfortran.dg/gomp/declare-target-2.f90: Ditto.
+	* gfortran.dg/gomp/declare-target-4.f90: Ditto.
+	* gfortran.dg/gomp/declare-target-5.f90: Ditto.
+	* gfortran.dg/gomp/declare-target-indirect-1.f90: Ditto.
+	* gfortran.dg/gomp/declare-target-indirect-2.f90: Ditto.
+	* gfortran.dg/gomp/declare-variant-10.f90: Ditto.
+	* gfortran.dg/gomp/declare-variant-8.f90: Ditto.
+	* gfortran.dg/gomp/implicit-save.f90: Ditto.
+	* gfortran.dg/gomp/linear-1.f90: Ditto.
+	* gfortran.dg/gomp/linear-2.f90: Ditto.
+	* gfortran.dg/gomp/linear-3.f90: Ditto.
+	* gfortran.dg/gomp/linear-4.f90: Ditto.
+	* gfortran.dg/gomp/linear-6.f90: Ditto.
+	* gfortran.dg/gomp/map-12.f90: Ditto.
+	* gfortran.dg/gomp/map-6.f90: Ditto.
+	* gfortran.dg/gomp/map-7.f90: Ditto.
+	* gfortran.dg/gomp/map-8.f90: Ditto.
+	* gfortran.dg/gomp/order-8.f90: Ditto.
+	* gfortran.dg/gomp/pr83977.f90: Ditto.
+	* gfortran.dg/gomp/reduction1.f90: Ditto.
+	* gfortran.dg/gomp/schedule-modifiers-2.f90: Ditto.
+	* gfortran.dg/gomp/workshare-reduction-55.f90: Ditto.
+	* gfortran.dg/gomp/workshare-reduction-56.f90: Ditto.
+	* gfortran.dg/gomp/workshare-reduction-57.f90: Ditto.
+	* gfortran.dg/gomp/workshare-reduction-58.f90: Ditto.
+	* gfortran.dg/gomp/52-deps.f90: New test.
+
+2025-12-11  supers1ngular  <supers1ngular@baylibre.com>
+
+	* c-c++-common/gomp/Wparentheses-2.c: Suppress warnings.
+	* c-c++-common/gomp/attrs-metadirective-1.c: Ditto.
+	* c-c++-common/gomp/attrs-metadirective-2.c: Ditto.
+	* c-c++-common/gomp/attrs-metadirective-3.c: Ditto.
+	* c-c++-common/gomp/attrs-metadirective-4.c: Ditto.
+	* c-c++-common/gomp/attrs-metadirective-5.c: Ditto.
+	* c-c++-common/gomp/attrs-metadirective-8.c: Ditto.
+	* c-c++-common/gomp/begin-declare-target-1.c: Ditto.
+	* c-c++-common/gomp/begin-declare-target-2.c: Ditto.
+	* c-c++-common/gomp/clauses-3.c: Ditto.
+	* c-c++-common/gomp/declare-target-1.c: Ditto.
+	* c-c++-common/gomp/declare-target-2.c: Ditto.
+	* c-c++-common/gomp/declare-target-3.c: Ditto.
+	* c-c++-common/gomp/declare-target-4.c: Ditto.
+	* c-c++-common/gomp/declare-target-5.c: Ditto.
+	* c-c++-common/gomp/declare-target-7.c: Ditto.
+	* c-c++-common/gomp/declare-target-indirect-1.c: Ditto.
+	* c-c++-common/gomp/declare-target-indirect-2.c: Ditto.
+	* c-c++-common/gomp/declare-variant-10.c: Ditto.
+	* c-c++-common/gomp/declare-variant-8.c: Ditto.
+	* c-c++-common/gomp/defaultmap-2.c: Ditto.
+	* c-c++-common/gomp/defaultmap-3.c: Ditto.
+	* c-c++-common/gomp/depend-iterator-2.c: Ditto.
+	* c-c++-common/gomp/depobj-1.c: Ditto.
+	* c-c++-common/gomp/directive-1.c: Ditto.
+	* c-c++-common/gomp/distribute-1.c: Ditto.
+	* c-c++-common/gomp/doacross-1.c: Ditto.
+	* c-c++-common/gomp/doacross-2.c: Ditto.
+	* c-c++-common/gomp/doacross-3.c: Ditto.
+	* c-c++-common/gomp/doacross-4.c: Ditto.
+	* c-c++-common/gomp/doacross-8.c: Ditto.
+	* c-c++-common/gomp/linear-1.c: Ditto.
+	* c-c++-common/gomp/linear-2.c: Ditto.
+	* c-c++-common/gomp/linear-3.c: Ditto.
+	* c-c++-common/gomp/loop-6.c: Ditto.
+	* c-c++-common/gomp/map-1.c: Ditto.
+	* c-c++-common/gomp/map-3.c: Ditto.
+	* c-c++-common/gomp/map-6.c: Ditto.
+	* c-c++-common/gomp/metadirective-1.c: Ditto.
+	* c-c++-common/gomp/metadirective-2.c: Ditto.
+	* c-c++-common/gomp/metadirective-3.c: Ditto.
+	* c-c++-common/gomp/metadirective-4.c: Ditto.
+	* c-c++-common/gomp/metadirective-5.c: Ditto.
+	* c-c++-common/gomp/metadirective-8.c: Ditto.
+	* c-c++-common/gomp/metadirective-construct.c: Ditto.
+	* c-c++-common/gomp/metadirective-device.c: Ditto.
+	* c-c++-common/gomp/metadirective-target-device-1.c: Ditto.
+	* c-c++-common/gomp/metadirective-target-device-2.c: Ditto.
+	* c-c++-common/gomp/order-2.c: Ditto.
+	* c-c++-common/gomp/ordered-3.c: Ditto.
+	* c-c++-common/gomp/ordered-5.c: Ditto.
+	* c-c++-common/gomp/pr102640.c: Ditto.
+	* c-c++-common/gomp/pr106836.c: Ditto.
+	* c-c++-common/gomp/pr120180-1.c: Ditto.
+	* c-c++-common/gomp/pr88203-1.c: Ditto.
+	* c-c++-common/gomp/pr88203-2.c: Ditto.
+	* c-c++-common/gomp/pr88203-3.c: Ditto.
+	* c-c++-common/gomp/pr91401-2.c: Ditto.
+	* c-c++-common/gomp/pr91987.c: Ditto.
+	* c-c++-common/gomp/reverse-offload-1.c: Ditto.
+	* c-c++-common/gomp/schedule-modifiers-1.c: Ditto.
+	* c-c++-common/gomp/sink-1.c: Ditto.
+	* c-c++-common/gomp/sink-2.c: Ditto.
+	* c-c++-common/gomp/sink-3.c: Ditto.
+	* c-c++-common/gomp/sink-4.c: Ditto.
+	* c-c++-common/gomp/sink-5.c: Ditto.
+	* c-c++-common/gomp/target-teams-1.c: Ditto.
+	* g++.dg/gomp/attrs-12.C: Ditto.
+	* g++.dg/gomp/attrs-5.C: Ditto.
+	* g++.dg/gomp/attrs-9.C: Ditto.
+	* g++.dg/gomp/clause-3.C: Ditto.
+	* g++.dg/gomp/declare-simd-3.C: Ditto.
+	* g++.dg/gomp/declare-simd-4.C: Ditto.
+	* g++.dg/gomp/declare-simd-6.C: Ditto.
+	* g++.dg/gomp/declare-simd-7.C: Ditto.
+	* g++.dg/gomp/declare-simd-8.C: Ditto.
+	* g++.dg/gomp/declare-target-1.C: Ditto.
+	* g++.dg/gomp/declare-target-2.C: Ditto.
+	* g++.dg/gomp/declare-target-3.C: Ditto.
+	* g++.dg/gomp/declare-target-indirect-1.C: Ditto.
+	* g++.dg/gomp/depend-iterator-2.C: Ditto.
+	* g++.dg/gomp/depobj-1.C: Ditto.
+	* g++.dg/gomp/doacross-2.C: Ditto.
+	* g++.dg/gomp/linear-1.C: Ditto.
+	* g++.dg/gomp/linear-2.C: Ditto.
+	* g++.dg/gomp/linear-3.C: Ditto.
+	* g++.dg/gomp/linear-5.C: Ditto.
+	* g++.dg/gomp/map-1.C: Ditto.
+	* g++.dg/gomp/pr118876.C: Ditto.
+	* g++.dg/gomp/pr119370.C: Ditto.
+	* g++.dg/gomp/sink-1.C: Ditto.
+	* g++.dg/gomp/sink-2.C: Ditto.
+	* g++.dg/gomp/sink-3.C: Ditto.
+	* g++.dg/gomp/target-simd-clone-1.C: Ditto.
+	* g++.dg/gomp/target-simd-clone-2.C: Ditto.
+	* g++.dg/gomp/target-teams-1.C: Ditto.
+	* g++.dg/gomp/udr-5.C: Ditto.
+	* gcc.dg/gomp/attrs-12.c: Ditto.
+	* gcc.dg/gomp/attrs-5.c: Ditto.
+	* gcc.dg/gomp/attrs-9.c: Ditto.
+	* gcc.dg/gomp/clause-1.c: Ditto.
+	* gcc.dg/gomp/declare-simd-3.c: Ditto.
+	* gcc.dg/gomp/linear-1.c: Ditto.
+	* gcc.dg/gomp/metadirective-1.c: Ditto.
+	* gcc.dg/gomp/pr104757.c: Ditto.
+	* gcc.dg/gomp/sink-fold-1.c: Ditto.
+	* gcc.dg/gomp/sink-fold-2.c: Ditto.
+	* gcc.dg/gomp/sink-fold-3.c: Ditto.
+	* gcc.dg/gomp/target-simd-clone-1.c: Ditto.
+	* gcc.dg/gomp/target-simd-clone-2.c: Ditto.
+	* gcc.dg/gomp/target-simd-clone-3.c: Ditto.
+	* gcc.dg/gomp/target-simd-clone-4.c: Ditto.
+	* gcc.dg/gomp/target-simd-clone-5.c: Ditto.
+	* gcc.dg/gomp/target-simd-clone-6.c: Ditto.
+	* gcc.dg/gomp/target-simd-clone-7.c: Ditto.
+	* gcc.dg/gomp/target-simd-clone-8.c: Ditto.
+	* gcc.dg/gomp/workshare-reduction-55.c: Ditto.
+	* gcc.dg/gomp/workshare-reduction-56.c: Ditto.
+	* gcc.dg/gomp/workshare-reduction-57.c: Ditto.
+	* gcc.dg/gomp/workshare-reduction-58.c: Ditto.
+	* c-c++-common/gomp/52-deps.c: New test.
+	* g++.dg/gomp/map-csm-dep.C: New test.
+	* gcc.dg/gomp/map-csm-dep.c: New test.
+
+2025-12-11  supers1ngular  <supers1ngular@baylibre.com>
+
+	* c-c++-common/cpp/openmp-define-3.c: Bump OMP version.
+	* c-c++-common/gomp/Wparentheses-1.c: Suppress deprecation
+	warnings.
+	* c-c++-common/gomp/Wparentheses-3.c: Ditto.
+	* c-c++-common/gomp/affinity-3.c: Ditto.
+	* c-c++-common/gomp/allocate-18.c: Ditto.
+	* c-c++-common/gomp/cancel-1.c: Ditto.
+	* c-c++-common/gomp/clause-dups-1.c: Ditto.
+	* c-c++-common/gomp/clauses-1.c: Suppress deprecation
+	warnings and fix misspelled directive. Add
+	'-Wunknown-pragmas'.
+	* c-c++-common/gomp/clauses-6.c: Suppress deprecation warnings.
+	* c-c++-common/gomp/declare-variant-1.c: Ditto.
+	* c-c++-common/gomp/declare-variant-2.c: Ditto.
+	* c-c++-common/gomp/depend-iterator-1.c: Ditto.
+	* c-c++-common/gomp/lastprivate-conditional-1.c: Ditto.
+	* c-c++-common/gomp/loop-1.c: Ditto.
+	* c-c++-common/gomp/loop-2.c: Ditto.
+	* c-c++-common/gomp/loop-3.c: Ditto.
+	* c-c++-common/gomp/loop-4.c: Ditto.
+	* c-c++-common/gomp/master-combined-1.c: Ditto.
+	* c-c++-common/gomp/master-combined-2.c: Ditto.
+	* c-c++-common/gomp/nesting-2.c: Ditto.
+	* c-c++-common/gomp/pr100902-1.c: Ditto.
+	* c-c++-common/gomp/pr61486-2.c: Ditto.
+	* c-c++-common/gomp/pr85696.c: Ditto.
+	* c-c++-common/gomp/pr85956.c: Ditto.
+	* c-c++-common/gomp/pr98187.c: Ditto.
+	* c-c++-common/gomp/pr99928-1.c: Ditto.
+	* c-c++-common/gomp/pr99928-10.c: Ditto.
+	* c-c++-common/gomp/pr99928-11.c: Ditto.
+	* c-c++-common/gomp/pr99928-12.c: Ditto.
+	* c-c++-common/gomp/pr99928-13.c: Ditto.
+	* c-c++-common/gomp/pr99928-14.c: Ditto.
+	* c-c++-common/gomp/pr99928-2.c: Ditto.
+	* c-c++-common/gomp/pr99928-3.c: Ditto.
+	* c-c++-common/gomp/pr99928-4.c: Ditto.
+	* c-c++-common/gomp/pr99928-5.c: Ditto.
+	* c-c++-common/gomp/pr99928-6.c: Ditto.
+	* c-c++-common/gomp/pr99928-7.c: Ditto.
+	* c-c++-common/gomp/pr99928-8.c: Ditto.
+	* c-c++-common/gomp/pr99928-9.c: Ditto.
+	* c-c++-common/gomp/task-detach-1.c: Ditto.
+	* c-c++-common/gomp/teams-2.c: Ditto.
+	* g++.dg/gomp/attrs-1.C: Ditto.
+	* g++.dg/gomp/attrs-2.C: Ditto.
+	* g++.dg/gomp/attrs-4.C: Ditto.
+	* g++.dg/gomp/block-0.C: Ditto.
+	* g++.dg/gomp/block-10.C: Ditto.
+	* g++.dg/gomp/block-5.C: Ditto.
+	* g++.dg/gomp/block-9.C: Ditto.
+	* g++.dg/gomp/depend-iterator-1.C: Ditto.
+	* g++.dg/gomp/master-1.C: Ditto.
+	* g++.dg/gomp/master-2.C: Ditto.
+	* g++.dg/gomp/master-3.C: Ditto.
+	* g++.dg/gomp/method-1.C: Ditto.
+	* g++.dg/gomp/pr29965-3.C: Ditto.
+	* g++.dg/gomp/pr29965-9.C: Ditto.
+	* g++.dg/gomp/pr78363-4.C: Ditto.
+	* g++.dg/gomp/pr78363-6.C: Ditto.
+	* g++.dg/gomp/pr79664.C: Ditto.
+	* g++.dg/gomp/pr94477.C: Ditto.
+	* g++.dg/gomp/pr94512.C: Ditto.
+	* g++.dg/gomp/tpl-master-1.C: Ditto.
+	* gcc.dg/gomp/appendix-a/a.12.1.c: Ditto.
+	* gcc.dg/gomp/appendix-a/a.33.2.c: Ditto.
+	* gcc.dg/gomp/attrs-1.c: Ditto.
+	* gcc.dg/gomp/attrs-2.c: Ditto.
+	* gcc.dg/gomp/attrs-4.c: Ditto.
+	* gcc.dg/gomp/block-10.c: Ditto.
+	* gcc.dg/gomp/block-5.c: Ditto.
+	* gcc.dg/gomp/block-9.c: Ditto.
+	* gcc.dg/gomp/master-1.c: Ditto.
+	* gcc.dg/gomp/master-2.c: Ditto.
+	* gcc.dg/gomp/master-3.c: Ditto.
+	* gcc.dg/gomp/nesting-1.c: Ditto.
+	* gcc.dg/gomp/pr104517.c: Ditto.
+	* gcc.dg/gomp/pr29965-3.c: Ditto.
+	* gcc.dg/gomp/pr35818.c: Ditto.
+	* gcc.dg/gomp/pr91216.c: Ditto.
+	* gcc.dg/gomp/sharing-2.c: Ditto.
+	* gfortran.dg/gomp/adjust-args-10.f90: Ditto.
+	* gfortran.dg/gomp/affinity-1.f90: Ditto.
+	* gfortran.dg/gomp/allocate-clause.f90: Ditto.
+	* gfortran.dg/gomp/appendix-a/a.12.1.f90: Ditto.
+	* gfortran.dg/gomp/appendix-a/a.33.2.f90: Ditto.
+	* gfortran.dg/gomp/c_ptr_tests_20.f90: Ditto.
+	* gfortran.dg/gomp/c_ptr_tests_21.f90: Ditto.
+	* gfortran.dg/gomp/cancel-1.f90: Ditto.
+	* gfortran.dg/gomp/clauses-1.f90: Ditto.
+	* gfortran.dg/gomp/declare-variant-1.f90: Ditto.
+	* gfortran.dg/gomp/depend-iterator-1.f90: Ditto.
+	* gfortran.dg/gomp/depend-iterator-2.f90: Ditto.
+	* gfortran.dg/gomp/is_device_ptr-1.f90: Ditto.
+	* gfortran.dg/gomp/is_device_ptr-2.f90: Ditto.
+	* gfortran.dg/gomp/is_device_ptr-3.f90: Ditto.
+	* gfortran.dg/gomp/lastprivate-conditional-1.f90: Ditto.
+	* gfortran.dg/gomp/loop-4.f90: Ditto.
+	* gfortran.dg/gomp/loop-exit.f90: Ditto.
+	* gfortran.dg/gomp/map-3.f90: Ditto.
+	* gfortran.dg/gomp/nesting-2.f90: Ditto.
+	* gfortran.dg/gomp/nesting-3.f90: Ditto.
+	* gfortran.dg/gomp/nowait-2.f90: Ditto.
+	* gfortran.dg/gomp/nowait-4.f90: Ditto.
+	* gfortran.dg/gomp/nowait-5.f90: Ditto.
+	* gfortran.dg/gomp/openmp-simd-2.f90: Ditto.
+	* gfortran.dg/gomp/openmp-simd-3.f90: Ditto.
+	* gfortran.dg/gomp/parallel-master-1.f90: Ditto.
+	* gfortran.dg/gomp/parallel-master-2.f90: Ditto.
+	* gfortran.dg/gomp/pr107214-8.f90: Ditto.
+	* gfortran.dg/gomp/pr48117.f90: Ditto.
+	* gfortran.dg/gomp/pr94672.f90: Ditto.
+	* gfortran.dg/gomp/pr99928-1.f90: Suppression + fix whitespace.
+	* gfortran.dg/gomp/pr99928-11.f90: Suppression.
+	* gfortran.dg/gomp/pr99928-2.f90: Suppression + fix whitespace.
+	* gfortran.dg/gomp/pr99928-3.f90: Ditto.
+	* gfortran.dg/gomp/pr99928-4.f90: Ditto.
+	* gfortran.dg/gomp/pr99928-5.f90: Ditto.
+	* gfortran.dg/gomp/pr99928-6.f90: Ditto.
+	* gfortran.dg/gomp/pr99928-8.f90: Ditto.
+	* gfortran.dg/gomp/sharing-3.f90: Suppress deprecation warnings.
+	* gfortran.dg/gomp/strictly-structured-block-1.f90: Ditto.
+	* gfortran.dg/gomp/strictly-structured-block-2.f90: Ditto.
+	* gfortran.dg/gomp/target1.f90: Ditto.
+	* gfortran.dg/gomp/taskloop-1.f90: Ditto.
+	* gfortran.dg/gomp/taskloop-2.f90: Ditto.
+	* gfortran.dg/openmp-define-3.f90: Bump expected version.
+	* c-c++-common/gomp/master-construct-dep.c: New test.
+	* gfortran.dg/gomp/master-construct-dep.f90: New test.
+
+2025-12-11  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gnat.dg/aggr33.adb: New test.
+
+2025-12-11  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc.dg/tls/struct-2.c: New test.
+
+2025-12-10  Alexandre Oliva  <oliva@adacore.com>
+
+	* gcc.target/i386/lea-3.c: Add -fno-PIE.
+	* gcc.target/i386/lea-4.c: New, with -fPIE.
+
+2025-12-10  Alexandre Oliva  <oliva@adacore.com>
+
+	* gcc.dg/sibcall-12.c: Add -fno-PIE on ia32.
+	* gcc.target/i386/pr106060-2.c: Likewise.
+	* gcc.target/i386/pr106060-3.c: Likewise.
+	* gcc.target/i386/vect-shiftv4qi.c: Likewise.
+
+2025-12-10  Jakub Jelinek  <jakub@redhat.com>
+	    Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	PR middle-end/123069
+	* gcc.c-torture/compile/pr123069.c: New test.
+
+2025-12-10  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* algol68/execute/sign-int-2.a68: New test.
+	* algol68/execute/sign-real-2.a68: Likewise.
+
+2025-12-10  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* algol68/execute/mult-char-1.a68: Cover int*char cases.
+
+2025-12-10  Jason Merrill  <jason@redhat.com>
+
+	* g++.dg/modules/compile-std1.C: Test <vector> translation.
+
+2025-12-10  Jason Merrill  <jason@redhat.com>
+
+	* g++.dg/modules/compile-std1.C: Add dg-module-cmi lines.
+	* g++.dg/modules/modules.exp (host_header_path): New.
+	(munge_cmi): Factor out...
+	(dg-module-cmi): ...from here.
+
+2025-12-10  Robin Dapp  <rdapp@ventanamicro.com>
+
+	* gcc.target/riscv/rvv/autovec/pr123074.C: Move to...
+	* g++.target/riscv/rvv/autovec/pr123074.C: ...here.
+	* gcc.target/riscv/rvv/rvv.exp: Remove 'C'.
+
+2025-12-10  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* g++.dg/lookup/extern-c-redecl3.C (pid_t): Define.
+	Use it for fork return type.
+	terms of __builtin_fork.
+	* g++.dg/pid_t-1.C: New test.
+	* gcc.dg/pid_t-1.c: Likewise.
+
+2025-12-09  Robin Dapp  <rdapp@ventanamicro.com>
+
+	PR tree-optimization/123074
+	* gcc.target/riscv/rvv/rvv.exp: Include *.C.
+	* gcc.target/riscv/rvv/autovec/pr123074.C: New test.
+
+2025-12-09  Qing Zhao  <qing.zhao@oracle.com>
+
+	PR c/122982
+	* gcc.dg/pointer-counted-by-pr122982.c: New test.
+
+2025-12-09  Pan Li  <pan2.li@intel.com>
+
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-1-i16.c: Add asm check
+	for vmslt.vx.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-1-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-1-i64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-1-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-2-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-2-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-2-i64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-2-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-3-i16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-3-i32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-3-i64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-3-i8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx_binary.h: Add test
+	helper macros.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx_binary_data.h: Add test
+	data for run test.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx_vmslt-run-1-i16.c: New test.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx_vmslt-run-1-i32.c: New test.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx_vmslt-run-1-i64.c: New test.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx_vmslt-run-1-i8.c: New test.
+
+2025-12-09  Richard Biener  <rguenther@suse.de>
+
+	PR target/121230
+	* gcc.target/i386/pr121230.c: New testcase.
+
+2025-12-09  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	Revert:
+	2025-12-09  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122819
+	* g++.dg/modules/tpl-friend-22.C: New test.
+
+2025-12-09  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/123018
+	* gcc.dg/pr123018.c: New test.
+
+2025-12-09  Robin Dapp  <rdapp@ventanamicro.com>
+
+	PR tree-optimization/122635
+	* gcc.target/aarch64/sve/pfalse-store.c: Expect more elided
+	stores.
+	* gcc.target/riscv/rvv/autovec/pr122635-1.c: New test.
+	* gcc.target/riscv/rvv/autovec/pr122635-2.c: New test.
+	* gcc.target/powerpc/p9-vec-length-epil-8.c: Expect two lxvl
+	less.
+
+2025-12-09  Robin Dapp  <rdapp@ventanamicro.com>
+
+	* gcc.target/riscv/rvv/autovec/max-vect-1.c: New test.
+	* gcc.target/riscv/rvv/autovec/max-vect-2.c: New test.
+
+2025-12-09  Robin Dapp  <rdapp@ventanamicro.com>
+
+	PR target/123022
+	* gcc.target/riscv/rvv/autovec/pr123022-2.c: New test.
+	* gcc.target/riscv/rvv/autovec/pr123022.c: New test.
+
+2025-12-09  Robin Dapp  <rdapp@ventanamicro.com>
+
+	PR target/115325
+	* gcc.target/riscv/pragma-target-1.c: New test.
+	* gcc.target/riscv/pragma-target-2.c: New test.
+
+2025-12-09  Robin Dapp  <rdapp@ventanamicro.com>
+
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-1-run.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-1.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-2-run.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-2.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-3-run.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-3.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-4-run.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-4.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-5-run.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-5.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-6-run.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-6.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-7-run.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-7.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-8-run.c: New test.
+	* gcc.target/riscv/rvv/autovec/reduc/reduc-bool-8.c: New test.
+
+2025-12-09  Richard Biener  <rguenther@suse.de>
+
+	PR target/123027
+	* gcc.target/i386/pr123027.c: New testcase.
+	* gcc.dg/torture/pr123027.c: Likewise.
+
+2025-12-09  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122819
+	* g++.dg/modules/tpl-friend-22.C: New test.
+
+2025-12-08  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	PR tree-optimization/46555
+	* gcc.dg/tree-ssa/pr46555.c: New test.
+
+2025-12-08  Harald Anlauf  <anlauf@gmx.de>
+	    Steven G. Kargl  <kargl@gcc.gnu.org>
+
+	PR fortran/123025
+	* gfortran.dg/assumed_charlen_dummy.f90: These tests failed
+	with the change because of the default -pedantic option
+	used by the dg.exp mechanisms. Overide this default.
+	* gfortran.dg/automatic_char_len_1.f90: Ditto.
+	* gfortran.dg/entry_23.f: Ditto.
+	* gfortran.dg/finalize_59.f90: Dito.
+	* gfortran.dg/g77/f90-intrinsic-bit.f: Ditto.
+	* gfortran.dg/g77/f90-intrinsic-mathematical.f: Ditto.
+	* gfortran.dg/g77/f90-intrinsic-numeric.f: Ditto.
+	* gfortran.dg/g77/intrinsic-unix-bessel.f: Ditto.
+	* gfortran.dg/g77/intrinsic-unix-erf.f: Ditto.
+	* gfortran.dg/initialization_9.f90: Ditto.
+	* gfortran.dg/intrinsic_actual_4.f90: Ditto.
+	* gfortran.dg/namelist_assumed_char.f90: Ditto.
+	* gfortran.dg/pr15140.f90: Ditto.
+
+2025-12-08  Egas Ribeiro  <egas.g.ribeiro@tecnico.ulisboa.pt>
+
+	PR c++/119343
+	* g++.dg/template/sfinae-deleted-pr119343.C: New test.
+
+2025-12-08  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc.dg/tls/data-sections-1.c: New test.
+
+2025-12-08  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/123040
+	* g++.dg/torture/pr123040.C: New testcase.
+
+2025-12-08  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/123038
+	* gcc.dg/vect/pr123038.c: New testcase.
+
+2025-12-08  Tamar Christina  <tamar.christina@arm.com>
+
+	PR target/123026
+	* gcc.target/aarch64/pr123026.c: New test.
+
+2025-12-08  H.J. Lu  <hjl.tools@gmail.com>
+
+	PR target/122343
+	* gcc.target/i386/avx2-vpcmpgtq-1.c: Compile with
+	-fno-fuse-ops-with-volatile-access.
+
+2025-12-07  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gnat.dg/reduce3.adb: New test.
+
+2025-12-07  H.J. Lu  <hjl.tools@gmail.com>
+
+	PR target/122343
+	* gcc.target/i386/20040112-1.c: Add -fomit-frame-pointer and use
+	check-function-bodies to check for loop.
+	* gcc.target/i386/avx-ne-convert-1.c: Compile with
+	-fno-fuse-ops-with-volatile-access.
+	* gcc.target/i386/avx10_2-bf16-1.c: Likewise.
+	* gcc.target/i386/avx10_2-convert-1.c: Likewise.
+	* gcc.target/i386/avx10_2-satcvt-1.c: Likewise.
+	* gcc.target/i386/avx512bf16-vcvtneps2bf16-1.c: Likewise.
+	* gcc.target/i386/avx512bf16vl-vcvtneps2bf16-1a.c: Likewise.
+	* gcc.target/i386/avx512bf16vl-vcvtneps2bf16-1b.c: Likewise.
+	* gcc.target/i386/avx512bitalg-vpshufbitqmb.c: Likewise.
+	* gcc.target/i386/avx512bw-vpcmpb-1.c: Likewise.
+	* gcc.target/i386/avx512bw-vpcmpub-1.c: Likewise.
+	* gcc.target/i386/avx512bw-vpcmpuw-1.c: Likewise.
+	* gcc.target/i386/avx512bw-vpcmpw-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vcvtps2qq-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vcvtps2uqq-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vcvtqq2pd-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vcvtqq2ps-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vcvttps2qq-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vcvttps2uqq-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vcvtuqq2pd-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vcvtuqq2ps-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vextractf32x8-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vextractf64x2-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vextracti64x2-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vfpclasspd-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vfpclassps-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vfpclasssd-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vfpclassss-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vpmullq-1.c: Likewise.
+	* gcc.target/i386/avx512dq-vpmullq-3.c: Likewise.
+	* gcc.target/i386/avx512f-pr100267-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcmppd-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcmpps-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvtps2pd-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvtsd2si-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvtsd2si64-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvtsd2usi-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvtsd2usi64-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvtsi2ss-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvtss2si-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvtss2si64-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvtss2usi-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvtss2usi64-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvttsd2si-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvttsd2si64-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvttsd2usi-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvttsd2usi64-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvttss2si-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvttss2si64-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvttss2usi-1.c: Likewise.
+	* gcc.target/i386/avx512f-vcvttss2usi64-1.c: Likewise.
+	* gcc.target/i386/avx512f-vextractf32x4-1.c: Likewise.
+	* gcc.target/i386/avx512f-vextractf64x4-1.c: Likewise.
+	* gcc.target/i386/avx512f-vextracti64x4-1.c: Likewise.
+	* gcc.target/i386/avx512f-vmovapd-1.c: Likewise.
+	* gcc.target/i386/avx512f-vmovaps-1.c: Likewise.
+	* gcc.target/i386/avx512f-vmovdqa64-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpandnq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpbroadcastd-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpbroadcastq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpd-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpeqq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpequq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpged-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpgeq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpgeud-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpgeuq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpled-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpleq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpleud-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpleuq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpltd-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpltq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpltud-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpltuq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpneqd-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpneqq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpnequd-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpnequq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpud-1.c: Likewise.
+	* gcc.target/i386/avx512f-vpcmpuq-1.c: Likewise.
+	* gcc.target/i386/avx512f-vrndscalepd-1.c: Likewise.
+	* gcc.target/i386/avx512f-vrndscaleps-1.c: Likewise.
+	* gcc.target/i386/avx512fp16-complex-fma.c: Likewise.
+	* gcc.target/i386/avx512fp16-vaddph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvtpd2ph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvtph2dq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvtph2pd-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvtph2psx-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvtph2qq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvtph2udq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvtph2uqq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvtph2uw-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvtph2w-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvtps2ph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvtqq2ph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvttph2dq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvttph2qq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvttph2udq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvttph2uqq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvttph2uw-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvttph2w-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vcvtuqq2ph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vfcmaddcph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vfcmulcph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vfmaddcph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vfmulcph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vfpclassph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vfpclasssh-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vmulph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vrcpph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vrsqrtph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16-vsqrtph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vaddph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvtpd2ph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvtph2dq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvtph2psx-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvtph2qq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvtph2udq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvtph2uqq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvtph2uw-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvtph2w-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvtps2ph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvtqq2ph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvttph2dq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvttph2udq-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvttph2uw-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvttph2w-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vcvtuqq2ph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vfcmaddcph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vfcmulcph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vfmaddcph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vfmulcph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vfpclassph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vmulph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vrcpph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vrsqrtph-1a.c: Likewise.
+	* gcc.target/i386/avx512fp16vl-vsqrtph-1a.c: Likewise.
+	* gcc.target/i386/avx512vl-pr100267-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vcmppd-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vcmpps-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vcvtpd2ps-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vcvtpd2udq-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vcvttpd2udq-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vcvttps2udq-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vextractf32x4-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vmovapd-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vmovaps-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vmovdqa64-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vpcmpd-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vpcmpeqq-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vpcmpequq-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vpcmpq-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vpcmpud-1.c: Likewise.
+	* gcc.target/i386/avx512vl-vpcmpuq-1.c: Likewise.
+	* gcc.target/i386/pr122343-1a.c: New test.
+	* gcc.target/i386/pr122343-1b.c: Likewise.
+	* gcc.target/i386/pr122343-2a.c: Likewise.
+	* gcc.target/i386/pr122343-2b.c: Likewise.
+	* gcc.target/i386/pr122343-3.c: Likewise.
+	* gcc.target/i386/pr122343-4a.c: Likewise.
+	* gcc.target/i386/pr122343-4b.c: Likewise.
+	* gcc.target/i386/pr122343-5a.c: Likewise.
+	* gcc.target/i386/pr122343-5b.c: Likewise.
+	* gcc.target/i386/pr122343-6a.c: Likewise.
+	* gcc.target/i386/pr122343-6b.c: Likewise.
+	* gcc.target/i386/pr122343-7.c: Likewise.
+
+2025-12-06  Alexandre Oliva  <oliva@adacore.com>
+
+	PR rtl-optimization/122947
+	* gcc.dg/pr122947.c: New.
+
+2025-12-06  Alexandre Oliva  <oliva@adacore.com>
+
+	PR target/91420
+	* gcc.target/riscv/pr91420.c: New.
+
+2025-12-06  Jeff Law  <jlaw@ventanamicro.com>
+
+	PR rtl-optimization/122675
+	* gcc.target/riscv/pr122675-1.c: Adjust expected output.
+
+2025-12-06  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/103414
+	* gfortran.dg/pdt_76.f03: New test.
+
+2025-12-06  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/122693
+	* gfortran.dg/pdt_75.f03: New test.
+
+2025-12-06  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/122670
+	* gfortran.dg/pdt_74.f03: New test.
+
+2025-12-06  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/122669
+	* gfortran.dg/pdt_73.f03: New test.
+
+2025-12-06  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/122578
+	* gfortran.dg/pdt_72.f03: New test.
+
+2025-12-06  Dimitar Dimitrov  <dimitar@dinux.eu>
+
+	PR rtl-optimization/122675
+	* gcc.target/aarch64/pr122675-1.c: New test.
+	* gcc.target/i386/pr122675-1.c: New test.
+	* gcc.target/riscv/pr122675-1.c: New test.
+
+2025-12-06  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/99782
+	* gcc.dg/torture/pr99782-1.c: Fix typo, dg-compile -> dg-do compile.
+	Use int128 effective target directly on that directive.  Move PR
+	comment first.
+
+2025-12-05  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	* gcc.dg/torture/pr99782-1.c: Require intt128 target.
+
+2025-12-05  Vladimir N. Makarov  <vmakarov@redhat.com>
+
+	PR rtl-optimization/122215
+	* gcc.target/riscv/pr122215.c: New.
+	* lib/target-supports.exp (check_effective_target_valgrind): New.
+
+2025-12-05  Harald Anlauf  <anlauf@gmx.de>
+
+	PR fortran/122977
+	* gfortran.dg/contiguous_16.f90: New test.
+
+2025-12-05  Tobias Burnus  <tburnus@baylibre.com>
+
+	* gfortran.dg/gomp/dyn_groupprivate-1.f90: Fix
+	scan-tree-dump-times regexp to avoid hard-coded 'D.4680'.
+
+2025-12-05  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/120939
+	* gcc.dg/torture/pr113026-1.c: Skip when -ftracer.
+
+2025-12-05  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/123002
+	* gcc.dg/vect/vect-pr123002.c: Make global data non-const
+	and non-static.
+
+2025-12-05  Denis Mazzucato  <mazzucato@adacore.com>
+
+	* gnat.dg/reduce1.adb: Adjust expected error message.
+
+2025-12-05  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/123002
+	* gcc.dg/vect/vect-pr123002.c: New testcase.
+
+2025-12-05  Richard Biener  <rguenther@suse.de>
+
+	* gcc.dg/gimplefe-58.c: New testcase.
+
+2025-12-05  Tobias Burnus  <tburnus@baylibre.com>
+
+	* gfortran.dg/gomp/dyn_groupprivate-1.f90: Add scan-dump test.
+	* gfortran.dg/gomp/dyn_groupprivate-2.f90: Extend and update.
+	* c-c++-common/gomp/dyn_groupprivate-1.c: New test.
+	* c-c++-common/gomp/dyn_groupprivate-2.c: New test.
+
+2025-12-05  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/122776
+	* gcc.dg/vect/vect-simd-clone-24.c: Add -mprefer-vector-width=512.
+
+2025-12-05  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	PR middle-end/99782
+	* gcc.dg/torture/pr99782-1.c: New test.
+
+2025-12-05  Daniel Barboza  <dbarboza@ventanamicro.com>
+	    Jeff Law  <jlaw@ventanamicro.com>
+
+	* gcc.dg/torture/pr122615.c: New test.
+	* gcc.dg/torture/pr122616.c: Likewise.
+
+2025-12-05  Pan Li  <pan2.li@intel.com>
+
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-1-u16.c: Add asm check
+	for vmsltu.vx.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-1-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-1-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-1-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-2-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-2-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-2-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-2-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-3-u16.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-3-u32.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-3-u64.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx-3-u8.c: Ditto.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx_binary.h: Add test
+	helper macros.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx_binary_data.h: Add test
+	data for run test.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx_vmsltu-run-1-u16.c: New test.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx_vmsltu-run-1-u32.c: New test.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx_vmsltu-run-1-u64.c: New test.
+	* gcc.target/riscv/rvv/autovec/vx_vf/vx_vmsltu-run-1-u8.c: New test.
+
+2025-12-04  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/122776
+	* gcc.dg/vect/vect-simd-clone-24.c: New testcase.
+	* gcc.dg/gomp/pr110485.c: Adjust.
+
+2025-12-04  Martin Jambor  <mjambor@suse.cz>
+
+	* gcc.dg/tree-ssa/vrp-from-cst-agg-1.c: New test.
+	* gcc.dg/tree-ssa/vrp-from-cst-agg-2.c: Likewise.
+	* gcc.dg/tree-ssa/vrp-from-cst-agg-3.c: Likewise.
+	* gcc.dg/tree-ssa/vrp-from-cst-agg-4.c: Likewise.
+	* gcc.dg/tree-ssa/vrp-from-cst-agg-5.c: Likewise.
+	* gcc.dg/tree-ssa/vrp-from-cst-agg-6.c: Likewise.
+	* gcc.dg/tree-ssa/vrp-from-cst-agg-7.c: Likewise.
+	* gcc.dg/ipa/vrp-from-cst-agg-1.c: Likewise.
+
+2025-12-04  Stefan Schulze Frielinghaus  <stefansf@gcc.gnu.org>
+
+	* gcc.dg/asm-hard-reg-9.c: Restrict to lp64 x86_64.
+
+2025-12-04  Jakub Jelinek  <jakub@redhat.com>
+
+	PR target/122991
+	* gcc.dg/pr122991.c: New test.
+
+2025-12-04  Jakub Jelinek  <jakub@redhat.com>
+
+	PR target/122983
+	* g++.dg/cpp26/decomp18.C: Add dg-add-options tls and
+	dg-require-effective-target tls_runtime directives.
+
+2025-12-04  Stefan Schulze Frielinghaus  <stefansf@gcc.gnu.org>
+
+	* gcc.dg/asm-hard-reg-9.c: New test.
+
+2025-12-03  Joseph Myers  <josmyers@redhat.com>
+
+	* lib/gcc-defs.exp (handle-dg-regexps): Also escape \r in output.
+
+2025-12-03  Jakub Jelinek  <jakub@redhat.com>
+
+	PR tree-optimization/122943
+	* gcc.c-torture/execute/pr122943.c: New test.
+
+2025-12-03  Andrew MacLeod  <amacleod@redhat.com>
+
+	PR tree-optimization/122898
+	* gcc.dg/pr122898.c: New.
+
+2025-12-03  Tamar Christina  <tamar.christina@arm.com>
+
+	PR tree-optimization/122969
+	* gcc.dg/vect/pr122969.c: New test.
+
+2025-12-03  Mathias Krause  <minipli@grsecurity.net>
+
+	* gcc.target/i386/nop-mcount-m16.c: New test.
+	* gcc.target/i386/nop-mcount.c: Adapt to test for 5-byte NOP.
+
+2025-12-03  Pierre-Emmanuel Patry  <pierre-emmanuel.patry@embecosm.com>
+
+	* rust/compile/lang_feature_gate.rs: New test.
+
+2025-12-03  Owen Avery  <powerboat9.gamer@gmail.com>
+
+	* rust/core/core.exp: Change -frust-compile-until=astvalidation
+	to -frust-compile-until=nameresolution.
+
+2025-12-03  Raiki Tamura  <tamaron1203@gmail.com>
+
+	* rust/borrowck/reference.rs: Add attributes.
+	* rust/borrowck/tmp.rs: Likewise.
+	* rust/compile/additional-trait-bounds1.rs: Likewise.
+	* rust/compile/additional-trait-bounds2.rs: Likewise.
+	* rust/compile/additional-trait-bounds2nr2.rs: Likewise.
+	* rust/compile/auto_traits1.rs: Likewise.
+	* rust/compile/auto_traits2.rs: Likewise.
+	* rust/compile/bad-rpit1.rs: Likewise.
+	* rust/compile/black_box.rs: Likewise.
+	* rust/compile/bounds1.rs: Likewise.
+	* rust/compile/box_syntax_feature_gate.rs: Likewise.
+	* rust/compile/bug-with-default-generic.rs: Likewise.
+	* rust/compile/canonical_paths1.rs: Likewise.
+	* rust/compile/cast_generics.rs: Likewise.
+	* rust/compile/closure_no_type_anno.rs: Likewise.
+	* rust/compile/cmp1.rs: Likewise.
+	* rust/compile/complex_qualified_path_in_expr.rs: Likewise.
+	* rust/compile/const-issue1440.rs: Likewise.
+	* rust/compile/const_generics_1.rs: Likewise.
+	* rust/compile/const_generics_10.rs: Likewise.
+	* rust/compile/const_generics_11.rs: Likewise.
+	* rust/compile/const_generics_12.rs: Likewise.
+	* rust/compile/const_generics_13.rs: Likewise.
+	* rust/compile/const_generics_14.rs: Likewise.
+	* rust/compile/const_generics_15.rs: Likewise.
+	* rust/compile/const_generics_16.rs: Likewise.
+	* rust/compile/const_generics_18.rs: Likewise.
+	* rust/compile/const_generics_19.rs: Likewise.
+	* rust/compile/const_generics_3.rs: Likewise.
+	* rust/compile/const_generics_8.rs: Likewise.
+	* rust/compile/const_generics_9.rs: Likewise.
+	* rust/compile/derive-debug1.rs: Likewise.
+	* rust/compile/derive-default1.rs: Likewise.
+	* rust/compile/derive-eq-invalid.rs: Likewise.
+	* rust/compile/derive-hash1.rs: Likewise.
+	* rust/compile/derive-partialeq1.rs: Likewise.
+	* rust/compile/derive_clone_enum1.rs: Likewise.
+	* rust/compile/derive_clone_enum2.rs: Likewise.
+	* rust/compile/derive_clone_enum3.rs: Likewise.
+	* rust/compile/derive_macro1.rs: Likewise.
+	* rust/compile/derive_macro3.rs: Likewise.
+	* rust/compile/derive_macro4.rs: Likewise.
+	* rust/compile/derive_macro6.rs: Likewise.
+	* rust/compile/derive_partial_ord1.rs: Likewise.
+	* rust/compile/expand_macro_qual_path_in_type.rs: Likewise.
+	* rust/compile/expected_type_args2.rs: Likewise.
+	* rust/compile/expected_type_args3.rs: Likewise.
+	* rust/compile/extern_generics.rs: Likewise.
+	* rust/compile/for-loop1.rs: Likewise.
+	* rust/compile/for-loop2.rs: Likewise.
+	* rust/compile/format_args_basic_expansion.rs: Likewise.
+	* rust/compile/format_args_concat.rs: Likewise.
+	* rust/compile/format_args_extra_comma.rs: Likewise.
+	* rust/compile/generics1.rs: Likewise.
+	* rust/compile/generics11.rs: Likewise.
+	* rust/compile/generics12.rs: Likewise.
+	* rust/compile/generics2.rs: Likewise.
+	* rust/compile/generics3.rs: Likewise.
+	* rust/compile/generics4.rs: Likewise.
+	* rust/compile/generics6.rs: Likewise.
+	* rust/compile/generics7.rs: Likewise.
+	* rust/compile/generics8.rs: Likewise.
+	* rust/compile/if_let_expr.rs: Likewise.
+	* rust/compile/impl_fnptr.rs: Likewise.
+	* rust/compile/impl_trait_diag.rs: Likewise.
+	* rust/compile/impl_trait_generic_arg.rs: Likewise.
+	* rust/compile/issue-1005.rs: Likewise.
+	* rust/compile/issue-1019.rs: Likewise.
+	* rust/compile/issue-1031.rs: Likewise.
+	* rust/compile/issue-1034.rs: Likewise.
+	* rust/compile/issue-1128.rs: Likewise.
+	* rust/compile/issue-1129-2.rs: Likewise.
+	* rust/compile/issue-1130.rs: Likewise.
+	* rust/compile/issue-1131.rs: Likewise.
+	* rust/compile/issue-1165.rs: Likewise.
+	* rust/compile/issue-1173.rs: Likewise.
+	* rust/compile/issue-1235.rs: Likewise.
+	* rust/compile/issue-1237.rs: Likewise.
+	* rust/compile/issue-1289.rs: Likewise.
+	* rust/compile/issue-1383.rs: Likewise.
+	* rust/compile/issue-1447.rs: Likewise.
+	* rust/compile/issue-1483.rs: Likewise.
+	* rust/compile/issue-1485.rs: Likewise.
+	* rust/compile/issue-1487.rs: Likewise.
+	* rust/compile/issue-1589.rs: Likewise.
+	* rust/compile/issue-1725-1.rs: Likewise.
+	* rust/compile/issue-1725-2.rs: Likewise.
+	* rust/compile/issue-1786.rs: Likewise.
+	* rust/compile/issue-1893.rs: Likewise.
+	* rust/compile/issue-1901.rs: Likewise.
+	* rust/compile/issue-1930.rs: Likewise.
+	* rust/compile/issue-1981.rs: Likewise.
+	* rust/compile/issue-2015.rs: Likewise.
+	* rust/compile/issue-2019-1.rs: Likewise.
+	* rust/compile/issue-2019-2.rs: Likewise.
+	* rust/compile/issue-2019-3.rs: Likewise.
+	* rust/compile/issue-2036.rs: Likewise.
+	* rust/compile/issue-2037.rs: Likewise.
+	* rust/compile/issue-2070.rs: Likewise.
+	* rust/compile/issue-2105.rs: Likewise.
+	* rust/compile/issue-2106.rs: Likewise.
+	* rust/compile/issue-2135.rs: Likewise.
+	* rust/compile/issue-2136-1.rs: Likewise.
+	* rust/compile/issue-2136-2.rs: Likewise.
+	* rust/compile/issue-2139.rs: Likewise.
+	* rust/compile/issue-2142.rs: Likewise.
+	* rust/compile/issue-2165.rs: Likewise.
+	* rust/compile/issue-2166.rs: Likewise.
+	* rust/compile/issue-2190-1.rs: Likewise.
+	* rust/compile/issue-2190-2.rs: Likewise.
+	* rust/compile/issue-2195.rs: Likewise.
+	* rust/compile/issue-2238.rs: Likewise.
+	* rust/compile/issue-2304.rs: Likewise.
+	* rust/compile/issue-2323.rs: Likewise.
+	* rust/compile/issue-2330.rs: Likewise.
+	* rust/compile/issue-2369.rs: Likewise.
+	* rust/compile/issue-2375.rs: Likewise.
+	* rust/compile/issue-2478.rs: Likewise.
+	* rust/compile/issue-2499.rs: Likewise.
+	* rust/compile/issue-2723-1.rs: Likewise.
+	* rust/compile/issue-2723-2.rs: Likewise.
+	* rust/compile/issue-2725.rs: Likewise.
+	* rust/compile/issue-2747.rs: Likewise.
+	* rust/compile/issue-2772-1.rs: Likewise.
+	* rust/compile/issue-2772-2.rs: Likewise.
+	* rust/compile/issue-2775.rs: Likewise.
+	* rust/compile/issue-2782.rs: Likewise.
+	* rust/compile/issue-2907.rs: Likewise.
+	* rust/compile/issue-2951.rs: Likewise.
+	* rust/compile/issue-2953-1.rs: Likewise.
+	* rust/compile/issue-2953-2.rs: Likewise.
+	* rust/compile/issue-2954.rs: Likewise.
+	* rust/compile/issue-2987.rs: Likewise.
+	* rust/compile/issue-3009.rs: Likewise.
+	* rust/compile/issue-3022.rs: Likewise.
+	* rust/compile/issue-3030.rs: Likewise.
+	* rust/compile/issue-3032-1.rs: Likewise.
+	* rust/compile/issue-3032-2.rs: Likewise.
+	* rust/compile/issue-3033.rs: Likewise.
+	* rust/compile/issue-3035.rs: Likewise.
+	* rust/compile/issue-3036.rs: Likewise.
+	* rust/compile/issue-3045-1.rs: Likewise.
+	* rust/compile/issue-3045-2.rs: Likewise.
+	* rust/compile/issue-3144.rs: Likewise.
+	* rust/compile/issue-3242.rs: Likewise.
+	* rust/compile/issue-3304.rs: Likewise.
+	* rust/compile/issue-3382.rs: Likewise.
+	* rust/compile/issue-3402-1.rs: Likewise.
+	* rust/compile/issue-3402-2.rs: Likewise.
+	* rust/compile/issue-3403.rs: Likewise.
+	* rust/compile/issue-3454.rs: Likewise.
+	* rust/compile/issue-3551.rs: Likewise.
+	* rust/compile/issue-3554-2.rs: Likewise.
+	* rust/compile/issue-3599.rs: Likewise.
+	* rust/compile/issue-3642.rs: Likewise.
+	* rust/compile/issue-3711.rs: Likewise.
+	* rust/compile/issue-3836.rs: Likewise.
+	* rust/compile/issue-3898.rs: Likewise.
+	* rust/compile/issue-3915.rs: Likewise.
+	* rust/compile/issue-3916.rs: Likewise.
+	* rust/compile/issue-3969.rs: Likewise.
+	* rust/compile/issue-402.rs: Likewise.
+	* rust/compile/issue-4090-1.rs: Likewise.
+	* rust/compile/issue-4090-2.rs: Likewise.
+	* rust/compile/issue-850.rs: Likewise.
+	* rust/compile/issue-855.rs: Likewise.
+	* rust/compile/issue-925.rs: Likewise.
+	* rust/compile/iterators1.rs: Likewise.
+	* rust/compile/macros/builtin/option_env1.rs: Likewise.
+	* rust/compile/macros/builtin/option_env2.rs: Likewise.
+	* rust/compile/macros/builtin/option_env3.rs: Likewise.
+	* rust/compile/macros/mbe/macro-issue1400.rs: Likewise.
+	* rust/compile/macros/mbe/macro-issue3708.rs: Likewise.
+	* rust/compile/macros/mbe/macro-issue3709-2.rs: Likewise.
+	* rust/compile/macros/mbe/macro20.rs: Likewise.
+	* rust/compile/macros/mbe/macro23.rs: Likewise.
+	* rust/compile/macros/mbe/macro40.rs: Likewise.
+	* rust/compile/macros/mbe/macro49.rs: Likewise.
+	* rust/compile/macros/mbe/macro54.rs: Likewise.
+	* rust/compile/multiple_bindings1.rs: Likewise.
+	* rust/compile/name_resolution2.rs: Likewise.
+	* rust/compile/name_resolution4.rs: Likewise.
+	* rust/compile/nested_generic.rs: Likewise.
+	* rust/compile/parse_associated_type_as_generic_arg.rs: Likewise.
+	* rust/compile/parse_associated_type_as_generic_arg2.rs: Likewise.
+	* rust/compile/parse_associated_type_as_generic_arg3.rs: Likewise.
+	* rust/compile/parse_closure_bind.rs: Likewise.
+	* rust/compile/parse_complex_generic_application.rs: Likewise.
+	* rust/compile/parse_complex_generic_application2.rs: Likewise.
+	* rust/compile/path_as_generic_arg.rs: Likewise.
+	* rust/compile/privacy4.rs: Likewise.
+	* rust/compile/privacy6.rs: Likewise.
+	* rust/compile/silly-order-bug.rs: Likewise.
+	* rust/compile/sizeof-stray-infer-var-bug.rs: Likewise.
+	* rust/compile/stmt_with_block_dot.rs: Likewise.
+	* rust/compile/structural-eq-peq.rs: Likewise.
+	* rust/compile/torture/associated_types1.rs: Likewise.
+	* rust/compile/torture/forward_decl_5.rs: Likewise.
+	* rust/compile/torture/generics1.rs: Likewise.
+	* rust/compile/torture/generics10.rs: Likewise.
+	* rust/compile/torture/generics11.rs: Likewise.
+	* rust/compile/torture/generics12.rs: Likewise.
+	* rust/compile/torture/generics13.rs: Likewise.
+	* rust/compile/torture/generics14.rs: Likewise.
+	* rust/compile/torture/generics15.rs: Likewise.
+	* rust/compile/torture/generics16.rs: Likewise.
+	* rust/compile/torture/generics17.rs: Likewise.
+	* rust/compile/torture/generics18.rs: Likewise.
+	* rust/compile/torture/generics19.rs: Likewise.
+	* rust/compile/torture/generics2.rs: Likewise.
+	* rust/compile/torture/generics20.rs: Likewise.
+	* rust/compile/torture/generics21.rs: Likewise.
+	* rust/compile/torture/generics22.rs: Likewise.
+	* rust/compile/torture/generics23.rs: Likewise.
+	* rust/compile/torture/generics24.rs: Likewise.
+	* rust/compile/torture/generics25.rs: Likewise.
+	* rust/compile/torture/generics26.rs: Likewise.
+	* rust/compile/torture/generics27.rs: Likewise.
+	* rust/compile/torture/generics28.rs: Likewise.
+	* rust/compile/torture/generics29.rs: Likewise.
+	* rust/compile/torture/generics3.rs: Likewise.
+	* rust/compile/torture/generics30.rs: Likewise.
+	* rust/compile/torture/generics31.rs: Likewise.
+	* rust/compile/torture/generics32.rs: Likewise.
+	* rust/compile/torture/generics4.rs: Likewise.
+	* rust/compile/torture/generics5.rs: Likewise.
+	* rust/compile/torture/generics6.rs: Likewise.
+	* rust/compile/torture/generics7.rs: Likewise.
+	* rust/compile/torture/generics8.rs: Likewise.
+	* rust/compile/torture/generics9.rs: Likewise.
+	* rust/compile/torture/intrinsics-2.rs: Likewise.
+	* rust/compile/torture/intrinsics-4.rs: Likewise.
+	* rust/compile/torture/intrinsics-5.rs: Likewise.
+	* rust/compile/torture/intrinsics-6.rs: Likewise.
+	* rust/compile/torture/intrinsics-7.rs: Likewise.
+	* rust/compile/torture/intrinsics-8.rs: Likewise.
+	* rust/compile/torture/issue-1024.rs: Likewise.
+	* rust/compile/torture/issue-1075.rs: Likewise.
+	* rust/compile/torture/issue-1432.rs: Likewise.
+	* rust/compile/torture/issue-1555.rs: Likewise.
+	* rust/compile/torture/issue-368.rs: Likewise.
+	* rust/compile/torture/issue-808.rs: Likewise.
+	* rust/compile/torture/issue-862.rs: Likewise.
+	* rust/compile/torture/issue-893-2.rs: Likewise.
+	* rust/compile/torture/issue-893.rs: Likewise.
+	* rust/compile/torture/must_use2.rs: Likewise.
+	* rust/compile/torture/nested_fn2.rs: Likewise.
+	* rust/compile/torture/phantom_data.rs: Likewise.
+	* rust/compile/torture/range-lang-item1.rs: Likewise.
+	* rust/compile/torture/traits1.rs: Likewise.
+	* rust/compile/torture/traits10.rs: Likewise.
+	* rust/compile/torture/traits11.rs: Likewise.
+	* rust/compile/torture/traits12.rs: Likewise.
+	* rust/compile/torture/traits13.rs: Likewise.
+	* rust/compile/torture/traits14.rs: Likewise.
+	* rust/compile/torture/traits15.rs: Likewise.
+	* rust/compile/torture/traits16.rs: Likewise.
+	* rust/compile/torture/traits17.rs: Likewise.
+	* rust/compile/torture/traits18.rs: Likewise.
+	* rust/compile/torture/traits19.rs: Likewise.
+	* rust/compile/torture/traits2.rs: Likewise.
+	* rust/compile/torture/traits3.rs: Likewise.
+	* rust/compile/torture/traits4.rs: Likewise.
+	* rust/compile/torture/traits5.rs: Likewise.
+	* rust/compile/torture/traits6.rs: Likewise.
+	* rust/compile/torture/traits7.rs: Likewise.
+	* rust/compile/torture/traits8.rs: Likewise.
+	* rust/compile/torture/traits9.rs: Likewise.
+	* rust/compile/torture/transmute-size-check-1.rs: Likewise.
+	* rust/compile/torture/transmute1.rs: Likewise.
+	* rust/compile/torture/uninit-intrinsic-1.rs: Likewise.
+	* rust/compile/torture/utf8_identifiers.rs: Likewise.
+	* rust/compile/traits1.rs: Likewise.
+	* rust/compile/traits10.rs: Likewise.
+	* rust/compile/traits11.rs: Likewise.
+	* rust/compile/traits12.rs: Likewise.
+	* rust/compile/traits2.rs: Likewise.
+	* rust/compile/traits3.rs: Likewise.
+	* rust/compile/traits4.rs: Likewise.
+	* rust/compile/traits5.rs: Likewise.
+	* rust/compile/traits6.rs: Likewise.
+	* rust/compile/traits7.rs: Likewise.
+	* rust/compile/traits8.rs: Likewise.
+	* rust/compile/traits9.rs: Likewise.
+	* rust/compile/try-expr1.rs: Likewise.
+	* rust/compile/try-trait.rs: Likewise.
+	* rust/compile/try_block1.rs: Likewise.
+	* rust/compile/type-bindings1.rs: Likewise.
+	* rust/compile/unconstrained_type_param.rs: Likewise.
+	* rust/compile/unify-errors1.rs: Likewise.
+	* rust/compile/unsafe10.rs: Likewise.
+	* rust/compile/v0-mangle1.rs: Likewise.
+	* rust/compile/v0-mangle2.rs: Likewise.
+	* rust/compile/while_let1.rs: Likewise.
+	* rust/execute/black_box.rs: Likewise.
+	* rust/execute/torture/atomic_load.rs: Likewise.
+	* rust/execute/torture/atomic_store.rs: Likewise.
+	* rust/execute/torture/basic_partial_ord1.rs: Likewise.
+	* rust/execute/torture/basic_partial_ord2.rs: Likewise.
+	* rust/execute/torture/builtin_macro_option_env.rs: Likewise.
+	* rust/execute/torture/closure1.rs: Likewise.
+	* rust/execute/torture/closure2.rs: Likewise.
+	* rust/execute/torture/closure3.rs: Likewise.
+	* rust/execute/torture/closure4.rs: Likewise.
+	* rust/execute/torture/coercion1.rs: Likewise.
+	* rust/execute/torture/coercion2.rs: Likewise.
+	* rust/execute/torture/coercion3.rs: Likewise.
+	* rust/execute/torture/const-generics-1.rs: Likewise.
+	* rust/execute/torture/const-generics-2.rs: Likewise.
+	* rust/execute/torture/const-generics-3.rs: Likewise.
+	* rust/execute/torture/const-generics-4.rs: Likewise.
+	* rust/execute/torture/const-generics-5.rs: Likewise.
+	* rust/execute/torture/const-generics-6.rs: Likewise.
+	* rust/execute/torture/const-generics-7.rs: Likewise.
+	* rust/execute/torture/copy_nonoverlapping1.rs: Likewise.
+	* rust/execute/torture/derive-default1.rs: Likewise.
+	* rust/execute/torture/derive-partialeq1.rs: Likewise.
+	* rust/execute/torture/derive-partialeq2.rs: Likewise.
+	* rust/execute/torture/derive_clone_enum1.rs: Likewise.
+	* rust/execute/torture/derive_macro1.rs: Likewise.
+	* rust/execute/torture/derive_macro3.rs: Likewise.
+	* rust/execute/torture/derive_macro4.rs: Likewise.
+	* rust/execute/torture/enum_intrinsics1.rs: Likewise.
+	* rust/execute/torture/enum_intrinsics2.rs: Likewise.
+	* rust/execute/torture/for-loop1.rs: Likewise.
+	* rust/execute/torture/for-loop2.rs: Likewise.
+	* rust/execute/torture/gat1.rs: Likewise.
+	* rust/execute/torture/impl_desugar-2.rs: Likewise.
+	* rust/execute/torture/impl_desugar.rs: Likewise.
+	* rust/execute/torture/impl_rpit1.rs: Likewise.
+	* rust/execute/torture/impl_rpit2.rs: Likewise.
+	* rust/execute/torture/impl_rpit3.rs: Likewise.
+	* rust/execute/torture/impl_trait1.rs: Likewise.
+	* rust/execute/torture/impl_trait2.rs: Likewise.
+	* rust/execute/torture/impl_trait3.rs: Likewise.
+	* rust/execute/torture/impl_trait4.rs: Likewise.
+	* rust/execute/torture/index1.rs: Likewise.
+	* rust/execute/torture/issue-1120.rs: Likewise.
+	* rust/execute/torture/issue-1133.rs: Likewise.
+	* rust/execute/torture/issue-1198.rs: Likewise.
+	* rust/execute/torture/issue-1232.rs: Likewise.
+	* rust/execute/torture/issue-1249.rs: Likewise.
+	* rust/execute/torture/issue-1436.rs: Likewise.
+	* rust/execute/torture/issue-1481.rs: Likewise.
+	* rust/execute/torture/issue-1482.rs: Likewise.
+	* rust/execute/torture/issue-1496.rs: Likewise.
+	* rust/execute/torture/issue-1720-2.rs: Likewise.
+	* rust/execute/torture/issue-1720.rs: Likewise.
+	* rust/execute/torture/issue-2005.rs: Likewise.
+	* rust/execute/torture/issue-2052.rs: Likewise.
+	* rust/execute/torture/issue-2179.rs: Likewise.
+	* rust/execute/torture/issue-2180.rs: Likewise.
+	* rust/execute/torture/issue-2236.rs: Likewise.
+	* rust/execute/torture/issue-2583.rs: Likewise.
+	* rust/execute/torture/issue-3126.rs: Likewise.
+	* rust/execute/torture/issue-3381.rs: Likewise.
+	* rust/execute/torture/issue-3502.rs: Likewise.
+	* rust/execute/torture/issue-3836.rs: Likewise.
+	* rust/execute/torture/issue-647.rs: Likewise.
+	* rust/execute/torture/issue-845.rs: Likewise.
+	* rust/execute/torture/issue-851.rs: Likewise.
+	* rust/execute/torture/issue-858.rs: Likewise.
+	* rust/execute/torture/iter1.rs: Likewise.
+	* rust/execute/torture/macros23.rs: Likewise.
+	* rust/execute/torture/macros28.rs: Likewise.
+	* rust/execute/torture/method2.rs: Likewise.
+	* rust/execute/torture/method3.rs: Likewise.
+	* rust/execute/torture/method4.rs: Likewise.
+	* rust/execute/torture/min_specialization2.rs: Likewise.
+	* rust/execute/torture/min_specialization3.rs: Likewise.
+	* rust/execute/torture/operator_overload_1.rs: Likewise.
+	* rust/execute/torture/operator_overload_10.rs: Likewise.
+	* rust/execute/torture/operator_overload_11.rs: Likewise.
+	* rust/execute/torture/operator_overload_12.rs: Likewise.
+	* rust/execute/torture/operator_overload_2.rs: Likewise.
+	* rust/execute/torture/operator_overload_3.rs: Likewise.
+	* rust/execute/torture/operator_overload_4.rs: Likewise.
+	* rust/execute/torture/operator_overload_5.rs: Likewise.
+	* rust/execute/torture/operator_overload_6.rs: Likewise.
+	* rust/execute/torture/operator_overload_7.rs: Likewise.
+	* rust/execute/torture/operator_overload_8.rs: Likewise.
+	* rust/execute/torture/operator_overload_9.rs: Likewise.
+	* rust/execute/torture/partial-eq-1.rs: Likewise.
+	* rust/execute/torture/partial-eq-2.rs: Likewise.
+	* rust/execute/torture/partial-eq-3.rs: Likewise.
+	* rust/execute/torture/partial-eq-4.rs: Likewise.
+	* rust/execute/torture/partial-ord-1.rs: Likewise.
+	* rust/execute/torture/partial-ord-2.rs: Likewise.
+	* rust/execute/torture/partial-ord-3.rs: Likewise.
+	* rust/execute/torture/partial-ord-4.rs: Likewise.
+	* rust/execute/torture/partial-ord-5.rs: Likewise.
+	* rust/execute/torture/partial-ord-6.rs: Likewise.
+	* rust/execute/torture/prefetch_data.rs: Likewise.
+	* rust/execute/torture/ref-pattern2.rs: Likewise.
+	* rust/execute/torture/sip-hasher.rs: Likewise.
+	* rust/execute/torture/slice-magic.rs: Likewise.
+	* rust/execute/torture/slice-magic2.rs: Likewise.
+	* rust/execute/torture/slice1.rs: Likewise.
+	* rust/execute/torture/str-layout1.rs: Likewise.
+	* rust/execute/torture/trait1.rs: Likewise.
+	* rust/execute/torture/trait10.rs: Likewise.
+	* rust/execute/torture/trait11.rs: Likewise.
+	* rust/execute/torture/trait12.rs: Likewise.
+	* rust/execute/torture/trait13.rs: Likewise.
+	* rust/execute/torture/trait14.rs: Likewise.
+	* rust/execute/torture/trait15.rs: Likewise.
+	* rust/execute/torture/trait2.rs: Likewise.
+	* rust/execute/torture/trait3.rs: Likewise.
+	* rust/execute/torture/trait4.rs: Likewise.
+	* rust/execute/torture/trait5.rs: Likewise.
+	* rust/execute/torture/trait6.rs: Likewise.
+	* rust/execute/torture/trait7.rs: Likewise.
+	* rust/execute/torture/trait8.rs: Likewise.
+	* rust/execute/torture/trait9.rs: Likewise.
+	* rust/execute/torture/transmute1.rs: Likewise.
+	* rust/execute/torture/wrapping_op1.rs: Likewise.
+	* rust/execute/torture/wrapping_op2.rs: Likewise.
+	* rust/link/generic_function_1.rs: Likewise.
+	* rust/link/trait_import_1.rs: Likewise.
+
+2025-12-03  Pierre-Emmanuel Patry  <pierre-emmanuel.patry@embecosm.com>
+
+	* rust/compile/braced_macro_arm.rs: Remove parent errors.
+	* rust/compile/issue-407-2.rs: Likewise.
+	* rust/compile/issue-407.rs: Likewise.
+	* rust/compile/issue-4162.rs: Likewise.
+	* rust/compile/issue-867.rs: Likewise.
+	* rust/compile/raw_ref_op_invalid.rs: Likewise.
+
+2025-12-03  Pierre-Emmanuel Patry  <pierre-emmanuel.patry@embecosm.com>
+
+	* rust/compile/macros/mbe/macro-issue3608.rs: Remove error.
+
+2025-12-03  Pierre-Emmanuel Patry  <pierre-emmanuel.patry@embecosm.com>
+
+	* rust/compile/braced_macro_arm.rs: Remove superfluous error message
+	matching.
+	* rust/compile/decl_macro6.rs: Likewise.
+	* rust/compile/decl_macro7.rs: Likewise.
+	* rust/compile/extern_type_item_missing_semi.rs: Likewise.
+	* rust/compile/issue-2187.rs: Likewise.
+	* rust/compile/issue-407-2.rs: Likewise.
+	* rust/compile/issue-407.rs: Likewise.
+	* rust/compile/issue-4162.rs: Likewise.
+	* rust/compile/issue-867.rs: Likewise.
+	* rust/compile/macros/mbe/macro-issue1053-2.rs: Likewise.
+	* rust/compile/macros/mbe/macro-issue1395-2.rs: Likewise.
+	* rust/compile/macros/mbe/macro-issue3608.rs: Likewise.
+	* rust/compile/macros/mbe/macro27.rs: Likewise.
+	* rust/compile/macros/mbe/macro28.rs: Likewise.
+	* rust/compile/macros/mbe/macro29.rs: Likewise.
+	* rust/compile/macros/mbe/macro30.rs: Likewise.
+	* rust/compile/macros/mbe/macro31.rs: Likewise.
+	* rust/compile/macros/mbe/macro33.rs: Likewise.
+	* rust/compile/macros/mbe/macro35.rs: Likewise.
+	* rust/compile/macros/mbe/macro37.rs: Likewise.
+	* rust/compile/macros/mbe/macro38.rs: Likewise.
+	* rust/compile/macros/mbe/macro39.rs: Likewise.
+	* rust/compile/macros/mbe/macro48.rs: Likewise.
+	* rust/compile/parse_invalid_specialization.rs: Likewise.
+	* rust/compile/parse_simple_path_fail_1.rs: Likewise.
+	* rust/compile/parse_simple_path_fail_2.rs: Likewise.
+	* rust/compile/raw-string-loc.rs: Likewise.
+	* rust/compile/raw-byte-string-loc.rs: Likewise.
+	* rust/compile/self_const_ptr.rs: Likewise.
+	* rust/compile/self_mut_ptr.rs: Likewise.
+	* rust/compile/static_var1.rs: Likewise.
+	* rust/compile/self_ptr.rs: Likewise.
+	* rust/compile/torture/identifier-missing-impl-1.rs: Likewise.
+
+2025-12-03  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/103371
+	* gfortran.dg/pdt_71.f03: New test.
+
+2025-12-03  liuhongt  <hongtao.liu@intel.com>
+
+	* g++.target/i386/avx512-pr71921.C: New test.
+	* g++.target/i386/pr71921.C: New test.
+
+2025-12-02  Robin Dapp  <rdapp.gcc@gmail.com>
+
+	PR target/122656
+	* gcc.target/riscv/rvv/base/pr122656-1.c: New test.
+	* gcc.target/riscv/rvv/base/pr122656-2.c: New test.`
+
+2025-12-02  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122860
+	* g++.dg/ext/pr122860.C: New test.
+
+2025-12-02  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122836
+	* g++.dg/ext/pr122836.C: New test.
+
+2025-12-02  Jason Merrill  <jason@redhat.com>
+
+	PR c++/122171
+	PR c++/112632
+	* g++.dg/cpp0x/alias-decl-conv1.C: New test.
+
+2025-12-02  Tamar Christina  <tamar.christina@arm.com>
+
+	PR tree-optimization/122868
+	* gcc.dg/vect/vect-early-break_140-pr122868_1.c: New test.
+	* gcc.dg/vect/vect-early-break_140-pr122868_2.c: New test.
+	* gcc.dg/vect/vect-early-break_140-pr122868_3.c: New test.
+	* gcc.dg/vect/vect-early-break_140-pr122868_4.c: New test.
+
+2025-12-02  David Guillen Fandos  <david@davidgf.net>
+
+	* gcc.target/mips/madd-10.c: New test.
+	* gcc.target/mips/maddu-5.c: New test.
+	* gcc.target/mips/msub-9.c: New test.
+	* gcc.target/mips/msubu-5.c: New test.
+
+2025-12-02  David Guillen Fandos  <david@davidgf.net>
+
+	* gcc.target/mips/bswap-7.c: New test.
+
+2025-12-02  David Guillen Fandos  <david@davidgf.net>
+
+	* gcc.target/mips/max-1.c: New test.
+	* gcc.target/mips/min-1.c: New test.
+
+2025-12-02  Saurabh Jha  <saurabh.jha@arm.com>
+	    Radek Barton  <radek.barton@microsoft.com>
+
+	* gcc.target/aarch64/mingw/variadic_hfa.c: New test.
+	* gcc.target/aarch64/mingw/variadic_hva.c: New test.
+	* gcc.target/aarch64/mingw/variadic_int.c: New test.
+
+2025-12-02  Saurabh Jha  <saurabh.jha@arm.com>
+	    Radek Barton  <radek.barton@microsoft.com>
+	    Martin Vejbora  <mvejbora@microsoft.com>
+
+	* gcc.target/aarch64/mingw/mingw.exp: New test.
+	* gcc.target/aarch64/mingw/long_double_size.c: New test.
+
+2025-12-02  Saurabh Jha  <saurabh.jha@arm.com>
+
+	* lib/scanasm.exp: Add support for mingw targets.
+
+2025-12-01  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* g++.dg/modules/friend-12_a.C: New test.
+	* g++.dg/modules/friend-12_b.C: New test.
+
+2025-12-01  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122915
+	* g++.dg/modules/namespace-16_a.C: New test.
+	* g++.dg/modules/namespace-16_b.C: New test.
+	* g++.dg/modules/namespace-16_c.C: New test.
+	* g++.dg/modules/namespace-16_d.C: New test.
+
+2025-12-01  Christophe Lyon  <christophe.lyon@linaro.org>
+
+	PR target/122858
+	* gcc.target/arm/mve/pr122858.c: New test.
+
+2025-12-01  Christopher Albert  <albert@tugraz.at>
+	    Harald Anlauf  <anlauf@gcc.gnu.org>
+
+	PR fortran/107721
+	PR fortran/102417
+	* gfortran.dg/array_constructor_typespec_1.f90: New test.
+
+2025-12-01  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122905
+	* g++.dg/lto/pr122905.h: New file.
+	* g++.dg/lto/pr122905_0.C: New test.
+	* g++.dg/lto/pr122905_1.C: New test.
+
+2025-12-01  Robin Dapp  <rdapp@ventanamicro.com>
+
+	PR target/122652
+	* gcc.target/riscv/rvv/base/pr122652.c: New test.
+
+2025-12-01  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR testsuite/122596
+	* gfortran.dg/alloc_comp_deep_copy_5.f90: Restrict
+	-Wa,--noexecstack, -Wl,-z,noexecstack to gas, gld.
+	* gfortran.dg/alloc_comp_deep_copy_6.f90: Likewise.
+
+2025-12-01  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR c++/81337
+	PR c++/52477
+	* g++.dg/gcov/pr16855.C (Test::~Test): xfail on *-*-solaris2*
+	(dg-final): Likewise.
+	* g++.dg/gcov/pr16855-priority.C (Test::~Test): Likewise.
+	(dg-final): Likewise.
+
+2025-12-01  H.J. Lu  <hjl.tools@gmail.com>
+
+	PR target/122906
+	* g++.target/i386/pr122906-1.C: New test.
+
+2025-11-30  Kugan Vivekanandarajah  <kvivekananda@nvidia.com>
+
+	* gcc.dg/vect/tsvc/vect-tsvc-s293.c: Remove xfail.
+	* gcc.target/aarch64/vect-ld1r-compile.c: Add
+	-fno-tree-loop-distribute-patterns to prevent memset detection.
+
+2025-11-30  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	PR fortran/122923
+	* gfortran.dg/ISO_Fortran_binding_17.f90: Recognize language
+	list in warning regexp.
+	* gfortran.dg/c-interop/allocate-errors.f90: Likewise.
+	* gfortran.dg/c-interop/establish-errors.f90: Likewise.
+	* gfortran.dg/c-interop/pr113338.f90: Likewise.
+	* gfortran.dg/c-interop/section-errors.f90: Likewise.
+	* gfortran.dg/c-interop/select-errors.f90: Likewise.
+	* gfortran.dg/c-interop/setpointer-errors.f90: Likewise.
+
+2025-11-30  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122465
+	* g++.dg/cpp0x/pr122465.C: New test.
+
+2025-11-30  Tamar Christina  <tamar.christina@arm.com>
+
+	PR tree-optimization/115120
+	PR tree-optimization/119577
+	PR tree-optimization/119860
+	* gcc.dg/vect/vect-early-break_39.c: Update.
+	* gcc.dg/vect/vect-early-break_139.c: New testcase.
+	* gcc.target/aarch64/sve/peel_ind_10.c: Update.
+	* gcc.target/aarch64/sve/peel_ind_11.c: Update.
+	* gcc.target/aarch64/sve/peel_ind_12.c: Update.
+	* gcc.target/aarch64/sve/peel_ind_5.c: Update.
+	* gcc.target/aarch64/sve/peel_ind_6.c: Update.
+	* gcc.target/aarch64/sve/peel_ind_7.c: Update.
+	* gcc.target/aarch64/sve/peel_ind_9.c: Update.
+	* gcc.target/aarch64/sve/pr119351.c
+
+2025-11-30  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* algol68/compile/mcgt-1.3b.a68: New file.
+	* algol68/compile/mcgt-7.1.3a-bis.a68: Likewise.
+	* algol68/compile/mcgt-7.1.3a.a68: Likewise.
+	* algol68/execute/mcgt/execute.exp: Likewise.
+	* algol68/execute/mcgt/mcgt-1.3a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-1.3c.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.2.1a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.2.2a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.2.3a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.3a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.3b.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.3c.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.3e.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.4.2a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.4.2b.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.4.2c.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.4.3a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.6a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.6b.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.7d.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.7e.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.8a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.8b.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-2.9.1a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-3.5.1a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-3.5d.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-3.7.2a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-3.8.2a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-3.9.1b.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-4.1.2a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-4.1.3a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-4.1.6a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-4.1.6b.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-4.1.6c.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-4.2.6a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-4.2.6b.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-4.2.6d.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-4.3.1a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-4.3.1b.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-4.3.2a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-5.1.2a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-5.1.3a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-5.1.3c.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-5.1.5a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-6.2.2a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-6.2.2b.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-6.2.2c.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-7.1.1a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-7.1.1b.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-7.1.3a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-7.3.2a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-7.3.6a.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-7.3.6b.a68: Likewise.
+	* algol68/execute/mcgt/mcgt-7.5.3a.a68: Likewise.
+
+2025-11-30  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* algol68/README.mcts: New file.
+
+2025-11-30  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* algol68/compile/a68includes/goodbye-supper.a68
+	* algol68/compile/a68includes/goodbye.a68: Likewise.
+	* algol68/compile/a68includes/hello-supper.a68: Likewise.
+	* algol68/compile/a68includes/hello.a68: Likewise.
+	* algol68/compile/actual-bounds-expected-1.a68: Likewise.
+	* algol68/compile/actual-bounds-expected-2.a68: Likewise.
+	* algol68/compile/actual-bounds-expected-3.a68: Likewise.
+	* algol68/compile/balancing-1.a68: Likewise.
+	* algol68/compile/bold-nestable-comment-1.a68: Likewise.
+	* algol68/compile/bold-taggle-1.a68: Likewise.
+	* algol68/compile/brief-nestable-comment-1.a68: Likewise.
+	* algol68/compile/brief-nestable-comment-2.a68: Likewise.
+	* algol68/compile/char-break-1.a68: Likewise.
+	* algol68/compile/compile.exp: Likewise.
+	* algol68/compile/conditional-clause-1.a68: Likewise.
+	* algol68/compile/error-bold-taggle-1.a68: Likewise.
+	* algol68/compile/error-coercion-1.a68: Likewise.
+	* algol68/compile/error-coercion-2.a68: Likewise.
+	* algol68/compile/error-coercion-flex-1.a68: Likewise.
+	* algol68/compile/error-conformance-clause-1.a68: Likewise.
+	* algol68/compile/error-contraction-1.a68: Likewise.
+	* algol68/compile/error-contraction-2.a68: Likewise.
+	* algol68/compile/error-incestuous-union-1.a68: Likewise.
+	* algol68/compile/error-label-after-decl-1.a68: Likewise.
+	* algol68/compile/error-nestable-comments-1.a68: Likewise.
+	* algol68/compile/error-nested-comment-1.a68: Likewise.
+	* algol68/compile/error-no-bounds-allowed-1.a68: Likewise.
+	* algol68/compile/error-string-break-1.a68: Likewise.
+	* algol68/compile/error-string-break-2.a68: Likewise.
+	* algol68/compile/error-string-break-3.a68: Likewise.
+	* algol68/compile/error-string-break-4.a68: Likewise.
+	* algol68/compile/error-string-break-5.a68: Likewise.
+	* algol68/compile/error-string-break-6.a68: Likewise.
+	* algol68/compile/error-string-break-7.a68: Likewise.
+	* algol68/compile/error-supper-1.a68: Likewise.
+	* algol68/compile/error-supper-2.a68: Likewise.
+	* algol68/compile/error-supper-3.a68: Likewise.
+	* algol68/compile/error-supper-4.a68: Likewise.
+	* algol68/compile/error-supper-5.a68: Likewise.
+	* algol68/compile/error-supper-6.a68: Likewise.
+	* algol68/compile/error-underscore-in-mode-1.a68: Likewise.
+	* algol68/compile/error-underscore-in-tag-1.a68: Likewise.
+	* algol68/compile/error-upper-1.a68: Likewise.
+	* algol68/compile/error-widening-1.a68: Likewise.
+	* algol68/compile/error-widening-2.a68: Likewise.
+	* algol68/compile/error-widening-3.a68: Likewise.
+	* algol68/compile/error-widening-4.a68: Likewise.
+	* algol68/compile/error-widening-5.a68: Likewise.
+	* algol68/compile/error-widening-6.a68: Likewise.
+	* algol68/compile/error-widening-7.a68: Likewise.
+	* algol68/compile/error-widening-8.a68: Likewise.
+	* algol68/compile/error-widening-9.a68: Likewise.
+	* algol68/compile/hidden-operators-1.a68: Likewise.
+	* algol68/compile/implicit-widening-1.a68: Likewise.
+	* algol68/compile/include-supper.a68: Likewise.
+	* algol68/compile/include.a68: Likewise.
+	* algol68/compile/labeled-unit-1.a68: Likewise.
+	* algol68/compile/nested-comment-1.a68: Likewise.
+	* algol68/compile/nested-comment-2.a68: Likewise.
+	* algol68/compile/operators-firmly-related.a68: Likewise.
+	* algol68/compile/recursive-modes-1.a68: Likewise.
+	* algol68/compile/recursive-modes-2.a68: Likewise.
+	* algol68/compile/serial-clause-jump-1.a68: Likewise.
+	* algol68/compile/snobol.a68: Likewise.
+	* algol68/compile/supper-1.a68: Likewise.
+	* algol68/compile/supper-10.a68: Likewise.
+	* algol68/compile/supper-11.a68: Likewise.
+	* algol68/compile/supper-12.a68: Likewise.
+	* algol68/compile/supper-13.a68: Likewise.
+	* algol68/compile/supper-2.a68: Likewise.
+	* algol68/compile/supper-3.a68: Likewise.
+	* algol68/compile/supper-4.a68: Likewise.
+	* algol68/compile/supper-5.a68: Likewise.
+	* algol68/compile/supper-6.a68: Likewise.
+	* algol68/compile/supper-7.a68: Likewise.
+	* algol68/compile/supper-8.a68: Likewise.
+	* algol68/compile/supper-9.a68: Likewise.
+	* algol68/compile/uniting-1.a68: Likewise.
+	* algol68/compile/upper-1.a68: Likewise.
+	* algol68/compile/warning-scope-1.a68: Likewise.
+	* algol68/compile/warning-scope-2.a68: Likewise.
+	* algol68/compile/warning-scope-3.a68: Likewise.
+	* algol68/compile/warning-scope-4.a68: Likewise.
+	* algol68/compile/warning-scope-5.a68: Likewise.
+	* algol68/compile/warning-scope-6.a68: Likewise.
+	* algol68/compile/warning-scope-7.a68: Likewise.
+	* algol68/compile/warning-voiding-1.a68: Likewise.
+	* algol68/compile/warning-voiding-2.a68: Likewise.
+	* algol68/compile/error-compile-unknown-tag-1.a68: New file.
+	* algol68/compile/error-def-1.a68: New file.
+	* algol68/compile/error-mode-stropping-1.a68: New file.
+	* algol68/compile/error-mode-stropping-10.a68: New file.
+	* algol68/compile/error-mode-stropping-11.a68: New file.
+	* algol68/compile/error-mode-stropping-12.a68: New file.
+	* algol68/compile/error-mode-stropping-13.a68: New file.
+	* algol68/compile/error-mode-stropping-14.a68: New file.
+	* algol68/compile/error-mode-stropping-15.a68: New file.
+	* algol68/compile/error-mode-stropping-16.a68: New file.
+	* algol68/compile/error-mode-stropping-17.a68: New file.
+	* algol68/compile/error-mode-stropping-2.a68: New file.
+	* algol68/compile/error-mode-stropping-3.a68: New file.
+	* algol68/compile/error-mode-stropping-4.a68: New file.
+	* algol68/compile/error-mode-stropping-5.a68: New file.
+	* algol68/compile/error-mode-stropping-6.a68: New file.
+	* algol68/compile/error-mode-stropping-8.a68: New file.
+	* algol68/compile/error-mode-stropping-9.a68: New file.
+	* algol68/compile/error-module-coercions-1.a68: New file.
+	* algol68/compile/error-module-not-found-1.a68: New file.
+	* algol68/compile/error-module-ranges-1.a68: New file.
+	* algol68/compile/error-pragmat-1.a68: New file.
+	* algol68/compile/error-pragmat-access-1.a68: New file.
+	* algol68/compile/error-pragmat-access-2.a68: New file.
+	* algol68/compile/error-pub-loc-1.a68: New file.
+	* algol68/compile/error-pub-out-of-def-1.a68: New file.
+	* algol68/compile/error-pub-out-of-def-2.a68: New file.
+	* algol68/compile/error-string-break-8.a68: New file.
+	* algol68/compile/error-stropping-5.a68: New file.
+	* algol68/compile/error-stropping-6.a68: New file.
+	* algol68/compile/error-stropping-keyword-1.a68: New file.
+	* algol68/compile/error-stropping-keyword-2.a68: New file.
+	* algol68/compile/error-stropping-keyword-3.a68: New file.
+	* algol68/compile/error-stropping-keyword-4.a68: New file.
+	* algol68/compile/error-vacuum-1.a68: New file.
+	* algol68/compile/error-vacuum-2.a68: New file.
+	* algol68/compile/error-vacuum-3.a68: New file.
+	* algol68/compile/module-1.a68: New file.
+	* algol68/compile/module-2.a68: New file.
+	* algol68/compile/module-extracts-1.a68: New file.
+	* algol68/compile/module-mode-exports-1.a68: New file.
+	* algol68/compile/module-mode-exports-2.a68: New file.
+	* algol68/compile/module-mode-exports-3.a68: New file.
+	* algol68/compile/module-mode-exports-4.a68: New file.
+	* algol68/compile/module-mode-exports-5.a68: New file.
+	* algol68/compile/module-mode-exports-6.a68: New file.
+	* algol68/compile/module-mode-exports-7.a68: New file.
+	* algol68/compile/module-mode-exports-8.a68: New file.
+	* algol68/compile/module-mode-exports-9.a68: New file.
+	* algol68/compile/module-pub-1.a68: New file.
+	* algol68/compile/module-pub-mangling-1.a68: New file.
+	* algol68/compile/module-pub-mangling-10.a68: New file.
+	* algol68/compile/module-pub-mangling-11.a68: New file.
+	* algol68/compile/module-pub-mangling-12.a68: New file.
+	* algol68/compile/module-pub-mangling-13.a68: New file.
+	* algol68/compile/module-pub-mangling-14.a68: New file.
+	* algol68/compile/module-pub-mangling-15.a68: New file.
+	* algol68/compile/module-pub-mangling-16.a68: New file.
+	* algol68/compile/module-pub-mangling-17.a68: New file.
+	* algol68/compile/module-pub-mangling-18.a68: New file.
+	* algol68/compile/module-pub-mangling-19.a68: New file.
+	* algol68/compile/module-pub-mangling-2.a68: New file.
+	* algol68/compile/module-pub-mangling-20.a68: New file.
+	* algol68/compile/module-pub-mangling-21.a68: New file.
+	* algol68/compile/module-pub-mangling-22.a68: New file.
+	* algol68/compile/module-pub-mangling-3.a68: New file.
+	* algol68/compile/module-pub-mangling-4.a68: New file.
+	* algol68/compile/module-pub-mangling-5.a68: New file.
+	* algol68/compile/module-pub-mangling-6.a68: New file.
+	* algol68/compile/module-pub-mangling-7.a68: New file.
+	* algol68/compile/module-pub-mangling-8.a68: New file.
+	* algol68/compile/module-pub-mangling-9.a68: New file.
+	* algol68/compile/module-top-down-1.a68: New file.
+	* algol68/compile/modules/compile.exp: New file.
+	* algol68/compile/modules/module1.a68: New file.
+	* algol68/compile/modules/module2.a68: New file.
+	* algol68/compile/modules/module3.a68: New file.
+	* algol68/compile/modules/module4.a68: New file.
+	* algol68/compile/modules/module5.a68: New file.
+	* algol68/compile/modules/module6.a68: New file.
+	* algol68/compile/modules/module7.a68: New file.
+	* algol68/compile/modules/module8.a68: New file.
+	* algol68/compile/modules/module9.a68: New file.
+	* algol68/compile/modules/program-7.a68: New file.
+	* algol68/compile/modules/program-8.a68: New file.
+	* algol68/compile/modules/program-9.a68: New file.
+	* algol68/compile/modules/program-error-no-prio-1.a68: New file.
+	* algol68/compile/modules/program-error-outside-access-1.a68: New file.
+	* algol68/compile/modules/program-module-accesses-module-1.a68: New file.
+	* algol68/compile/modules/program-proc-arg-order-1.a68: New file.
+	* algol68/compile/warning-hidding-1.a68: New file.
+	* algol68/compile/warning-hidding-2.a68: New file.
+	* algol68/compile/warning-hidding-3.a68: New file.
+	* algol68/compile/warning-hidding-4.a68: New file.
+	* algol68/compile/warning-hidding-5.a68: New file.
+	* algol68/compile/warning-hidding-6.a68: New file.
+	* algol68/compile/warning-hidding-7.a68: New file.
+	* algol68/compile/warning-module-hidding-1.a68: New file.
+	* algol68/compile/warning-pub-loc-1.a68: New file.
+
+2025-11-30  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* algol68/execute/loop-7.a68: New file.
+	* algol68/execute/loop-8.a68: Likewise.
+	* algol68/execute/loop-9.a68: Likewise.
+	* algol68/execute/loop-overflow-underflow.a68: Likewise.
+	* algol68/execute/lt-int-1.a68: Likewise.
+	* algol68/execute/lt-string-stride-1.a68: Likewise.
+	* algol68/execute/lwb-1.a68: Likewise.
+	* algol68/execute/minus-int-1.a68: Likewise.
+	* algol68/execute/minusab-1.a68: Likewise.
+	* algol68/execute/minusab-2.a68: Likewise.
+	* algol68/execute/minusab-3.a68: Likewise.
+	* algol68/execute/minusab-4.a68: Likewise.
+	* algol68/execute/mod-int-1.a68: Likewise.
+	* algol68/execute/modab-1.a68: Likewise.
+	* algol68/execute/modab-2.a68: Likewise.
+	* algol68/execute/mode-indication-1.a68: Likewise.
+	* algol68/execute/mult-char-1.a68: Likewise.
+	* algol68/execute/mult-int-1.a68: Likewise.
+	* algol68/execute/mult-string-1.a68: Likewise.
+	* algol68/execute/mult-string-2.a68: Likewise.
+	* algol68/execute/mult-string-3.a68: Likewise.
+	* algol68/execute/mult-string-4.a68: Likewise.
+	* algol68/execute/multab-1.a68: Likewise.
+	* algol68/execute/multab-2.a68: Likewise.
+	* algol68/execute/multab-3.a68: Likewise.
+	* algol68/execute/mutual-recursion-1.a68: Likewise.
+	* algol68/execute/ne-bits-1.a68: Likewise.
+	* algol68/execute/ne-char-char-1.a68: Likewise.
+	* algol68/execute/ne-int-1.a68: Likewise.
+	* algol68/execute/ne-string-1.a68: Likewise.
+	* algol68/execute/neg-int-1.a68: Likewise.
+	* algol68/execute/not-bits-1.a68: Likewise.
+	* algol68/execute/odd-1.a68: Likewise.
+	* algol68/execute/op-1.a68: Likewise.
+	* algol68/execute/op-2.a68: Likewise.
+	* algol68/execute/op-3.a68: Likewise.
+	* algol68/execute/operator-declaration-1.a68: Likewise.
+	* algol68/execute/or-bits-1.a68: Likewise.
+	* algol68/execute/orf-1.a68: Likewise.
+	* algol68/execute/over-int-1.a68: Likewise.
+	* algol68/execute/overab-1.a68: Likewise.
+	* algol68/execute/overab-2.a68: Likewise.
+	* algol68/execute/particular-program-1.a68: Likewise.
+	* algol68/execute/plus-char-1.a68: Likewise.
+	* algol68/execute/plus-int-1.a68: Likewise.
+	* algol68/execute/plus-string-1.a68: Likewise.
+	* algol68/execute/plus-string-2.a68: Likewise.
+	* algol68/execute/plus-string-stride-1.a68: Likewise.
+	* algol68/execute/plusab-1.a68: Likewise.
+	* algol68/execute/plusab-2.a68: Likewise.
+	* algol68/execute/plusab-3.a68: Likewise.
+	* algol68/execute/plusab-4.a68: Likewise.
+	* algol68/execute/plusab-string-1.a68: Likewise.
+	* algol68/execute/plusto-char-1.a68: Likewise.
+	* algol68/execute/plusto-string-1.a68: Likewise.
+	* algol68/execute/posix-argc-argv-1.a68: Likewise.
+	* algol68/execute/posix-fopen-1.a68: Likewise.
+	* algol68/execute/posix-fputc-fputs-1.a68: Likewise.
+	* algol68/execute/posix-getenv-1.a68: Likewise.
+	* algol68/execute/posix-perror-1.a68: Likewise.
+	* algol68/execute/posix-putchar-1.a68: Likewise.
+	* algol68/execute/posix-stdinouterr-1.a68: Likewise.
+	* algol68/execute/posix-strerror-1.a68: Likewise.
+	* algol68/execute/posix-stride-1.a68: Likewise.
+	* algol68/execute/pow-int-1.a68: Likewise.
+	* algol68/execute/pow-real-1.a68: Likewise.
+	* algol68/execute/proc-1.a68: Likewise.
+	* algol68/execute/proc-10.a68: Likewise.
+	* algol68/execute/proc-12.a68: Likewise.
+	* algol68/execute/proc-13.a68: Likewise.
+	* algol68/execute/proc-14.a68: Likewise.
+	* algol68/execute/proc-15.a68: Likewise.
+	* algol68/execute/proc-16.a68: Likewise.
+	* algol68/execute/proc-17.a68: Likewise.
+	* algol68/execute/proc-18.a68: Likewise.
+	* algol68/execute/proc-19.a68: Likewise.
+	* algol68/execute/proc-2.a68: Likewise.
+	* algol68/execute/proc-20.a68: Likewise.
+	* algol68/execute/proc-21.a68: Likewise.
+	* algol68/execute/proc-22.a68: Likewise.
+	* algol68/execute/proc-23.a68: Likewise.
+	* algol68/execute/proc-25.a68: Likewise.
+	* algol68/execute/proc-26.a68: Likewise.
+	* algol68/execute/proc-27.a68: Likewise.
+	* algol68/execute/proc-28.a68: Likewise.
+	* algol68/execute/proc-29.a68: Likewise.
+	* algol68/execute/proc-3.a68: Likewise.
+	* algol68/execute/proc-4.a68: Likewise.
+	* algol68/execute/proc-5.a68: Likewise.
+	* algol68/execute/proc-6.a68: Likewise.
+	* algol68/execute/proc-7.a68: Likewise.
+	* algol68/execute/proc-8.a68: Likewise.
+	* algol68/execute/procedured-goto-1.a68: Likewise.
+	* algol68/execute/quine.a68: Likewise.
+	* algol68/execute/random-1.a68: Likewise.
+	* algol68/execute/re-im-1.a68: Likewise.
+	* algol68/execute/rela-string-1.a68: Likewise.
+	* algol68/execute/repr-1.a68: Likewise.
+	* algol68/execute/round-1.a68: Likewise.
+	* algol68/execute/row-display-1.a68: Likewise.
+	* algol68/execute/row-display-2.a68: Likewise.
+	* algol68/execute/row-display-3.a68: Likewise.
+	* algol68/execute/row-display-4.a68: Likewise.
+	* algol68/execute/row-display-5.a68: Likewise.
+	* algol68/execute/rowing-1.a68: Likewise.
+	* algol68/execute/rowing-10.a68: Likewise.
+	* algol68/execute/rowing-11.a68: Likewise.
+	* algol68/execute/rowing-12.a68: Likewise.
+	* algol68/execute/rowing-13.a68: Likewise.
+	* algol68/execute/rowing-2.a68: Likewise.
+	* algol68/execute/rowing-3.a68: Likewise.
+	* algol68/execute/rowing-4.a68: Likewise.
+	* algol68/execute/rowing-5.a68: Likewise.
+	* algol68/execute/rowing-6.a68: Likewise.
+	* algol68/execute/rowing-7.a68: Likewise.
+	* algol68/execute/rowing-8.a68: Likewise.
+	* algol68/execute/rowing-9.a68: Likewise.
+	* algol68/execute/selection-1.a68: Likewise.
+	* algol68/execute/selection-2.a68: Likewise.
+	* algol68/execute/selection-3.a68: Likewise.
+	* algol68/execute/selection-4.a68: Likewise.
+	* algol68/execute/selection-5.a68: Likewise.
+	* algol68/execute/selection-multiple-1.a68: Likewise.
+	* algol68/execute/selection-multiple-2.a68: Likewise.
+	* algol68/execute/serial-clause-1.a68: Likewise.
+	* algol68/execute/serial-clause-10.a68: Likewise.
+	* algol68/execute/serial-clause-2.a68: Likewise.
+	* algol68/execute/serial-clause-3.a68: Likewise.
+	* algol68/execute/serial-clause-4.a68: Likewise.
+	* algol68/execute/serial-clause-5.a68: Likewise.
+	* algol68/execute/serial-clause-6.a68: Likewise.
+	* algol68/execute/serial-clause-7.a68: Likewise.
+	* algol68/execute/serial-clause-8.a68: Likewise.
+	* algol68/execute/serial-clause-9.a68: Likewise.
+	* algol68/execute/serial-dsa-1.a68: Likewise.
+	* algol68/execute/serial-dsa-2.a68: Likewise.
+	* algol68/execute/serial-dsa-3.a68: Likewise.
+	* algol68/execute/serial-dsa-4.a68: Likewise.
+	* algol68/execute/serial-dsa-5.a68: Likewise.
+	* algol68/execute/serial-dsa-6.a68: Likewise.
+	* algol68/execute/sign-int-1.a68: Likewise.
+	* algol68/execute/sign-real-1.a68: Likewise.
+	* algol68/execute/sin-1.a68: Likewise.
+	* algol68/execute/skip-1.a68: Likewise.
+	* algol68/execute/skip-2.a68: Likewise.
+	* algol68/execute/skip-struct-1.a68: Likewise.
+	* algol68/execute/slice-indexing-1.a68: Likewise.
+	* algol68/execute/slice-indexing-2.a68: Likewise.
+	* algol68/execute/slice-indexing-3.a68: Likewise.
+	* algol68/execute/slice-indexing-4.a68: Likewise.
+	* algol68/execute/slice-indexing-5.a68: Likewise.
+	* algol68/execute/slice-indexing-6.a68: Likewise.
+	* algol68/execute/slice-indexing-7.a68: Likewise.
+	* algol68/execute/sqrt-1.a68: Likewise.
+	* algol68/execute/string-1.a68: Likewise.
+	* algol68/execute/string-2.a68: Likewise.
+	* algol68/execute/string-4.a68: Likewise.
+	* algol68/execute/string-break-1.a68: Likewise.
+	* algol68/execute/struct-self-1.a68: Likewise.
+	* algol68/execute/struct-self-2.a68: Likewise.
+	* algol68/execute/struct-self-3.a68: Likewise.
+	* algol68/execute/structure-display-1.a68: Likewise.
+	* algol68/execute/structure-display-2.a68: Likewise.
+	* algol68/execute/structure-display-3.a68: Likewise.
+	* algol68/execute/structure-display-4.a68: Likewise.
+	* algol68/execute/structure-display-5.a68: Likewise.
+	* algol68/execute/tan-1.a68: Likewise.
+	* algol68/execute/timesab-string-1.a68: Likewise.
+	* algol68/execute/trimmer-1.a68: Likewise.
+	* algol68/execute/trimmer-10.a68: Likewise.
+	* algol68/execute/trimmer-2.a68: Likewise.
+	* algol68/execute/trimmer-3.a68: Likewise.
+	* algol68/execute/trimmer-4.a68: Likewise.
+	* algol68/execute/trimmer-5.a68: Likewise.
+	* algol68/execute/trimmer-6.a68: Likewise.
+	* algol68/execute/trimmer-7.a68: Likewise.
+	* algol68/execute/trimmer-8.a68: Likewise.
+	* algol68/execute/trimmer-9.a68: Likewise.
+	* algol68/execute/trimmer-matrix-1.a68: Likewise.
+	* algol68/execute/trimmer-matrix-2.a68: Likewise.
+	* algol68/execute/trimmer-matrix-3.a68: Likewise.
+	* algol68/execute/trimmer-matrix-4.a68: Likewise.
+	* algol68/execute/trimmer-matrix-5.a68: Likewise.
+	* algol68/execute/trimmer-matrix-6.a68: Likewise.
+	* algol68/execute/trimmer-name-1.a68: Likewise.
+	* algol68/execute/undefined-1.a68: Likewise.
+	* algol68/execute/undefined-2.a68: Likewise.
+	* algol68/execute/undefined-3.a68: Likewise.
+	* algol68/execute/undefined-4.a68: Likewise.
+	* algol68/execute/undefined-5.a68: Likewise.
+	* algol68/execute/uniting-1.a68: Likewise.
+	* algol68/execute/uniting-2.a68: Likewise.
+	* algol68/execute/uniting-3.a68: Likewise.
+	* algol68/execute/uniting-4.a68: Likewise.
+	* algol68/execute/up-down-bits-1.a68: Likewise.
+	* algol68/execute/upb-1.a68: Likewise.
+	* algol68/execute/vacuum-1.a68: Likewise.
+	* algol68/execute/variable-declaration-1.a68: Likewise.
+	* algol68/execute/variable-declaration-2.a68: Likewise.
+	* algol68/execute/variable-declaration-3.a68: Likewise.
+	* algol68/execute/variable-declaration-4.a68: Likewise.
+	* algol68/execute/variable-declaration-5.a68: Likewise.
+	* algol68/execute/variable-declaration-6.a68: Likewise.
+	* algol68/execute/variable-declaration-heap-1.a68: Likewise.
+	* algol68/execute/variable-declaration-heap-2.a68: Likewise.
+	* algol68/execute/variable-declaration-multiple-1.a68: Likewise.
+	* algol68/execute/variable-declaration-multiple-2.a68: Likewise.
+	* algol68/execute/variable-declaration-multiple-3.a68: Likewise.
+	* algol68/execute/variable-declaration-multiple-4.a68: Likewise.
+	* algol68/execute/variable-declaration-multiple-5.a68: Likewise.
+	* algol68/execute/variable-declaration-multiple-6.a68: Likewise.
+	* algol68/execute/variable-declaration-multiple-7.a68: Likewise.
+	* algol68/execute/variable-declaration-multiple-8.a68: Likewise.
+	* algol68/execute/variable-declaration-multiple-9.a68: Likewise.
+	* algol68/execute/voiding-1.a68: Likewise.
+	* algol68/execute/widening-1.a68: Likewise.
+	* algol68/execute/widening-2.a68: Likewise.
+	* algol68/execute/widening-bits-1.a68: Likewise.
+	* algol68/execute/widening-bits-2.a68: Likewise.
+	* algol68/execute/widening-bits-3.a68: Likewise.
+	* algol68/execute/xor-bits-1.a68: Likewise.
+	* algol68/execute/environment-enquiries-8.a68: Likewise.
+	* algol68/execute/modules/README: New file.
+	* algol68/execute/modules/execute.exp: New file.
+	* algol68/execute/modules/module1.a68: New file.
+	* algol68/execute/modules/module10.a68: New file.
+	* algol68/execute/modules/module11.a68: New file.
+	* algol68/execute/modules/module12.a68: New file.
+	* algol68/execute/modules/module13.a68: New file.
+	* algol68/execute/modules/module14.a68: New file.
+	* algol68/execute/modules/module15.a68: New file.
+	* algol68/execute/modules/module16.a68: New file.
+	* algol68/execute/modules/module17.a68: New file.
+	* algol68/execute/modules/module3.a68: New file.
+	* algol68/execute/modules/module4.a68: New file.
+	* algol68/execute/modules/module5.a68: New file.
+	* algol68/execute/modules/module6.a68: New file.
+	* algol68/execute/modules/module7.a68: New file.
+	* algol68/execute/modules/module8.a68: New file.
+	* algol68/execute/modules/module9.a68: New file.
+	* algol68/execute/modules/program-1.a68: New file.
+	* algol68/execute/modules/program-10.a68: New file.
+	* algol68/execute/modules/program-11.a68: New file.
+	* algol68/execute/modules/program-12.a68: New file.
+	* algol68/execute/modules/program-15.a68: New file.
+	* algol68/execute/modules/program-16.a68: New file.
+	* algol68/execute/modules/program-17.a68: New file.
+	* algol68/execute/modules/program-2.a68: New file.
+	* algol68/execute/modules/program-3.a68: New file.
+	* algol68/execute/modules/program-4.a68: New file.
+	* algol68/execute/modules/program-5.a68: New file.
+	* algol68/execute/modules/program-6.a68: New file.
+	* algol68/execute/modules/program-7.a68: New file.
+	* algol68/execute/modules/program-8.a68: New file.
+	* algol68/execute/posix-lseek.a68: New file.
+
+2025-11-30  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* algol68/execute/abs-bits-1.a68: New file.
+	* algol68/execute/abs-bool-1.a68: Likewise.
+	* algol68/execute/abs-char-1.a68: Likewise.
+	* algol68/execute/abs-int-1.a68: Likewise.
+	* algol68/execute/abs-int-negative-1.a68: Likewise.
+	* algol68/execute/abs-int-negative-gnu-1.a68: Likewise.
+	* algol68/execute/acos-1.a68: Likewise.
+	* algol68/execute/affirm-int-1.a68: Likewise.
+	* algol68/execute/and-bits-1.a68: Likewise.
+	* algol68/execute/andf-1.a68: Likewise.
+	* algol68/execute/ascription-1.a68: Likewise.
+	* algol68/execute/asin-1.a68: Likewise.
+	* algol68/execute/assert-1.a68: Likewise.
+	* algol68/execute/assignation-char-1.a68: Likewise.
+	* algol68/execute/assignation-int-1.a68: Likewise.
+	* algol68/execute/assignation-int-2.a68: Likewise.
+	* algol68/execute/assignation-int-3.a68: Likewise.
+	* algol68/execute/assignation-int-4.a68: Likewise.
+	* algol68/execute/assignation-int-5.a68: Likewise.
+	* algol68/execute/assignation-multiple-1.a68: Likewise.
+	* algol68/execute/assignation-multiple-2.a68: Likewise.
+	* algol68/execute/assignation-struct-1.a68: Likewise.
+	* algol68/execute/assignation-struct-2.a68: Likewise.
+	* algol68/execute/atan-1.a68: Likewise.
+	* algol68/execute/balancing-1.a68: Likewise.
+	* algol68/execute/balancing-rows-1.a68: Likewise.
+	* algol68/execute/bin-1.a68: Likewise.
+	* algol68/execute/bin-negative-1.a68: Likewise.
+	* algol68/execute/bin-negative-gnu-1.a68: Likewise.
+	* algol68/execute/boolops-1.a68: Likewise.
+	* algol68/execute/call-1.a68: Likewise.
+	* algol68/execute/call-2.a68: Likewise.
+	* algol68/execute/case-clause-1.a68: Likewise.
+	* algol68/execute/case-clause-2.a68: Likewise.
+	* algol68/execute/case-clause-3.a68: Likewise.
+	* algol68/execute/case-clause-4.a68: Likewise.
+	* algol68/execute/closed-clause-1.a68: Likewise.
+	* algol68/execute/closed-clause-2.a68: Likewise.
+	* algol68/execute/collateral-clause-1.a68: Likewise.
+	* algol68/execute/collateral-clause-2.a68: Likewise.
+	* algol68/execute/collateral-clause-3.a68: Likewise.
+	* algol68/execute/collateral-clause-4.a68: Likewise.
+	* algol68/execute/collateral-clause-5.a68: Likewise.
+	* algol68/execute/collateral-clause-6.a68: Likewise.
+	* algol68/execute/completer-1.a68: Likewise.
+	* algol68/execute/completer-10.a68: Likewise.
+	* algol68/execute/completer-2.a68: Likewise.
+	* algol68/execute/completer-3.a68: Likewise.
+	* algol68/execute/completer-4.a68: Likewise.
+	* algol68/execute/completer-5.a68: Likewise.
+	* algol68/execute/completer-6.a68: Likewise.
+	* algol68/execute/completer-7.a68: Likewise.
+	* algol68/execute/completer-8.a68: Likewise.
+	* algol68/execute/completer-9.a68: Likewise.
+	* algol68/execute/cond-clause-1.a68: Likewise.
+	* algol68/execute/cond-clause-2.a68: Likewise.
+	* algol68/execute/cond-clause-3.a68: Likewise.
+	* algol68/execute/cond-clause-4.a68: Likewise.
+	* algol68/execute/cond-clause-5.a68: Likewise.
+	* algol68/execute/cond-clause-6.a68: Likewise.
+	* algol68/execute/cond-clause-7.a68: Likewise.
+	* algol68/execute/cond-clause-8.a68: Likewise.
+	* algol68/execute/cond-clause-9.a68: Likewise.
+	* algol68/execute/conformity-clause-1.a68: Likewise.
+	* algol68/execute/conformity-clause-2.a68: Likewise.
+	* algol68/execute/conformity-clause-3.a68: Likewise.
+	* algol68/execute/conformity-clause-4.a68: Likewise.
+	* algol68/execute/conformity-clause-5.a68: Likewise.
+	* algol68/execute/conformity-clause-6.a68: Likewise.
+	* algol68/execute/conformity-clause-7.a68: Likewise.
+	* algol68/execute/conformity-clause-8.a68: Likewise.
+	* algol68/execute/conformity-clause-9.a68: Likewise.
+	* algol68/execute/conj-1.a68: Likewise.
+	* algol68/execute/cos-1.a68: Likewise.
+	* algol68/execute/declarer-1.a68: Likewise.
+	* algol68/execute/declarer-2.a68: Likewise.
+	* algol68/execute/deprocedure-1.a68: Likewise.
+	* algol68/execute/deprocedure-2.a68: Likewise.
+	* algol68/execute/deref-1.a68: Likewise.
+	* algol68/execute/deref-2.a68: Likewise.
+	* algol68/execute/deref-3.a68: Likewise.
+	* algol68/execute/deref-4.a68: Likewise.
+	* algol68/execute/deref-5.a68: Likewise.
+	* algol68/execute/deref-6.a68: Likewise.
+	* algol68/execute/deref-7.a68: Likewise.
+	* algol68/execute/deref-8.a68: Likewise.
+	* algol68/execute/div-int-1.a68: Likewise.
+	* algol68/execute/divab-real-1.a68: Likewise.
+	* algol68/execute/elem-bits-1.a68: Likewise.
+	* algol68/execute/elems-1.a68: Likewise.
+	* algol68/execute/elems-2.a68: Likewise.
+	* algol68/execute/entier-1.a68: Likewise.
+	* algol68/execute/environment-enquiries-1.a68: Likewise.
+	* algol68/execute/environment-enquiries-2.a68: Likewise.
+	* algol68/execute/environment-enquiries-3.a68: Likewise.
+	* algol68/execute/environment-enquiries-4.a68: Likewise.
+	* algol68/execute/environment-enquiries-5.a68: Likewise.
+	* algol68/execute/environment-enquiries-6.a68: Likewise.
+	* algol68/execute/environment-enquiries-7.a68: Likewise.
+	* algol68/execute/environment-enquiries-8.a68: Likewise.
+	* algol68/execute/eq-bits-1.a68: Likewise.
+	* algol68/execute/eq-char-char-1.a68: Likewise.
+	* algol68/execute/eq-int-1.a68: Likewise.
+	* algol68/execute/eq-string-1.a68: Likewise.
+	* algol68/execute/eq-string-stride-1.a68: Likewise.
+	* algol68/execute/execute.exp: Likewise.
+	* algol68/execute/factorial-1.a68: Likewise.
+	* algol68/execute/flat-assignation-1.a68: Likewise.
+	* algol68/execute/flat-assignation-2.a68: Likewise.
+	* algol68/execute/flex-1.a68: Likewise.
+	* algol68/execute/flex-2.a68: Likewise.
+	* algol68/execute/flex-3.a68: Likewise.
+	* algol68/execute/flex-4.a68: Likewise.
+	* algol68/execute/flex-5.a68: Likewise.
+	* algol68/execute/formula-1.a68: Likewise.
+	* algol68/execute/formula-2.a68: Likewise.
+	* algol68/execute/fsize-1.a68: Likewise.
+	* algol68/execute/ge-int-1.a68: Likewise.
+	* algol68/execute/ge-string-stride-1.a68: Likewise.
+	* algol68/execute/gen-flex-1.a68: Likewise.
+	* algol68/execute/gen-heap-1.a68: Likewise.
+	* algol68/execute/gen-heap-2.a68: Likewise.
+	* algol68/execute/gen-heap-3.a68: Likewise.
+	* algol68/execute/gen-heap-bool-1.a68: Likewise.
+	* algol68/execute/gen-heap-int-1.a68: Likewise.
+	* algol68/execute/gen-heap-real-1.a68: Likewise.
+	* algol68/execute/gen-heap-struct-1.a68: Likewise.
+	* algol68/execute/gen-heap-struct-2.a68: Likewise.
+	* algol68/execute/gen-heap-struct-3.a68: Likewise.
+	* algol68/execute/gen-loc-1.a68: Likewise.
+	* algol68/execute/gen-loc-2.a68: Likewise.
+	* algol68/execute/gen-loc-3.a68: Likewise.
+	* algol68/execute/gen-loc-4.a68: Likewise.
+	* algol68/execute/gen-multiple-1.a68: Likewise.
+	* algol68/execute/gen-union-1.a68: Likewise.
+	* algol68/execute/gen-union-2.a68: Likewise.
+	* algol68/execute/gen-union-3.a68: Likewise.
+	* algol68/execute/goto-1.a68: Likewise.
+	* algol68/execute/goto-2.a68: Likewise.
+	* algol68/execute/goto-3.a68: Likewise.
+	* algol68/execute/goto-4.a68: Likewise.
+	* algol68/execute/goto-5.a68: Likewise.
+	* algol68/execute/gt-int-1.a68: Likewise.
+	* algol68/execute/gt-string-stride-1.a68: Likewise.
+	* algol68/execute/i-1.a68: Likewise.
+	* algol68/execute/i-2.a68: Likewise.
+	* algol68/execute/identification-1.a68: Likewise.
+	* algol68/execute/identification-2.a68: Likewise.
+	* algol68/execute/identity-declaration-1.a68: Likewise.
+	* algol68/execute/identity-declaration-2.a68: Likewise.
+	* algol68/execute/identity-declaration-3.a68: Likewise.
+	* algol68/execute/identity-declaration-4.a68: Likewise.
+	* algol68/execute/identity-declaration-5.a68: Likewise.
+	* algol68/execute/identity-declaration-multiple-1.a68: Likewise.
+	* algol68/execute/identity-declaration-multiple-2.a68: Likewise.
+	* algol68/execute/identity-declaration-multiple-3.a68: Likewise.
+	* algol68/execute/identity-declaration-multiple-5.a68: Likewise.
+	* algol68/execute/identity-declaration-multiple-empty-1.a68: Likewise.
+	* algol68/execute/identity-declaration-multiple-empty-2.a68: Likewise.
+	* algol68/execute/identity-declaration-multiple-empty-3.a68: Likewise.
+	* algol68/execute/identity-declaration-multiple-empty-4.a68: Likewise.
+	* algol68/execute/identity-declaration-struct-1.a68: Likewise.
+	* algol68/execute/infinity-1.a68: Likewise.
+	* algol68/execute/le-ge-bits-1.a68: Likewise.
+	* algol68/execute/le-int-1.a68: Likewise.
+	* algol68/execute/le-string-stride-1.a68: Likewise.
+	* algol68/execute/leng-shorten-bits-1.a68: Likewise.
+	* algol68/execute/leng-shorten-ints-1.a68: Likewise.
+	* algol68/execute/leng-shorten-reals-1.a68: Likewise.
+	* algol68/execute/lengths-shorths-1.a68: Likewise.
+	* algol68/execute/lisp-1.a68: Likewise.
+	* algol68/execute/lisp-2.a68: Likewise.
+	* algol68/execute/ln-1.a68: Likewise.
+	* algol68/execute/log-1.a68: Likewise.
+	* algol68/execute/loop-1.a68: Likewise.
+	* algol68/execute/loop-10.a68: Likewise.
+	* algol68/execute/loop-11.a68: Likewise.
+	* algol68/execute/loop-12.a68: Likewise.
+	* algol68/execute/loop-13.a68: Likewise.
+	* algol68/execute/loop-14.a68: Likewise.
+	* algol68/execute/loop-2.a68: Likewise.
+	* algol68/execute/loop-3.a68: Likewise.
+	* algol68/execute/loop-4.a68: Likewise.
+	* algol68/execute/loop-5.a68: Likewise.
+	* algol68/execute/loop-6.a68: Likewise.
+
+2025-11-30  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* lib/algol68-dg.exp: New file.
+	* lib/algol68-torture.exp: Likewise.
+	* lib/algol68.exp: Likewise.
+
+2025-11-30  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/119864
+	* g++.dg/modules/omp-4_a.C: New test.
+	* g++.dg/modules/omp-4_b.C: New test.
+
+2025-11-29  Eczbek  <eczbek.void@gmail.com>
+	    Jason Merrill  <jason@redhat.com>
+
+	PR c++/116952
+	* g++.dg/cpp2a/lambda-uneval14.C: Revise incorrect test.
+	* g++.dg/cpp2a/lambda-uneval29.C: New test.
+
+2025-11-29  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122758
+	* g++.dg/cpp26/erroneous5.C: New test.
+	* g++.dg/cpp26/erroneous6.C: New test.
+
+2025-11-28  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/122844
+	* gcc.dg/vect/vect-pr122844.c: New testcase.
+
+2025-11-28  Tobias Burnus  <tburnus@baylibre.com>
+
+	PR c/122892
+	* gfortran.dg/gomp/allocate-15.f90: Use another allocator as
+	omp_{cgroup,pteam}_mem_alloc is invalid for non-local static vars.
+	* gfortran.dg/gomp/allocate-7.f90: Likewise.
+	* gfortran.dg/gomp/allocate-static-3.f90: New test.
+
+2025-11-28  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/119969
+	* g++.dg/torture/pr119969.C: New test.
+
+2025-11-28  Mark Zhuang  <mark.zhuang@spacemit.com>
+
+	* gcc.target/riscv/predef-smt-1.c: New test.
+
+2025-11-28  Jakub Jelinek  <jakub@redhat.com>
+
+	PR tree-optimization/122733
+	* gcc.dg/match-shift-cmp-4.c: New test.
+	* gcc.dg/match-shift-cmp-5.c: New test.
+
+2025-11-28  Tamar Christina  <tamar.christina@arm.com>
+
+	PR middle-end/122890
+	* g++.target/aarch64/pr122890.C: New test.
+
+2025-11-27  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/121506
+	* gcc.dg/pr121506.c: New test.
+
+2025-11-27  Matthieu Longo  <matthieu.longo@arm.com>
+
+	* gcc.target/aarch64/build-attributes/build-attribute-define-nok.c: New test.
+	* gcc.target/aarch64/build-attributes/build-attribute-define-ok.c: New test.
+
+2025-11-27  Wilco Dijkstra  <wilco.dijkstra@arm.com>
+
+	* gcc.target/aarch64/ffs.c: Improve test.
+
+2025-11-27  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	* c-c++-common/Wstringop-overflow.c: Xfail, PR 122881.
+
+2025-11-27  Robin Dapp  <rdapp@ventanamicro.com>
+
+	PR tree-optimization/122855
+	PR tree-optimization/122850
+	* gcc.dg/vect/pr122850.c: New test.
+	* gcc.dg/vect/pr122855.c: New test.
+
+2025-11-27  Pan Li  <pan2.li@intel.com>
+
+	* gcc.target/riscv/rvv/autovec/pr121959-run-1.c: Update
+	the reference for run test.
+
+2025-11-27  Dhruv Chawla  <dhruvc@nvidia.com>
+
+	PR tree-optimization/122733
+	* gcc.dg/match-shift-cmp-1.c: Update test to only check
+	equality.
+	* gcc.dg/match-shift-cmp-2.c: Likewise.
+	* gcc.dg/match-shift-cmp-3.c: Likewise.
+	* gcc.dg/match-shift-cmp-4.c: Removed.
+
+2025-11-27  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/122885
+	* gcc.dg/torture/pr122873.c: New testcase.
+
+2025-11-26  Jeff Law  <jlaw@ventanamicro.com>
+
+	Revert:
+	2025-11-26  Zhongyao Chen  <chenzhongyao.hit@gmail.com>
+
+	* gcc.target/riscv/predef-profiles-1.c: New test for __riscv_rvi20u64.
+	* gcc.target/riscv/predef-profiles-2.c: New test for __riscv_rvi20u32.
+	* gcc.target/riscv/predef-profiles-3.c: New test for __riscv_rva20u64.
+	* gcc.target/riscv/predef-profiles-4.c: New test for __riscv_rva22u64.
+	* gcc.target/riscv/predef-profiles-5.c: New test for __riscv_rva23u64.
+	* gcc.target/riscv/predef-profiles-6.c: New test for __riscv_rva23s64.
+	* gcc.target/riscv/predef-profiles-7.c: New test for __riscv_rvb23u64.
+	* gcc.target/riscv/predef-profiles-8.c: New test for __riscv_rvb23s64.
+
+2025-11-26  Alejandro Colomar  <alx@kernel.org>
+
+	* gcc.dg/maxof-bitint.c: New test.
+	* gcc.dg/maxof-bitint575.c: New test.
+	* gcc.dg/maxof-compile.c: New test.
+	* gcc.dg/maxof-pedantic-errors.c: New test.
+	* gcc.dg/maxof-pedantic.c: New test.
+
+2025-11-26  Jeff Law  <jlaw@ventanamicro.com>
+
+	PR rtl-optimization/122735
+	* gcc.dg/torture/pr122735.c: New test.
+
+2025-11-26  Tobias Burnus  <tburnus@baylibre.com>
+
+	* gfortran.dg/gomp/crayptr2.f90: Move dg-error line.
+	* gfortran.dg/gomp/declare-target-2.f90: Extend.
+	* gfortran.dg/gomp/declare-target-4.f90: Update comment,
+	enable one test.
+	* gfortran.dg/gomp/declare-target-5.f90: Update dg- wording,
+	add new test.
+	* gfortran.dg/gomp/declare-target-indirect-2.f90: Expect
+	'device_type(any)' in scan-tree-dump.
+	* gfortran.dg/gomp/declare-target-6.f90: New test.
+	* gfortran.dg/gomp/dyn_groupprivate-1.f90: New test.
+	* gfortran.dg/gomp/dyn_groupprivate-2.f90: New test.
+	* gfortran.dg/gomp/groupprivate-1.f90: New test.
+	* gfortran.dg/gomp/groupprivate-2.f90: New test.
+	* gfortran.dg/gomp/groupprivate-3.f90: New test.
+	* gfortran.dg/gomp/groupprivate-4.f90: New test.
+	* gfortran.dg/gomp/groupprivate-5.f90: New test.
+	* gfortran.dg/gomp/groupprivate-6.f90: New test.
+
+2025-11-26  Marek Polacek  <polacek@redhat.com>
+
+	PR c++/121325
+	* g++.dg/cpp26/pack-indexing18.C: New test.
+
+2025-11-26  Richard Earnshaw  <rearnsha@arm.com>
+
+	PR target/122867
+	* gcc.target/arm/cbz-range.c: New test.
+
+2025-11-26  Tamar Christina  <tamar.christina@arm.com>
+
+	PR tree-optimization/122861
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_10.c: New test.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_11.c: New test.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_12.c: New test.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_13.c: New test.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_14.c: New test.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_15.c: New test.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_9.c: New test.
+	* gcc.target/aarch64/vect-early-break-cbranch_4.c: New test.
+	* gcc.target/aarch64/vect-early-break-cbranch_5.c: New test.
+
+2025-11-26  Jakub Jelinek  <jakub@redhat.com>
+
+	* lib/target-supports.exp: Set cxx_default to c++20 rather than
+	c++17.
+	* lib/g++-dg.exp (g++-std-flags): Reorder list to put 20 first
+	and 17 after 26.
+	* g++.dg/debug/pr80461.C (bar): Use v = v + 1; instead of ++v;.
+	* g++.dg/debug/pr94459.C: Add -std=gnu++17 to dg-options.
+	* g++.dg/diagnostic/virtual-constexpr.C: Remove dg-skip-if,
+	instead use { c++11 && c++17_down } effective target instead of
+	c++11.
+	* g++.dg/guality/pr67192.C: Add -std=gnu++17.
+	* g++.dg/torture/pr84961-1.C: Likewise.
+	* g++.dg/torture/pr84961-2.C: Likewise.
+	* g++.dg/torture/pr51482.C (anim_track_bez_wvect::tangent): Cast
+	key_class to int before multiplying it by float.
+	* g++.dg/torture/stackalign/unwind-4.C (foo): Use g_a = g_a + 1;
+	instead of g_a++;.
+	* g++.dg/tree-prof/partition1.C (bar): Use l = l + 1; return l;
+	instead of return ++l;.
+	* obj-c++.dg/exceptions-3.mm: Add -std=gnu++17.
+	* obj-c++.dg/exceptions-5.mm: Likewise.
+
+2025-11-26  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/122835
+	* gcc.dg/torture/pr122835.c: New test.
+
+2025-11-26  Jakub Jelinek  <jakub@redhat.com>
+
+	PR tree-optimization/119683
+	* gcc.dg/tree-ssa/pr119683.c: New test.
+
+2025-11-26  Richard Biener  <rguenther@suse.de>
+
+	* gcc.dg/vect/vect-simd-clone-22.c: Add -w.
+	* gcc.dg/vect/vect-simd-clone-23.c: Likewise.
+
+2025-11-26  Soumya AR  <soumyaa@nvidia.com>
+
+	* gcc.target/aarch64/aarch64-json-tunings/aarch64-json-tunings.exp: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/boolean-1.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/boolean-1.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/boolean-2.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/boolean-2.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/empty-brackets.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/empty-brackets.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/empty.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/empty.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/enum-1.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/enum-1.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/enum-2.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/enum-2.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/integer-1.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/integer-1.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/integer-2.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/integer-2.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/integer-3.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/integer-3.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/string-1.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/string-1.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/string-2.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/string-2.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/test-all.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/test-all.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/unidentified-key.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/unidentified-key.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/unsigned-1.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/unsigned-1.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/unsigned-2.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/unsigned-2.json: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/unsigned-3.c: New test.
+	* gcc.target/aarch64/aarch64-json-tunings/unsigned-3.json: New test.
+
+2025-11-26  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/104650
+	* gfortran.dg/pdt_70.f03: New test.
+
+2025-11-26  Dhruv Chawla  <dhruvc@nvidia.com>
+
+	PR middle-end/116815
+	* gcc.target/aarch64/pr116815-1.c: New test.
+	* gcc.target/aarch64/pr116815-2.c: Likewise.
+	* gcc.target/aarch64/pr116815-3.c: Likewise.
+
+2025-11-26  Pan Li  <pan2.li@intel.com>
+
+	* gcc.target/riscv/sat/sat_arith.h: Add test helper macros.
+	* gcc.target/riscv/sat/sat_u_mul-8-u16-from-u128.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-8-u16-from-u32.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-8-u16-from-u64.rv32.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-8-u16-from-u64.rv64.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-8-u32-from-u128.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-8-u32-from-u64.rv32.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-8-u32-from-u64.rv64.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-8-u64-from-u128.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-8-u8-from-u128.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-8-u8-from-u16.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-8-u8-from-u32.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-8-u8-from-u64.rv32.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-8-u8-from-u64.rv64.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-run-8-u16-from-u128.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-run-8-u16-from-u32.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-run-8-u16-from-u64.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-run-8-u32-from-u128.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-run-8-u32-from-u64.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-run-8-u64-from-u128.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-run-8-u8-from-u128.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-run-8-u8-from-u16.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-run-8-u8-from-u32.c: New test.
+	* gcc.target/riscv/sat/sat_u_mul-run-8-u8-from-u64.c: New test.
+
+2025-11-26  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	PR tree-optimization/122847
+	* gcc.dg/torture/pr122847-1.c: New test.
+
+2025-11-25  Lúcio Boari Fleury  <lucboari@gmail.com>
+
+	* rust/compile/macros/mbe/macro-issue3608.rs: New Test. The test skips an issue at line 11
+
+2025-11-25  Philip Herron  <herron.philip@googlemail.com>
+
+	* rust/compile/gat1.rs: New test.
+	* rust/execute/torture/gat1.rs: New test.
+
+2025-11-25  Lucas Ly Ba  <lucas.ly-ba@outlook.com>
+
+	* rust/compile/issue-3971.rs: New test.
+
+2025-11-25  Lucas Ly Ba  <lucas.ly-ba@outlook.com>
+
+	* rust/compile/issue-4226.rs: New test.
+
+2025-11-25  Yap Zhi Heng  <yapzhhg@gmail.com>
+
+	* rust/compile/e0579-neg-float-fail.rs: New file.
+	* rust/compile/e0579-neg-float.rs: New file.
+
+2025-11-25  Lucas Ly Ba  <lucas.ly-ba@outlook.com>
+
+	* rust/compile/issue-4262.rs: New test.
+
+2025-11-25  lenny.chiadmi-delage  <lenny.chiadmi-delage@epita.fr>
+
+	* rust/compile/issue-4140-1.rs: Fixes test.
+	* rust/compile/issue-4140-2.rs: Likewise.
+
+2025-11-25  lenny.chiadmi-delage  <lenny.chiadmi-delage@epita.fr>
+
+	* rust/compile/issue-4140-1.rs: New test.
+	* rust/compile/issue-4140-2.rs: Likewise.
+
+2025-11-25  David Malcolm  <dmalcolm@redhat.com>
+
+	* gcc.dg/analyzer/strchr-1.c: Drop include of <string.h>, and use
+	__builtin_strchr throughout rather than strchr to avoid const
+	correctness issues when the header implements strchr with a C23
+	const-preserving macro.  Drop "const" from two vars.
+
+2025-11-25  Tamar Christina  <tamar.christina@arm.com>
+
+	PR target/118974
+	* gcc.target/aarch64/sve/pr119351.c: Update codegen.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch.c: Likewise.
+	* gcc.target/aarch64/vect-early-break-cbranch.c: Likewise.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_2.c: New test.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_3.c: New test.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_4.c: New test.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_5.c: New test.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_7.c: New test.
+	* gcc.target/aarch64/sve/vect-early-break-cbranch_8.c: New test.
+	* gcc.target/aarch64/vect-early-break-cbranch_2.c: New test.
+	* gcc.target/aarch64/vect-early-break-cbranch_3.c: New test.
+
+2025-11-25  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122699
+	* g++.dg/modules/tpl-friend-21_a.C: New test.
+	* g++.dg/modules/tpl-friend-21_b.C: New test.
+
+2025-11-25  Andre Vieira  <andre.simoesdiasvieira@arm.com>
+
+	* gcc.dg/Wstringop-overflow-47.c: Adjust warnings to allow for 32-bit
+	stores.
+
+2025-11-25  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122789
+	* g++.dg/modules/concept-12_a.C: New test.
+	* g++.dg/modules/concept-12_b.C: New test.
+
+2025-11-25  Jason Merrill  <jason@redhat.com>
+
+	* g++.dg/modules/compile-std1.C: New test.
+	* g++.dg/modules/modules.exp: Only run it once.
+
+2025-11-25  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/120052
+	* c-c++-common/gomp/pr120052.c: New test.
+
+2025-11-25  Jakub Jelinek  <jakub@redhat.com>
+
+	PR testsuite/119931
+	* gcc.dg/vla-1.c (main): Hide x value from optimizers and use it after
+	the call as well.
+
+2025-11-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* g++.dg/DRs/dr2581-1.C (__STDC_ISO_10646__): xfail on non-Linux.
+	* g++.dg/DRs/dr2581-2.C: Likewise.
+	(__STDC_VERSION__): Expect error instead of warning on Solaris.
+
+2025-11-25  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/120564
+	* c-c++-common/gomp/pr120564.c: New test.
+
+2025-11-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* gcc.target/i386/pr120936-1.c: Restrict to *-*-linux*.
+	* gcc.target/i386/pr120936-2.c: Likewise.
+	* gcc.target/i386/pr120936-4.c: Likewise.
+	* gcc.target/i386/pr120936-5.c: Likewise.
+	* gcc.target/i386/pr120936-9.c: Likewise.
+	* gcc.target/i386/pr120936-11.c: Likewise.
+
+2025-11-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* gcc.target/i386/pr120936-3.c: Restrict to *-*-linux*.
+	* gcc.target/i386/pr120936-6.c: Likewise.
+	* gcc.target/i386/pr120936-10.c: Likewise.
+	* gcc.target/i386/pr120936-12.c: Likewise.
+
+2025-11-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* lib/target-supports.exp (add_options_for_check_function_bodies):
+	New proc.
+	* g++.target/i386/cf_check-3.C: Add dg-add-options
+	check_function_bodies.
+	* g++.target/i386/cf_check-4.C: Likewise.
+	* gcc.target/i386/builtin-copysign-2.c: Likewise.
+	* gcc.target/i386/builtin-copysign-3.c: Likewise.
+	* gcc.target/i386/builtin-copysign-4.c: Likewise.
+	* gcc.target/i386/builtin-copysign-5.c: Likewise.
+	* gcc.target/i386/builtin-copysign-6.c: Likewise.
+	* gcc.target/i386/builtin-copysign-7.c: Likewise.
+	* gcc.target/i386/builtin-copysign-8a.c: Likewise.
+	* gcc.target/i386/builtin-copysign-8b.c: Likewise.
+	* gcc.target/i386/builtin-fabs-1.c: Likewise.
+	* gcc.target/i386/builtin-memmove-10.c: Likewise.
+	* gcc.target/i386/builtin-memmove-11a.c: Likewise.
+	* gcc.target/i386/builtin-memmove-11b.c: Likewise.
+	* gcc.target/i386/builtin-memmove-11c.c: Likewise.
+	* gcc.target/i386/builtin-memmove-12.c: Likewise.
+	* gcc.target/i386/builtin-memmove-13.c: Likewise.
+	* gcc.target/i386/builtin-memmove-14.c: Likewise.
+	* gcc.target/i386/builtin-memmove-15.c: Likewise.
+	* gcc.target/i386/builtin-memmove-1a.c: Likewise.
+	* gcc.target/i386/builtin-memmove-1b.c: Likewise.
+	* gcc.target/i386/builtin-memmove-1c.c: Likewise.
+	* gcc.target/i386/builtin-memmove-1d.c: Likewise.
+	* gcc.target/i386/builtin-memmove-2a.c: Likewise.
+	* gcc.target/i386/builtin-memmove-2b.c: Likewise.
+	* gcc.target/i386/builtin-memmove-2c.c: Likewise.
+	* gcc.target/i386/builtin-memmove-2d.c: Likewise.
+	* gcc.target/i386/builtin-memmove-3a.c: Likewise.
+	* gcc.target/i386/builtin-memmove-3b.c: Likewise.
+	* gcc.target/i386/builtin-memmove-3c.c: Likewise.
+	* gcc.target/i386/builtin-memmove-4a.c: Likewise.
+	* gcc.target/i386/builtin-memmove-4b.c: Likewise.
+	* gcc.target/i386/builtin-memmove-4c.c: Likewise.
+	* gcc.target/i386/builtin-memmove-5a.c: Likewise.
+	* gcc.target/i386/builtin-memmove-5b.c: Likewise.
+	* gcc.target/i386/builtin-memmove-5c.c: Likewise.
+	* gcc.target/i386/builtin-memmove-6.c: Likewise.
+	* gcc.target/i386/builtin-memmove-7.c: Likewise.
+	* gcc.target/i386/builtin-memmove-8.c: Likewise.
+	* gcc.target/i386/builtin-memmove-9.c: Likewise.
+	* gcc.target/i386/cf_check-11.c: Likewise.
+	* gcc.target/i386/cf_check-7.c: Likewise.
+	* gcc.target/i386/pr120936-1.c: Likewise.
+	* gcc.target/i386/pr120936-11.c: Likewise.
+	* gcc.target/i386/pr120936-2.c: Likewise.
+	* gcc.target/i386/pr120936-4.c: Likewise.
+	* gcc.target/i386/pr120936-5.c: Likewise.
+	* gcc.target/i386/pr120936-9.c: Likewise.
+	* g++.target/i386/memset-pr101366-1.C: Switch to dg-add-options
+	check_function_bodies.
+	* g++.target/i386/memset-pr101366-2.C: Likewise.
+	* g++.target/i386/memset-pr108585-1a.C: Likewise.
+	* g++.target/i386/memset-pr108585-1b.C: Likewise.
+	* g++.target/i386/memset-pr118276-1a.C: Likewise.
+	* g++.target/i386/memset-pr118276-1b.C: Likewise.
+	* g++.target/i386/memset-pr118276-1c.C: Likewise.
+	* gcc.target/i386/memcpy-pr120683-1.c: Likewise.
+	* gcc.target/i386/memcpy-pr120683-2.c: Likewise.
+	* gcc.target/i386/memcpy-pr120683-3.c: Likewise.
+	* gcc.target/i386/memcpy-pr120683-4.c: Likewise.
+	* gcc.target/i386/memcpy-pr120683-5.c: Likewise.
+	* gcc.target/i386/memcpy-pr120683-6.c: Likewise.
+	* gcc.target/i386/memcpy-pr120683-7.c: Likewise.
+	* gcc.target/i386/memcpy-strategy-12.c: Likewise.
+	* gcc.target/i386/memset-pr120683-1.c: Likewise.
+	* gcc.target/i386/memset-pr120683-10.c: Likewise.
+	* gcc.target/i386/memset-pr120683-11.c: Likewise.
+	* gcc.target/i386/memset-pr120683-12.c: Likewise.
+	* gcc.target/i386/memset-pr120683-13.c: Likewise.
+	* gcc.target/i386/memset-pr120683-14.c: Likewise.
+	* gcc.target/i386/memset-pr120683-15.c: Likewise.
+	* gcc.target/i386/memset-pr120683-16.c: Likewise.
+	* gcc.target/i386/memset-pr120683-17.c: Likewise.
+	* gcc.target/i386/memset-pr120683-18.c: Likewise.
+	* gcc.target/i386/memset-pr120683-19.c: Likewise.
+	* gcc.target/i386/memset-pr120683-2.c: Likewise.
+	* gcc.target/i386/memset-pr120683-20.c: Likewise.
+	* gcc.target/i386/memset-pr120683-21.c: Likewise.
+	* gcc.target/i386/memset-pr120683-22.c: Likewise.
+	* gcc.target/i386/memset-pr120683-23.c: Likewise.
+	* gcc.target/i386/memset-pr120683-3.c: Likewise.
+	* gcc.target/i386/memset-pr120683-4.c: Likewise.
+	* gcc.target/i386/memset-pr120683-5.c: Likewise.
+	* gcc.target/i386/memset-pr120683-6.c: Likewise.
+	* gcc.target/i386/memset-pr120683-7.c: Likewise.
+	* gcc.target/i386/memset-pr120683-8.c: Likewise.
+	* gcc.target/i386/memset-pr120683-9.c: Likewise.
+	* gcc.target/i386/memset-pr70308-1a.c: Likewise.
+	* gcc.target/i386/memset-pr70308-1b.c: Likewise.
+	* gcc.target/i386/memset-strategy-10.c: Likewise.
+	* gcc.target/i386/memset-strategy-13.c: Likewise.
+	* gcc.target/i386/memset-strategy-25.c: Likewise.
+	* gcc.target/i386/memset-strategy-28.c: Likewise.
+	* gcc.target/i386/memset-strategy-29.c: Likewise.
+	* gcc.target/i386/memset-strategy-30.c: Likewise.
+	* gcc.target/i386/pr111673.c: Likewise.
+	* gcc.target/i386/pr82142a.c: Likewise.
+	* gcc.target/i386/pr82142b.c: Likewise.
+	* gcc.target/i386/pr92080-17.c: Likewise.
+
+2025-11-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* gcc.dg/debug/dwarf2/dwarf-btf-decl-tag-1.c
+	(scan-assembler-times): Switch to brace quotes.
+	Allow for alternative assembler syntax.
+	* gcc.dg/debug/dwarf2/dwarf-btf-type-tag-1.c: Likewise.
+	* gcc.dg/debug/dwarf2/dwarf-btf-type-tag-10.c: Likewise.
+	* gcc.dg/debug/dwarf2/dwarf-btf-type-tag-2.c: Likewise.
+	* gcc.dg/debug/dwarf2/dwarf-btf-type-tag-4.c: Likewise.
+	* gcc.dg/debug/dwarf2/dwarf-btf-type-tag-5.c: Likewise.
+
+2025-11-24  Robin Dapp  <rdapp.gcc@gmail.com>
+
+	* gcc.target/riscv/rvv/autovec/pr121582.c: New test.
+
+2025-11-24  Robin Dapp  <rdapp@ventanamicro.com>
+
+	PR tree-optimization/122797
+	* gcc.dg/vect/pr122797.c: New test.
+
+2025-11-24  Robin Dapp  <rdapp@ventanamicro.com>
+
+	* gcc.target/powerpc/builtins-1.c: Adjust test expectation.
+	* gcc.target/riscv/rvv/autovec/pr118019-3.c: New test.
+
+2025-11-24  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+	    Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/116835
+	* gcc.dg/torture/pr116835.c: New test.
+	* gcc.dg/tree-ssa/phiprop-6.c: New test.
+	* gcc.dg/tree-ssa/phiprop-7.c: New test.
+
+2025-11-24  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	PR tree-optimization/60183
+	* gcc.dg/tree-ssa/phiprop-5.c: New test.
+
+2025-11-24  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	PR tree-optimization/60183
+	* gcc.dg/tree-ssa/phiprop-3.c: New test.
+	* gcc.dg/tree-ssa/phiprop-4.c: New test.
+
+2025-11-24  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	* g++.dg/tree-ssa/simple-dse-3.C: un-xfail.
+
+2025-11-24  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	PR tree-optimization/122633
+	* g++.dg/tree-ssa/simple-dse-1.C: New test.
+	* g++.dg/tree-ssa/simple-dse-2.C: New test.
+	* g++.dg/tree-ssa/simple-dse-3.C: New test.
+	* g++.dg/tree-ssa/simple-dse-4.C: New test.
+
+2025-11-24  Marek Polacek  <polacek@redhat.com>
+
+	PR c++/119964
+	* g++.dg/cpp1y/defaulted1.C: New test.
+	* g++.dg/cpp1y/defaulted2.C: New test.
+
+2025-11-24  Yury Khrustalev  <yury.khrustalev@arm.com>
+
+	PR debug/121964
+	* g++.target/aarch64/dwarf-bit-stride-func.C: New test.
+	* g++.target/aarch64/dwarf-bit-stride-pragma.C: New test.
+	* g++.target/aarch64/dwarf-bit-stride-pragma-sme.C: New test.
+	* g++.target/aarch64/sve/dwarf-bit-stride.C: New test.
+	* gcc.target/aarch64/dwarf-bit-stride-func.c: New test.
+	* gcc.target/aarch64/dwarf-bit-stride-pragma.c: New test.
+	* gcc.target/aarch64/dwarf-bit-stride-pragma-sme.c: New test.
+	* gcc.target/aarch64/sve/dwarf-bit-stride.c: New test.
+
+2025-11-24  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/122766
+	* gfortran.dg/pdt_69.f03: New test.
+
+2025-11-24  Richard Biener  <rguenther@suse.de>
+
+	* gcc.dg/vect/bb-slp-41.c: Adjust dump scan.
+
+2025-11-24  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gnat.dg/object_overflow6.adb: New test.
+
+2025-11-24  liuhongt  <hongtao.liu@intel.com>
+
+	PR target/122503
+	* g++.target/i386/pr116896-1.C: Add -mtune=generic to
+	dg-options.
+	* gcc.target/i386/pr116896.c: Ditto.
+
+2025-11-23  Pan Li  <pan2.li@intel.com>
+
+	* gcc.dg/tree-ssa/bit_op_cvt.1.c: New test.
+	* gcc.dg/tree-ssa/bit_op_cvt.2.c: New test.
+	* gcc.dg/tree-ssa/bit_op_cvt.3.c: New test.
+	* gcc.dg/tree-ssa/bit_op_cvt.4.c: New test.
+	* gcc.dg/tree-ssa/bit_op_cvt.5.c: New test.
+	* gcc.dg/tree-ssa/bit_op_cvt.6.c: New test.
+	* gcc.dg/tree-ssa/bit_op_cvt.h: New test.
+
+2025-11-23  Kugan Vivekanandarajah  <kvivekananda@nvidia.com>
+
+	* gcc.dg/vect/vect-licm-hoist-1.c: New.
+	* gcc.dg/vect/vect-licm-hoist-2.c: Likewise.
+
+2025-11-23  Sandra Loosemore  <sloosemore@baylibre.com>
+
+	* c-c++-common/gomp/delim-declare-variant-6.c (f3): Use "x86"
+	instead of "x86_64" in the arch selector, to match both 64- and
+	32-bit targets.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122636
+	* g++.dg/modules/internal-19_a.C: New test.
+	* g++.dg/modules/internal-19_b.C: New test.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* g++.dg/cpp2a/is-pointer-interconvertible-base-of2.C: New test.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* g++.dg/cpp2a/is-layout-compatible4.C: New test.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* g++.dg/cpp1z/has-unique-obj-representations5.C: New test.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* g++.dg/ext/is_destructible3.C: Add test for function type.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* g++.dg/ext/is_virtual_base_of_diagnostic2.C: Adjust
+	diagnostic.
+
+2025-11-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	* g++.dg/cpp2a/is-layout-compatible3.C: Adjust expected results.
+
+2025-11-22  Jeff Law  <jlaw@ventanamicro.com>
+
+	PR rtl-optimization/122701
+	* gcc.dg/torture/pr122701.c: New test.
+
+2025-11-22  Sandra Loosemore  <sloosemore@baylibre.com>
+	    Tobias Burnus  <tburnus@baylibre.com>
+
+	* c-c++-common/gomp/delim-declare-variant-1.c: New.
+	* c-c++-common/gomp/delim-declare-variant-2.c: New.
+	* c-c++-common/gomp/delim-declare-variant-3.c: New.
+	* c-c++-common/gomp/delim-declare-variant-4.c: New.
+	* c-c++-common/gomp/delim-declare-variant-5.c: New.
+	* c-c++-common/gomp/delim-declare-variant-6.c: New.
+	* c-c++-common/gomp/delim-declare-variant-7.c: New.
+	* c-c++-common/gomp/delim-declare-variant-8.c: New.
+	* c-c++-common/gomp/delim-declare-variant-9.c: New.
+
+2025-11-22  Sandra Loosemore  <sloosemore@baylibre.com>
+	    Julian Brown  <julian@codesourcery.com>
+	    waffl3x  <waffl3x@baylibre.com>
+
+	* g++.dg/gomp/delim-declare-variant-1.C: New.
+	* g++.dg/gomp/delim-declare-variant-2.C: New.
+	* g++.dg/gomp/delim-declare-variant-3.C: New.
+	* g++.dg/gomp/delim-declare-variant-4.C: New.
+	* g++.dg/gomp/delim-declare-variant-5.C: New.
+	* g++.dg/gomp/delim-declare-variant-6.C: New.
+	* g++.dg/gomp/delim-declare-variant-7.C: New.
+	* g++.dg/gomp/delim-declare-variant-40.C: New.
+	* g++.dg/gomp/delim-declare-variant-41.C: New.
+	* g++.dg/gomp/delim-declare-variant-50.C: New.
+	* g++.dg/gomp/delim-declare-variant-51.C: New.
+	* g++.dg/gomp/delim-declare-variant-52.C: New.
+	* g++.dg/gomp/delim-declare-variant-70.C: New.
+	* g++.dg/gomp/delim-declare-variant-71.C: New.
+
+2025-11-22  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122788
+	* g++.dg/cpp26/expansion-stmt27.C: New test.
+
+2025-11-22  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122185
+	* g++.dg/cpp1z/pr122185.C: New test.
+
+2025-11-22  zhaozhou  <zhaozhou@loongson.cn>
+
+	* gcc.target/loongarch/vector/lasx/lasx-struct-move.c: New test.
+
+2025-11-22  Deng Jianbo  <dengjianbo@loongson.cn>
+
+	* gcc.target/loongarch/bstrins-5.c: New test.
+	* gcc.target/loongarch/bstrins-6.c: New test.
+
+2025-11-22  zhaozhou  <zhaozhou@loongson.cn>
+
+	* gcc.target/loongarch/vector/lsx/lsx-vec-construct-opt.c:
+
+2025-11-22  Daniele Sahebi  <daniele@mkryss.me>
+	    Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122658
+	* g++.dg/cpp2a/consteval42.C: New test.
+
+2025-11-21  Vladimir N. Makarov  <vmakarov@redhat.com>
+
+	PR target/118358
+	* gcc.target/xstormy16/pr118358.c: New.
+
+2025-11-21  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/122762
+	PR tree-optimization/122736
+	PR tree-optimization/122790
+	* gcc.dg/vect/vect-simd-clone-23.c: New testcase.
+
+2025-11-21  Richard Biener  <rguenther@suse.de>
+
+	PR tree-optimization/122778
+	* gcc.dg/vect/vect-simd-clone-22.c: New testcase.
+	* gcc.dg/vect/vect-simd-clone-22a.c: Likewise.
+
+2025-11-21  Marek Polacek  <polacek@redhat.com>
+
+	PR c++/120529
+	* g++.dg/ext/reference_xes_from_temporary1.C: New test.
+
+2025-11-21  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/121445
+	* g++.dg/cpp1y/constexpr-121445.C: New test.
+
+2025-11-21  Jakub Jelinek  <jakub@redhat.com>
+
+	PR target/122598
+	* gcc.target/i386/pr122598.c: New test.
+
+2025-11-21  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/122773
+	* gcc.dg/pr122773.c: New test.
+
+2025-11-21  Loeka Rogge  <loeka@synopsys.com>
+	    Keith Packard  <keithp@keithp.com>
+
+	PR target/120375
+	* gcc.target/arc/no-barrel-shifter.c: New test.
+
+2025-11-21  Claudiu Zissulescu  <claziss@gmail.com>
+	    Michiel Derhaeg  <michiel@synopsys.com>
+
+	* gcc.target/arc/extvsi-3.c: New test.
+
+2025-11-21  Deng Jianbo  <dengjianbo@loongson.cn>
+
+	* gcc.target/loongarch/vector/lasx/lasx-builtin.c: Replace xvrepli
+	with xvldi.
+	* gcc.target/loongarch/vector/lasx/lasx-vec-init-2.c: Fix test.
+	* gcc.target/loongarch/vector/lsx/lsx-builtin.c: Repalce vrepli with
+	vldi.
+	* gcc.target/loongarch/vrepli.c: Ditto.
+	* gcc.target/loongarch/vector/lasx/lasx-xvldi-2.c: New test.
+	* gcc.target/loongarch/vector/lsx/lsx-vldi-2.c: New test.
+
+2025-11-20  Kito Cheng  <kito.cheng@sifive.com>
+
+	* gcc.target/riscv/pr113715.c: New test.
+	* gcc.target/riscv/rv32e_zcmp.c: Update expected output for
+	test_popretz.
+	* gcc.target/riscv/rv32i_zcmp.c: Likewise.
+
+2025-11-20  Pan Li  <pan2.li@intel.com>
+
+	PR target/122692
+	* g++.target/riscv/pr122692-run-1.C: New test.
+	* g++.target/riscv/pr122692-run-2.C: New test.
+
+2025-11-20  Xi Ruoyao  <xry111@xry111.site>
+
+	PR target/122695
+	* gcc.target/loongarch/pr122695-1.c: New test.
+	* gcc.target/loongarch/pr122695-2.c: New test.
+
+2025-11-20  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/120876
+	* g++.dg/parse/crash81.C: New test.
+
 2025-11-19  Andrew MacLeod  <amacleod@redhat.com>
 
 	PR tree-optimization/122756

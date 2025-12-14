@@ -23,7 +23,7 @@ H
 UrlSuffix(gcc/Preprocessor-Options.html#index-H) LangUrlSuffix_D(gdc/Code-Generation.html#index-H) LangUrlSuffix_Fortran(gfortran/Preprocessing-Options.html#index-H)
 
 I
-UrlSuffix(gcc/Directory-Options.html#index-I) LangUrlSuffix_D(gdc/Directory-Options.html#index-I)
+UrlSuffix(gcc/Directory-Options.html#index-I) LangUrlSuffix_D(gdc/Directory-Options.html#index-I) LangUrlSuffix_Algol68(ga68/Directory-options.html#index-I)
 
 M
 UrlSuffix(gcc/Preprocessor-Options.html#index-M) LangUrlSuffix_D(gdc/Code-Generation.html#index-M)
@@ -321,6 +321,9 @@ UrlSuffix(gcc/C_002b_002b-Dialect-Options.html#index-Wdeprecated-literal-operato
 
 Wdeprecated-non-prototype
 UrlSuffix(gcc/Warning-Options.html#index-Wdeprecated-non-prototype)
+
+Wdeprecated-openmp
+UrlSuffix(gcc/Warning-Options.html#index-Wdeprecated-openmp) LangUrlSuffix_Fortran(gfortran/Error-and-Warning-Options.html#index-Wdeprecated-openmp)
 
 Wdeprecated-variadic-comma-omission
 UrlSuffix(gcc/C_002b_002b-Dialect-Options.html#index-Wdeprecated-variadic-comma-omission)

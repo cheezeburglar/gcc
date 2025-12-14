@@ -195,6 +195,7 @@ init_internal_fns ()
 #define check_ptrs_direct { 0, 0, false }
 #define crc_direct { 1, -1, true }
 #define reduc_sbool_direct { 0, 0, true }
+#define select_vl_direct { 2, 0, false }
 
 const direct_internal_fn_info direct_internal_fn_array[IFN_LAST + 1] = {
 #define DEF_INTERNAL_FN(CODE, FLAGS, FNSPEC) not_direct,
@@ -4183,6 +4184,9 @@ expand_reduc_sbool_optab_fn (internal_fn fn, gcall *stmt, direct_optab optab)
 #define expand_check_ptrs_optab_fn(FN, STMT, OPTAB) \
   expand_direct_optab_fn (FN, STMT, OPTAB, 4)
 
+#define expand_select_vl_optab_fn(FN, STMT, OPTAB) \
+  expand_convert_optab_fn (FN, STMT, OPTAB, 3)
+
 /* Expanders for optabs that can use expand_convert_optab_fn.  */
 
 #define expand_unary_convert_optab_fn(FN, STMT, OPTAB) \
@@ -4299,6 +4303,7 @@ multi_vector_optab_supported_p (convert_optab optab, tree_pair types,
 #define direct_vec_set_optab_supported_p direct_optab_supported_p
 #define direct_vec_extract_optab_supported_p convert_optab_supported_p
 #define direct_reduc_sbool_optab_supported_p direct_optab_supported_p
+#define direct_select_vl_optab_supported_p convert_optab_supported_p
 
 /* Return the optab used by internal function FN.  */
 
@@ -5001,6 +5006,7 @@ internal_fn_len_index (internal_fn fn)
   switch (fn)
     {
     case IFN_LEN_LOAD:
+      return 3;
     case IFN_LEN_STORE:
       return 2;
 
@@ -5064,6 +5070,9 @@ internal_fn_else_index (internal_fn fn)
     case IFN_COND_NOT:
     case IFN_COND_LEN_NEG:
     case IFN_COND_LEN_NOT:
+      return 2;
+
+    case IFN_LEN_LOAD:
       return 2;
 
     case IFN_COND_ADD:
@@ -5396,7 +5405,7 @@ internal_len_load_store_bias (internal_fn ifn, machine_mode mode)
 {
   optab optab = direct_internal_fn_optab (ifn);
   insn_code icode = direct_optab_handler (optab, mode);
-  int bias_no = 3;
+  int bias_idx = internal_fn_len_index (ifn) + 1;
 
   if (icode == CODE_FOR_nothing)
     {
@@ -5407,22 +5416,23 @@ internal_len_load_store_bias (internal_fn ifn, machine_mode mode)
 	{
 	  /* Try MASK_LEN_LOAD.  */
 	  optab = direct_internal_fn_optab (IFN_MASK_LEN_LOAD);
+	  bias_idx = internal_fn_len_index (IFN_MASK_LEN_LOAD) + 1;
 	}
       else
 	{
 	  /* Try MASK_LEN_STORE.  */
 	  optab = direct_internal_fn_optab (IFN_MASK_LEN_STORE);
+	  bias_idx = internal_fn_len_index (IFN_MASK_LEN_STORE) + 1;
 	}
       icode = convert_optab_handler (optab, mode, mask_mode);
-      bias_no = 4;
     }
 
   if (icode != CODE_FOR_nothing)
     {
       /* For now we only support biases of 0 or -1.  Try both of them.  */
-      if (insn_operand_matches (icode, bias_no, GEN_INT (0)))
+      if (insn_operand_matches (icode, bias_idx, GEN_INT (0)))
 	return 0;
-      if (insn_operand_matches (icode, bias_no, GEN_INT (-1)))
+      if (insn_operand_matches (icode, bias_idx, GEN_INT (-1)))
 	return -1;
     }
 

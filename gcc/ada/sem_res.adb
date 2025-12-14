@@ -4486,21 +4486,6 @@ package body Sem_Res is
                   Set_Do_Range_Check (Expression (A));
                end if;
 
-            --  If the actual is a function call that returns a limited
-            --  unconstrained object that needs finalization, create a
-            --  transient scope for it, so that it can receive the proper
-            --  finalization list.
-
-            elsif Expander_Active
-              and then Nkind (A) = N_Function_Call
-              and then Is_Limited_Record (Etype (F))
-              and then not Is_Constrained (Etype (F))
-              and then (Needs_Finalization (Etype (F))
-                         or else Has_Task (Etype (F)))
-            then
-               Establish_Transient_Scope (A, Manage_Sec_Stack => False);
-               Resolve (A, Etype (F));
-
             --  A small optimization: if one of the actuals is a concatenation
             --  create a block around a procedure call to recover stack space.
             --  This alleviates stack usage when several procedure calls in
@@ -7063,10 +7048,11 @@ package body Sem_Res is
 
       --  b) Subprograms that are ignored ghost entities do not return anything
 
-      --  c) Calls to a build-in-place function, since such functions may
-      --  allocate their result directly in a target object, and cases where
-      --  the result does get allocated in the secondary stack are checked for
-      --  within the specialized Exp_Ch6 procedures for expanding those
+      --  c) Calls to a build-in-place function, since such functions allocate
+      --  their result directly in the target object or on the secondary stack,
+      --  and cases where the target object needs to be created and destroyed
+      --  on exit to the context, or the secondary stack is used, are checked
+      --  for within the specialized Exp_Ch6 procedures for expanding those
       --  build-in-place calls.
 
       --  d) Calls to inlinable expression functions do not use the secondary
@@ -7767,6 +7753,11 @@ package body Sem_Res is
       Decl  : Node_Id;
       Local : Entity_Id := Empty;
 
+      Save_Hidden_Map : constant Elist_Id := New_Elmt_List;
+      --  Stores the map of identifiers, and corresponding entities, that
+      --  temporarily loose visibility due to homonym declarations in the
+      --  current declare expression.
+
       function Replace_Local (N  : Node_Id) return Traverse_Result;
       --  Use a tree traversal to replace each occurrence of the name of
       --  a local object declared in the construct, with the corresponding
@@ -7831,6 +7822,19 @@ package body Sem_Res is
                   Next (D);
                end loop;
             end;
+
+            --  Homonyms of the new local declaration are saved to be restored
+            --  after the resolution of the declare block's expression.
+
+            Append_Elmt (Local, Save_Hidden_Map);
+            Append_Elmt (Get_Name_Entity_Id (Chars (Local)), Save_Hidden_Map);
+
+            --  Update the references to local in the name table and make them
+            --  immediately visible to be available within the expression.
+
+            Set_Current_Entity (Local);
+            Set_Is_Immediately_Visible (Local);
+            Set_Is_Not_Self_Hidden (Local);
          end if;
 
          Next (Decl);
@@ -7846,6 +7850,20 @@ package body Sem_Res is
 
       Resolve (Expr, Typ);
       Check_Unset_Reference (Expr);
+
+      --  Restore any hidden entity homonyms to a local one
+
+      declare
+         Cursor : Elmt_Id := First_Elmt (Save_Hidden_Map);
+         Name : Name_Id;
+      begin
+         while Present (Cursor) loop
+            Name := Chars (Node (Cursor));
+            Next_Elmt (Cursor);
+            Set_Name_Entity_Id (Name, Node (Cursor));
+            Next_Elmt (Cursor);
+         end loop;
+      end;
    end Resolve_Declare_Expression;
 
    -----------------------------------
@@ -10100,7 +10118,7 @@ package body Sem_Res is
          Set_Etype (N, Any_Type);
          return;
 
-      elsif Is_Modular_Integer_Type (Typ)
+      elsif Has_Modular_Operations (Typ)
         and then Etype (Left_Opnd (N)) = Universal_Integer
         and then Etype (Right_Opnd (N)) = Universal_Integer
       then
@@ -12749,7 +12767,7 @@ package body Sem_Res is
         and then Nkind (N) = N_Op_Minus
         and then Nkind (R) = N_Integer_Literal
         and then Comes_From_Source (R)
-        and then Is_Modular_Integer_Type (B_Typ)
+        and then Has_Modular_Operations (B_Typ)
         and then Nkind (Parent (N)) not in N_Qualified_Expression
                                          | N_Type_Conversion
         and then Expr_Value (R) > Uint_1
@@ -13242,7 +13260,7 @@ package body Sem_Res is
             if Length = 1 then
                High_Bound := New_Copy_Tree (Low_Bound);
 
-            elsif Is_Signed_Integer_Type (Index_Type) then
+            elsif Has_Overflow_Operations (Index_Type) then
                High_Bound :=
                  Make_Op_Add (Loc,
                    Left_Opnd  => New_Copy_Tree (Low_Bound),

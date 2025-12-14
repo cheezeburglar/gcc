@@ -860,7 +860,8 @@ struct cpp_callbacks
   /* Maybe translate a #include into something else.  Return a
      cpp_buffer containing the translation if translating.  */
   char *(*translate_include) (cpp_reader *, line_maps *, location_t,
-			      const char *path);
+			      _cpp_file *file, bool angle_brackets,
+			      const char **alternate);
 };
 
 #ifdef VMS
@@ -1563,8 +1564,10 @@ extern void cpp_make_system_header (cpp_reader *, int, int);
 extern bool cpp_push_include (cpp_reader *, const char *);
 extern bool cpp_push_default_include (cpp_reader *, const char *);
 extern void cpp_change_file (cpp_reader *, enum lc_reason, const char *);
-extern const char *cpp_get_path (struct _cpp_file *);
-extern cpp_dir *cpp_get_dir (struct _cpp_file *);
+extern const char *_cpp_get_file_path (_cpp_file *);
+extern const char *_cpp_get_file_name (_cpp_file *);
+extern struct stat *_cpp_get_file_stat (_cpp_file *);
+extern struct cpp_dir *_cpp_get_file_dir (_cpp_file *);
 extern cpp_buffer *cpp_get_buffer (cpp_reader *);
 extern struct _cpp_file *cpp_get_file (cpp_buffer *);
 extern cpp_buffer *cpp_get_prev (cpp_buffer *);

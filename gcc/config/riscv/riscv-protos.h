@@ -208,6 +208,7 @@ rtl_opt_pass * make_pass_vsetvl (gcc::context *ctxt);
 rtl_opt_pass * make_pass_insert_landing_pad (gcc::context *ctxt);
 rtl_opt_pass * make_pass_vector_permconst (gcc::context *ctxt);
 rtl_opt_pass * make_pass_bclr_lowest_set_bit (gcc::context *ctxt);
+rtl_opt_pass * make_pass_combine_popretz (gcc::context *ctxt);
 
 /* Routines implemented in riscv-vsetvl.cc.  */
 extern bool has_vtype_op (rtx_insn *);
@@ -663,6 +664,7 @@ bool expand_vec_cmp_float (rtx, rtx_code, rtx, rtx, bool);
 void expand_cond_len_unop (unsigned, rtx *);
 void expand_cond_len_binop (unsigned, rtx *);
 void expand_reduction (unsigned, unsigned, unsigned, rtx *, rtx);
+void expand_mask_reduction (rtx *, rtx_code);
 void expand_vec_ceil (rtx, rtx, machine_mode, machine_mode);
 void expand_vec_floor (rtx, rtx, machine_mode, machine_mode);
 void expand_vec_nearbyint (rtx, rtx, machine_mode, machine_mode);
@@ -690,6 +692,7 @@ void expand_vx_binary_vec_dup_vec (rtx, rtx, rtx, rtx_code, machine_mode);
 void expand_vx_binary_vec_vec_dup (rtx, rtx, rtx, rtx_code, machine_mode);
 void expand_vx_binary_vxrm_vec_vec_dup (rtx, rtx, rtx, int, int, machine_mode);
 void expand_vx_binary_vxrm_vec_dup_vec (rtx, rtx, rtx, int, int, machine_mode);
+void expand_vx_cmp_vec_dup_vec (rtx, rtx, rtx, rtx_code, machine_mode);
 #endif
 bool sew64_scalar_helper (rtx *, rtx *, rtx, machine_mode,
 			  bool, void (*)(rtx *, rtx), enum avl_type);
@@ -846,12 +849,15 @@ riscv_option_valid_attribute_p (tree, tree, tree, int);
 extern bool
 riscv_option_valid_version_attribute_p (tree, tree, tree, int);
 extern bool
+riscv_process_target_attr_for_pragma (tree);
+extern bool
 riscv_process_target_version_attr (tree, location_t *);
 extern bool
 riscv_process_target_version_str (string_slice, location_t *);
 extern void
 riscv_override_options_internal (struct gcc_options *);
 extern void riscv_option_override (void);
+extern void riscv_reset_previous_fndecl (void);
 extern rtx riscv_prefetch_cookie (rtx, rtx);
 extern bool riscv_prefetch_offset_address_p (rtx, machine_mode);
 

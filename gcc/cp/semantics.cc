@@ -4051,6 +4051,13 @@ finish_translation_unit (void)
 	       "#pragma omp end declare target");
       vec_safe_truncate (scope_chain->omp_declare_target_attribute, 0);
     }
+  if (vec_safe_length (scope_chain->omp_declare_variant_attribute))
+    {
+      if (!errorcount)
+	error ("%<omp begin declare variant%> without corresponding "
+	       "%<omp end declare variant%>");
+      vec_safe_truncate (scope_chain->omp_declare_variant_attribute, 0);
+    }
   if (vec_safe_length (scope_chain->omp_begin_assumes))
     {
       if (!errorcount)
@@ -8349,6 +8356,7 @@ finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 	case OMP_CLAUSE_NUM_THREADS:
 	case OMP_CLAUSE_NUM_GANGS:
 	case OMP_CLAUSE_NUM_WORKERS:
+	case OMP_CLAUSE_DYN_GROUPPRIVATE:
 	case OMP_CLAUSE_VECTOR_LENGTH:
 	  t = OMP_CLAUSE_OPERAND (c, 0);
 	  if (t == error_mark_node)
@@ -8382,7 +8390,8 @@ finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 	      if (!processing_template_decl)
 		{
 		  t = maybe_constant_value (t);
-		  if (TREE_CODE (t) == INTEGER_CST
+		  if (OMP_CLAUSE_CODE (c) != OMP_CLAUSE_DYN_GROUPPRIVATE
+		      && TREE_CODE (t) == INTEGER_CST
 		      && tree_int_cst_sgn (t) != 1)
 		    {
 		      switch (OMP_CLAUSE_CODE (c))
@@ -8410,6 +8419,15 @@ finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 				      [OMP_CLAUSE_CODE (c)]);
 			}
 		      t = integer_one_node;
+		    }
+		  else if (OMP_CLAUSE_CODE (c) == OMP_CLAUSE_DYN_GROUPPRIVATE
+			   && TREE_CODE (t) == INTEGER_CST
+			   && tree_int_cst_sgn (t) < 0)
+		    {
+		      warning_at (OMP_CLAUSE_LOCATION (c), OPT_Wopenmp,
+				  "%<dyn_groupprivate%> value must be "
+				  "non-negative");
+		      t = integer_zero_node;
 		    }
 		  t = fold_build_cleanup_point_expr (TREE_TYPE (t), t);
 		}
@@ -8870,6 +8888,162 @@ finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 	      break;
 	    }
 	  gcc_unreachable ();
+	case OMP_CLAUSE_USES_ALLOCATORS:
+	  t = OMP_CLAUSE_USES_ALLOCATORS_ALLOCATOR (c);
+	  t = convert_from_reference (t);
+	  if (t == error_mark_node)
+	    {
+	      remove = true;
+	      break;
+	    }
+	  if (DECL_P (t)
+	      && (bitmap_bit_p (&generic_head, DECL_UID (t))
+		  || bitmap_bit_p (&firstprivate_head, DECL_UID (t))
+		  || bitmap_bit_p (&map_firstprivate_head, DECL_UID (t))))
+	    {
+	      error_at (OMP_CLAUSE_LOCATION (c),
+			"%qE appears more than once in data clauses", t);
+	      remove = true;
+	    }
+	  else if (DECL_P (t))
+	    bitmap_set_bit (&generic_head, DECL_UID (t));
+	  if (type_dependent_expression_p (t))
+	    break;
+	  if (TREE_CODE (t) == FIELD_DECL)
+	    {
+	      sorry_at (OMP_CLAUSE_LOCATION (c), "class member %qE not yet "
+			"supported in %<uses_allocators%> clause", t);
+	      remove = true;
+	      break;
+	    }
+	  if (TREE_CODE (TREE_TYPE (t)) != ENUMERAL_TYPE
+	      || strcmp (IDENTIFIER_POINTER (TYPE_IDENTIFIER (TREE_TYPE (t))),
+			 "omp_allocator_handle_t") != 0)
+	    {
+	      error_at (OMP_CLAUSE_LOCATION (c),
+			"allocator %qE must be of %<omp_allocator_handle_t%> "
+			"type", t);
+	      remove = true;
+	      break;
+	    }
+	  tree init;
+	  if (TREE_CODE (t) == CONST_DECL)
+	    init = DECL_INITIAL(t);
+	  else
+	    init = t;
+	  if (!DECL_P (t)
+	      && (init == NULL_TREE
+		  || TREE_CODE (init) != INTEGER_CST
+		  || ((wi::to_widest (init) < 0
+		       || wi::to_widest (init) > GOMP_OMP_PREDEF_ALLOC_MAX)
+		      && (wi::to_widest (init) < GOMP_OMPX_PREDEF_ALLOC_MIN
+			  || (wi::to_widest (init)
+			      > GOMP_OMPX_PREDEF_ALLOC_MAX)))))
+	    {
+	      remove = true;
+	      error_at (OMP_CLAUSE_LOCATION (c),
+			"allocator %qE must be either a variable or a "
+			"predefined allocator", t);
+	      break;
+	    }
+	  else if (TREE_CODE (t) == CONST_DECL)
+	    {
+	      /* omp_null_allocator is ignored and for predefined allocators,
+		 not special handling is required; thus, remove them removed. */
+	      remove = true;
+
+	      if (OMP_CLAUSE_USES_ALLOCATORS_MEMSPACE (c)
+		  || OMP_CLAUSE_USES_ALLOCATORS_TRAITS (c))
+		{
+		  error_at (OMP_CLAUSE_LOCATION (c),
+			    "modifiers cannot be used with predefined "
+			    "allocators");
+		  break;
+		}
+	    }
+	  t = OMP_CLAUSE_USES_ALLOCATORS_MEMSPACE (c);
+	  if (t == error_mark_node)
+	    {
+	      remove = true;
+	      break;
+	    }
+	  if (t != NULL_TREE
+	      && !type_dependent_expression_p (t)
+	      && ((TREE_CODE (t) != CONST_DECL && TREE_CODE (t) != INTEGER_CST)
+		  || TREE_CODE (TREE_TYPE (t)) != ENUMERAL_TYPE
+		  || strcmp (IDENTIFIER_POINTER (TYPE_IDENTIFIER (TREE_TYPE (t))),
+			     "omp_memspace_handle_t") != 0))
+	    {
+	      error_at (OMP_CLAUSE_LOCATION (c), "memspace modifier %qE must be"
+			" constant enum of %<omp_memspace_handle_t%> type", t);
+	      remove = true;
+	      break;
+	    }
+	  t = OMP_CLAUSE_USES_ALLOCATORS_TRAITS (c);
+	  if (t == error_mark_node)
+	    {
+	      remove = true;
+	      break;
+	    }
+	  if (type_dependent_expression_p (t))
+	    break;
+	  if (t != NULL_TREE
+	      && t != error_mark_node
+	      && !type_dependent_expression_p (t)
+	      && (!DECL_P (t)
+		  ||  DECL_EXTERNAL (t)
+		  || TREE_CODE (t) == PARM_DECL))
+	    {
+	      error_at (OMP_CLAUSE_LOCATION (c), "traits array %qE must be "
+			"defined in same scope as the construct on which the "
+			"clause appears", t);
+	      remove = true;
+	    }
+	  if (t != NULL_TREE)
+	    {
+	      bool type_err = false;
+
+	      if (TREE_CODE (TREE_TYPE (t)) != ARRAY_TYPE
+		  || DECL_SIZE (t) == NULL_TREE
+		  || !COMPLETE_TYPE_P (TREE_TYPE (t)))
+		type_err = true;
+	      else
+		{
+		  tree elem_t = TREE_TYPE (TREE_TYPE (t));
+		  if (TREE_CODE (elem_t) != RECORD_TYPE
+		      || strcmp (IDENTIFIER_POINTER (TYPE_IDENTIFIER (elem_t)),
+				 "omp_alloctrait_t") != 0
+		      || !TYPE_READONLY (elem_t))
+		    type_err = true;
+		}
+	      if (type_err)
+		{
+		  error_at (OMP_CLAUSE_LOCATION (c), "traits array %qE must "
+			    "be of %<const omp_alloctrait_t []%> type", t);
+		  remove = true;
+		}
+	      else if (TREE_CODE (array_type_nelts_top (TREE_TYPE (t)))
+		       != INTEGER_CST)
+		{
+		  error_at (OMP_CLAUSE_LOCATION (c), "variable length traits "
+			    "arrays are not supported");
+		  remove = true;
+		}
+	      else
+		{
+		  tree cst_val = decl_constant_value (t);
+		  if (cst_val == t)
+		    {
+		      error_at (OMP_CLAUSE_LOCATION (c), "traits array must be "
+				"initialized with constants");
+		      remove = true;
+		    }
+		}
+	    }
+	  if (remove)
+	    break;
+	  pc = &OMP_CLAUSE_CHAIN (c);
+	  continue;
 	case OMP_CLAUSE_DEPEND:
 	  depend_clause = c;
 	  /* FALLTHRU */
@@ -13081,26 +13255,57 @@ classtype_has_nothrow_assign_or_copy_p (tree type, bool assign_p)
   return saw_copy;
 }
 
-/* Return true if DERIVED is pointer interconvertible base of BASE.  */
+/* Return true if BASE is a pointer-interconvertible base of DERIVED.  */
 
-static bool
-pointer_interconvertible_base_of_p (tree base, tree derived)
+bool
+pointer_interconvertible_base_of_p (tree base, tree derived,
+				    bool explain/*=false*/)
 {
   if (base == error_mark_node || derived == error_mark_node)
     return false;
+
   base = TYPE_MAIN_VARIANT (base);
   derived = TYPE_MAIN_VARIANT (derived);
-  if (!NON_UNION_CLASS_TYPE_P (base)
-      || !NON_UNION_CLASS_TYPE_P (derived))
-    return false;
+  if (!NON_UNION_CLASS_TYPE_P (base))
+    {
+      if (explain)
+	inform (location_of (base),
+		"%qT is not a non-union class type", base);
+      return false;
+    }
+  if (!NON_UNION_CLASS_TYPE_P (derived))
+    {
+      if (explain)
+	inform (location_of (derived),
+		"%qT is not a non-union class type", derived);
+      return false;
+    }
 
   if (same_type_p (base, derived))
     return true;
 
   if (!std_layout_type_p (derived))
-    return false;
+    {
+      if (explain)
+	inform (location_of (derived),
+		"%qT is not a standard-layout type", derived);
+      return false;
+    }
 
-  return uniquely_derived_from_p (base, derived);
+  if (!uniquely_derived_from_p (base, derived))
+    {
+      if (explain)
+	{
+	  /* An ambiguous base should already be impossible due to
+	     the std_layout_type_p check.  */
+	  gcc_checking_assert (!DERIVED_FROM_P (base, derived));
+	  inform (location_of (derived),
+		  "%qT is not a base of %qT", base, derived);
+	}
+      return false;
+    }
+
+  return true;
 }
 
 /* Helper function for fold_builtin_is_pointer_inverconvertible_with_class,

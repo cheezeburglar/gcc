@@ -784,6 +784,56 @@ static const struct riscv_tune_param spacemit_x60_tune_info= {
   true,						/* prefer-agnostic.  */
 };
 
+/* Costs to use when optimizing for Andes 23 series.  */
+static const struct riscv_tune_param andes_23_tune_info = {
+  {COSTS_N_INSNS (4), COSTS_N_INSNS (5)},       /* fp_add */
+  {COSTS_N_INSNS (4), COSTS_N_INSNS (5)},       /* fp_mul */
+  {COSTS_N_INSNS (20), COSTS_N_INSNS (20)},     /* fp_div */
+  {COSTS_N_INSNS (2), COSTS_N_INSNS (2)},       /* int_mul */
+  {COSTS_N_INSNS (24), COSTS_N_INSNS (24)},     /* int_div */
+  2,						/* issue_rate */
+  3,						/* branch_cost */
+  3,						/* memory_cost */
+  8,						/* fmv_cost */
+  false,					/* slow_unaligned_access */
+  false,					/* vector_unaligned_access */
+  true,						/* use_divmod_expansion */
+  false,					/* overlap_op_by_pieces */
+  false,					/* use_zero_stride_load */
+  false,					/* speculative_sched_vsetvl */
+  RISCV_FUSE_NOTHING,				/* fusible_ops */
+  NULL,						/* vector cost */
+  NULL,						/* function_align */
+  NULL,						/* jump_align */
+  NULL,						/* loop_align */
+  true,						/* prefer-agnostic.  */
+};
+
+/* Costs to use when optimizing for Andes 45 series.  */
+static const struct riscv_tune_param andes_45_tune_info = {
+  {COSTS_N_INSNS (4), COSTS_N_INSNS (5)},       /* fp_add */
+  {COSTS_N_INSNS (4), COSTS_N_INSNS (5)},       /* fp_mul */
+  {COSTS_N_INSNS (20), COSTS_N_INSNS (20)},     /* fp_div */
+  {COSTS_N_INSNS (2), COSTS_N_INSNS (2)},       /* int_mul */
+  {COSTS_N_INSNS (24), COSTS_N_INSNS (24)},     /* int_div */
+  2,						/* issue_rate */
+  3,						/* branch_cost */
+  3,						/* memory_cost */
+  8,						/* fmv_cost */
+  false,					/* slow_unaligned_access */
+  false,					/* vector_unaligned_access */
+  true,						/* use_divmod_expansion */
+  false,					/* overlap_op_by_pieces */
+  false,					/* use_zero_stride_load */
+  false,					/* speculative_sched_vsetvl */
+  RISCV_FUSE_NOTHING,				/* fusible_ops */
+  NULL,						/* vector cost */
+  NULL,						/* function_align */
+  NULL,						/* jump_align */
+  NULL,						/* loop_align */
+  true,						/* prefer-agnostic.  */
+};
+
 static bool riscv_avoid_shrink_wrapping_separate ();
 static tree riscv_handle_fndecl_attribute (tree *, tree, tree, int, bool *);
 static tree riscv_handle_type_attribute (tree *, tree, tree, int, bool *);
@@ -1790,8 +1840,19 @@ riscv_symbolic_constant_p (rtx x, enum riscv_symbol_type *symbol_type)
   /* Nonzero offsets are only valid for references that don't use the GOT.  */
   switch (*symbol_type)
     {
-    case SYMBOL_ABSOLUTE:
     case SYMBOL_PCREL:
+      /* In 64-bit mode, PC-relative offsets with ranges beyond +/-1GiB are
+	 more likely than not to end up out of range for an auipc instruction
+	 randomly-placed within the 2GB range usable by medany, and such
+	 offsets are quite unlikely to come up by chance, so be conservative
+	 and separate the offset for them when in 64-bit mode, where they don't
+	 wrap around.  */
+      if (TARGET_64BIT)
+	return sext_hwi (INTVAL (offset), 30) == INTVAL (offset);
+
+      /* Fall through.  */
+
+    case SYMBOL_ABSOLUTE:
     case SYMBOL_TLS_LE:
       /* GAS rejects offsets outside the range [-2^31, 2^31-1].  */
       return sext_hwi (INTVAL (offset), 32) == INTVAL (offset);
@@ -2814,7 +2875,7 @@ riscv_unspec_address_offset (rtx base, rtx offset,
 			     enum riscv_symbol_type symbol_type)
 {
   base = gen_rtx_UNSPEC (Pmode, gen_rtvec (1, base),
-			 UNSPEC_ADDRESS_FIRST + symbol_type);
+			 UNSPEC_ADDRESS_FIRST + (int) symbol_type);
   if (offset != const0_rtx)
     base = gen_rtx_PLUS (Pmode, base, offset);
   return gen_rtx_CONST (Pmode, base);
@@ -4964,7 +5025,7 @@ riscv_output_move (rtx dest, rtx src)
 	    if (TARGET_ZFHMIN || TARGET_ZFBFMIN)
 	      return "fmv.x.h\t%0,%1";
 	    /* Using fmv.x.s + sign-extend to emulate fmv.x.h.  */
-	    return "fmv.x.s\t%0,%1;slli\t%0,%0,16;srai\t%0,%0,16";
+	    return "fmv.x.s\t%0,%1\n\tslli\t%0,%0,16\n\tsrai\t%0,%0,16";
 	  case 4:
 	    return "fmv.x.s\t%0,%1";
 	  case 8:
@@ -12164,6 +12225,12 @@ riscv_override_options_internal (struct gcc_options *opts)
   /* Convert -march and -mrvv-vector-bits to a chunks count.  */
   riscv_vector_chunks = riscv_convert_vector_chunks (opts);
 
+  /* Set scalar costing to a high value such that we always pick
+     vectorization.  Increase scalar costing by 100x.  */
+  if (opts->x_riscv_max_vectorization)
+    SET_OPTION_IF_UNSET (&global_options, &global_options_set,
+			 param_vect_scalar_cost_multiplier, 10000);
+
   if (opts->x_flag_cf_protection != CF_NONE)
     {
       if ((opts->x_flag_cf_protection & CF_RETURN) == CF_RETURN
@@ -12400,6 +12467,39 @@ riscv_option_restore (struct gcc_options *opts,
 }
 
 static GTY (()) tree riscv_previous_fndecl;
+
+/* Reset the previous function declaration.  */
+
+void
+riscv_reset_previous_fndecl (void)
+{
+  riscv_previous_fndecl = NULL;
+}
+
+/* Implement TARGET_OPTION_SAVE.  */
+
+static void
+riscv_option_save (struct cl_target_option *ptr,
+		   struct gcc_options *opts,
+		   struct gcc_options * /* opts_set */)
+{
+  ptr->x_riscv_arch_string = opts->x_riscv_arch_string;
+  ptr->x_riscv_tune_string = opts->x_riscv_tune_string;
+  ptr->x_riscv_cpu_string = opts->x_riscv_cpu_string;
+}
+
+/* Implement TARGET_OPTION_PRINT.  */
+
+static void
+riscv_option_print (FILE *file, int indent, struct cl_target_option *ptr)
+{
+  fprintf (file, "%*sarch = %s\n", indent, "",
+	   ptr->x_riscv_arch_string ? ptr->x_riscv_arch_string : "default");
+  fprintf (file, "%*stune = %s\n", indent, "",
+	   ptr->x_riscv_tune_string ? ptr->x_riscv_tune_string : "default");
+  if (ptr->x_riscv_cpu_string)
+    fprintf (file, "%*scpu = %s\n", indent, "", ptr->x_riscv_cpu_string);
+}
 
 /* Implement TARGET_CONDITIONAL_REGISTER_USAGE.  */
 
@@ -12737,7 +12837,7 @@ riscv_get_interrupt_type (tree decl)
 /* Implement `TARGET_SET_CURRENT_FUNCTION'.  Unpack the codegen decisions
    like tuning and ISA features from the DECL_FUNCTION_SPECIFIC_TARGET
    of the function, if such exists.  This function may be called multiple
-   times on a single function so use aarch64_previous_fndecl to avoid
+   times on a single function so use riscv_previous_fndecl to avoid
    setting up identical state.  */
 
 /* Sanity checking for above function attributes.  */
@@ -14547,7 +14647,7 @@ riscv_expand_ustrunc (rtx dest, rtx src)
   gcc_assert (precision < 64);
 
   uint64_t max = ((uint64_t)1u << precision) - 1u;
-  rtx xmode_src = gen_lowpart (Xmode, src);
+  rtx xmode_src = riscv_extend_to_xmode_reg (src, GET_MODE (src), ZERO_EXTEND);
   rtx xmode_dest = gen_reg_rtx (Xmode);
   rtx xmode_lt = gen_reg_rtx (Xmode);
 
@@ -16248,8 +16348,14 @@ riscv_prefetch_offset_address_p (rtx x, machine_mode mode)
 #undef TARGET_OPTION_OVERRIDE
 #define TARGET_OPTION_OVERRIDE riscv_option_override
 
+#undef TARGET_OPTION_SAVE
+#define TARGET_OPTION_SAVE riscv_option_save
+
 #undef TARGET_OPTION_RESTORE
 #define TARGET_OPTION_RESTORE riscv_option_restore
+
+#undef TARGET_OPTION_PRINT
+#define TARGET_OPTION_PRINT riscv_option_print
 
 #undef TARGET_OPTION_VALID_ATTRIBUTE_P
 #define TARGET_OPTION_VALID_ATTRIBUTE_P riscv_option_valid_attribute_p

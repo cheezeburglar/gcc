@@ -1,3 +1,45 @@
+2025-12-12  mengqinggang  <mengqinggang@loongson.cn>
+	    Jiajie Chen  <c@jia.je>
+
+	* config-list.mk: Add loongarch32-linux-gnu*.
+
+2025-12-11  Joseph Myers  <josmyers@redhat.com>
+
+	* test_installed: Use config.sub to determine canonical target.
+
+2025-12-08  Joseph Myers  <josmyers@redhat.com>
+
+	* test_installed (--with-alt-cc=, --with-alt-cxx=)
+	(--with-compat-options=, --with-libiconv=): New options.
+
+2025-12-08  Jonathan Wakely  <jwakely@redhat.com>
+
+	* check_GNU_style_lib.py (check_GNU_style_file): Do not check
+	libstdc++ files.
+
+2025-12-06  Mark Zhuang  <mark.zhuang@spacemit.com>
+
+	* prepare-commit-msg: check --default-prefix
+
+2025-12-04  Jonathan Wakely  <jwakely@redhat.com>
+
+	* check_GNU_style_lib.py (TrailinigOperatorCheck): Rename to
+	TrailingOperatorCheck.
+
+2025-12-02  Jakub Jelinek  <jakub@redhat.com>
+
+	* gcc-changelog/git_update_version.py (ignored_commits): Add
+	e69bea9b4ccfe79efeec6e87d7d24e6350f31375.
+
+2025-12-01  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* gcc-changelog/git_commit.py: Add gcc/algol68 and libga68 to
+	default_changelog_locations.
+
+2025-11-22  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	* gcc-changelog/git_commit.py: Add algol68.
+
 2025-11-16  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
 
 	* make_sunver.pl ($elfdump): Remove ccs from path.

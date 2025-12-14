@@ -981,6 +981,18 @@ proc add_options_for_tls { flags } {
     return $flags
 }
 
+# Add to FLAGS all the target-specific flags needed to use check-function-bodies.
+
+proc add_options_for_check_function_bodies { flags } {
+    if { [istarget i?86-*-solaris2*] || [istarget x86_64-*-solaris2*] } {
+	# check-function-bodies relies on the .cfi_* directives, which are
+	# off on Solaris/x86 with as and ld.  Similarly it also expects
+	# the .LFB/.LFE labels, which aren't emitted for 32-bit.
+	return "-fdwarf2-cfi-asm -fasynchronous-unwind-tables $flags "
+    }
+    return $flags
+}
+
 # Return 1 if indirect jumps are supported, 0 otherwise.
 
 proc check_effective_target_indirect_jumps {} {
@@ -4354,7 +4366,8 @@ proc add_options_for_bfloat16 { flags } {
 
 proc check_effective_target_scalar_all_fma { } {
     if { [istarget aarch64*-*-*]
-	 || [istarget loongarch*-*-*]} {
+	 || ([istarget loongarch*-*-*]
+	     && [check_effective_target_hard_float])} {
 	return 1
     }
     return 0
@@ -4551,7 +4564,8 @@ proc check_effective_target_vect_cmdline_needed { } {
 	     || ([istarget arm*-*-*] && [check_effective_target_arm_neon])
 	     || [istarget aarch64*-*-*]
 	     || [istarget amdgcn*-*-*]
-	     || [istarget riscv*-*-*]} {
+	     || [istarget riscv*-*-*]
+	     || [istarget loongarch*-*-*]} {
 	    return 0
 	} else {
 	    return 1
@@ -12146,7 +12160,7 @@ proc check_effective_target_c++ { } {
  return 0
 }
 
-set cxx_default "c++17"
+set cxx_default "c++20"
 # Check whether the current active language standard supports the features
 # of C++11/C++14 by checking for the presence of one of the -std flags.
 # This assumes that the default for the compiler is $cxx_default, and that
@@ -12334,6 +12348,10 @@ proc check_effective_target_concepts { } {
 
 proc check_effective_target_implicit_constexpr { } {
     return [check-flags { "" { } { -fimplicit-constexpr } }]
+}
+
+proc check_effective_target_modules { } {
+    return [check-flags { "" { } { -fmodules } }]
 }
 
 # Return 1 if expensive testcases should be run.
@@ -12526,13 +12544,17 @@ proc check_vect_support_and_set_flags { } {
 	    return 0
         }
     } elseif [istarget loongarch*-*-*] {
-      # Set the default vectorization option to "-mlsx" due to the problem
-      # of non-aligned memory access when using 256-bit vectorization.
-      lappend DEFAULT_VECTCFLAGS "-mdouble-float" "-mlsx"
-      if [check_effective_target_loongarch_sx_hw] {
-	  set dg-do-what-default run
+      if [check_effective_target_loongarch_sx] { # If compiler support vector
+	# Set the default vectorization option to "-mlsx" due to the problem
+	# of non-aligned memory access when using 256-bit vectorization.
+	lappend DEFAULT_VECTCFLAGS "-mdouble-float" "-mlsx"
+	if [check_effective_target_loongarch_sx_hw] { # If hardware support vector
+	    set dg-do-what-default run
+	} else {
+	    set dg-do-what-default compile
+	}
       } else {
-	  set dg-do-what-default compile
+	return 0
       }
     } else {
 	return 0
@@ -14749,4 +14771,12 @@ proc check_effective_target_fentry { } {
 	    return 0
 	}
     }]
+}
+
+# Check if valgrind executable exists in PATH on host
+proc check_effective_target_valgrind { } {
+    if { [which valgrind] != 0 } {
+        return 1
+    }
+    return 0
 }

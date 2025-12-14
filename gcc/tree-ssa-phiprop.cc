@@ -35,6 +35,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-ssa-loop.h"
 #include "tree-cfg.h"
 #include "tree-ssa-dce.h"
+#include "cfgloop.h"
 
 /* This pass propagates indirect loads through the PHI node for its
    address to make the load source possibly non-addressable and to
@@ -271,6 +272,7 @@ propagate_with_phi (basic_block bb, gphi *vphi, gphi *phi,
     return false;
 
   tree up_vuse = NULL_TREE;
+  bool canpossible_trap = false;
   /* Check if we can "cheaply" dereference all phi arguments.  */
   FOR_EACH_PHI_ARG (arg_p, phi, i, SSA_OP_USE)
     {
@@ -289,7 +291,11 @@ propagate_with_phi (basic_block bb, gphi *vphi, gphi *phi,
 	  arg = gimple_assign_rhs1 (def_stmt);
 	}
       if (TREE_CODE (arg) == ADDR_EXPR)
-	;
+	{
+	  tree decl = TREE_OPERAND (arg, 0);
+	  if (!canpossible_trap)
+	    canpossible_trap = tree_could_trap_p (decl);
+	}
       /* When we have an SSA name see if we previously encountered a
 	 dereference of it.  */
       else if (TREE_CODE (arg) == SSA_NAME
@@ -326,19 +332,34 @@ propagate_with_phi (basic_block bb, gphi *vphi, gphi *phi,
      can move the loads to the place of the ptr phi node.  */
   phi_inserted = false;
   changed = false;
+  auto_vec<gimple*> delayed_uses;
   FOR_EACH_IMM_USE_STMT (use_stmt, ui, ptr)
     {
       gimple *def_stmt;
       tree vuse;
+      bool delay = false;
 
-      if (!dom_info_available_p (cfun, CDI_POST_DOMINATORS))
+      if (canpossible_trap
+	  && !dom_info_available_p (cfun, CDI_POST_DOMINATORS))
 	calculate_dominance_info (CDI_POST_DOMINATORS);
 
       /* Only replace loads in blocks that post-dominate the PHI node.  That
-         makes sure we don't end up speculating loads.  */
-      if (!dominated_by_p (CDI_POST_DOMINATORS,
-			   bb, gimple_bb (use_stmt)))
-	continue;
+	 makes sure we don't end up speculating trapping loads.  */
+      if (canpossible_trap
+	  && !dominated_by_p (CDI_POST_DOMINATORS,
+			      bb, gimple_bb (use_stmt)))
+	delay = true;
+
+      /* Amend the post-dominance check for SSA cycles, we need to
+	 make sure each PHI result value is dereferenced.
+	 We only want to delay this if we don't insert a phi.  */
+      if (!(gimple_bb (use_stmt) == bb
+	    || (!(bb->flags & BB_IRREDUCIBLE_LOOP)
+		&& !(gimple_bb (use_stmt)->flags & BB_IRREDUCIBLE_LOOP)
+		&& (bb->loop_father == gimple_bb (use_stmt)->loop_father
+		    || flow_loop_nested_p (bb->loop_father,
+					   gimple_bb (use_stmt)->loop_father)))))
+	delay = true;
 
       /* Check whether this is a load of *ptr.  */
       if (!(is_gimple_assign (use_stmt)
@@ -390,6 +411,9 @@ propagate_with_phi (basic_block bb, gphi *vphi, gphi *phi,
          insert aggregate copies on the edges instead.  */
       if (!is_gimple_reg_type (TREE_TYPE (gimple_assign_lhs (use_stmt))))
 	{
+	  /* aggregate copies are too hard to handled if delayed.  */
+	  if (delay)
+	    goto next;
 	  if (!gimple_vdef (use_stmt))
 	    goto next;
 
@@ -444,10 +468,19 @@ propagate_with_phi (basic_block bb, gphi *vphi, gphi *phi,
 
 	  changed = true;
 	}
-
+      /* Further replacements are easy, just make a copy out of the
+	 load.  */
+      else if (phi_inserted)
+	{
+	  gimple_assign_set_rhs1 (use_stmt, res);
+	  update_stmt (use_stmt);
+	  changed = true;
+	}
+      else if (delay)
+	delayed_uses.safe_push (use_stmt);
       /* Found a proper dereference.  Insert a phi node if this
 	 is the first load transformation.  */
-      else if (!phi_inserted)
+      else
 	{
 	  res = phiprop_insert_phi (bb, phi, use_stmt, phivn, n, dce_ssa_names);
 	  type = TREE_TYPE (res);
@@ -464,18 +497,22 @@ propagate_with_phi (basic_block bb, gphi *vphi, gphi *phi,
 	  phi_inserted = true;
 	  changed = true;
 	}
-      else
-	{
-	  /* Further replacements are easy, just make a copy out of the
-	     load.  */
-	  gimple_assign_set_rhs1 (use_stmt, res);
-	  update_stmt (use_stmt);
-	  changed = true;
-	}
 
 next:;
       /* Continue searching for a proper dereference.  */
     }
+
+  /* Update the delayed uses if there is any
+     as now we know this is safe to do. */
+  if (phi_inserted)
+    for (auto use_stmt : delayed_uses)
+      {
+	/* The types must match of the inserted phi.  */
+	if (!types_compatible_p (type, TREE_TYPE (gimple_assign_lhs (use_stmt))))
+	  continue;
+	gimple_assign_set_rhs1 (use_stmt, res);
+	update_stmt (use_stmt);
+      }
 
   return changed;
 }

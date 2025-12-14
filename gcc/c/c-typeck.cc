@@ -610,9 +610,9 @@ c_type_tag (const_tree t)
     return NULL_TREE;
   if (TREE_CODE (name) == TYPE_DECL)
     {
-      /* A TYPE_DECL added by add_decl_expr.  */
-      gcc_checking_assert (!DECL_NAME (name));
-      return NULL_TREE;
+      if (!DECL_NAME (name))
+	return NULL_TREE;
+      name = DECL_NAME (name);
     }
   gcc_checking_assert (TREE_CODE (name) == IDENTIFIER_NODE);
   return name;
@@ -3187,7 +3187,7 @@ build_access_with_size_for_counted_by (location_t loc, tree ref,
   tree first_param = is_fam
 		     ? c_fully_fold (array_to_pointer_conversion (loc, ref),
 				     false, NULL)
-		     : ref;
+		     : c_fully_fold (ref, false, NULL);
   tree second_param
     = c_fully_fold (counted_by_ref, false, NULL);
   tree third_param = build_int_cst (c_build_pointer_type (counted_by_type), 0);
@@ -4117,6 +4117,60 @@ c_expr_countof_type (location_t loc, struct c_type_name *t)
       C_MAYBE_CONST_EXPR_NON_CONST (ret.value) = !type_expr_const;
     }
   pop_maybe_used (type != error_mark_node ? is_top_array_vla (type) : false);
+  return ret;
+}
+
+/* Return the result of maxof applied to T, a structure for the type
+   name passed to maxof (rather than the type itself).  LOC is the
+   location of the original expression.  */
+
+struct c_expr
+c_expr_maxof_type (location_t loc, struct c_type_name *t)
+{
+  tree type;
+  struct c_expr ret;
+  tree type_expr = NULL_TREE;
+  bool type_expr_const = true;
+  type = groktypename (t, &type_expr, &type_expr_const);
+  ret.value = c_maxof_type (loc, type);
+  c_last_sizeof_arg = type;
+  c_last_sizeof_loc = loc;
+  ret.original_code = MAXOF_EXPR;
+  ret.original_type = NULL;
+  ret.m_decimal = 0;
+  if (type == error_mark_node)
+    {
+      ret.value = error_mark_node;
+      ret.original_code = ERROR_MARK;
+    }
+  pop_maybe_used (type != error_mark_node);
+  return ret;
+}
+
+/* Return the result of minof applied to T, a structure for the type
+   name passed to minof (rather than the type itself).  LOC is the
+   location of the original expression.  */
+
+struct c_expr
+c_expr_minof_type (location_t loc, struct c_type_name *t)
+{
+  tree type;
+  struct c_expr ret;
+  tree type_expr = NULL_TREE;
+  bool type_expr_const = true;
+  type = groktypename (t, &type_expr, &type_expr_const);
+  ret.value = c_minof_type (loc, type);
+  c_last_sizeof_arg = type;
+  c_last_sizeof_loc = loc;
+  ret.original_code = MINOF_EXPR;
+  ret.original_type = NULL;
+  ret.m_decimal = 0;
+  if (type == error_mark_node)
+    {
+      ret.value = error_mark_node;
+      ret.original_code = ERROR_MARK;
+    }
+  pop_maybe_used (type != error_mark_node);
   return ret;
 }
 
@@ -17205,6 +17259,145 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 	      break;
 	    }
 	  gcc_unreachable ();
+
+	case OMP_CLAUSE_USES_ALLOCATORS:
+	  t = OMP_CLAUSE_USES_ALLOCATORS_ALLOCATOR (c);
+	  if (t == error_mark_node)
+	    {
+	      remove = true;
+	      break;
+	    }
+	  if ((VAR_P (t) || TREE_CODE (t) == PARM_DECL)
+	      && (bitmap_bit_p (&generic_head, DECL_UID (t))
+		  || bitmap_bit_p (&map_head, DECL_UID (t))
+		  || bitmap_bit_p (&firstprivate_head, DECL_UID (t))
+		  || bitmap_bit_p (&lastprivate_head, DECL_UID (t))))
+	    {
+	      error_at (OMP_CLAUSE_LOCATION (c),
+			"%qE appears more than once in data clauses", t);
+	      remove = true;
+	      break;
+	    }
+	  else
+	    bitmap_set_bit (&generic_head, DECL_UID (t));
+	  if (TREE_CODE (TREE_TYPE (t)) != ENUMERAL_TYPE
+	      || strcmp (IDENTIFIER_POINTER (TYPE_IDENTIFIER (TREE_TYPE (t))),
+			 "omp_allocator_handle_t") != 0)
+	    {
+	      error_at (OMP_CLAUSE_LOCATION (c),
+			"allocator %qE must be of %<omp_allocator_handle_t%> "
+			"type", t);
+	      remove = true;
+	      break;
+	    }
+	  tree init;
+	  if (!DECL_P (t)
+	      || (TREE_CODE (t) == CONST_DECL
+		  && ((init = DECL_INITIAL(t)) == nullptr
+		      || TREE_CODE (init) != INTEGER_CST
+		      || ((wi::to_widest (init) < 0
+			   || wi::to_widest (init) > GOMP_OMP_PREDEF_ALLOC_MAX)
+			  && (wi::to_widest (init) < GOMP_OMPX_PREDEF_ALLOC_MIN
+			      || (wi::to_widest (init)
+				  > GOMP_OMPX_PREDEF_ALLOC_MAX))))))
+	    {
+	      remove = true;
+	      error_at (OMP_CLAUSE_LOCATION (c),
+			"allocator %qE must be either a variable or a "
+			"predefined allocator", t);
+	      break;
+	    }
+	  else if (TREE_CODE (t) == CONST_DECL)
+	    {
+	      /* omp_null_allocator is ignored and for predefined allocators,
+		 not special handling is required; thus, remove them removed. */
+	      remove = true;
+
+	      if (OMP_CLAUSE_USES_ALLOCATORS_MEMSPACE (c)
+		  || OMP_CLAUSE_USES_ALLOCATORS_TRAITS (c))
+		{
+		  error_at (OMP_CLAUSE_LOCATION (c),
+			    "modifiers cannot be used with predefined "
+			    "allocator %qE", t);
+		  break;
+		}
+	    }
+	  t = OMP_CLAUSE_USES_ALLOCATORS_MEMSPACE (c);
+	  if (t == error_mark_node)
+	    {
+	      remove = true;
+	      break;
+	    }
+	  if (t != NULL_TREE
+	      && ((TREE_CODE (t) != CONST_DECL && TREE_CODE (t) != INTEGER_CST)
+		  || TREE_CODE (TREE_TYPE (t)) != ENUMERAL_TYPE
+		  || strcmp (IDENTIFIER_POINTER (TYPE_IDENTIFIER (TREE_TYPE (t))),
+			     "omp_memspace_handle_t") != 0))
+	    {
+	      error_at (OMP_CLAUSE_LOCATION (c), "memspace modifier %qE must be"
+			" constant enum of %<omp_memspace_handle_t%> type", t);
+	      remove = true;
+	      break;
+	    }
+	  t = OMP_CLAUSE_USES_ALLOCATORS_TRAITS (c);
+	  if (t == error_mark_node)
+	    {
+	      remove = true;
+	      break;
+	    }
+	  if (t != NULL_TREE
+	      && t != error_mark_node
+	      && (DECL_EXTERNAL (t)
+		  || TREE_CODE (t) == PARM_DECL))
+	    {
+	      error_at (OMP_CLAUSE_LOCATION (c), "traits array %qE must be "
+			"defined in same scope as the construct on which the "
+			"clause appears", t);
+	      remove = true;
+	    }
+	  if (t != NULL_TREE)
+	    {
+	      bool type_err = false;
+
+	      if (TREE_CODE (TREE_TYPE (t)) != ARRAY_TYPE
+		  || DECL_SIZE (t) == NULL_TREE
+		  || !COMPLETE_TYPE_P (TREE_TYPE (t)))
+		type_err = true;
+	      else
+		{
+		  tree elem_t = TREE_TYPE (TREE_TYPE (t));
+		  if (TREE_CODE (elem_t) != RECORD_TYPE
+		      || strcmp (IDENTIFIER_POINTER (TYPE_IDENTIFIER (elem_t)),
+				 "omp_alloctrait_t") != 0
+		      || !TYPE_READONLY (elem_t))
+		    type_err = true;
+		}
+	      if (type_err)
+		{
+		  if (t != error_mark_node)
+		    error_at (OMP_CLAUSE_LOCATION (c), "traits array %qE must "
+			      "be of %<const omp_alloctrait_t []%> type", t);
+		  else
+		    error_at (OMP_CLAUSE_LOCATION (c), "traits array must "
+			      "be of %<const omp_alloctrait_t []%> type");
+		  remove = true;
+		}
+	      else
+		{
+		  tree cst_val = decl_constant_value_1 (t, true);
+		  if (cst_val == t)
+		    {
+		      error_at (OMP_CLAUSE_LOCATION (c), "traits array must be "
+				"initialized with constants");
+
+		      remove = true;
+		    }
+		}
+	    }
+	  if (remove)
+	    break;
+	  pc = &OMP_CLAUSE_CHAIN (c);
+	  continue;
 	case OMP_CLAUSE_DEPEND:
 	  depend_clause = c;
 	  /* FALLTHRU */
@@ -17825,6 +18018,7 @@ c_finish_omp_clauses (tree clauses, enum c_omp_region_type ort)
 	case OMP_CLAUSE_FINAL:
 	case OMP_CLAUSE_DEVICE:
 	case OMP_CLAUSE_DIST_SCHEDULE:
+	case OMP_CLAUSE_DYN_GROUPPRIVATE:
 	case OMP_CLAUSE_PARALLEL:
 	case OMP_CLAUSE_FOR:
 	case OMP_CLAUSE_SECTIONS:

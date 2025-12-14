@@ -5273,13 +5273,14 @@ for (i = 1; i < operand3; i++)
   operand0[i] = operand0[i - 1] && (operand1 + i < operand2);
 @end smallexample
 
-@cindex @code{select_vl@var{m}} instruction pattern
-@item @code{select_vl@var{m}}
-Set operand 0 to the number of scalar iterations that should be handled
-by one iteration of a vector loop.  Operand 1 is the total number of
-scalar iterations that the loop needs to process and operand 2 is a
-maximum bound on the result (also known as the maximum ``vectorization
-factor'').
+@cindex @code{select_vl@var{m}@var{n}} instruction pattern
+@item @code{select_vl@var{m}@var{n}}
+Set operand 0 (of mode @var{n}) to the number of scalar iterations that
+should be handled by one iteration of a vector loop.  Operand 1 is the
+total number of scalar iterations that the loop needs to process and
+operand 2 is a maximum bound on the result (also known as the
+maximum ``vectorization factor'').  Operand 3 (of mode @var{m}) is
+a dummy parameter to pass the vector mode to be used.
 
 The maximum value of operand 0 is given by:
 @smallexample
@@ -5293,7 +5294,7 @@ this, it is generally not useful to define this instruction if it will
 always calculate the maximum value.
 
 This optab is only useful on targets that implement @samp{len_load_@var{m}}
-and/or @samp{len_store_@var{m}}.
+and/or @samp{len_store_@var{m}} or the associated @samp{_len} variants.
 
 @cindex @code{check_raw_ptrs@var{m}} instruction pattern
 @item @samp{check_raw_ptrs@var{m}}
@@ -5407,18 +5408,20 @@ This pattern is not allowed to @code{FAIL}.
 
 @cindex @code{len_load_@var{m}} instruction pattern
 @item @samp{len_load_@var{m}}
-Load (operand 2 + operand 3) elements from memory operand 1
-into vector register operand 0, setting the other elements of
-operand 0 to undefined values.  Operands 0 and 1 have mode @var{m},
-which must be a vector mode.  Operand 2 has whichever integer mode the
-target prefers.  Operand 3 conceptually has mode @code{QI}.
+Load (operand 3 + operand 4) elements from memory operand 1
+into vector register operand 0.  Operands 0 and 1 have mode @var{m},
+which must be a vector mode.  Operand 3 has whichever integer mode the
+target prefers.  Operand 2 (the “else value”) is of mode @var{m} and
+specifies which value is loaded for the remaining elements.  The predicate
+of operand 2 must only accept the else values that the target actually
+supports.  Operand 4 conceptually has mode @code{QI}.
 
-Operand 2 can be a variable or a constant amount.  Operand 3 specifies a
+Operand 3 can be a variable or a constant amount.  Operand 4 specifies a
 constant bias: it is either a constant 0 or a constant -1.  The predicate on
-operand 3 must only accept the bias values that the target actually supports.
+operand 4 must only accept the bias values that the target actually supports.
 GCC handles a bias of 0 more efficiently than a bias of -1.
 
-If (operand 2 + operand 3) exceeds the number of elements in mode
+If (operand 3 + operand 4) exceeds the number of elements in mode
 @var{m}, the behavior is undefined.
 
 If the target prefers the length to be measured in bytes rather than
@@ -7664,7 +7667,67 @@ position of Operand 1 to test.  Operand 3 is the @code{code_label} to jump to.
 Conditional branch instruction combined with a compare instruction.
 Operand 0 is a comparison operator.  Operand 1 and operand 2 are the
 first and second operands of the comparison, respectively.  Operand 3
+is the @code{code_label} to jump to.  For vectors this optab is only used for
+comparisons of VECTOR_BOOLEAN_TYPE_P values and it never called for
+data-registers.  Data vector operands should use one of the patterns below
+instead.
+
+@cindex @code{vec_cbranch_any@var{mode}} instruction pattern
+@item @samp{vec_cbranch_any@var{mode}}
+Conditional branch instruction based on a vector compare that branches
+when at least one of the elementwise comparisons of the two input
+vectors is true.
+Operand 0 is a comparison operator.  Operand 1 and operand 2 are the
+first and second operands of the comparison, respectively.  Operand 3
 is the @code{code_label} to jump to.
+
+@cindex @code{vec_cbranch_all@var{mode}} instruction pattern
+@item @samp{vec_cbranch_all@var{mode}}
+Conditional branch instruction based on a vector compare that branches
+when all of the elementwise comparisons of the two input vectors is true.
+Operand 0 is a comparison operator.  Operand 1 and operand 2 are the
+first and second operands of the comparison, respectively.  Operand 3
+is the @code{code_label} to jump to.
+
+@cindex @code{cond_vec_cbranch_any@var{mode}} instruction pattern
+@item @samp{cond_vec_cbranch_any@var{mode}}
+Masked conditional branch instruction based on a vector compare that branches
+when at least one of the elementwise comparisons of the two input
+vectors is true.
+Operand 0 is a comparison operator.  Operand 1 is the mask operand.
+Operand 2 and operand 3 are the first and second operands of the comparison,
+respectively.  Operand 5 is the @code{code_label} to jump to.  Inactive lanes in
+the mask operand should not influence the decision to branch.
+
+@cindex @code{cond_vec_cbranch_all@var{mode}} instruction pattern
+@item @samp{cond_vec_cbranch_all@var{mode}}
+Masked conditional branch instruction based on a vector compare that branches
+when all of the elementwise comparisons of the two input vectors is true.
+Operand 0 is a comparison operator.  Operand 1 is the mask operand.
+Operand 2 and operand 3 are the first and second operands of the comparison,
+respectively.  Operand 5 is the @code{code_label} to jump to.  Inactive lanes in
+the mask operand should not influence the decision to branch.
+
+@cindex @code{cond_len_vec_cbranch_any@var{mode}} instruction pattern
+@item @samp{cond_len_vec_cbranch_any@var{mode}}
+Len based conditional branch instruction based on a vector compare that branches
+when at least one of the elementwise comparisons of the two input
+vectors is true.
+Operand 0 is a comparison operator.  Operand 1 is the mask operand.  Operand 2
+and operand 3 are the first and second operands of the comparison, respectively.
+Operand 4 is the len operand and Operand 5 is the bias operand.  Operand 6 is
+the @code{code_label} to jump to.  Inactive lanes in the mask operand should not
+influence the decision to branch.
+
+@cindex @code{cond_len_vec_cbranch_all@var{mode}} instruction pattern
+@item @samp{cond_len_vec_cbranch_all@var{mode}}
+Len based conditional branch instruction based on a vector compare that branches
+when all of the elementwise comparisons of the two input vectors is true.
+Operand 0 is a comparison operator.  Operand 1 is the mask operand.  Operand 2
+and operand 3 are the first and second operands of the comparison, respectively.
+Operand 4 is the len operand and Operand 5 is the bias operand.  Operand 6 is
+the @code{code_label} to jump to. Inactive lanes in the mask operand should not
+influence the decision to branch.
 
 @cindex @code{jump} instruction pattern
 @item @samp{jump}

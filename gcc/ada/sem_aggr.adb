@@ -1136,9 +1136,16 @@ package body Sem_Aggr is
    begin
       Error_Msg_Warn := SPARK_Mode /= On;
 
-      if Is_Modular_Integer_Type (Index_Typ) then
+      if Has_Modular_Operations (Index_Typ) then
          Error_Msg_N
            ("null array aggregate indexed by a modular type<<", N);
+
+      elsif Is_Modular_Integer_Type (Index_Typ)
+        and then Has_Unsigned_Base_Range_Aspect (Base_Type (Index_Typ))
+      then
+         Error_Msg_N
+           ("null array aggregate indexed by an unsigned base range type<<",
+            N);
 
       elsif Is_Enumeration_Type (Index_Typ) then
          Error_Msg_N
@@ -6641,7 +6648,7 @@ package body Sem_Aggr is
          else
             Record_Def := Type_Definition (Parent (Base_Type (Typ)));
 
-            if Null_Present (Record_Def) then
+            if No (Record_Def) or else Null_Present (Record_Def) then
                null;
 
             --  Explicitly add here mutably class-wide types because they do

@@ -686,7 +686,11 @@ get_reload_reg (enum op_type type, machine_mode mode, rtx original,
 	  && (int) REGNO (original) >= new_regno_start
 	  && (INSN_UID (curr_insn) >= new_insn_uid_start
 	      || ira_former_scratch_p (REGNO (original)))
-	  && in_class_p (original, rclass, &new_class, true))
+	  && in_class_p (original, rclass, &new_class, true)
+	  && (exclude_start_hard_regs == nullptr
+	      || hard_reg_set_intersect_p (
+		  ~lra_reg_info[REGNO (original)].exclude_start_hard_regs,
+		  ~*exclude_start_hard_regs)))
 	{
 	  unsigned int regno = REGNO (original);
 	  if (lra_dump_file != NULL)
@@ -698,6 +702,9 @@ get_reload_reg (enum op_type type, machine_mode mode, rtx original,
 	    lra_change_class (regno, new_class, ", change to", false);
 	  if (lra_dump_file != NULL)
 	    fprintf (lra_dump_file, "\n");
+	  if (exclude_start_hard_regs)
+	    lra_reg_info[regno].exclude_start_hard_regs
+	      |= *exclude_start_hard_regs;
 	  *result_reg = original;
 	  return false;
 	}
@@ -733,6 +740,18 @@ get_reload_reg (enum op_type type, machine_mode mode, rtx original,
 		reg = lowpart_subreg (mode, reg, GET_MODE (reg));
 		if (reg == NULL_RTX || GET_CODE (reg) != SUBREG)
 		  continue;
+	      }
+	    /* If the existing reload and this have no start hard register in
+	       common, then skip.  Otherwise update exclude_start_hard_regs.  */
+	    if (exclude_start_hard_regs
+		&& ! hard_reg_set_empty_p (*exclude_start_hard_regs))
+	      {
+		HARD_REG_SET r = lra_reg_info[regno].exclude_start_hard_regs
+				 | *exclude_start_hard_regs;
+		if (hard_reg_set_empty_p (~r))
+		  continue;
+		else
+		  lra_reg_info[regno].exclude_start_hard_regs = r;
 	      }
 	    *result_reg = reg;
 	    if (lra_dump_file != NULL)
@@ -4960,7 +4979,47 @@ curr_insn_transform (bool check_only_p)
 	  }
       lra_assert (done_p);
     }
+  int const_regno = -1;
+  rtx set;
+  rtx_insn *prev, *const_insn = NULL;
+  if (before != NULL_RTX && (prev = PREV_INSN (curr_insn)) != NULL_RTX
+      && (set = single_set (prev)) != NULL_RTX && CONSTANT_P (SET_SRC (set)))
+    {
+      rtx reg = SET_DEST (set);
+      if (GET_CODE (reg) == SUBREG)
+	reg = SUBREG_REG (reg);
+      /* Consider only reload insns as we don't want to change the order
+	 created by previous optimizations.  */
+      if (REG_P (reg) && (int) REGNO (reg) >= lra_new_regno_start
+	  && bitmap_bit_p (&lra_reg_info[REGNO (reg)].insn_bitmap,
+			   INSN_UID (curr_insn)))
+	{
+	  const_regno = REGNO (reg);
+	  const_insn = prev;
+	}
+    }
   lra_process_new_insns (curr_insn, before, after, "Inserting insn reload");
+  if (const_regno >= 0) {
+    bool move_p = true;
+    for (rtx_insn *insn = before; insn != curr_insn; insn = NEXT_INSN (insn))
+      if (bitmap_bit_p (&lra_reg_info[const_regno].insn_bitmap,
+			INSN_UID (insn)))
+	{
+	  move_p = false;
+	  break;
+	}
+    if (move_p)
+      {
+	reorder_insns_nobb (const_insn, const_insn, PREV_INSN (curr_insn));
+	if (lra_dump_file != NULL)
+	  {
+	    dump_insn_slim (lra_dump_file, const_insn);
+	    fprintf (lra_dump_file,
+		     "    to decrease reg pressure, it is moved before:\n");
+	    dump_insn_slim (lra_dump_file, curr_insn);
+	  }
+      }
+  }
   return change_p;
 }
 

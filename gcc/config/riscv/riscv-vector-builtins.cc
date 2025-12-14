@@ -4443,7 +4443,7 @@ function_builder::get_attributes (const function_instance &instance)
 registered_function &
 function_builder::add_function (const function_instance &instance,
 				const char *name, tree fntype, tree attrs,
-				bool placeholder_p, const char *overload_name,
+				const char *overload_name,
 				const vec<tree> &argument_types,
 				enum required_ext required,
 				bool overloaded_p = false)
@@ -4464,7 +4464,7 @@ function_builder::add_function (const function_instance &instance,
      nodes and remove the target hook. For now, however, we need to appease the
      validation and return a non-NULL, non-error_mark_node node, so we
      arbitrarily choose integer_zero_node.  */
-  tree decl = placeholder_p || in_lto_p
+  tree decl = in_lto_p
 		? integer_zero_node
 		: simulate_builtin_function_decl (input_location, name, fntype,
 						  code, NULL, attrs);
@@ -4508,7 +4508,7 @@ function_builder::add_unique_function (const function_instance &instance,
 				 argument_types.address ());
   tree attrs = get_attributes (instance);
   registered_function &rfn
-    = add_function (instance, name, fntype, attrs, false, overload_name,
+    = add_function (instance, name, fntype, attrs, overload_name,
 		    argument_types.copy (), required);
 
   /* Enter the function into the hash table.  */
@@ -4523,7 +4523,7 @@ function_builder::add_unique_function (const function_instance &instance,
       /* Attribute lists shouldn't be shared.  */
       tree attrs = get_attributes (instance);
       if (m_direct_overloads)
-	add_function (instance, overload_name, fntype, attrs, false, NULL,
+	add_function (instance, overload_name, fntype, attrs, NULL,
 		      vNULL, required);
       else
 	{
@@ -4562,7 +4562,7 @@ function_builder::add_overloaded_function (const function_instance &instance,
       /* To avoid API conflicting, take void return type and void argument
 	 for the overloaded function.  */
       tree fntype = build_function_type (void_type_node, void_list_node);
-      add_function (instance, name, fntype, NULL_TREE, false, name,
+      add_function (instance, name, fntype, NULL_TREE, name,
 		    vNULL, required, true);
       obstack_free (&m_string_obstack, name);
     }
@@ -4709,7 +4709,8 @@ function_expander::use_exact_insn (insn_code icode)
 
   /* The RVV floating-point only support dynamic rounding mode in the
      FRM register.  */
-  if (opno != insn_data[icode].n_generator_args)
+  if (base->may_require_frm_p ()
+      && opno < insn_data[icode].n_generator_args)
     add_input_operand (Pmode, gen_int_mode (riscv_vector::FRM_DYN, Pmode));
 
   return generate_insn (icode);
@@ -4894,7 +4895,8 @@ function_expander::use_ternop_insn (bool vd_accum_p, insn_code icode)
 
   /* The RVV floating-point only support dynamic rounding mode in the
      FRM register.  */
-  if (opno != insn_data[icode].n_generator_args)
+  if (base->may_require_frm_p ()
+      && opno < insn_data[icode].n_generator_args)
     add_input_operand (Pmode, gen_int_mode (riscv_vector::FRM_DYN, Pmode));
 
   return generate_insn (icode);
@@ -4938,7 +4940,8 @@ function_expander::use_widen_ternop_insn (insn_code icode)
 
   /* The RVV floating-point only support dynamic rounding mode in the
      FRM register.  */
-  if (opno != insn_data[icode].n_generator_args)
+  if (base->may_require_frm_p ()
+      && opno < insn_data[icode].n_generator_args)
     add_input_operand (Pmode, gen_int_mode (riscv_vector::FRM_DYN, Pmode));
 
   return generate_insn (icode);

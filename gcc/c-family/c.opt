@@ -45,6 +45,10 @@ C ObjC C++ ObjC++ Separate Alias(A) MissingArgError(assertion missing after %qs)
 -assert=
 C ObjC C++ ObjC++ Joined Alias(A) MissingArgError(assertion missing after %qs)
 
+-compile-std-module
+C++ ObjC++ Driver
+--compile-std-module	Compile module units for <bits/stdc++.h>, std, and std.compat.
+
 -comments
 C ObjC C++ ObjC++ Alias(C)
 
@@ -680,6 +684,10 @@ Warn about deprecated space between \"\" and suffix in a user-defined literal op
 Wdeprecated-non-prototype
 C ObjC Var(warn_deprecated_non_prototype) Init(-1) Warning
 Warn about calls with arguments to functions declared without parameters.
+
+Wdeprecated-openmp
+C ObjC C++ ObjC++ Warning Var(warn_deprecated_openmp) Init(1)
+Warn about deprecated OpenMP code.
 
 Wdeprecated-variadic-comma-omission
 C++ ObjC++ Var(warn_deprecated_variadic_comma_omission) Warning
@@ -2614,15 +2622,15 @@ Conform to the ISO 2017 C++ standard.
 
 std=c++2a
 C++ ObjC++ Alias(std=c++20) Undocumented
-Conform to the ISO 2020 C++ standard (experimental and incomplete support).
+Deprecated in favor of -std=c++20.
 
 std=c++20
 C++ ObjC++
-Conform to the ISO 2020 C++ standard (experimental and incomplete support).
+Conform to the ISO 2020 C++ standard.
 
 std=c++2b
 C++ ObjC++ Alias(std=c++23) Undocumented
-Conform to the ISO 2023 C++ standard (published in 2024; experimental and incomplete support).
+Deprecated in favor of -std=c++23.
 
 std=c++23
 C++ ObjC++
@@ -2716,15 +2724,15 @@ Conform to the ISO 2017 C++ standard with GNU extensions.
 
 std=gnu++2a
 C++ ObjC++ Alias(std=gnu++20) Undocumented
-Conform to the ISO 2020 C++ standard with GNU extensions (experimental and incomplete support).
+Deprecated in favor of -std=gnu++20.
 
 std=gnu++20
 C++ ObjC++
-Conform to the ISO 2020 C++ standard with GNU extensions (experimental and incomplete support).
+Conform to the ISO 2020 C++ standard with GNU extensions.
 
 std=gnu++2b
 C++ ObjC++ Alias(std=gnu++23) Undocumented
-Conform to the ISO 2023 C++ standard with GNU extensions (published in 2024; experimental and incomplete support).
+Deprecated in favor of -std=gnu++23.
 
 std=gnu++23
 C++ ObjC++

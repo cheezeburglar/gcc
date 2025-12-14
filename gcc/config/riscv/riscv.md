@@ -273,6 +273,7 @@
   V1SI,V2SI,V4SI,V8SI,V16SI,V32SI,V64SI,V128SI,V256SI,V512SI,V1024SI,
   V1DI,V2DI,V4DI,V8DI,V16DI,V32DI,V64DI,V128DI,V256DI,V512DI,
   V1HF,V2HF,V4HF,V8HF,V16HF,V32HF,V64HF,V128HF,V256HF,V512HF,V1024HF,V2048HF,
+  V1BF,V2BF,V4BF,V8BF,V16BF,V32BF,V64BF,V128BF,V256BF,V512BF,V1024BF,V2048BF,
   V1SF,V2SF,V4SF,V8SF,V16SF,V32SF,V64SF,V128SF,V256SF,V512SF,V1024SF,
   V1DF,V2DF,V4DF,V8DF,V16DF,V32DF,V64DF,V128DF,V256DF,V512DF,
   V1BI,V2BI,V4BI,V8BI,V16BI,V32BI,V64BI,V128BI,V256BI,V512BI,V1024BI,V2048BI,V4096BI"
@@ -673,7 +674,7 @@
 ;; Keep this in sync with enum riscv_microarchitecture.
 (define_attr "tune"
   "generic,sifive_7,sifive_p400,sifive_p600,xiangshan,generic_ooo,mips_p8700,
-   tt_ascalon_d8,andes_25_series,spacemit_x60"
+   tt_ascalon_d8,andes_25_series,andes_23_series,andes_45_series,spacemit_x60"
   (const (symbol_ref "((enum attr_tune) riscv_microarchitecture)")))
 
 ;; Describe a user's asm statement.
@@ -4988,5 +4989,7 @@
 (include "generic-vector-ooo.md")
 (include "generic-ooo.md")
 (include "tt-ascalon-d8.md")
+(include "andes-23-series.md")
 (include "andes-25-series.md")
+(include "andes-45-series.md")
 (include "spacemit-x60.md")

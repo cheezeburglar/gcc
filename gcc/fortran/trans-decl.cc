@@ -1560,7 +1560,11 @@ add_attributes_to_decl (tree *decl_p, const gfc_symbol *sym)
       clauses = c;
     }
 
-  if (sym_attr.omp_device_type != OMP_DEVICE_TYPE_UNSET)
+  /* FIXME: 'declare_target_link' permits both any and host, but
+     will fail if one sets OMP_CLAUSE_DEVICE_TYPE_KIND.  */
+  if (sym_attr.omp_device_type != OMP_DEVICE_TYPE_UNSET
+      && !sym_attr.omp_declare_target_link
+      && !sym_attr.omp_declare_target_indirect /* implies 'any' */)
     {
       tree c = build_omp_clause (UNKNOWN_LOCATION, OMP_CLAUSE_DEVICE_TYPE);
       switch (sym_attr.omp_device_type)
@@ -1580,6 +1584,26 @@ add_attributes_to_decl (tree *decl_p, const gfc_symbol *sym)
       OMP_CLAUSE_CHAIN (c) = clauses;
       clauses = c;
     }
+
+  /* Also check trans-common.cc when updating/removing the following;
+     also update f95.c's gfc_gnu_attributes.
+     For the warning, see also OpenMP spec issue 4663.  */
+  if (sym_attr.omp_groupprivate && sym_attr.threadprivate)
+    {
+      /* Unset this flag; implicit 'declare target local(...)' remains.  */
+      sym_attr.omp_groupprivate = 0;
+      gfc_warning (OPT_Wopenmp,
+		   "Ignoring the %<groupprivate%> attribute for "
+		   "%<threadprivate%> variable %qs declared at %L",
+		   sym->name, &sym->declared_at);
+    }
+  if (sym_attr.omp_groupprivate)
+    gfc_error ("Sorry, OMP GROUPPRIVATE not implemented, "
+	       "used by %qs declared at %L", sym->name, &sym->declared_at);
+  else if (sym_attr.omp_declare_target_local)
+    /* Use 'else if' as groupprivate implies 'local'.  */
+    gfc_error ("Sorry, OMP DECLARE TARGET with LOCAL clause not implemented, "
+	       "used by %qs declared at %L", sym->name, &sym->declared_at);
 
   bool has_declare = true;
   if (sym_attr.omp_declare_target_link
@@ -4542,7 +4566,8 @@ gfc_trans_vla_type_sizes (gfc_symbol *sym, stmtblock_t *body)
    and using trans_assignment to do the work. Set dealloc to false
    if no deallocation prior the assignment is needed.  */
 void
-gfc_init_default_dt (gfc_symbol * sym, stmtblock_t * block, bool dealloc)
+gfc_init_default_dt (gfc_symbol * sym, stmtblock_t * block, bool dealloc,
+		     bool pdt_ok)
 {
   gfc_expr *e;
   tree tmp;
@@ -4551,7 +4576,8 @@ gfc_init_default_dt (gfc_symbol * sym, stmtblock_t * block, bool dealloc)
   gcc_assert (block);
 
   /* Initialization of PDTs is done elsewhere.  */
-  if (sym->ts.type == BT_DERIVED && sym->ts.u.derived->attr.pdt_type)
+  if (sym->ts.type == BT_DERIVED && sym->ts.u.derived->attr.pdt_type
+      && !pdt_ok)
     return;
 
   gcc_assert (!sym->attr.allocatable);
@@ -4567,6 +4593,28 @@ gfc_init_default_dt (gfc_symbol * sym, stmtblock_t * block, bool dealloc)
     }
   gfc_add_expr_to_block (block, tmp);
   gfc_free_expr (e);
+}
+
+
+/* Initialize a PDT, when all the components have an initializer.  */
+static void
+gfc_init_default_pdt (gfc_symbol *sym, stmtblock_t *block, bool dealloc)
+{
+  /* Allowed in the case where all the components have initializers and
+     there are no LEN components.  */
+  if (sym->ts.type == BT_DERIVED && sym->ts.u.derived->attr.pdt_type)
+    {
+      gfc_component *c = sym->ts.u.derived->components;
+      if (!dealloc || !sym->value || sym->value->expr_type != EXPR_STRUCTURE)
+	return;
+      for (; c; c = c->next)
+	if (c->attr.pdt_len || !c->initializer)
+	  return;
+    }
+  else
+    return;
+  gfc_init_default_dt (sym, block, dealloc, true);
+  return;
 }
 
 
@@ -4960,6 +5008,9 @@ gfc_trans_deferred_vars (gfc_symbol * proc_sym, gfc_wrapped_block * block)
 					       sym->param_list);
 		  gfc_add_expr_to_block (&tmpblock, tmp);
 		}
+
+	      if (is_pdt_type)
+		gfc_init_default_pdt (sym, &tmpblock, true);
 
 	      if (!sym->attr.result && !sym->ts.u.derived->attr.alloc_comp)
 		tmp = gfc_deallocate_pdt_comp (sym->ts.u.derived,

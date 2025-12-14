@@ -3338,10 +3338,10 @@
   [(set (match_operand:VFH 0 "register_operand")
 	(vec_merge:VFH
 	  (match_operand:VFH 1 "nonimmediate_operand")
-	  (match_operand:VFH 2 "nonimmediate_operand")
+	  (match_operand:VFH 2 "general_operand")
 	  (unspec:<avx512fmaskmode>
 	    [(match_operand:VFH 3 "nonimmediate_operand")
-	     (match_operand:VFH 4 "nonimmediate_operand")
+	     (match_operand:VFH 4 "general_operand")
 	     (match_operand:SI 5 "const_0_to_31_operand")]
 	     UNSPEC_PCMP)))]
   "TARGET_SSE && ix86_pre_reload_split ()
@@ -3352,19 +3352,21 @@
    && (INTVAL (operands[5]) == 1 || INTVAL (operands[5]) == 14)"
    "#"
    "&& 1"
-   [(const_int 0)]
+   [(set (match_dup 0) (match_dup 6))]
  {
    int u = UNSPEC_IEEE_MIN;
+   rtx tmp = operands[2];
    if ((INTVAL (operands[5]) == 1 && rtx_equal_p (operands[1], operands[4]))
 	|| (INTVAL (operands[5]) == 14 && rtx_equal_p (operands[1], operands[3])))
      u = UNSPEC_IEEE_MAX;
 
    if (MEM_P (operands[1]))
      operands[1] = force_reg (<MODE>mode, operands[1]);
-   rtvec v = gen_rtvec (2, operands[1], operands[2]);
-   rtx tmp = gen_rtx_UNSPEC (<MODE>mode, v, u);
-   emit_move_insn (operands[0], tmp);
-   DONE;
+
+  if (immediate_operand (operands[2], <MODE>mode))
+    tmp = force_reg (<MODE>mode, operands[2]);
+   rtvec v = gen_rtvec (2, operands[1], tmp);
+   operands[6] = gen_rtx_UNSPEC (<MODE>mode, v, u);
  })
 
 (define_insn_and_split "*minmax<mode>3_2"
@@ -3383,7 +3385,7 @@
 	   && rtx_equal_p (operands[2], operands[3])))"
    "#"
    "&& 1"
-   [(const_int 0)]
+   [(set (match_dup 0) (match_dup 5))]
  {
    int u = UNSPEC_IEEE_MIN;
    if (rtx_equal_p (operands[1], operands[3]))
@@ -3392,9 +3394,53 @@
    if (MEM_P (operands[2]))
      operands[2] = force_reg (<MODE>mode, operands[2]);
    rtvec v = gen_rtvec (2, operands[2], operands[1]);
-   rtx tmp = gen_rtx_UNSPEC (<MODE>mode, v, u);
-   emit_move_insn (operands[0], tmp);
-   DONE;
+   operands[5] = gen_rtx_UNSPEC (<MODE>mode, v, u);
+ })
+
+
+(define_insn_and_split "*minmax<mode>3_3"
+  [(set (match_operand:VF_128_256 0 "register_operand")
+	(and:VF_128_256
+	  (not:VF_128_256
+	    (match_operator:VF_128_256 1 "ieee_maxmin_comparison_operator"
+	     [(match_operand:VF_128_256 2 "nonimmediate_operand")
+	      (match_operand:VF_128_256 3 "const0_operand")]))
+	  (match_operand:VF_128_256 4 "nonimmediate_operand")))]
+  "TARGET_SSE && ix86_pre_reload_split ()
+   && rtx_equal_p (operands[2], operands[4])"
+   "#"
+   "&& 1"
+   [(set (match_dup 0) (match_dup 5))]
+ {
+   int u = UNSPEC_IEEE_MIN;
+   if (GET_CODE (operands[1]) == LT)
+     u = UNSPEC_IEEE_MAX;
+
+   rtx tmp = force_reg (<MODE>mode, operands[3]);
+   rtvec v = gen_rtvec (2, tmp, operands[2]);
+   operands[5] = gen_rtx_UNSPEC (<MODE>mode, v, u);
+ })
+
+(define_insn_and_split "*minmax<mode>3_4"
+  [(set (match_operand:VF_128_256 0 "register_operand")
+	(and:VF_128_256
+	  (match_operator:VF_128_256 1 "ieee_maxmin_comparison_operator"
+	    [(match_operand:VF_128_256 2 "nonimmediate_operand")
+	     (match_operand:VF_128_256 3 "const0_operand")])
+	  (match_operand:VF_128_256 4 "nonimmediate_operand")))]
+  "TARGET_SSE && ix86_pre_reload_split ()
+   && rtx_equal_p (operands[2], operands[4])"
+   "#"
+   "&& 1"
+   [(set (match_dup 0) (match_dup 5))]
+ {
+   int u = UNSPEC_IEEE_MIN;
+   if (GET_CODE (operands[1]) == GT)
+     u = UNSPEC_IEEE_MAX;
+
+   rtx tmp = force_reg (<MODE>mode, operands[3]);
+   rtvec v = gen_rtvec (2, operands[2], tmp);
+   operands[5] = gen_rtx_UNSPEC (<MODE>mode, v, u);
  })
 
 ;; These versions of the min/max patterns implement exactly the operations
@@ -4854,7 +4900,8 @@
 	   (match_operand:SI 3 "<cmp_imm_predicate>")]
 	  UNSPEC_PCMP_ITER))]
   "TARGET_AVX512F && ix86_pre_reload_split ()
-   && rtx_equal_p (operands[1], operands[2])"
+   && rtx_equal_p (operands[1], operands[2])
+   && (!MEM_P (operands[1]) || !MEM_VOLATILE_P (operands[1]))"
   "#"
   "&& 1"
   [(set (match_dup 0) (match_dup 4))]
@@ -27290,24 +27337,6 @@
     }
   else
     ix86_expand_vecop_qihi (<CODE>, operands[0], operands[1], operands[2]);
-  DONE;
-})
-
-(define_expand "cond_<insn><mode>"
-  [(set (match_operand:VI1_AVX512VL 0 "register_operand")
-	(vec_merge:VI1_AVX512VL
-	  (any_shift:VI1_AVX512VL
-	    (match_operand:VI1_AVX512VL 2 "register_operand")
-	    (match_operand:VI1_AVX512VL 3 "const_vec_dup_operand"))
-	  (match_operand:VI1_AVX512VL 4 "nonimm_or_0_operand")
-	(match_operand:<avx512fmaskmode> 1 "register_operand")))]
-  "TARGET_GFNI && TARGET_AVX512F"
-{
-  rtx count = XVECEXP (operands[3], 0, 0);
-  rtx matrix = ix86_vgf2p8affine_shift_matrix (operands[0], count, <CODE>);
-  emit_insn (gen_vgf2p8affineqb_<mode>_mask (operands[0], operands[2], matrix,
-					     const0_rtx, operands[4],
-					     operands[1]));
   DONE;
 })
 

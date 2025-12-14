@@ -3587,13 +3587,13 @@ of the pragma in the :title:`GNAT_Reference_manual`).
 :switch:`-gnatwp`
   *Activate warnings on ineffective pragma Inlines.*
 
-  This switch activates warnings for failure of front end inlining
-  (activated by :switch:`-gnatN`) to inline a particular call. There are
-  many reasons for not being able to inline a call, including most
-  commonly that the call is too complex to inline. The default is
-  that such warnings are not given.
-  Warnings on ineffective inlining by the gcc back end can be activated
-  separately, using the gcc switch -Winline.
+  This switch activates warnings for failure of cross-unit inlining
+  (activated by :switch:`-gnatn`) to inline calls to a subprogram.
+  There are many reasons for not being able to inline these calls,
+  including most commonly that the subprogram body is too complex
+  to inline. The default is that such warnings are not given.
+  Warnings on ineffective inlining (within units) by the back end
+  can be activated separately, using the -Winline switch.
 
 
 .. index:: -gnatwP  (gcc)
@@ -5414,64 +5414,8 @@ switches refine this default behavior.
   This switch controls the mode used for computing intermediate
   arithmetic integer operations, and also enables overflow checking.
   For a full description of overflow mode and checking control, see
-  the 'Overflow Check Handling in GNAT' appendix in this
+  the :ref:`Overflow_Check_Handling_in_GNAT` appendix in this
   User's Guide.
-
-  Overflow checks are always enabled by this switch. The argument
-  controls the mode, using the codes
-
-
-  *1 = STRICT*
-    In STRICT mode, intermediate operations are always done using the
-    base type, and overflow checking ensures that the result is within
-    the base type range.
-
-
-  *2 = MINIMIZED*
-    In MINIMIZED mode, overflows in intermediate operations are avoided
-    where possible by using a larger integer type for the computation
-    (typically ``Long_Long_Integer``). Overflow checking ensures that
-    the result fits in this larger integer type.
-
-
-  *3 = ELIMINATED*
-    In ELIMINATED mode, overflows in intermediate operations are avoided
-    by using multi-precision arithmetic. In this case, overflow checking
-    has no effect on intermediate operations (since overflow is impossible).
-
-  If two digits are present after :switch:`-gnato` then the first digit
-  sets the mode for expressions outside assertions, and the second digit
-  sets the mode for expressions within assertions. Here assertions is used
-  in the technical sense (which includes for example precondition and
-  postcondition expressions).
-
-  If one digit is present, the corresponding mode is applicable to both
-  expressions within and outside assertion expressions.
-
-  If no digits are present, the default is to enable overflow checks
-  and set STRICT mode for both kinds of expressions. This is compatible
-  with the use of :switch:`-gnato` in previous versions of GNAT.
-
-  .. index:: Machine_Overflows
-
-  Note that the :switch:`-gnato??` switch does not affect the code generated
-  for any floating-point operations; it applies only to integer semantics.
-  For floating-point, GNAT has the ``Machine_Overflows``
-  attribute set to ``False`` and the normal mode of operation is to
-  generate IEEE NaN and infinite values on overflow or invalid operations
-  (such as dividing 0.0 by 0.0).
-
-  The reason that we distinguish overflow checking from other kinds of
-  range constraint checking is that a failure of an overflow check, unlike
-  for example the failure of a range check, can result in an incorrect
-  value, but cannot cause random memory destruction (like an out of range
-  subscript), or a wild jump (from an out of range case value). Overflow
-  checking is also quite expensive in time and space, since in general it
-  requires the use of double length arithmetic.
-
-  Note again that the default is :switch:`-gnato11` (equivalent to :switch:`-gnato1`),
-  so overflow checking is performed in STRICT mode by default.
-
 
 .. index:: -gnatE  (gcc)
 .. index:: Elaboration checks

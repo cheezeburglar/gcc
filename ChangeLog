@@ -1,3 +1,41 @@
+2025-12-12  Pietro Monteiro  <pietro@sociotechnical.xyz>
+
+	* MAINTAINERS: add myself to write after approval
+
+2025-12-11  Jeff Law  <jlaw@ventanamicro.com>
+
+	* MAINTAINERS: Update entries for contributors formerly at
+	Ventana Microsystems to refer to Qualcomm instead.
+
+2025-12-11  supers1ngular  <supers1ngular@baylibre.com>
+
+	* MAINTAINERS: add myself to write after approval
+
+2025-12-11  Pengxuan Zheng  <pengxuan.zheng@oss.qualcomm.com>
+
+	* MAINTAINERS (Pengxuan Zheng): Update email address.
+
+2025-12-08  Nathan Myers  <ncm@cantrip.org>
+
+	* MAINTAINERS: add ncm
+
+2025-11-30  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* MAINTAINERS: Add Algol 68 subsystems.
+	* SECURITY.txt: add libga68 to list of libraries.
+
+2025-11-20  Claudio Bantaloukas  <claudio.bantaloukas@arm.com>
+
+	* MAINTAINERS:  Add myself in forge integration maintainers
+
+2025-11-20  Josef Melcr  <josef.melcr@suse.com>
+
+	* MAINTAINERS: Update my email address.
+
+2025-11-20  Arsen Arsenović  <aarsenovic@baylibre.com>
+
+	* MAINTAINERS: Update my email.
+
 2025-11-19  Martin Liska  <martin.liska@hey.com>
 
 	* MAINTAINERS: Add myself to write after approval (DSO).

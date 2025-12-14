@@ -945,6 +945,11 @@ enum reg_class
 /* CPU/ARCH option handling.  */
 #include "config/aarch64/aarch64-opts.h"
 
+/* Long double is stored in 128 bits by default.  */
+#ifndef TARGET_LONG_DOUBLE_128
+#define TARGET_LONG_DOUBLE_128 1
+#endif
+
 /* If there is no CPU defined at configure, use generic as default.  */
 #ifndef TARGET_CPU_DEFAULT
 # define TARGET_CPU_DEFAULT AARCH64_CPU_generic_armv8_a
@@ -984,6 +989,25 @@ extern enum aarch64_cpu aarch64_tune;
 
 #define DEFAULT_PCC_STRUCT_RETURN 0
 
+/* The set of available Procedure Call Stardards.  */
+
+enum arm_pcs
+{
+  ARM_PCS_AAPCS64,		/* Base standard AAPCS for 64 bit.  */
+  ARM_PCS_SIMD,			/* For aarch64_vector_pcs functions.  */
+  ARM_PCS_SVE,			/* For functions that pass or return
+				   values in SVE registers.  */
+  ARM_PCS_TLSDESC,		/* For targets of tlsdesc calls.  */
+  ARM_PCS_PRESERVE_NONE,	/* PCS variant with no call-preserved
+				   registers except X29.  */
+  ARM_PCS_MS_VARIADIC,		/* PCS variant with no call-preserved
+				   differently.
+				   All composites are treated alike.
+				   SIMD and floating-point registers
+				   aren't used.  */
+  ARM_PCS_UNKNOWN
+};
+
 #if defined(HAVE_POLY_INT_H) && defined(GCC_VEC_H)
 struct GTY (()) aarch64_frame
 {
@@ -1011,6 +1035,9 @@ struct GTY (()) aarch64_frame
      frame.  This value is rounded up to a multiple of
      STACK_BOUNDARY.  */
   HOST_WIDE_INT saved_varargs_size;
+
+  /* The same as above except it is the original unaligned stack size.  */
+  HOST_WIDE_INT unaligned_saved_varargs_size;
 
   /* The number of bytes between the bottom of the static frame (the bottom
      of the outgoing arguments) and the bottom of the register save area.
@@ -1151,6 +1178,9 @@ typedef struct GTY (()) machine_function
 
   /* During SEH output, this is non-null.  */
   struct seh_frame_state * GTY ((skip (""))) seh;
+
+  /* The Procedure Call Standard for the function.  */
+  enum arm_pcs pcs;
 } machine_function;
 #endif
 #endif
@@ -1167,21 +1197,6 @@ enum aarch64_abi_type
 #endif
 
 #define TARGET_ILP32	(aarch64_abi & AARCH64_ABI_ILP32)
-
-enum arm_pcs
-{
-  ARM_PCS_AAPCS64,		/* Base standard AAPCS for 64 bit.  */
-  ARM_PCS_SIMD,			/* For aarch64_vector_pcs functions.  */
-  ARM_PCS_SVE,			/* For functions that pass or return
-				   values in SVE registers.  */
-  ARM_PCS_TLSDESC,		/* For targets of tlsdesc calls.  */
-  ARM_PCS_PRESERVE_NONE,	/* PCS variant with no call-preserved
-				   registers except X29.  */
-  ARM_PCS_UNKNOWN
-};
-
-
-
 
 /* We can't use machine_mode inside a generator file because it
    hasn't been created yet; we shouldn't be using any code that
@@ -1559,6 +1574,9 @@ extern GTY(()) tree aarch64_fp16_ptr_type_node;
 /* Pointer to the user-visible __bf16 type.  __bf16 itself is generic
    bfloat16_type_node.  Defined in aarch64-builtins.cc.  */
 extern GTY(()) tree aarch64_bf16_ptr_type_node;
+
+/* Windows Arm64 variadic function call ABI specific va_list type node.  */
+extern GTY(()) tree ms_va_list_type_node;
 
 /* The generic unwind code in libgcc does not initialize the frame pointer.
    So in order to unwind a function using a frame pointer, the very first

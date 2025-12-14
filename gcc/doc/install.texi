@@ -687,13 +687,14 @@ Please refer to the @uref{https://gcc.gnu.org/releases.html,,releases web page}
 for information on how to obtain GCC@.
 
 The source distribution includes the Ada, C, C++, Objective-C, COBOL
-(GCC 15 and later), D (GCC 9 and later), Fortran, Go, and Modula-2
-(GCC 13 and later) compilers, as well as runtime libraries for C++,
-Objective-C, COBOL, and Fortran.  For previous versions these were
-downloadable as separate components such as the core GCC distribution,
-which included the C language front end and shared components, and
-language-specific distributions including the language front end and
-the language runtime (where appropriate).
+(GCC 15 and later), D (GCC 9 and later), Fortran, Go, Modula-2 (GCC 13
+and later) and Algol 68 (GCC 16 and later, experimental) compilers, as
+well as runtime libraries for C++, Objective-C, COBOL, Fortran and
+Algol 68.  For previous versions these were downloadable as separate
+components such as the core GCC distribution, which included the C
+language front end and shared components, and language-specific
+distributions including the language front end and the language
+runtime (where appropriate).
 
 If you also intend to build binutils (either to upgrade an existing
 installation or for use in place of the corresponding tools of your
@@ -1687,10 +1688,10 @@ not use transactional memory.
 Specify which cpu variant the compiler should generate code for by default.
 @var{cpu} will be used as the default value of the @option{-mcpu=} switch.
 This option is only supported on some targets, including ARC, ARM, i386, M68k,
-PowerPC, and SPARC@.  It is mandatory for ARC@.  The @option{--with-cpu-32} and
-@option{--with-cpu-64} options specify separate default CPUs for
-32-bit and 64-bit modes; these options are only supported for aarch64, i386,
-x86-64, PowerPC, and SPARC@.
+PowerPC, RISC-V, and SPARC@.  It is mandatory for ARC@.  The
+@option{--with-cpu-32} and @option{--with-cpu-64} options specify separate
+default CPUs for 32-bit and 64-bit modes; these options are only supported for
+aarch64, i386, x86-64, PowerPC, and SPARC@.
 
 @item --with-schedule=@var{cpu}
 @itemx --with-arch=@var{cpu}
@@ -2103,13 +2104,13 @@ their runtime libraries should be built.  For a list of valid values for
 grep ^language= */config-lang.in
 @end smallexample
 Currently, you can use any of the following:
-@code{all}, @code{default}, @code{ada}, @code{c}, @code{c++},
+@code{all}, @code{default}, @code{ada}, @code{algol68}, @code{c}, @code{c++},
 @code{cobol}, @code{d}, @code{fortran}, @code{go}, @code{jit},
 @code{lto}, @code{m2}, @code{objc}, @code{obj-c++}.
 Building the Ada compiler has special requirements, see below.
 If you do not pass this flag, or specify the option @code{default}, then the
 default languages available in the @file{gcc} sub-tree will be configured.
-Ada, COBOL, D, Go, Jit, Objective-C++ and Modula-2 are not default languages.
+Algol 68, Ada, COBOL, D, Go, Jit, Objective-C++ and Modula-2 are not default languages.
 LTO is not a
 default language, but is built by default because @option{--enable-lto} is
 enabled by default.  The other languages are default languages.  If
@@ -2912,6 +2913,41 @@ scripts.
 In order to avoid shell and @command{make} quoting issues for complex
 overrides, you can pass a setting for @env{CONFIG_SITE} and set
 variables in the site file.
+
+@subheading Algol 68-Specific Options
+
+The following options apply to the build of the Algol 68 runtime library.
+
+@table @code
+@item --enable-algol68-gc
+Specify that an additional variant of the GNU Algol 68 runtime library
+is built, using an external build of the Boehm-Demers-Weiser garbage
+collector (@uref{https://www.hboehm.info/gc/}).
+
+This library needs to be available for each multilib variant, unless
+configured with @option{--enable-objc-gc=@samp{auto}} in which case
+the build of the additional runtime library is skipped when not
+available and the build continues.
+
+@item --with-target-bdw-gc=@var{list}
+@itemx --with-target-bdw-gc-include=@var{list}
+@itemx --with-target-bdw-gc-lib=@var{list}
+Specify search directories for the garbage collector header files and
+libraries. @var{list} is a comma separated list of key value pairs of the
+form @samp{@var{multilibdir}=@var{path}}, where the default multilib key
+is named as @samp{.} (dot), or is omitted (e.g.@:
+@samp{--with-target-bdw-gc=/opt/bdw-gc,32=/opt-bdw-gc32}).
+
+The options @option{--with-target-bdw-gc-include} and
+@option{--with-target-bdw-gc-lib} must always be specified together
+for each multilib variant and they take precedence over
+@option{--with-target-bdw-gc}.  If @option{--with-target-bdw-gc-include}
+is missing values for a multilib, then the value for the default
+multilib is used (e.g.@: @samp{--with-target-bdw-gc-include=/opt/bdw-gc/include}
+@samp{--with-target-bdw-gc-lib=/opt/bdw-gc/lib64,32=/opt-bdw-gc/lib32}).
+If none of these options are specified, the library is assumed in
+default locations.
+@end table
 
 @subheading Objective-C-Specific Options
 
@@ -4084,16 +4120,17 @@ supported ISAs as multilib; use @code{--with-multilib-list=} to tailor the built
 multilibs.  Note that mixing ISAs in the same binary is not supported and gives
 a linker error.
 
-By default, multilib support is built for @code{gfx900}, @code{gfx906},
-@code{gfx908}, @code{gfx90a}, @code{gfx90c}, @code{gfx1030}, @code{gfx1036},
-@code{gfx1100} and @code{gfx1103}.  The default multilib configuration
-requires LLVM 15 or newer.  LLVM 13.0.1 or LLVM 14 can be used by specifying
-a @code{--with-multilib-list=} that does not list any GFX 11 device nor
-@code{gfx1036}.  At least LLVM 16 is required for @code{gfx1150} and
-@code{gfx1151}, LLVM 18 for @code{gfx942}, LLVM 19 for the generic
+By default, multilib support is built for @code{gfx908}, @code{gfx90a},
 @code{gfx9-generic}, @code{gfx9-4-generic}, @code{gfx10-3-generic}, and
-@code{gfx11-generic} targets and for @code{gfx1152}, while LLVM 20 is required
-for @code{gfx950} and @code{gfx1153}.
+@code{gfx11-generic}, which covers all supported archs.  The default multilib
+configuration requires LLVM 19 or newer.  LLVM 13.0.1 or LLVM 14 can be used by
+specifying a @code{--with-multilib-list=} that only lists GFX9 or GFX10-3
+devices, while LLVM 15 is required for GFX 11 device and @code{gfx1036}.
+At least LLVM 16 is required for @code{gfx1150} and @code{gfx1151},
+LLVM 18 for @code{gfx942}, LLVM 19 for the generic @code{gfx9-generic},
+@code{gfx9-4-generic}, @code{gfx10-3-generic}, and @code{gfx11-generic}
+targets and for @code{gfx1152}, while LLVM 20 is required for
+@code{gfx950} and @code{gfx1153}.
 
 The supported ISA architectures are listed in the GCC manual. The generic
 ISA targets @code{gfx9-generic}, @code{gfx10-3-generic}, and

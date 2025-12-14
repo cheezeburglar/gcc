@@ -7090,7 +7090,10 @@ package body Sem_Ch12 is
            and then Convention (Gen_Unit) /= Convention_Intrinsic
          then
             Set_Convention (Act_Decl_Id, Convention (Gen_Unit));
+            Set_Convention (Anon_Id,     Convention (Gen_Unit));
+
             Set_Is_Exported (Act_Decl_Id, Is_Exported (Gen_Unit));
+            Set_Is_Exported (Anon_Id,     Is_Exported (Gen_Unit));
          end if;
 
          Generate_Definition (Act_Decl_Id);
@@ -15794,7 +15797,7 @@ package body Sem_Ch12 is
                Diagnose_Predicated_Actual;
 
             when N_Formal_Signed_Integer_Type_Definition =>
-               if not Is_Signed_Integer_Type (Act_T) then
+               if not Has_Overflow_Operations (Act_T) then
                   Error_Msg_NE
                     ("expect signed integer type in instantiation of&",
                      Actual, Gen_T);
@@ -15804,7 +15807,7 @@ package body Sem_Ch12 is
                Diagnose_Predicated_Actual;
 
             when N_Formal_Modular_Type_Definition =>
-               if not Is_Modular_Integer_Type (Act_T) then
+               if not Has_Modular_Operations (Act_T) then
                   Error_Msg_NE
                     ("expect modular type in instantiation of &",
                        Actual, Gen_T);
@@ -16929,7 +16932,7 @@ package body Sem_Ch12 is
             Scope_Stack.Decrement_Last;
             S := Current_Scope;
          else
-            SE := (Is_Transient => False, others => <>);
+            SE.Is_Transient := False;
          end if;
 
          --  After child instantiation is complete, remove from scope stack the
@@ -19230,13 +19233,13 @@ package body Sem_Ch12 is
             end if;
 
          when N_Formal_Signed_Integer_Type_Definition =>
-            if not Is_Integer_Type (Def_Sub) then
+            if not Has_Overflow_Operations (Def_Sub) then
                Error_Msg_NE ("default for& must be a discrete type",
                  Default, Formal);
             end if;
 
          when N_Formal_Modular_Type_Definition =>
-            if not Is_Modular_Integer_Type (Def_Sub) then
+            if not Has_Modular_Operations (Def_Sub) then
                Error_Msg_NE ("default for& must be a modular_integer Type",
                  Default, Formal);
             end if;

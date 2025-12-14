@@ -164,6 +164,9 @@ vec<c_omp_declare_target_attr, va_gc> *current_omp_declare_target_attribute;
    we are in.  */
 vec<c_omp_begin_assumes_data, va_gc> *current_omp_begin_assumes;
 
+/* Vector of "omp begin/end declare variant" blocks we are in.  */
+vec<c_omp_declare_variant_attr, va_gc> *current_omp_declare_variant_attribute;
+
 /* Vector of loop names with C_DECL_LOOP_NAME or C_DECL_SWITCH_NAME marked
    LABEL_DECL as the last and canonical for each loop or switch.  */
 static vec<tree> loop_names;
@@ -9771,6 +9774,13 @@ finish_struct (location_t loc, tree t, tree fieldlist, tree attributes,
 	  unsigned HOST_WIDE_INT width
 	    = tree_to_uhwi (DECL_INITIAL (field));
 	  tree type = TREE_TYPE (field);
+	  if (VECTOR_TYPE_P (type))
+	    {
+	      error_at (DECL_SOURCE_LOCATION (field),
+			"bit-field %qD has invalid type", field);
+	      type = TREE_TYPE (type);
+	      TREE_TYPE (field) = type;
+	    }
 	  if (width != TYPE_PRECISION (type))
 	    {
 	      if (TREE_CODE (type) == BITINT_TYPE
