@@ -64,8 +64,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "gcc-urlifier.h"
 #include "diagnostic-highlight-colors.h"
 #include "pretty-print-markup.h"
-#include "print-tree.h"
-#include "cstdio"
 
 
 /* Possible cases of bad specifiers type used by bad_specifiers. */
@@ -19378,10 +19376,8 @@ implicit_default_ctor_p (tree fn)
 static tree
 build_clobber_this (clobber_kind kind)
 {
-  printf(" -- Doing CLOBBER2\n");
   /* Clobbering an empty base is pointless, and harmful if its one byte
      TYPE_SIZE overlays real data.  */
-  printf(" -- build_clobber_this called\n -- clobber_kind is %d", kind);
   if (is_empty_class (current_class_type))
     return void_node;
 
@@ -19826,7 +19822,6 @@ start_preparsed_function (tree decl1, tree attrs, int flags)
       && !lookup_attribute ("clobber *this",
 			    DECL_ATTRIBUTES (current_class_ptr)))
   {
-    printf(" -- Doing CLOBBER3\n");
     DECL_ATTRIBUTES (current_class_ptr)
       = tree_cons (get_identifier ("clobber *this"), NULL_TREE,
 		   DECL_ATTRIBUTES (current_class_ptr));
@@ -20033,7 +20028,6 @@ begin_destructor_body (void)
 	  /* Clobbering an empty base is harmful if it overlays real data.  */
 	  && !is_empty_class (current_class_type))
       {
-      printf(" -- Doing CLOBBER4\n");
 	if (sanitize_flags_p (SANITIZE_VPTR)
 	    && (flag_sanitize_recover & SANITIZE_VPTR) == 0
 	    && TYPE_CONTAINS_VPTR_P (current_class_type))
@@ -20440,33 +20434,17 @@ finish_function (bool inline_p)
   /* Set up the named return value optimization, if we can.  Candidate
      variables are selected in check_return_expr.  */
   if (current_function_return_values)
-//      && fndecl != error_mark_node)
-  {
-    for ( auto r : current_function_return_values)
     {
-//      printf("iterating with finalize irv \n");
-//      printf("fndecl: \n");
-//      debug_tree(fndecl);
-//      printf("\n decl result fndecl: \n");
-//      debug_tree(DECL_RESULT(fndecl));
-//      printf("\n r: \n");
-//      debug_tree(r);
-//      printf("\n\n");
-      if (r != error_mark_node)
+      for ( auto r : current_function_return_values)
       {
-        finalize_nrv(fndecl, r);
-        r = NULL_TREE;
-        current_function_return_value = NULL_TREE;
+	if (r != error_mark_node)
+	{
+	  finalize_nrv(fndecl, r);
+	  r = NULL_TREE;
+	  current_function_return_value = NULL_TREE;
+	}
       }
     }
-  }
-
-//  if (tree r = current_function_return_value)
-//    {
-//      if (r != error_mark_node)
-//	finalize_nrv (fndecl, r);
-//      current_function_return_value = NULL_TREE;
-//    }
 
   /* Must mark the RESULT_DECL as being in this function.  */
   DECL_CONTEXT (DECL_RESULT (fndecl)) = fndecl;

@@ -30,7 +30,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "attribs.h"
 #include "tree-iterator.h"
 #include "target.h"
-#include "cstdio"
 
 static void push_eh_cleanup (tree);
 static tree prepare_eh_type (tree);
@@ -296,7 +295,6 @@ push_eh_cleanup (tree type)
 tree
 build_must_not_throw_expr (tree body, tree cond)
 {
-  printf(" -- enter build_must_not_throw_expr\n");
   tree type = body ? TREE_TYPE (body) : void_type_node;
 
   if (!flag_exceptions)
@@ -320,7 +318,6 @@ build_must_not_throw_expr (tree body, tree cond)
       else if (integer_onep (cond))
 	cond = NULL_TREE;
     }
-  printf(" -- except must_not_throw 1 -- \n");
   return build2 (MUST_NOT_THROW_EXPR, type, body, cond);
 }
 
@@ -368,7 +365,6 @@ initialize_handler_parm (tree decl, tree exp)
       /* Force cleanups now to avoid nesting problems with the
 	 MUST_NOT_THROW_EXPR.  */
       init = fold_build_cleanup_point_expr (TREE_TYPE (init), init);
-      printf(" -- except must_not_throw 2 -- \n");
       init = build_must_not_throw_expr (init, NULL_TREE);
       if (init && TREE_CODE (init) == MUST_NOT_THROW_EXPR)
 	MUST_NOT_THROW_CATCH_P (init) = 1;
@@ -525,7 +521,6 @@ begin_eh_spec_block (void)
      MUST_NOT_THROW_EXPR.  */
   if (TYPE_NOEXCEPT_P (TREE_TYPE (current_function_decl)))
     {
-      printf(" -- except must_not_throw 3 -- \n");
       r = build_stmt (spec_location, MUST_NOT_THROW_EXPR,
 		      NULL_TREE, NULL_TREE);
       TREE_SIDE_EFFECTS (r) = 1;
@@ -619,7 +614,6 @@ wrap_cleanups_r (tree *tp, int *walk_subtrees, void * /*data*/)
   cleanup = TARGET_EXPR_CLEANUP (exp);
   if (cleanup)
     {
-      printf(" -- except must_not_throw 4 -- \n");
       cleanup = build2 (MUST_NOT_THROW_EXPR, void_type_node, cleanup,
 			NULL_TREE);
       MUST_NOT_THROW_THROW_P (cleanup) = 1;
@@ -772,7 +766,6 @@ build_throw (location_t loc, tree exp, tsubst_flags_t complain)
 
       /* Mark any cleanups from the initialization as MUST_NOT_THROW, since
 	 they are run after the exception object is initialized.  */
-      printf(" -- except must_not_throw 5 -- \n");
       cp_walk_tree_without_duplicates (&exp, wrap_cleanups_r, 0);
 
       /* Prepend the allocation.  */
@@ -1356,13 +1349,11 @@ maybe_set_retval_sentinel ()
     {
       /* Just create the temporary now, maybe_splice_retval_cleanup
 	 will do the rest.  */
-//      printf("Creating current_retval_sentinel\n");
       current_retval_sentinel = create_temporary_var (boolean_type_node);
       DECL_INITIAL (current_retval_sentinel) = boolean_false_node;
       pushdecl_outermost_localscope (current_retval_sentinel);
     }
 
-//  printf("Setting current_retval_sentinel true\n");
   return build2 (MODIFY_EXPR, boolean_type_node,
 		 current_retval_sentinel, boolean_true_node);
 }

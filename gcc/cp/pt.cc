@@ -50,7 +50,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "omp-general.h"
 #include "pretty-print-markup.h"
 #include "contracts.h"
-#include "cstdio"
 
 /* The type of functions taking a tree, and some additional data, and
    returning an int.  */
@@ -20224,7 +20223,6 @@ tsubst_stmt (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 	    tree noex = NULL_TREE;
 	    if (TREE_CODE (body) == MUST_NOT_THROW_EXPR)
 	      {
-		printf(" -- pt must_not_throw 1 -- \n");
 		noex = MUST_NOT_THROW_COND (body);
 		if (noex == NULL_TREE)
 		  noex = boolean_true_node;
@@ -20254,7 +20252,6 @@ tsubst_stmt (tree t, tree args, tsubst_flags_t complain, tree in_decl)
 
     case MUST_NOT_THROW_EXPR:
       {
-	printf(" -- pt must_not_throw 2 -- \n");
 	tree op0 = RECUR (TREE_OPERAND (t, 0));
 	tree cond = RECUR (MUST_NOT_THROW_COND (t));
 	stmt = build_must_not_throw_expr (op0, cond);
