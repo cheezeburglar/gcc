@@ -5761,8 +5761,8 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
       DECL_INITIAL (dp->var) = NULL_TREE;
       SET_EXPR_LOCATION (init, EXPR_LOCATION (*tp));
       *tp = init;
-      if (DECL_HAS_VALUE_EXPR_P(*tp))
-	gcc_unreachable();
+//      if (DECL_HAS_VALUE_EXPR_P(*tp))
+//	gcc_unreachable();
     }
 
   /* Keep iterating.  */
