@@ -2186,7 +2186,6 @@ expand_default_init (tree binfo, tree true_exp, tree exp, tree init, int flags,
       while (TREE_CODE (*p) == MUST_NOT_THROW_EXPR
 	     || TREE_CODE (*p) == CLEANUP_POINT_EXPR)
 	{
-	  printf(" -- init must_not_throw 1 -- \n");
 	  /* Avoid voidify_wrapper_expr making a temporary.  */
 	  TREE_TYPE (*p) = void_type_node;
 	  p = &TREE_OPERAND (*p, 0);
