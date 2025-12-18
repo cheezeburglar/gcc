@@ -5780,7 +5780,7 @@ finalize_nrv (tree fndecl, tree var)
   class nrv_data data;
   tree result = DECL_RESULT (fndecl);
 
-  if (!result->decl_minimal.name) { result->decl_minmal.name = get_identifier( "nrvo builtin"); }
+  if (!result->decl_minimal.name) { result->decl_minimal.name = get_identifier( "nrvo builtin"); }
 //  TODO: Learn why I did this origianlly - THOR
 
   /* Copy name from VAR to RESULT.  */
