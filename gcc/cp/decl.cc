@@ -19821,11 +19821,9 @@ start_preparsed_function (tree decl1, tree attrs, int flags)
       && !implicit_default_ctor_p (decl1)
       && !lookup_attribute ("clobber *this",
 			    DECL_ATTRIBUTES (current_class_ptr)))
-  {
     DECL_ATTRIBUTES (current_class_ptr)
       = tree_cons (get_identifier ("clobber *this"), NULL_TREE,
 		   DECL_ATTRIBUTES (current_class_ptr));
-  }
   if (!processing_template_decl
       && DECL_CONSTRUCTOR_P (decl1)
       && sanitize_flags_p (SANITIZE_VPTR)
