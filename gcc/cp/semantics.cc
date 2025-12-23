@@ -5672,7 +5672,8 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
      but differs from using NULL_TREE in that it indicates that we care
      about the value of the RESULT_DECL.  But preserve anything appended
      by check_return_expr.  */
-  else if (TREE_CODE (*tp) == RETURN_EXPR)
+  else if (TREE_CODE (*tp) == RETURN_EXPR
+	   && TREE_OPERAND(*tp, 0))
     {
       tree *p = &TREE_OPERAND (*tp, 0);
       while (TREE_CODE (*p) == COMPOUND_EXPR)
