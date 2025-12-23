@@ -5627,11 +5627,6 @@ public:
   tree var;
   tree result;
   hash_set<tree> visited;
-
-  // experimental for nrv
-  hash_set<tree> results_test;
-  tree canary;
-
   bool simple;
   bool in_nrv_cleanup;
 };
@@ -5646,27 +5641,19 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
   /* No need to walk into types.  There wouldn't be any need to walk into
      non-statements, except that we have to consider STMT_EXPRs.  */
   if (TYPE_P (*tp))
-  {
     *walk_subtrees = 0;
-  }
   /* Replace all uses of the NRV with the RESULT_DECL.  */
   else if (*tp == dp->var)
-  {
     *tp = dp->result;
-  }
   /* Avoid walking into the same tree more than once.  Unfortunately, we
      can't just use walk_tree_without duplicates because it would only call
      us for the first occurrence of dp->var in the function body.  */
   else if (dp->visited.add (*tp))
-  {
     *walk_subtrees = 0;
-  }
 
   /* If there's a label, we might need to destroy the NRV on goto (92407).  */
   else if (TREE_CODE (*tp) == LABEL_EXPR && !dp->in_nrv_cleanup)
-  {
     dp->simple = false;
-  }
 
   /* Change NRV returns to just refer to the RESULT_DECL; this is a nop,
      but differs from using NULL_TREE in that it indicates that we care
@@ -5679,9 +5666,8 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
       while (TREE_CODE (*p) == COMPOUND_EXPR)
 	p = &TREE_OPERAND (*p, 0);
       if (TREE_CODE (*p) == INIT_EXPR
-	  && INIT_EXPR_NRV_P (*p)) {
+	  && INIT_EXPR_NRV_P (*p))
 	*p = dp->result;
-      }
     }
   /* Change all cleanups for the NRV to only run when not returning.  */
   else if (TREE_CODE (*tp) == CLEANUP_STMT
@@ -5744,10 +5730,8 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
   else if (TREE_CODE (*tp) == CLEANUP_STMT
 	   && dp->in_nrv_cleanup
 	   && CLEANUP_DECL (*tp) == dp->result)
-  {
     CLEANUP_EXPR (*tp) = void_node;
-  }
-    /* Replace the DECL_EXPR for the NRV with an initialization of the
+  /* Replace the DECL_EXPR for the NRV with an initialization of the
      RESULT_DECL, if needed.  */
   else if (TREE_CODE (*tp) == DECL_EXPR
 	   && DECL_EXPR_DECL (*tp) == dp->var)
@@ -5762,8 +5746,6 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
       DECL_INITIAL (dp->var) = NULL_TREE;
       SET_EXPR_LOCATION (init, EXPR_LOCATION (*tp));
       *tp = init;
-//      if (DECL_HAS_VALUE_EXPR_P(*tp))
-//	gcc_unreachable();
     }
 
   /* Keep iterating.  */
@@ -5781,8 +5763,8 @@ finalize_nrv (tree fndecl, tree var)
   class nrv_data data;
   tree result = DECL_RESULT (fndecl);
 
-  if (!result->decl_minimal.name) { result->decl_minimal.name = get_identifier( "nrvo builtin"); }
-//  TODO: Learn why I did this origianlly - THOR
+  /* Coroutine ramp functions relies on NRV to init vars - set DECL_NAME manually for them */
+  if (!result->decl_minimal.name) { result->decl_minimal.name = get_identifier("nrvo builtin"); }
 
   /* Copy name from VAR to RESULT.  */
   DECL_NAME (result) = DECL_NAME (var);
@@ -5806,7 +5788,6 @@ finalize_nrv (tree fndecl, tree var)
      return; see g++.dg/opt/nrv6.C.  */
   tree outer = outer_curly_brace_block (fndecl);
   data.simple = chain_member (var, BLOCK_VARS (outer));
-  data.canary = BLOCK_VARS (outer);
 
   cp_walk_tree (&DECL_SAVED_TREE (fndecl), finalize_nrv_r, &data, 0);
 }
