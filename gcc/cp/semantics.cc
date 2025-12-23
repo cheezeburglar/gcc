@@ -5680,10 +5680,8 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
       *walk_subtrees = 0;
 
       if (dp->simple)
-	{
 	/* For a simple NRV, just run it on the EH path.  */
 	CLEANUP_EH_ONLY (*tp) = true;
-	}
       else
 	{
 	  /* Not simple, we need to check current_retval_sentinel to decide
