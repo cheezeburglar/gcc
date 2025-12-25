@@ -291,17 +291,24 @@ constexpr auto AARCH64_FL_DEFAULT_ISA_MODE ATTRIBUTE_UNUSED
 #define TARGET_SVE2 AARCH64_HAVE_ISA (SVE2)
 
 /* SVE2 AES instructions, enabled through +sve2-aes.  */
-#define TARGET_SVE2_AES (AARCH64_HAVE_ISA (SVE2_AES) && TARGET_NON_STREAMING)
+#define TARGET_SVE2_AES (AARCH64_HAVE_ISA (SVE2) \
+			 && AARCH64_HAVE_ISA (SVE_AES) \
+			 && TARGET_NON_STREAMING)
 
 /* SVE2 BITPERM instructions, enabled through +sve2-bitperm.  */
-#define TARGET_SVE2_BITPERM (AARCH64_HAVE_ISA (SVE2_BITPERM) \
+#define TARGET_SVE2_BITPERM (AARCH64_HAVE_ISA (SVE2) \
+			     && AARCH64_HAVE_ISA (SVE_BITPERM) \
 			     && TARGET_NON_STREAMING)
 
 /* SVE2 SHA3 instructions, enabled through +sve2-sha3.  */
-#define TARGET_SVE2_SHA3 (AARCH64_HAVE_ISA (SVE2_SHA3) && TARGET_NON_STREAMING)
+#define TARGET_SVE2_SHA3 (AARCH64_HAVE_ISA (SVE2) \
+			  && AARCH64_HAVE_ISA (SVE_SHA3) \
+			  && TARGET_NON_STREAMING)
 
 /* SVE2 SM4 instructions, enabled through +sve2-sm4.  */
-#define TARGET_SVE2_SM4 (AARCH64_HAVE_ISA (SVE2_SM4) && TARGET_NON_STREAMING)
+#define TARGET_SVE2_SM4 (AARCH64_HAVE_ISA (SVE2) \
+			 && AARCH64_HAVE_ISA (SVE_SM4) \
+			 && TARGET_NON_STREAMING)
 
 /* SVE2p1 instructions, enabled through +sve2p1.  */
 #define TARGET_SVE2p1 AARCH64_HAVE_ISA (SVE2p1)
@@ -313,6 +320,14 @@ constexpr auto AARCH64_FL_DEFAULT_ISA_MODE ATTRIBUTE_UNUSED
 
 /* The FEAT_SME_I16I64 extension to SME, enabled through +sme-i16i64.  */
 #define TARGET_SME_I16I64 AARCH64_HAVE_ISA (SME_I16I64)
+
+/* The FEAT_SME_F8F16 extension to SME, enabled through +sme-f8f16.  */
+#define TARGET_STREAMING_SME_F8F16 \
+  (AARCH64_HAVE_ISA (SME_F8F16) && TARGET_STREAMING)
+
+/* The FEAT_SME_F8F32 extension to SME, enabled through +sme-f8f32.  */
+#define TARGET_STREAMING_SME_F8F32 \
+  (AARCH64_HAVE_ISA (SME_F8F32) && TARGET_STREAMING)
 
 /* The FEAT_SME_B16B16 extension to SME, enabled through +sme-b16b16.  */
 #define TARGET_STREAMING_SME_B16B16 \
@@ -530,6 +545,8 @@ through +ssve-fp8dot2.  */
 #define TARGET_SSVE_FP8DOT2 ((\
 		(TARGET_SVE2 && TARGET_FP8DOT2) || TARGET_STREAMING) \
 		&& (AARCH64_HAVE_ISA(SSVE_FP8DOT2) || TARGET_NON_STREAMING))
+
+#define TARGET_SSME2_FP8 (TARGET_FP8 && TARGET_STREAMING_SME2)
 
 /* Standard register usage.  */
 

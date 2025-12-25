@@ -2370,6 +2370,7 @@ private:
     DB_REF_PURVIEW_BIT,		/* Refers to a purview TU-local entity.  */
     DB_EXPOSE_GLOBAL_BIT,	/* Exposes a GMF TU-local entity.  */
     DB_EXPOSE_PURVIEW_BIT,	/* Exposes a purview TU-local entity.  */
+    DB_IGNORED_EXPOSURE_BIT,	/* Only seen where exposures are ignored.  */
     DB_IMPORTED_BIT,		/* An imported entity.  */
     DB_UNREACHED_BIT,		/* A yet-to-be reached entity.  */
     DB_MAYBE_RECURSIVE_BIT,	/* An entity maybe in a recursive cluster.  */
@@ -2490,6 +2491,10 @@ public:
   {
     return (get_flag_bit<DB_EXPOSE_PURVIEW_BIT> ()
 	    || (strict && get_flag_bit <DB_EXPOSE_GLOBAL_BIT> ()));
+  }
+  bool is_ignored_exposure_context () const
+  {
+    return get_flag_bit<DB_IGNORED_EXPOSURE_BIT> ();
   }
 
 public:
@@ -2625,26 +2630,53 @@ public:
     unsigned section;	     /* When writing out, the section.  */
     bool reached_unreached;  /* We reached an unreached entity.  */
     bool writing_merge_key;  /* We're writing merge key information.  */
-    bool ignore_tu_local;    /* In a context where referencing a TU-local
+
+  private:
+    bool ignore_exposure;    /* In a context where referencing a TU-local
 				entity is not an exposure.  */
+
+  private:
+    /* Information needed to do dependent ADL for discovering
+       more decl-reachable entities.  Cached during walking to
+       prevent tree marking from interfering with lookup.  */
+    struct dep_adl_info {
+      /* The name of the call or operator.  */
+      tree name = NULL_TREE;
+      /* If not ERROR_MARK, a rewrite candidate for this operator.  */
+      tree_code rewrite = ERROR_MARK;
+      /* Argument list for the call.  */
+      vec<tree, va_gc>* args = make_tree_vector ();
+    };
+    vec<dep_adl_info> dep_adl_entity_list;
 
   public:
     hash (size_t size, hash *c = NULL)
       : parent (size), chain (c), current (NULL), section (0),
 	reached_unreached (false), writing_merge_key (false),
-	ignore_tu_local (false)
+	ignore_exposure (false)
     {
       worklist.create (size);
+      dep_adl_entity_list.create (16);
     }
     ~hash ()
     {
       worklist.release ();
+      dep_adl_entity_list.release ();
     }
 
   public:
     bool is_key_order () const
     {
       return chain != NULL;
+    }
+
+  public:
+    /* Returns a temporary override that will additionally consider this
+       to be a context where exposures of TU-local entities are ignored
+       if COND is true.  */
+    temp_override<bool> ignore_exposure_if (bool cond)
+    {
+      return make_temp_override (ignore_exposure, ignore_exposure || cond);
     }
 
   private:
@@ -2671,6 +2703,7 @@ public:
     void add_specializations (bool decl_p);
     void add_partial_entities (vec<tree, va_gc> *);
     void add_class_entities (vec<tree, va_gc> *);
+    void add_dependent_adl_entities (tree expr);
 
   private:
     void add_deduction_guides (tree decl);
@@ -2985,6 +3018,7 @@ private:
   vec<tree> back_refs;		/* Back references.  */
   duplicate_hash_map *duplicates;	/* Map from existings to duplicate.  */
   vec<post_process_data> post_decls;	/* Decls to post process.  */
+  vec<tree> post_types;		/* Types to post process.  */
   unsigned unused;		/* Inhibit any interior TREE_USED
 				   marking.  */
 
@@ -3089,11 +3123,22 @@ public:
   {
     return post_decls;
   }
+  /* Return the types to postprocess.  */
+  const vec<tree>& post_process_type ()
+  {
+    return post_types;
+  }
 private:
   /* Register DATA for postprocessing.  */
   void post_process (post_process_data data)
   {
     post_decls.safe_push (data);
+  }
+  /* Register TYPE for postprocessing.  */
+  void post_process_type (tree type)
+  {
+    gcc_checking_assert (TYPE_P (type));
+    post_types.safe_push (type);
   }
 
 private:
@@ -3107,6 +3152,7 @@ trees_in::trees_in (module_state *state)
   duplicates = NULL;
   back_refs.create (500);
   post_decls.create (0);
+  post_types.create (0);
 }
 
 trees_in::~trees_in ()
@@ -3114,6 +3160,7 @@ trees_in::~trees_in ()
   delete (duplicates);
   back_refs.release ();
   post_decls.release ();
+  post_types.release ();
 }
 
 /* Tree stream writer.  */
@@ -8488,20 +8535,30 @@ trees_out::decl_value (tree decl, depset *dep)
 
   if (DECL_LANG_SPECIFIC (inner)
       && DECL_MODULE_KEYED_DECLS_P (inner)
-      && !is_key_order ())
+      && streaming_p ())
     {
-      /* Stream the keyed entities.  */
+      /* Stream the keyed entities.  There may be keyed entities that we
+	 choose not to stream, such as a lambda in a non-inline variable's
+	 initializer, so don't build dependencies for them here; any deps
+	 we need should be acquired during write_definition (possibly
+	 indirectly).  */
       auto *attach_vec = keyed_table->get (inner);
       unsigned num = attach_vec->length ();
-      if (streaming_p ())
-	u (num);
+      u (num);
       for (unsigned ix = 0; ix != num; ix++)
 	{
 	  tree attached = (*attach_vec)[ix];
+	  if (attached)
+	    {
+	      tree ti = TYPE_TEMPLATE_INFO (TREE_TYPE (attached));
+	      if (!dep_hash->find_dependency (attached)
+		  && !(ti && dep_hash->find_dependency (TI_TEMPLATE (ti))))
+		attached = NULL_TREE;
+	    }
+
 	  tree_node (attached);
-	  if (streaming_p ())
-	    dump (dumper::MERGE)
-	      && dump ("Written %d[%u] attached decl %N", tag, ix, attached);
+	  dump (dumper::MERGE)
+	    && dump ("Written %d[%u] attached decl %N", tag, ix, attached);
 	}
     }
 
@@ -8813,7 +8870,17 @@ trees_in::decl_value ()
 	  if (is_new)
 	    set.quick_push (attached);
 	  else if (set[ix] != attached)
-	    set_overrun ();
+	    {
+	      if (!set[ix] || !attached)
+		/* One import left a hole for a lambda dep we chose not
+		   to stream, but another import chose to stream that lambda.
+		   Let's not error here: hopefully we'll complain later in
+		   is_matching_decl about whatever caused us to make a
+		   different decision.  */
+		;
+	      else
+		set_overrun ();
+	    }
 	}
     }
 
@@ -9789,6 +9856,9 @@ trees_out::tree_value (tree t)
 				  && !DECL_CONTEXT (t)))
 			  && TREE_CODE (t) != FUNCTION_DECL));
 
+  if (is_initial_scan () && EXPR_P (t))
+    dep_hash->add_dependent_adl_entities (t);
+
   if (streaming_p ())
     {
       /* A new node -> tt_node.  */
@@ -10402,10 +10472,23 @@ trees_in::tree_node (bool is_use)
 
 	  case ARRAY_TYPE:
 	    {
+	      tree elt_type = res;
 	      tree domain = tree_node ();
 	      int dep = u ();
 	      if (!get_overrun ())
-		res = build_cplus_array_type (res, domain, dep);
+		{
+		  res = build_cplus_array_type (elt_type, domain, dep);
+		  /* If we're an array of an incomplete imported type,
+		     save it for post-processing so that we can attempt
+		     to complete the type later if it will get a
+		     definition later in the cluster.  */
+		  if (!dep
+		      && !COMPLETE_TYPE_P (elt_type)
+		      && CLASS_TYPE_P (elt_type)
+		      && DECL_LANG_SPECIFIC (TYPE_NAME (elt_type))
+		      && DECL_MODULE_IMPORT_P (TYPE_NAME (elt_type)))
+		    post_process_type (res);
+		}
 	    }
 	    break;
 
@@ -12901,8 +12984,7 @@ trees_out::write_function_def (tree decl)
        is ignored for determining exposures.  This should only matter
        for templates (we don't emit the bodies of non-inline functions
        to begin with).  */
-    auto ovr = make_temp_override (dep_hash->ignore_tu_local,
-				   !DECL_DECLARED_INLINE_P (decl));
+    auto ovr = dep_hash->ignore_exposure_if (!DECL_DECLARED_INLINE_P (decl));
     tree_node (DECL_INITIAL (decl));
     tree_node (DECL_SAVED_TREE (decl));
   }
@@ -13040,8 +13122,8 @@ trees_out::write_var_def (tree decl)
 {
   /* The initializer of a non-inline variable or variable template is
      ignored for determining exposures.  */
-  auto ovr = make_temp_override (dep_hash->ignore_tu_local,
-				 VAR_P (decl) && !DECL_INLINE_VAR_P (decl));
+  auto ovr = dep_hash->ignore_exposure_if (VAR_P (decl)
+					   && !DECL_INLINE_VAR_P (decl));
 
   tree init = DECL_INITIAL (decl);
   tree_node (init);
@@ -13240,7 +13322,7 @@ trees_out::write_class_def (tree defn)
       {
 	/* Friend declarations in class definitions are ignored when
 	   determining exposures.  */
-	auto ovr = make_temp_override (dep_hash->ignore_tu_local, true);
+	auto ovr = dep_hash->ignore_exposure_if (true);
 
 	/* Write the friend classes.  */
 	tree_list (CLASSTYPE_FRIEND_CLASSES (type), false);
@@ -14399,6 +14481,9 @@ depset::hash::make_dependency (tree decl, entity_kind ek)
 	  gcc_checking_assert ((*eslot)->get_entity_kind () == EK_REDIRECT
 			       && !(*eslot)->deps.length ());
 
+      if (ignore_exposure)
+	dep->set_flag_bit<DB_IGNORED_EXPOSURE_BIT> ();
+
       if (ek != EK_USING)
 	{
 	  tree not_tmpl = STRIP_TEMPLATE (decl);
@@ -14522,6 +14607,8 @@ depset::hash::make_dependency (tree decl, entity_kind ek)
       if (!dep->is_import ())
 	worklist.safe_push (dep);
     }
+  else if (!ignore_exposure)
+    dep->clear_flag_bit<DB_IGNORED_EXPOSURE_BIT> ();
 
   dump (dumper::DEPEND)
     && dump ("%s on %s %C:%N found",
@@ -14580,7 +14667,7 @@ depset::hash::add_dependency (depset *dep)
       else
 	current->set_flag_bit<DB_REF_GLOBAL_BIT> ();
 
-      if (!ignore_tu_local && !is_exposure_of_member_type (current, dep))
+      if (!ignore_exposure && !is_exposure_of_member_type (current, dep))
 	{
 	  if (dep->is_tu_local ())
 	    current->set_flag_bit<DB_EXPOSE_PURVIEW_BIT> ();
@@ -14953,6 +15040,90 @@ depset::hash::add_class_entities (vec<tree, va_gc> *class_members)
     }
 }
 
+/* Add any entities found via dependent ADL.  */
+
+void
+depset::hash::add_dependent_adl_entities (tree expr)
+{
+  gcc_checking_assert (!is_key_order ());
+  if (TREE_CODE (current->get_entity ()) != TEMPLATE_DECL)
+    return;
+
+  dep_adl_info info;
+  switch (TREE_CODE (expr))
+    {
+    case CALL_EXPR:
+      if (!KOENIG_LOOKUP_P (expr))
+	return;
+      info.name = CALL_EXPR_FN (expr);
+      if (!info.name)
+	return;
+      if (TREE_CODE (info.name) == TEMPLATE_ID_EXPR)
+	info.name = TREE_OPERAND (info.name, 0);
+      if (TREE_CODE (info.name) == TU_LOCAL_ENTITY)
+	return;
+      if (!identifier_p (info.name))
+	info.name = OVL_NAME (info.name);
+      for (int ix = 0; ix < call_expr_nargs (expr); ix++)
+	vec_safe_push (info.args, CALL_EXPR_ARG (expr, ix));
+      break;
+
+    case LE_EXPR:
+    case GE_EXPR:
+    case LT_EXPR:
+    case GT_EXPR:
+      info.rewrite = SPACESHIP_EXPR;
+      goto overloadable_expr;
+
+    case NE_EXPR:
+      info.rewrite = EQ_EXPR;
+      goto overloadable_expr;
+
+    case EQ_EXPR:
+      /* Not strictly a rewrite candidate, but we need to ensure
+	 that lookup of a matching NE_EXPR can succeed if that
+	 would inhibit a rewrite with reversed parameters.  */
+      info.rewrite = NE_EXPR;
+      goto overloadable_expr;
+
+    case COMPOUND_EXPR:
+    case MEMBER_REF:
+    case MULT_EXPR:
+    case TRUNC_DIV_EXPR:
+    case TRUNC_MOD_EXPR:
+    case PLUS_EXPR:
+    case MINUS_EXPR:
+    case LSHIFT_EXPR:
+    case RSHIFT_EXPR:
+    case SPACESHIP_EXPR:
+    case BIT_AND_EXPR:
+    case BIT_XOR_EXPR:
+    case BIT_IOR_EXPR:
+    case TRUTH_ANDIF_EXPR:
+    case TRUTH_ORIF_EXPR:
+    overloadable_expr:
+      info.name = ovl_op_identifier (TREE_CODE (expr));
+      gcc_checking_assert (tree_operand_length (expr) == 2);
+      vec_safe_push (info.args, TREE_OPERAND (expr, 0));
+      vec_safe_push (info.args, TREE_OPERAND (expr, 1));
+      break;
+
+    default:
+      return;
+    }
+
+  /* If all arguments are type-dependent we don't need to do
+     anything further, we won't find new entities.  */
+  processing_template_decl_sentinel ptds;
+  ++processing_template_decl;
+  if (!any_type_dependent_arguments_p (info.args))
+    return;
+
+  /* We need to defer name lookup until after walking, otherwise
+     we get confused by stray TREE_VISITEDs.  */
+  dep_adl_entity_list.safe_push (info);
+}
+
 /* We add the partial & explicit specializations, and the explicit
    instantiations.  */
 
@@ -15297,6 +15468,8 @@ depset::hash::find_dependencies (module_state *module)
 		      add_namespace_context (item, ns);
 		    }
 
+		  auto ovr = make_temp_override
+		    (ignore_exposure, item->is_ignored_exposure_context ());
 		  walker.decl_value (decl, current);
 		  if (current->has_defn ())
 		    walker.write_definition (decl, current->refs_tu_local ());
@@ -15313,6 +15486,31 @@ depset::hash::find_dependencies (module_state *module)
 	      if (!is_key_order ()
 		  && deduction_guide_p (decl))
 		add_deduction_guides (TYPE_NAME (TREE_TYPE (TREE_TYPE (decl))));
+
+	      /* Handle dependent ADL for [module.global.frag] p3.3.  */
+	      if (!is_key_order () && !dep_adl_entity_list.is_empty ())
+		{
+		  processing_template_decl_sentinel ptds;
+		  ++processing_template_decl;
+		  for (auto &info : dep_adl_entity_list)
+		    {
+		      tree lookup = lookup_arg_dependent (info.name, NULL_TREE,
+							  info.args, true);
+		      for (tree fn : lkp_range (lookup))
+			add_dependency (make_dependency (fn, EK_DECL));
+
+		      if (info.rewrite)
+			{
+			  tree rewrite_name = ovl_op_identifier (info.rewrite);
+			  lookup = lookup_arg_dependent (rewrite_name, NULL_TREE,
+							 info.args, true);
+			  for (tree fn : lkp_range (lookup))
+			    add_dependency (make_dependency (fn, EK_DECL));
+			}
+		      release_tree_vector (info.args);
+		    }
+		  dep_adl_entity_list.truncate (0);
+		}
 
 	      if (!is_key_order ()
 		  && TREE_CODE (decl) == TEMPLATE_DECL
@@ -17388,6 +17586,13 @@ module_state::read_cluster (unsigned snum)
 	    DECL_EXTERNAL (decl) = false;
 	}
 
+    }
+  for (const tree& type : sec.post_process_type ())
+    {
+      /* Attempt to complete an array type now in case its element type
+	 had a definition streamed later in the cluster.  */
+      gcc_checking_assert (TREE_CODE (type) == ARRAY_TYPE);
+      complete_type (type);
     }
   set_cfun (old_cfun);
   current_function_decl = old_cfd;

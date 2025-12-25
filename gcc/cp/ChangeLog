@@ -1,3 +1,221 @@
+2025-12-23  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122819
+	* decl.cc (start_preparsed_function): Use
+	DECL_TEMPLOID_INSTANTIATION instead of
+	DECL_TEMPLATE_INSTANTIATION to check vague linkage.
+	* decl2.cc (vague_linkage_p): Likewise.
+	(c_parse_final_cleanups): Simplify condition.
+	* pt.cc (non_templated_friend_p): Namespace-scope friend
+	function declarations without a primary template are still
+	non-templated.
+	* semantics.cc (expand_or_defer_fn_1): Also check for temploid
+	friend functions.
+
+2025-12-23  Egas Ribeiro  <egas.g.ribeiro@gmail.com>
+
+	PR c++/122550
+	* decl.cc (member_like_constrained_friend_p): Check that the
+	friend's enclosing class is an implicit instantiation.
+
+2025-12-23  Egas Ribeiro  <egas.g.ribeiro@gmail.com>
+
+	PR c++/122958
+	* pt.cc (maybe_new_partial_specialization): Compare template
+	parameter lists when checking for existing specializations and
+	remove flag_concepts check.
+
+2025-12-23  Egas Ribeiro  <egas.g.ribeiro@gmail.com>
+
+	PR c++/117518
+	* parser.cc (cp_parser_lambda_expression): Clear
+	processing_template_parmlist when parsing lambda body.
+
+2025-12-23  Dhruv Chawla  <dhruvc@nvidia.com>
+
+	* Make-lang.in: Bump GCOV version to 3.
+
+2025-12-22  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122994
+	* module.cc (depset::disc_bits): New flag
+	DB_IGNORED_EXPOSURE_BIT.
+	(depset::is_ignored_exposure_context): New getter.
+	(depset::hash::ignore_tu_local): Rename to...
+	(depset::hash::ignore_exposure): ...this, and make private.
+	(depset::hash::hash): Rename ignore_tu_local.
+	(depset::hash::ignore_exposure_if): New function.
+	(trees_out::decl_value): Don't build deps for keyed entities.
+	(trees_in::decl_value): Handle missing keys.
+	(trees_out::write_function_def): Use ignore_exposure_if.
+	(trees_out::write_var_def): Likewise.
+	(trees_out::write_class_def): Likewise.
+	(depset::hash::make_dependency): Set DB_IGNORED_EXPOSURE_BIT if
+	appropriate, or clear it otherwise.
+	(depset::hash::add_dependency): Rename ignore_tu_local.
+	(depset::hash::find_dependencies): Set ignore_exposure if in
+	such a context.
+
+2025-12-22  Yuao Ma  <c8ef@outlook.com>
+
+	PR c++/123261
+	* semantics.cc (expand_or_defer_fn_1): Use maybe_constexpr_fn.
+
+2025-12-20  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122712
+	* module.cc (depset::hash::dep_adl_info): New type.
+	(depset::hash::dep_adl_entity_list): New work list.
+	(depset::hash::hash): Create it.
+	(depset::hash::~hash): Release it.
+	(trees_out::tree_value): Cache possibly dependent
+	calls during tree walk.
+	(depset::hash::add_dependent_adl_entities): New function.
+	(depset::hash::find_dependencies): Process cached entities.
+	* name-lookup.cc (name_lookup::tentative): New member.
+	(name_lookup::name_lookup): Initialize it.
+	(name_lookup::preserve_state): Propagate tentative from previous
+	lookup.
+	(name_lookup::adl_namespace_fns): Don't search imported bindings
+	during tentative lookup.
+	(name_lookup::adl_class): Don't attempt to complete class types
+	during tentative lookup.
+	(name_lookup::search_adl): Skip type-dependent args and avoid
+	unnecessary work during tentative lookup.
+	(lookup_arg_dependent): Add tentative parameter.
+	* name-lookup.h (lookup_arg_dependent): Likewise.
+
+2025-12-20  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122690
+	* tree.cc (implicit_lifetime_type_p): Don't test is_trivially_xible,
+	instead try to lazily declare dtor and default, copy and move ctors
+	if needed and check for their triviality and whether they are
+	deleted.
+
+2025-12-19  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/91388
+	* semantics.cc (finish_static_assert): Suppress -Wreturn-type warnings
+	in functions with failed assertions.
+
+2025-12-19  Jason Merrill  <jason@redhat.com>
+	    Egas Ribeiro  <egas.g.ribeiro@tecnico.ulisboa.pt>
+
+	PR c++/117034
+	* parser.cc (maybe_start_implicit_template): Split out from...
+	(synthesize_implicit_template_parm): ...here.
+	(cp_parser_template_id): Call it.
+
+2025-12-19  Egas Ribeiro  <egas.g.ribeiro@tecnico.ulisboa.pt>
+
+	* decl2.cc (mark_single_function): Return false for error_mark_node.
+	(mark_used): Likewise.
+
+2025-12-19  Egas Ribeiro  <egas.g.ribeiro@tecnico.ulisboa.pt>
+
+	PR c++/123044
+	* typeck2.cc (build_functional_cast_1): Call convert_from_reference
+	on template CAST_EXPR to match C-style cast behavior.
+
+2025-12-19  Egas Ribeiro  <egas.g.ribeiro@gmail.com>
+
+	PR c++/122509
+	* parser.cc (cp_parser_lookup_name): Use protect=2 instead of
+	protect=0 when calling lookup_member.
+
+2025-12-19  Tobias Burnus  <tburnus@baylibre.com>
+
+	* parser.cc (cp_parser_omp_clause_uses_allocators): Accept
+	multiple clause-argument-specifications separated by ';'.
+
+2025-12-19  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122772
+	* tree.cc (cp_stabilize_bitfield_reference): New function.
+	(cp_stabilize_reference): Use it for stabilization of
+	clk_bitfield or clk_packed lvalues.
+
+2025-12-19  Jakub Jelinek  <jakub@redhat.com>
+
+	PR debug/122968
+	* decl.cc (cp_finish_decomp): For structured bindings at namespace
+	scope which have DECL_HAS_VALUE_EXPR_P set, call early_global_decl
+	debug hook and put all such structured bindings into
+	"structured bindings" attribute arguments on the underlying decl.
+
+2025-12-19  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/122834
+	* typeck.cc (cp_compare_floating_point_conversion_ranks): Return
+	3 if fmt2->b is 10 except for _Float16 vs. _Decimal128, in that
+	case return -2.
+
+2025-12-19  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/123030
+	* init.cc (build_vec_init): Call build_vec_delete_1 for -fexceptions
+	even if just type_build_dtor_call, not only when
+	TYPE_HAS_NONTRIVIAL_DESTRUCTOR.  But register cleanups only
+	for TYPE_HAS_NONTRIVIAL_DESTRUCTOR.
+
+2025-12-19  Jakub Jelinek  <jakub@redhat.com>
+
+	* parser.cc (cp_build_range_for_decls): If expansion_stmt_p,
+	where we are setting DECL_DECLARED_CONSTEXPR_P on begin/end, use
+	const qualified iter_type.
+	* pt.cc (finish_expansion_stmt): Use build_target_expr_with_type
+	with cv_unqualified to create it instead of get_target_expr to
+	make it non-const qualified.  When creating VAR_DECLs with
+	DECL_DECLARED_CONSTEXPR_P, make sure they have const qualified
+	type unless they are references.
+
+2025-12-19  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122922
+	* module.cc (trees_in::post_types): New member.
+	(trees_in::trees_in): Initialize it.
+	(trees_in::~trees_in): Clean it up.
+	(trees_in::post_process_type): New functions.
+	(trees_in::tree_node): Save incomplete ARRAY_TYPEs for later
+	post-processing.
+	(module_state::read_cluster): Attempt to complete any
+	ARRAY_TYPEs we saved earlier.
+
+2025-12-19  Nathaniel Shead  <nathanieloshead@gmail.com>
+
+	PR c++/122995
+	* name-lookup.cc (maybe_record_mergeable_decl): Don't build a
+	STAT_HACK for namespaces.
+
+2025-12-18  Tobias Burnus  <tburnus@baylibre.com>
+
+	* parser.cc (cp_parser_omp_assumption_clauses): Add
+	no_openmp_constructs clause.
+
+2025-12-18  Patrick Palka  <ppalka@redhat.com>
+
+	* decl.cc (tag_name) <case none_type>: Return "typename" as if
+	typename_type.
+
+2025-12-18  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/123186
+	* parser.cc (cp_parser_template_id): Use TYPE_IDENTIFIER instead of
+	TYPE_NAME in second build_typename_type argument.
+
+2025-12-18  Egas Ribeiro  <egas.g.ribeiro@gmail.com>
+	    Patrick Palka  <ppalka@redhat.com>
+
+	PR c++/122070
+	* pt.cc (type_targs_deducible_from): Fall back to
+	TYPE_TEMPLATE_INFO when TYPE_TEMPLATE_INFO_MAYBE_ALIAS is NULL.
+
+2025-12-18  Tobias Burnus  <tburnus@baylibre.com>
+
+	* parser.cc (OMP_TARGET_CLAUSE_MASK): Add
+	device_type clause.
+
 2025-12-17  benwu25  <soggysocks206@gmail.com>
 
 	* parser.cc (cp_parser_init_declarator): Adjust comment.

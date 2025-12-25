@@ -1976,7 +1976,7 @@ slpeel_tree_duplicate_loop_to_edge_cfg (class loop *loop, edge loop_exit,
 	  edge dup_exit = make_edge (bbcond, new_exit->dest, latch_is_false
 				? EDGE_TRUE_VALUE : EDGE_FALSE_VALUE);
 
-	  profile_probability probability (0.5, GUESSED);
+	  profile_probability probability = profile_probability::even ();
 	  to_latch_e->probability = dup_exit->probability = probability;
 
 	  set_immediate_dominator (CDI_DOMINATORS, dup_exit->src,
@@ -1988,11 +1988,6 @@ slpeel_tree_duplicate_loop_to_edge_cfg (class loop *loop, edge loop_exit,
       redirect_edge_and_branch_force (new_exit, preheader);
       flush_pending_stmts (new_exit);
       set_immediate_dominator (CDI_DOMINATORS, preheader, new_exit->src);
-
-      if (create_main_e)
-	set_immediate_dominator (CDI_DOMINATORS, scalar_exit->dest,
-				 recompute_dominator (CDI_DOMINATORS,
-						      scalar_exit->dest));
 
       /* And remove the non-necessary forwarder again.  Keep the other
          one so we have a proper pre-header for the loop at the exit edge.  */
@@ -2024,6 +2019,15 @@ slpeel_tree_duplicate_loop_to_edge_cfg (class loop *loop, edge loop_exit,
 		}
 	    }
 	}
+
+      /* When loop_exit != scalar_exit due to if-conversion loop versioning,
+	 the `scalar_exit' now has two incoming edges, one from the if-converted
+	 and one from the peeled prolog loop.  It is therefore dominated by a
+	 common block between these.  Update its dominator accordingly.  */
+      if (create_main_e && loop_exit != scalar_exit)
+	set_immediate_dominator (CDI_DOMINATORS, scalar_exit->dest,
+				 recompute_dominator (CDI_DOMINATORS,
+						      scalar_exit->dest));
     }
 
   free (new_bbs);
@@ -3267,7 +3271,7 @@ vect_do_peeling (loop_vec_info loop_vinfo, tree niters, tree nitersm1,
     return NULL;
 
   /* Before doing any peeling make sure to reset debug binds outside of
-     the loop refering to defs not in LC SSA.  */
+     the loop referring to defs not in LC SSA.  */
   class loop *loop = LOOP_VINFO_LOOP (loop_vinfo);
   for (unsigned i = 0; i < loop->num_nodes; ++i)
     {
@@ -3738,10 +3742,8 @@ vect_do_peeling (loop_vec_info loop_vinfo, tree niters, tree nitersm1,
       tree vector_iters_vf = niters_vector_mult_vf;
       if (LOOP_VINFO_EARLY_BREAKS (loop_vinfo))
 	{
-	  tree vector_iters_vf_type = uncounted_p ? sizetype
-						  : TREE_TYPE (vector_iters_vf);
-	  tree scal_iv_ty = signed_type_for (vector_iters_vf_type);
-	  tree tmp_niters_vf = make_ssa_name (scal_iv_ty);
+	  tree tmp_niters_vf
+	    = make_ssa_name (LOOP_VINFO_EARLY_BRK_IV_TYPE (loop_vinfo));
 
 	  if (!(LOOP_VINFO_NITERS_UNCOUNTED_P (loop_vinfo)
 		&& get_loop_exit_edges (loop).length () == 1))

@@ -277,6 +277,7 @@ static tree omp_start_variant_function
   (cp_declarator *, tree);
 static int omp_finish_variant_function
   (cp_parser *, tree, tree, tree, bool, bool);
+static void maybe_start_implicit_template (cp_parser *parser);
 
 /* Manifest constants.  */
 #define CP_LEXER_BUFFER_SIZE ((256 * 1024) / sizeof (cp_token))
@@ -12042,6 +12043,8 @@ cp_parser_lambda_expression (cp_parser* parser,
     bool saved_omp_array_section_p = parser->omp_array_section_p;
     bool saved_in_targ = parser->in_template_argument_list_p;
     bool saved_in_declarator_p = parser->in_declarator_p;
+    auto parmlist_sentinel
+      = make_temp_override (processing_template_parmlist, 0);
 
     parser->num_template_parameter_lists = 0;
     parser->in_statement = 0;
@@ -15287,6 +15290,8 @@ cp_build_range_for_decls (location_t loc, tree range_expr, tree *end_p,
     }
 
   /* The new for initialization statement.  */
+  if (expansion_stmt_p && !TYPE_REF_P (iter_type))
+    iter_type = cp_build_qualified_type (iter_type, TYPE_QUAL_CONST);
   tree begin = build_decl (loc, VAR_DECL, for_begin__identifier, iter_type);
   TREE_USED (begin) = 1;
   DECL_ARTIFICIAL (begin) = 1;
@@ -15302,7 +15307,11 @@ cp_build_range_for_decls (location_t loc, tree range_expr, tree *end_p,
 		  LOOKUP_ONLYCONVERTING);
 
   if (cxx_dialect >= cxx17)
-    iter_type = cv_unqualified (TREE_TYPE (end_expr));
+    {
+      iter_type = cv_unqualified (TREE_TYPE (end_expr));
+      if (expansion_stmt_p && !TYPE_REF_P (iter_type))
+	iter_type = cp_build_qualified_type (iter_type, TYPE_QUAL_CONST);
+    }
   tree end = build_decl (loc, VAR_DECL, for_end__identifier, iter_type);
   TREE_USED (end) = 1;
   DECL_ARTIFICIAL (end) = 1;
@@ -20287,6 +20296,13 @@ cp_parser_template_id (cp_parser *parser,
   if (templ == error_mark_node || is_identifier)
     return templ;
 
+  /* If we see a concept name in a parameter-list, it's a type-constraint in an
+     abbreviated function template, so enter template scope before parsing the
+     template arguments.  */
+  if (parser->auto_is_implicit_function_template_parm_p
+      && concept_definition_p (templ))
+    maybe_start_implicit_template (parser);
+
   /* Since we're going to preserve any side-effects from this parse, set up a
      firewall to protect our callers from cp_parser_commit_to_tentative_parse
      in the template arguments.  */
@@ -20435,7 +20451,7 @@ cp_parser_template_id (cp_parser *parser,
 				   fullname, arguments);
       TREE_TYPE (templ)
 	= build_typename_type (TYPE_CONTEXT (TREE_TYPE (templ)),
-			       TYPE_NAME (TREE_TYPE (templ)),
+			       TYPE_IDENTIFIER (TREE_TYPE (templ)),
 			       fullname,
 			       get_typename_tag (TREE_TYPE (templ)));
       template_id = templ;
@@ -34235,7 +34251,7 @@ cp_parser_lookup_name (cp_parser *parser, tree name,
 	   parse, those errors are valid.  */
 	decl = lookup_member (object_type,
 			      name,
-			      /*protect=*/0,
+			      /*protect=*/2,
 			      /*prefer_type=*/tag_type != none_type,
 			      tf_warning_or_error);
       else
@@ -42809,10 +42825,15 @@ cp_parser_omp_clause_allocate (cp_parser *parser, tree list)
    allocator ( traits-array )
    allocator ( traits-array ) , allocator-list
 
+   Deprecated in 5.2, removed in 6.0: 'allocator(trait-array)' syntax.
+
    OpenMP 5.2:
 
    uses_allocators ( modifier : allocator-list )
    uses_allocators ( modifier , modifier : allocator-list )
+
+   OpenMP 6.0:
+   uses_allocators ( [modifier-list :] allocator-list [; ...] )
 
    modifier:
    traits ( traits-array )
@@ -42827,6 +42848,8 @@ cp_parser_omp_clause_uses_allocators (cp_parser *parser, tree list)
   matching_parens parens;
   if (!parens.require_open (parser))
     return list;
+
+parse_next:
 
   bool has_modifiers = false;
   bool seen_allocators = false;
@@ -42982,9 +43005,16 @@ cp_parser_omp_clause_uses_allocators (cp_parser *parser, tree list)
 	break;
     }
 
+  if (cp_lexer_next_token_is (parser->lexer, CPP_SEMICOLON))
+    {
+      cp_lexer_consume_token (parser->lexer);
+      goto parse_next;
+    }
+
   if (!parens.require_close (parser))
     goto end;
   return nl;
+
  end:
   cp_parser_skip_to_closing_parenthesis (parser,
 					 /*recovering=*/true,
@@ -50663,6 +50693,7 @@ cp_parser_omp_target_update (cp_parser *parser, cp_token *pragma_tok,
 	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_DEFAULTMAP)	\
 	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_DEPEND)	\
 	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_DEVICE)	\
+	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_DEVICE_TYPE)	\
 	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_DYN_GROUPPRIVATE) \
 	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_FIRSTPRIVATE)	\
 	| (OMP_CLAUSE_MASK_1 << PRAGMA_OMP_CLAUSE_HAS_DEVICE_ADDR) \
@@ -51958,20 +51989,24 @@ cp_parser_omp_context_selector_specification (cp_parser *parser,
   return nreverse (ret);
 }
 
-/* Assumption clauses:
-   OpenMP 5.1
+/* Assumption clauses
+   OpenMP 5.1:
    absent (directive-name-list)
    contains (directive-name-list)
    holds (expression)
    no_openmp
    no_openmp_routines
-   no_parallelism  */
+   no_parallelism
+
+   OpenMP 6.0:
+   no_openmp_constructs  */
 
 static void
 cp_parser_omp_assumption_clauses (cp_parser *parser, cp_token *pragma_tok,
 				  bool is_assume)
 {
   bool no_openmp = false;
+  bool no_openmp_constructs = false;
   bool no_openmp_routines = false;
   bool no_parallelism = false;
   bitmap_head absent_head, contains_head;
@@ -52003,6 +52038,13 @@ cp_parser_omp_assumption_clauses (cp_parser *parser, cp_token *pragma_tok,
 	  if (no_openmp)
 	    error_at (cloc, "too many %qs clauses", "no_openmp");
 	  no_openmp = true;
+	}
+      else if (!strcmp (p, "no_openmp_constructs"))
+	{
+	  cp_lexer_consume_token (parser->lexer);
+	  if (no_openmp_constructs)
+	    error_at (cloc, "too many %qs clauses", "no_openmp_constructs");
+	  no_openmp_constructs = true;
 	}
       else if (!strcmp (p, "no_openmp_routines"))
 	{
@@ -56291,38 +56333,14 @@ make_generic_type_name ()
   return get_identifier (buf);
 }
 
-/* Add an implicit template type parameter to the CURRENT_TEMPLATE_PARMS
-   (creating a new template parameter list if necessary).  Returns the newly
-   created template type parm.  */
+/* We're declaring an abbreviated function template, make sure that
+   parser->implicit_template_scope is set. */
 
-static tree
-synthesize_implicit_template_parm  (cp_parser *parser, tree constr)
+static void
+maybe_start_implicit_template (cp_parser *parser)
 {
-  /* A requires-clause is not a function and cannot have placeholders.  */
-  if (current_binding_level->requires_expression)
-    {
-      error ("placeholder type not allowed in this context");
-      return error_mark_node;
-    }
-
-  gcc_assert (current_binding_level->kind == sk_function_parms);
-
-  /* We are either continuing a function template that already contains implicit
-     template parameters, creating a new fully-implicit function template, or
-     extending an existing explicit function template with implicit template
-     parameters.  */
-
-  cp_binding_level *const entry_scope = current_binding_level;
-
-  bool become_template = false;
-  cp_binding_level *parent_scope = 0;
-
   if (parser->implicit_template_scope)
-    {
-      gcc_assert (parser->implicit_template_parms);
-
-      current_binding_level = parser->implicit_template_scope;
-    }
+    return;
   else
     {
       /* Roll back to the existing template parameter scope (in the case of
@@ -56331,7 +56349,9 @@ synthesize_implicit_template_parm  (cp_parser *parser, tree constr)
 	 in the case of out-of-line member definitions).  The function scope is
 	 added back after template parameter synthesis below.  */
 
+      cp_binding_level *const entry_scope = current_binding_level;
       cp_binding_level *scope = entry_scope;
+      cp_binding_level *parent_scope = nullptr;
 
       while (scope->kind == sk_function_parms)
 	{
@@ -56384,8 +56404,6 @@ synthesize_implicit_template_parm  (cp_parser *parser, tree constr)
 	  /* Introduce a new template parameter list for implicit template
 	     parameters.  */
 
-	  become_template = true;
-
 	  parser->implicit_template_scope
 	      = begin_scope (sk_template_parms, NULL);
 
@@ -56393,6 +56411,12 @@ synthesize_implicit_template_parm  (cp_parser *parser, tree constr)
 
 	  parser->fully_implicit_function_template_p = true;
 	  ++parser->num_template_parameter_lists;
+
+	  parent_scope->level_chain = current_binding_level;
+
+	  current_template_parms
+	    = tree_cons (size_int (current_template_depth + 1),
+			 make_tree_vec (0), current_template_parms);
 	}
       else
 	{
@@ -56407,7 +56431,36 @@ synthesize_implicit_template_parm  (cp_parser *parser, tree constr)
 	  parser->implicit_template_parms
 	    = TREE_VEC_ELT (v, TREE_VEC_LENGTH (v) - 1);
 	}
+
+      current_binding_level = entry_scope;
     }
+}
+
+/* Add an implicit template type parameter to the CURRENT_TEMPLATE_PARMS
+   (creating a new template parameter list if necessary).  Returns the newly
+   created template type parm.  */
+
+static tree
+synthesize_implicit_template_parm  (cp_parser *parser, tree constr)
+{
+  /* A requires-clause is not a function and cannot have placeholders.  */
+  if (current_binding_level->requires_expression)
+    {
+      error ("placeholder type not allowed in this context");
+      return error_mark_node;
+    }
+
+  gcc_assert (current_binding_level->kind == sk_function_parms);
+
+  /* We are either continuing a function template that already contains implicit
+     template parameters, creating a new fully-implicit function template, or
+     extending an existing explicit function template with implicit template
+     parameters.  */
+
+  cp_binding_level *const entry_scope = current_binding_level;
+
+  maybe_start_implicit_template (parser);
+  current_binding_level = parser->implicit_template_scope;
 
   /* Synthesize a new template parameter and track the current template
      parameter chain with implicit_template_parms.  */
@@ -56419,10 +56472,6 @@ synthesize_implicit_template_parm  (cp_parser *parser, tree constr)
   /* Synthesize the type template parameter.  */
   gcc_assert(!proto || TREE_CODE (proto) == TYPE_DECL);
   tree synth_tmpl_parm = finish_template_type_parm (class_type_node, synth_id);
-
-  if (become_template)
-    current_template_parms = tree_cons (size_int (current_template_depth + 1),
-					NULL_TREE, current_template_parms);
 
   /* Attach the constraint to the parm before processing.  */
   tree node = build_tree_list (NULL_TREE, synth_tmpl_parm);
@@ -56463,21 +56512,10 @@ synthesize_implicit_template_parm  (cp_parser *parser, tree constr)
      template parameter list with this synthesized type, otherwise grow the
      current template parameter list.  */
 
-  if (become_template)
-    {
-      parent_scope->level_chain = current_binding_level;
-
-      tree new_parms = make_tree_vec (1);
-      TREE_VEC_ELT (new_parms, 0) = parser->implicit_template_parms;
-      TREE_VALUE (current_template_parms) = new_parms;
-    }
-  else
-    {
-      tree& new_parms = INNERMOST_TEMPLATE_PARMS (current_template_parms);
-      int new_parm_idx = TREE_VEC_LENGTH (new_parms);
-      new_parms = grow_tree_vec (new_parms, new_parm_idx + 1);
-      TREE_VEC_ELT (new_parms, new_parm_idx) = parser->implicit_template_parms;
-    }
+  tree& new_parms = INNERMOST_TEMPLATE_PARMS (current_template_parms);
+  int new_parm_idx = TREE_VEC_LENGTH (new_parms);
+  new_parms = grow_tree_vec (new_parms, new_parm_idx + 1);
+  TREE_VEC_ELT (new_parms, new_parm_idx) = parser->implicit_template_parms;
 
   /* If the new parameter was constrained, we need to add that to the
      constraints in the template parameter list.  */

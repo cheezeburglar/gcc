@@ -262,7 +262,7 @@ const char *constant_string_class_name;
 
 int warn_abi_version = -1;
 
-/* The C++ dialect being used.  Default set in c_common_post_options.  */
+/* The C++ dialect being used.  Default set in c_common_init_options.  */
 
 enum cxx_dialect cxx_dialect = cxx_unset;
 
@@ -1260,9 +1260,7 @@ c_build_shufflevector (location_t loc, tree v0, tree v1,
   vec_perm_indices indices (sel, 2, maskl);
 
   tree ret_type = build_vector_type (TREE_TYPE (TREE_TYPE (v0)), maskl);
-  tree mask_type = build_vector_type (build_nonstandard_integer_type
-		(TREE_INT_CST_LOW (TYPE_SIZE (TREE_TYPE (ret_type))), 1),
-		maskl);
+  tree mask_type = build_vector_type (ssizetype, maskl);
   /* Pad out arguments to the common vector size.  */
   if (v0n < maskl)
     {

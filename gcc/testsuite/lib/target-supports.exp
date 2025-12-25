@@ -2127,6 +2127,24 @@ proc check_effective_target_riscv_v { } {
     }]
 }
 
+# Return 1 if the target runtime supports 128-bit vectors, 0 otherwise.
+# Cache the result.
+
+proc check_effective_target_rvv_zvl128b_ok { } {
+    # Check if the target has a VLENB of 16.
+    set gcc_march [riscv_get_arch]
+    return [check_runtime ${gcc_march}_exec {
+       int main()
+       {
+         int vlenb = 0;
+         asm ("csrr %0,vlenb" : "=r" (vlenb) : : );
+         if (vlenb == 16)
+           return 0;
+         return 1;
+       }
+      } "-march=${gcc_march}"]
+}
+
 # Return 1 if the target runtime supports 256-bit vectors, 0 otherwise.
 # Cache the result.
 
@@ -12645,12 +12663,14 @@ proc check_effective_target_aarch64_gas_has_build_attributes { } {
 set exts {
     "bf16" "cmpbr" "crc" "crypto" "dotprod" "f32mm" "f64mm" "faminmax"
     "fp" "fp8" "fp8dot2" "fp8dot4" "fp8fma" "i8mm" "ls64" "lse" "lut"
-    "sb" "simd" "sve-b16b16" "sve" "sve2"
+    "sb" "simd" "sve-b16b16" "sve" "sve2" "sve-sm4" "sve-aes" "sve-bitperm"
+    "sve-sha3"
 }
 
 # We don't support SME without SVE2, so we'll use armv9 as the base
 # archiecture for SME and the features that require it.
 set exts_sve2 {
+    "sme-f8f16" "sme-f8f32"
     "sme-b16b16" "sme-f16f16" "sme-i16i64" "sme" "sme2" "sme2p1"
     "ssve-fp8dot2" "ssve-fp8dot4" "ssve-fp8fma"
 }

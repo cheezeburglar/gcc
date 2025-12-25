@@ -1795,8 +1795,13 @@ omp_verify_merge_absent_contains (gfc_statement st, gfc_omp_assumptions *check,
      predefined-allocator
      variable ( traits-array )
 
+   OpenMP 5.2 deprecated, 6.0 deleted: 'variable ( traits-array )'
+
    OpenMP 5.2:
    uses_allocators ( [modifier-list :] allocator-list )
+
+   OpenMP 6.0:
+   uses_allocators ( [modifier-list :] allocator-list [; ...])
 
    allocator:
      variable or predefined-allocator
@@ -1807,6 +1812,7 @@ omp_verify_merge_absent_contains (gfc_statement st, gfc_omp_assumptions *check,
 static match
 gfc_match_omp_clause_uses_allocators (gfc_omp_clauses *c)
 {
+parse_next:
   gfc_symbol *memspace_sym = NULL;
   gfc_symbol *traits_sym = NULL;
   gfc_omp_namelist *head = NULL;
@@ -1878,11 +1884,17 @@ gfc_match_omp_clause_uses_allocators (gfc_omp_clauses *c)
 	  p->u.memspace_sym = memspace_sym;
 	  p->u2.traits_sym = traits_sym;
 	}
-      if (gfc_match (", ") == MATCH_YES)
-	continue;
-      if (gfc_match (") ") == MATCH_YES)
+      gfc_gobble_whitespace ();
+      const char c = gfc_peek_ascii_char ();
+      if (c == ';' || c == ')')
 	break;
-      goto error;
+      if (c != ',')
+	{
+	  gfc_error ("Expected %<,%>, %<)%> or %<;%> at %C");
+	  goto error;
+	}
+      gfc_match_char (',');
+      gfc_gobble_whitespace ();
     } while (true);
 
   list = &c->lists[OMP_LIST_USES_ALLOCATORS];
@@ -1890,6 +1902,10 @@ gfc_match_omp_clause_uses_allocators (gfc_omp_clauses *c)
     list = &(*list)->next;
   *list = head;
 
+  if (gfc_match_char (';') == MATCH_YES)
+    goto parse_next;
+
+  gfc_match_char (')');
   return MATCH_YES;
 
 error:
@@ -2313,9 +2329,18 @@ gfc_match_dupl_check (bool not_dupl, const char *name, bool open_parens = false,
 		      gfc_expr **expr = NULL, const char *dupl_msg = NULL)
 {
   match m;
+  char c;
   locus old_loc = gfc_current_locus;
   if ((m = gfc_match (name)) != MATCH_YES)
     return m;
+  /* Ensure that no partial string is matched.  */
+  if (gfc_current_form == FORM_FREE
+      && gfc_match_eos () != MATCH_YES
+      && ((c = gfc_peek_ascii_char ()) == '_' || ISALNUM (c)))
+    {
+      gfc_current_locus = old_loc;
+      return MATCH_NO;
+    }
   if (!not_dupl)
     {
       if (dupl_msg)
@@ -2442,7 +2467,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->memorder = OMP_MEMORDER_ACQ_REL;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_MEMORDER)
@@ -2453,7 +2477,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->memorder = OMP_MEMORDER_ACQUIRE;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_AFFINITY)
@@ -2574,7 +2597,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 					     gfc_default_integer_kind,
 					     &gfc_current_locus);
 		  mpz_set_si (c->async_expr->value.integer, GOMP_ASYNC_NOVAL);
-		  needs_space = true;
 		}
 	      continue;
 	    }
@@ -2585,7 +2607,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->par_auto = true;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_ATTACH)
@@ -2625,7 +2646,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->capture = true;
-	      needs_space = true;
 	      continue;
 	    }
 	  if (mask & OMP_CLAUSE_COLLAPSE)
@@ -2657,7 +2677,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->compare = true;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_ASSUMPTIONS)
@@ -3013,6 +3032,43 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 					   OMP_MAP_DETACH, false,
 					   allow_derived))
 	    continue;
+	  if ((mask & OMP_CLAUSE_DEVICEPTR)
+	      && gfc_match ("deviceptr ( ") == MATCH_YES
+	      && gfc_match_omp_map_clause (&c->lists[OMP_LIST_MAP],
+					   OMP_MAP_FORCE_DEVICEPTR, false,
+					   allow_derived))
+	    continue;
+	  if ((mask & OMP_CLAUSE_DEVICE_TYPE)
+	      && gfc_match_dupl_check (c->device_type == OMP_DEVICE_TYPE_UNSET,
+				       "device_type", true) == MATCH_YES)
+	    {
+	      if (gfc_match ("host") == MATCH_YES)
+		c->device_type = OMP_DEVICE_TYPE_HOST;
+	      else if (gfc_match ("nohost") == MATCH_YES)
+		c->device_type = OMP_DEVICE_TYPE_NOHOST;
+	      else if (gfc_match ("any") == MATCH_YES)
+		c->device_type = OMP_DEVICE_TYPE_ANY;
+	      else
+		{
+		  gfc_error ("Expected HOST, NOHOST or ANY at %C");
+		  break;
+		}
+	      if (gfc_match (" )") != MATCH_YES)
+		break;
+	      continue;
+	    }
+	  if ((mask & OMP_CLAUSE_DEVICE_RESIDENT)
+	      && gfc_match_omp_variable_list
+		   ("device_resident (",
+		    &c->lists[OMP_LIST_DEVICE_RESIDENT], true) == MATCH_YES)
+	    continue;
+	  if ((mask & OMP_CLAUSE_DEVICE)
+	      && openacc
+	      && gfc_match ("device ( ") == MATCH_YES
+	      && gfc_match_omp_map_clause (&c->lists[OMP_LIST_MAP],
+					   OMP_MAP_FORCE_TO, true,
+					   /* allow_derived = */ true))
+	    continue;
 	  if ((mask & OMP_CLAUSE_DEVICE)
 	      && !openacc
 	      && ((m = gfc_match_dupl_check (!c->device, "device", true))
@@ -3072,42 +3128,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 		}
 	      continue;
 	    }
-	  if ((mask & OMP_CLAUSE_DEVICE)
-	      && openacc
-	      && gfc_match ("device ( ") == MATCH_YES
-	      && gfc_match_omp_map_clause (&c->lists[OMP_LIST_MAP],
-					   OMP_MAP_FORCE_TO, true,
-					   /* allow_derived = */ true))
-	    continue;
-	  if ((mask & OMP_CLAUSE_DEVICEPTR)
-	      && gfc_match ("deviceptr ( ") == MATCH_YES
-	      && gfc_match_omp_map_clause (&c->lists[OMP_LIST_MAP],
-					   OMP_MAP_FORCE_DEVICEPTR, false,
-					   allow_derived))
-	    continue;
-	  if ((mask & OMP_CLAUSE_DEVICE_TYPE)
-	      && gfc_match ("device_type ( ") == MATCH_YES)
-	    {
-	      if (gfc_match ("host") == MATCH_YES)
-		c->device_type = OMP_DEVICE_TYPE_HOST;
-	      else if (gfc_match ("nohost") == MATCH_YES)
-		c->device_type = OMP_DEVICE_TYPE_NOHOST;
-	      else if (gfc_match ("any") == MATCH_YES)
-		c->device_type = OMP_DEVICE_TYPE_ANY;
-	      else
-		{
-		  gfc_error ("Expected HOST, NOHOST or ANY at %C");
-		  break;
-		}
-	      if (gfc_match (" )") != MATCH_YES)
-		break;
-	      continue;
-	    }
-	  if ((mask & OMP_CLAUSE_DEVICE_RESIDENT)
-	      && gfc_match_omp_variable_list
-		   ("device_resident (",
-		    &c->lists[OMP_LIST_DEVICE_RESIDENT], true) == MATCH_YES)
-	    continue;
 	  if ((mask & OMP_CLAUSE_DIST_SCHEDULE)
 	      && c->dist_sched_kind == OMP_SCHED_NONE
 	      && gfc_match ("dist_schedule ( static") == MATCH_YES)
@@ -3197,7 +3217,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->finalize = true;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_FIRSTPRIVATE)
@@ -3214,7 +3233,7 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
-	      c->full = needs_space = true;
+	      c->full = true;
 	      continue;
 	    }
 	  break;
@@ -3231,8 +3250,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 		  gfc_current_locus = old_loc;
 		  break;
 		}
-	      else if (m == MATCH_NO)
-		needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_GRAINSIZE)
@@ -3291,7 +3308,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->if_present = true;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_IF)
@@ -3336,7 +3352,7 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
-	      c->inbranch = needs_space = true;
+	      c->inbranch = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_INDEPENDENT)
@@ -3346,7 +3362,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->independent = true;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_INDIRECT)
@@ -3734,7 +3749,7 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
-	      c->mergeable = needs_space = true;
+	      c->mergeable = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_MESSAGE)
@@ -3755,37 +3770,49 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	    continue;
 	  if ((mask & OMP_CLAUSE_ASSUMPTIONS)
 	      && (m = gfc_match_dupl_check (!c->assume
-					    || !c->assume->no_openmp_routines,
-					    "no_openmp_routines")) == MATCH_YES)
+					    || !c->assume->no_openmp_constructs,
+					    "no_openmp_constructs")) != MATCH_NO)
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
 	      if (c->assume == NULL)
 		c->assume = gfc_get_omp_assumptions ();
-	      c->assume->no_openmp_routines = needs_space = true;
+	      c->assume->no_openmp_constructs = true;
+	      continue;
+	    }
+	  if ((mask & OMP_CLAUSE_ASSUMPTIONS)
+	      && (m = gfc_match_dupl_check (!c->assume
+					    || !c->assume->no_openmp_routines,
+					    "no_openmp_routines")) != MATCH_NO)
+	    {
+	      if (m == MATCH_ERROR)
+		goto error;
+	      if (c->assume == NULL)
+		c->assume = gfc_get_omp_assumptions ();
+	      c->assume->no_openmp_routines = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_ASSUMPTIONS)
 	      && (m = gfc_match_dupl_check (!c->assume || !c->assume->no_openmp,
-					    "no_openmp")) == MATCH_YES)
+					    "no_openmp")) != MATCH_NO)
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
 	      if (c->assume == NULL)
 		c->assume = gfc_get_omp_assumptions ();
-	      c->assume->no_openmp = needs_space = true;
+	      c->assume->no_openmp = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_ASSUMPTIONS)
 	      && (m = gfc_match_dupl_check (!c->assume
 					    || !c->assume->no_parallelism,
-					    "no_parallelism")) == MATCH_YES)
+					    "no_parallelism")) != MATCH_NO)
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
 	      if (c->assume == NULL)
 		c->assume = gfc_get_omp_assumptions ();
-	      c->assume->no_parallelism = needs_space = true;
+	      c->assume->no_parallelism = true;
 	      continue;
 	    }
 
@@ -3813,7 +3840,7 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
-	      c->nogroup = needs_space = true;
+	      c->nogroup = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_NOHOST)
@@ -3821,7 +3848,7 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
-	      c->nohost = needs_space = true;
+	      c->nohost = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_NOTEMPORAL)
@@ -3835,7 +3862,7 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
-	      c->notinbranch = needs_space = true;
+	      c->notinbranch = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_NOWAIT)
@@ -3843,7 +3870,7 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
-	      c->nowait = needs_space = true;
+	      c->nowait = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_NUM_GANGS)
@@ -3906,28 +3933,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	    }
 	  break;
 	case 'o':
-	  if ((mask & OMP_CLAUSE_ORDER)
-	      && (m = gfc_match_dupl_check (!c->order_concurrent, "order ("))
-		 != MATCH_NO)
-	    {
-	      if (m == MATCH_ERROR)
-		goto error;
-	      if (gfc_match (" reproducible : concurrent )") == MATCH_YES)
-		c->order_reproducible = true;
-	      else if (gfc_match (" concurrent )") == MATCH_YES)
-		;
-	      else if (gfc_match (" unconstrained : concurrent )") == MATCH_YES)
-		c->order_unconstrained = true;
-	      else
-		{
-		  gfc_error ("Expected ORDER(CONCURRENT) at %C "
-			     "with optional %<reproducible%> or "
-			     "%<unconstrained%> modifier");
-		  goto error;
-		}
-	      c->order_concurrent = true;
-	      continue;
-	    }
 	  if ((mask & OMP_CLAUSE_ORDERED)
 	      && (m = gfc_match_dupl_check (!c->ordered, "ordered"))
 		 != MATCH_NO)
@@ -3954,7 +3959,28 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 		  continue;
 		}
 
-	      needs_space = true;
+	      continue;
+	    }
+	  if ((mask & OMP_CLAUSE_ORDER)
+	      && (m = gfc_match_dupl_check (!c->order_concurrent, "order", true))
+		 != MATCH_NO)
+	    {
+	      if (m == MATCH_ERROR)
+		goto error;
+	      if (gfc_match (" reproducible : concurrent )") == MATCH_YES)
+		c->order_reproducible = true;
+	      else if (gfc_match (" concurrent )") == MATCH_YES)
+		;
+	      else if (gfc_match (" unconstrained : concurrent )") == MATCH_YES)
+		c->order_unconstrained = true;
+	      else
+		{
+		  gfc_error ("Expected ORDER(CONCURRENT) at %C "
+			     "with optional %<reproducible%> or "
+			     "%<unconstrained%> modifier");
+		  goto error;
+		}
+	      c->order_concurrent = true;
 	      continue;
 	    }
 	  break;
@@ -4079,7 +4105,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->atomic_op = GFC_OMP_ATOMIC_READ;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_REDUCTION)
@@ -4094,7 +4119,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->memorder = OMP_MEMORDER_RELAXED;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_MEMORDER)
@@ -4105,7 +4129,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->memorder = OMP_MEMORDER_RELEASE;
-	      needs_space = true;
 	      continue;
 	    }
 	  break;
@@ -4199,11 +4222,8 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 		  break;
 		}
 	      else if (m == MATCH_NO)
-		{
-		  c->self_expr = gfc_get_logical_expr (gfc_default_logical_kind,
-						       NULL, true);
-		  needs_space = true;
-		}
+		c->self_expr = gfc_get_logical_expr (gfc_default_logical_kind,
+						     NULL, true);
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_SELF)
@@ -4219,7 +4239,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->seq = true;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_MEMORDER)
@@ -4230,7 +4249,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->memorder = OMP_MEMORDER_SEQ_CST;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_SHARED)
@@ -4251,7 +4269,7 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
-	      c->simd = needs_space = true;
+	      c->simd = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_SEVERITY)
@@ -4307,7 +4325,7 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
-	      c->threads = needs_space = true;
+	      c->threads = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_TILE)
@@ -4347,7 +4365,7 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	    {
 	      if (m == MATCH_ERROR)
 		goto error;
-	      c->untied = needs_space = true;
+	      c->untied = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_ATOMIC)
@@ -4358,7 +4376,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->atomic_op = GFC_OMP_ATOMIC_UPDATE;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_USE)
@@ -4411,8 +4428,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      m = match_oacc_clause_gwv (c, GOMP_DIM_VECTOR);
 	      if (m == MATCH_ERROR)
 		goto error;
-	      if (m == MATCH_NO)
-		needs_space = true;
 	      continue;
 	    }
 	  break;
@@ -4446,7 +4461,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->weak = true;
-	      needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_WORKER)
@@ -4458,8 +4472,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      m = match_oacc_clause_gwv (c, GOMP_DIM_WORKER);
 	      if (m == MATCH_ERROR)
 		goto error;
-	      else if (m == MATCH_NO)
-		needs_space = true;
 	      continue;
 	    }
 	  if ((mask & OMP_CLAUSE_ATOMIC)
@@ -4470,7 +4482,6 @@ gfc_match_omp_clauses (gfc_omp_clauses **cp, const omp_mask mask,
 	      if (m == MATCH_ERROR)
 		goto error;
 	      c->atomic_op = GFC_OMP_ATOMIC_WRITE;
-	      needs_space = true;
 	      continue;
 	    }
 	  break;
@@ -5136,7 +5147,7 @@ cleanup:
    | OMP_CLAUSE_IS_DEVICE_PTR | OMP_CLAUSE_IN_REDUCTION			\
    | OMP_CLAUSE_THREAD_LIMIT | OMP_CLAUSE_ALLOCATE			\
    | OMP_CLAUSE_HAS_DEVICE_ADDR | OMP_CLAUSE_USES_ALLOCATORS		\
-   | OMP_CLAUSE_DYN_GROUPPRIVATE)
+   | OMP_CLAUSE_DYN_GROUPPRIVATE | OMP_CLAUSE_DEVICE_TYPE)
 #define OMP_TARGET_DATA_CLAUSES \
   (omp_mask (OMP_CLAUSE_DEVICE) | OMP_CLAUSE_MAP | OMP_CLAUSE_IF	\
    | OMP_CLAUSE_USE_DEVICE_PTR | OMP_CLAUSE_USE_DEVICE_ADDR)
@@ -5355,6 +5366,8 @@ gfc_match_omp_assumes (void)
       gfc_current_ns->omp_assumes->no_openmp |= c->assume->no_openmp;
       gfc_current_ns->omp_assumes->no_openmp_routines
 	|= c->assume->no_openmp_routines;
+      gfc_current_ns->omp_assumes->no_openmp_constructs
+	|= c->assume->no_openmp_constructs;
       gfc_current_ns->omp_assumes->no_parallelism |= c->assume->no_parallelism;
       if (gfc_current_ns->omp_assumes->holds && c->assume->holds)
 	{

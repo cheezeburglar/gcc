@@ -2037,35 +2037,6 @@ noce_emit_cmove (struct noce_if_info *if_info, rtx x, enum rtx_code code,
     return NULL_RTX;
 }
 
-/*  Emit a conditional zero, returning TARGET or NULL_RTX upon failure.
-    IF_INFO describes the if-conversion scenario under consideration.
-    CZERO_CODE selects the condition (EQ/NE).
-    NON_ZERO_OP is the nonzero operand of the conditional move
-    TARGET is the desired output register.  */
-
-static rtx
-noce_emit_czero (struct noce_if_info *if_info, enum rtx_code czero_code,
-		 rtx non_zero_op, rtx target)
-{
-  machine_mode mode = GET_MODE (target);
-  rtx cond_op0 = XEXP (if_info->cond, 0);
-  rtx czero_cond
-    = gen_rtx_fmt_ee (czero_code, GET_MODE (cond_op0), cond_op0, const0_rtx);
-  rtx if_then_else
-    = gen_rtx_IF_THEN_ELSE (mode, czero_cond, const0_rtx, non_zero_op);
-  rtx set = gen_rtx_SET (target, if_then_else);
-
-  rtx_insn *insn = make_insn_raw (set);
-
-  if (recog_memoized (insn) >= 0)
-    {
-      add_insn (insn);
-      return target;
-    }
-
-  return NULL_RTX;
-}
-
 /* Try only simple constants and registers here.  More complex cases
    are handled in noce_try_cmove_arith after noce_try_store_flag_arith
    has had a go at it.  */
@@ -3141,166 +3112,136 @@ get_base_reg (rtx exp)
 {
   if (REG_P (exp))
     return exp;
+  else if (SUBREG_P (exp))
+    return SUBREG_REG (exp);
 
   return NULL_RTX;
 }
 
-/*  Check if IF-BB and THEN-BB satisfy the condition for conditional zero
-    based if conversion, returning TRUE if satisfied otherwise FALSE.
-
-    IF_INFO describes the if-conversion scenario under consideration.
-    COMMON_PTR points to the common REG of canonicalized IF_INFO->A and
-    IF_INFO->B.
-    CZERO_CODE_PTR points to the comparison code to use in czero RTX.
-    A_PTR points to the A expression of canonicalized IF_INFO->A.
-    TO_REPLACE points to the RTX to be replaced by czero RTX destnation.  */
-
-static bool
-noce_bbs_ok_for_cond_zero_arith (struct noce_if_info *if_info, rtx *common_ptr,
-				 rtx *bin_exp_ptr,
-				 enum rtx_code *czero_code_ptr, rtx *a_ptr,
-				 rtx **to_replace)
-{
-  rtx common = NULL_RTX;
-  rtx cond = if_info->cond;
-  rtx a = copy_rtx (if_info->a);
-  rtx b = copy_rtx (if_info->b);
-  rtx bin_op1 = NULL_RTX;
-  enum rtx_code czero_code = UNKNOWN;
-  bool reverse = false;
-  rtx op0, op1, bin_exp;
-
-  if (!noce_simple_bbs (if_info))
-    return false;
-
-  /* COND must be EQ or NE comparision of a reg and 0.  */
-  if (GET_CODE (cond) != NE && GET_CODE (cond) != EQ)
-    return false;
-  if (!REG_P (XEXP (cond, 0)) || !rtx_equal_p (XEXP (cond, 1), const0_rtx))
-    return false;
-
-  /* Canonicalize x = y : (y op z) to x = (y op z) : y.  */
-  if (REG_P (a) && noce_cond_zero_binary_op_supported (b))
-    {
-      std::swap (a, b);
-      reverse = !reverse;
-    }
-
-  /* Check if x = (y op z) : y is supported by czero based ifcvt.  */
-  if (!(noce_cond_zero_binary_op_supported (a) && REG_P (b)))
-    return false;
-
-  bin_exp = a;
-
-  /* Canonicalize x = (z op y) : y to x = (y op z) : y */
-  op1 = get_base_reg (XEXP (bin_exp, 1));
-  if (op1 && rtx_equal_p (op1, b) && COMMUTATIVE_ARITH_P (bin_exp))
-    std::swap (XEXP (bin_exp, 0), XEXP (bin_exp, 1));
-
-  op0 = get_base_reg (XEXP (bin_exp, 0));
-  if (op0 && rtx_equal_p (op0, b))
-    {
-      common = b;
-      bin_op1 = XEXP (bin_exp, 1);
-      czero_code = (reverse ^ (GET_CODE (bin_exp) == AND))
-		     ? noce_reversed_cond_code (if_info)
-		     : GET_CODE (cond);
-    }
-  else
-    return false;
-
-  if (czero_code == UNKNOWN)
-    return false;
-
-  if (REG_P (bin_op1))
-    *to_replace = &XEXP (bin_exp, 1);
-  else
-    return false;
-
-  *common_ptr = common;
-  *bin_exp_ptr = bin_exp;
-  *czero_code_ptr = czero_code;
-  *a_ptr = a;
-
-  return true;
-}
-
 /*  Try to covert if-then-else with conditional zero,
     returning TURE on success or FALSE on failure.
-    IF_INFO describes the if-conversion scenario under consideration.  */
+    IF_INFO describes the if-conversion scenario under consideration.
+
+    It verifies the branch structure on left and transforms it into branchless
+    sequence on the right, with a backend provided conditional zero or orig for
+    operand z. If true, tmp is z, 0 otherwise (y op 0 is same as y for most op).
+
+      if (cond)		|  tmp = cond ? z : 0
+	x = y op z	|    x = y op tmp
+      else		|
+	x = y		|
+
+    AND is special as it needs to be handled differently.
+
+      tmp = !cond ? y : 0
+	x = (y & z) | tmp
+  */
 
 static int
 noce_try_cond_zero_arith (struct noce_if_info *if_info)
 {
-  rtx target, rtmp, a;
+  rtx target, a, b, a_op0, a_op1;
+  rtx cond = if_info->cond;
   rtx_insn *seq;
+  rtx_code op;
   machine_mode mode = GET_MODE (if_info->x);
-  rtx common = NULL_RTX;
-  enum rtx_code czero_code = UNKNOWN;
-  rtx bin_exp = NULL_RTX;
-  enum rtx_code bin_code = UNKNOWN;
-  rtx non_zero_op = NULL_RTX;
-  rtx *to_replace = NULL;
+  bool reverse = false;
 
-  if (!noce_bbs_ok_for_cond_zero_arith (if_info, &common, &bin_exp, &czero_code,
-					&a, &to_replace))
+  /* Scalar integral modes are only supported here.
+     Could support scalar floating point but that
+     would be only with -ffast-math and might
+     be worse than a branch.  */
+  if (!SCALAR_INT_MODE_P (mode))
     return false;
+
+  if (!noce_simple_bbs (if_info))
+    return false;
+
+  if (!REG_P (XEXP (cond, 0)) || !rtx_equal_p (XEXP (cond, 1), const0_rtx))
+    return false;
+
+  a = copy_rtx (if_info->a);
+  b = copy_rtx (if_info->b);
+
+  /* Canonicalize x = y : (y op z) to x = (y op z) : y.  */
+  if (REG_P (a) && noce_cond_zero_binary_op_supported (b))
+    {
+      std::swap (if_info->cond, if_info->rev_cond);
+      std::swap (a, b);
+      reverse = true;
+    }
+
+  /* Check if x = (y op z) : y is supported by czero based ifcvt.  */
+  else if (!(noce_cond_zero_binary_op_supported (a) && REG_P (b)))
+    goto fail;
+
+  op = GET_CODE (a);
+
+  /* Canonicalize x = (z op y) : y to x = (y op z) : y */
+  a_op1 = get_base_reg (XEXP (a, 1));
+  if (a_op1 && rtx_equal_p (a_op1, b) && COMMUTATIVE_ARITH_P (a))
+    {
+      std::swap (XEXP (a, 0), XEXP (a, 1));
+      a_op1 = get_base_reg (XEXP (a, 1));
+    }
+
+  if (a_op1 == NULL_RTX)
+    goto fail;
+
+  /* Ensure the cond is of form: x = (y op z) : y */
+  a_op0 = get_base_reg (XEXP (a, 0));
+  if (!(a_op0 && rtx_equal_p (a_op0, b)))
+    goto fail;
 
   start_sequence ();
 
-  bin_code = GET_CODE (bin_exp);
+  target = gen_reg_rtx (GET_MODE (XEXP (a, op != AND)));
 
-  if (bin_code == AND)
+  /* AND requires !cond, instead we swap ops around.  */
+  target = noce_emit_cmove (if_info, target, GET_CODE (if_info->cond),
+			    XEXP (if_info->cond, 0), XEXP (if_info->cond, 1),
+			    op != AND ? XEXP (a, 1) : const0_rtx,
+			    op != AND ? const0_rtx : XEXP (a, 0));
+  if (!target)
+    goto end_seq_n_fail;
+
+  if (op == AND)
     {
-      rtmp = gen_reg_rtx (mode);
-      noce_emit_move_insn (rtmp, a);
+      rtx a_bin = gen_reg_rtx (mode);
+      noce_emit_move_insn (a_bin, a);
 
-      target = noce_emit_czero (if_info, czero_code, common, if_info->x);
-      if (!target)
-	{
-	  end_sequence ();
-	  return false;
-	}
-
-      target = expand_simple_binop (mode, IOR, rtmp, target, if_info->x, 0,
+      target = expand_simple_binop (mode, IOR, a_bin, target, if_info->x, 0,
 				    OPTAB_WIDEN);
-      if (!target)
-	{
-	  end_sequence ();
-	  return false;
-	}
 
-      if (target != if_info->x)
-	noce_emit_move_insn (if_info->x, target);
     }
   else
     {
-      non_zero_op = *to_replace;
-      /* If x is used in both input and out like x = c ? x + z : x,
-	 use a new reg to avoid modifying x  */
-      if (common && rtx_equal_p (common, if_info->x))
-	target = gen_reg_rtx (mode);
-      else
-	target = if_info->x;
-
-      target = noce_emit_czero (if_info, czero_code, non_zero_op, target);
-      if (!target || !to_replace)
-	{
-	  end_sequence ();
-	  return false;
-	}
-
-      *to_replace = target;
-      noce_emit_move_insn (if_info->x, a);
+      target = expand_simple_binop (mode, op, a_op0, target, if_info->x, 0,
+				    OPTAB_WIDEN);
     }
+
+  if (!target)
+    goto end_seq_n_fail;
+
+  if (target != if_info->x)
+    noce_emit_move_insn (if_info->x, target);
 
   seq = end_ifcvt_sequence (if_info);
   if (!seq || !targetm.noce_conversion_profitable_p (seq, if_info))
-    return false;
+    goto fail;
 
   emit_insn_before_setloc (seq, if_info->jump, INSN_LOCATION (if_info->insn_a));
   if_info->transform_name = "noce_try_cond_zero_arith";
   return true;
+
+end_seq_n_fail:
+  end_sequence ();
+
+fail:
+  if (reverse)
+    std::swap (if_info->cond, if_info->rev_cond);
+
+  return false;
 }
 
 /* Optimize away "if (x & C) x |= C" and similar bit manipulation
@@ -4464,12 +4405,12 @@ noce_process_if_block (struct noce_if_info *if_info)
       if (noce_try_store_flag_mask (if_info))
 	goto success;
       if (HAVE_conditional_move
-          && noce_try_cond_zero_arith (if_info))
-	goto success;
-      if (HAVE_conditional_move
 	  && noce_try_cmove_arith (if_info))
 	goto success;
       if (noce_try_sign_mask (if_info))
+	goto success;
+      if (HAVE_conditional_move
+          && noce_try_cond_zero_arith (if_info))
 	goto success;
     }
 

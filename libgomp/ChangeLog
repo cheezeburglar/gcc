@@ -1,3 +1,21 @@
+2025-12-24  Thomas Schwinge  <tschwinge@baylibre.com>
+
+	* testsuite/lib/libgomp.exp (check_effective_target_omp_usm):
+	Robustify.
+
+2025-12-22  Tobias Burnus  <tburnus@baylibre.com>
+
+	* testsuite/libgomp.fortran/uses_allocators_1.f90: Update dg-error.
+
+2025-12-19  Tobias Burnus  <tburnus@baylibre.com>
+
+	* testsuite/libgomp.fortran/uses_allocators-7.f90: Add ';' test.
+
+2025-12-18  Tobias Burnus  <tburnus@baylibre.com>
+
+	* libgomp.texi (OpenMP Implemenation Status): Mark
+	no_openmp_constructs as implemented.
+
 2025-12-17  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
 
 	* testsuite/libgomp.c/affinity-1.c: Always add warnings.

@@ -1129,6 +1129,7 @@ member_like_constrained_friend_p (tree decl)
 	  && DECL_UNIQUE_FRIEND_P (decl)
 	  && DECL_FRIEND_CONTEXT (decl)
 	  && get_constraints (decl)
+	  && CLASSTYPE_IMPLICIT_INSTANTIATION (DECL_FRIEND_CONTEXT (decl))
 	  && (!DECL_TEMPLATE_INFO (decl)
 	      || !PRIMARY_TEMPLATE_P (DECL_TI_TEMPLATE (decl))
 	      || (uses_outer_template_parms_in_constraints
@@ -11083,6 +11084,23 @@ cp_finish_decomp (tree decl, cp_decomp *decomp, bool test_p)
 	    DECL_HAS_VALUE_EXPR_P (v[i]) = 1;
 	  }
     }
+  else if (DECL_NAMESPACE_SCOPE_P (decl) && !seen_error ())
+    {
+      tree attr = NULL_TREE, *pa = &attr;
+      for (unsigned int i = 0; i < count; i++)
+	if ((unsigned) pack != i
+	    && DECL_HAS_VALUE_EXPR_P (v[i])
+	    && !DECL_IGNORED_P (v[i]))
+	  {
+	    (*debug_hooks->early_global_decl) (v[i]);
+	    *pa = build_tree_list (NULL_TREE, v[i]);
+	    pa = &TREE_CHAIN (*pa);
+	  }
+      if (attr)
+	DECL_ATTRIBUTES (decl)
+	  = tree_cons (get_identifier ("structured bindings"),
+		       attr, DECL_ATTRIBUTES (decl));
+    }
   return false;
 }
 
@@ -17946,8 +17964,8 @@ tag_name (enum tag_types code)
     case enum_type:
       return "enum";
     case typename_type:
-      return "typename";
     case none_type:
+      return "typename";
     case scope_type:
       return nullptr;
     }
@@ -19743,7 +19761,7 @@ start_preparsed_function (tree decl1, tree attrs, int flags)
 	}
     }
 
-  bool honor_interface = (!DECL_TEMPLATE_INSTANTIATION (decl1)
+  bool honor_interface = (!DECL_TEMPLOID_INSTANTIATION (decl1)
 			  /* Implicitly-defined methods (like the
 			     destructor for a class in which no destructor
 			     is explicitly declared) must not be defined
@@ -19774,7 +19792,7 @@ start_preparsed_function (tree decl1, tree attrs, int flags)
   else if (!finfo->interface_unknown && honor_interface)
     {
       if (DECL_DECLARED_INLINE_P (decl1)
-	  || DECL_TEMPLATE_INSTANTIATION (decl1))
+	  || DECL_TEMPLOID_INSTANTIATION (decl1))
 	{
 	  DECL_EXTERNAL (decl1)
 	    = (finfo->interface_only
@@ -19816,7 +19834,7 @@ start_preparsed_function (tree decl1, tree attrs, int flags)
 	DECL_EXTERNAL (decl1) = 0;
 
       if ((DECL_DECLARED_INLINE_P (decl1)
-	   || DECL_TEMPLATE_INSTANTIATION (decl1))
+	   || DECL_TEMPLOID_INSTANTIATION (decl1))
 	  && ! DECL_INTERFACE_KNOWN (decl1))
 	DECL_DEFER_OUTPUT (decl1) = 1;
       else

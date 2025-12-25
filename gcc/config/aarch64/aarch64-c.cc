@@ -199,6 +199,7 @@ aarch64_update_cpp_builtins (cpp_reader *pfile)
   aarch64_def_or_undef (TARGET_SVE, "__ARM_FEATURE_SVE", pfile);
   cpp_undef (pfile, "__ARM_FEATURE_SVE_BITS");
   cpp_undef (pfile, "__ARM_FEATURE_SVE_VECTOR_OPERATORS");
+  cpp_undef (pfile, "__ARM_FEATURE_SVE_PREDICATE_OPERATORS");
   if (TARGET_SVE)
     {
       int bits;
@@ -210,6 +211,8 @@ aarch64_update_cpp_builtins (cpp_reader *pfile)
 	}
       builtin_define_with_int_value ("__ARM_FEATURE_SVE_BITS", bits);
       builtin_define_with_int_value ("__ARM_FEATURE_SVE_VECTOR_OPERATORS", ops);
+      builtin_define_with_int_value ("__ARM_FEATURE_SVE_PREDICATE_OPERATORS",
+				     ops);
     }
   aarch64_def_or_undef (TARGET_SVE_I8MM,
 			"__ARM_FEATURE_SVE_MATMUL_INT8", pfile);
@@ -291,6 +294,10 @@ aarch64_update_cpp_builtins (cpp_reader *pfile)
 
   aarch64_def_or_undef (TARGET_SME, "__ARM_FEATURE_SME", pfile);
   aarch64_def_or_undef (TARGET_SME_I16I64, "__ARM_FEATURE_SME_I16I64", pfile);
+  aarch64_def_or_undef (AARCH64_HAVE_ISA (SME_F8F16),
+			"__ARM_FEATURE_SME_F8F16", pfile);
+  aarch64_def_or_undef (AARCH64_HAVE_ISA (SME_F8F32),
+			"__ARM_FEATURE_SME_F8F32", pfile);
   aarch64_def_or_undef (AARCH64_HAVE_ISA (SME_B16B16),
 			"__ARM_FEATURE_SME_B16B16", pfile);
   aarch64_def_or_undef (AARCH64_HAVE_ISA (SME_F16F16),
