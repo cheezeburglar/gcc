@@ -11490,9 +11490,9 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
 
   bool named_return_value_okay_p = want_nrvo_p (bare_retval, functype);
   if (fn_returns_value_p && flag_elide_constructors
-      && (current_function_return_value != bare_retval
-	  || (current_function_return_values
-	      &&!current_function_return_values->contains (bare_retval))))
+//      && (current_function_return_value != bare_retval
+      && (current_function_return_values
+	  && !current_function_return_values->contains (bare_retval))))
     {
       if (named_return_value_okay_p)
 //	  && current_function_return_value == NULL_TREE)
