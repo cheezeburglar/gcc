@@ -1,5 +1,5 @@
 /* ACLE support for AArch64 SVE (__ARM_FEATURE_SVE intrinsics)
-   Copyright (C) 2020-2025 Free Software Foundation, Inc.
+   Copyright (C) 2020-2026 Free Software Foundation, Inc.
 
    This file is part of GCC.
 
@@ -16,6 +16,23 @@
    You should have received a copy of the GNU General Public License
    along with GCC; see the file COPYING3.  If not see
    <http://www.gnu.org/licenses/>.  */
+
+/* Code organisation:
+
+   The lines defining if an intrinsic is for sve, sve2, sme, and sme2 can get
+   a little blurry.
+
+   Therefore code is organised by the following rough principles:
+
+   - aarch64-sve-builtins-sme.def for any intrinsic that is fundamentally
+     incompatible with non-streaming mode. This usually means it uses the ZA
+     or ZT register.
+   - aarch64-sve-builtins-sve2.def for any intrinsic that that is a streaming mode
+     intrinsic, but either is non-streaming compatible, or theoretically could
+     be later.
+   - aarch64-sve-builtins-base.def for SVE intrinsics that are pre SVE2.
+   - aarch64-sve-builtins.def for common data types and group definitions used
+     across all files.  */
 
 #define REQUIRED_EXTENSIONS sve_and_sme (AARCH64_FL_SVE2, 0)
 DEF_SVE_FUNCTION (svaba, ternary_opt_n, all_integer, none)
@@ -429,4 +446,18 @@ DEF_SVE_FUNCTION_GS_FPM (svcvt2, unary_convert, cvt_mf8, x2, none, set)
 DEF_SVE_FUNCTION_GS_FPM (svcvtl1, unary_convert, cvt_mf8, x2, none, set)
 DEF_SVE_FUNCTION_GS_FPM (svcvtl2, unary_convert, cvt_mf8, x2, none, set)
 DEF_SVE_FUNCTION_GS (svscale, binary_int_opt_single_n, all_float, x24, none)
+#undef REQUIRED_EXTENSIONS
+
+#define REQUIRED_EXTENSIONS \
+  nonstreaming_sve (AARCH64_FL_SVE2 | AARCH64_FL_F8F16MM)
+DEF_SVE_FUNCTION_GS_FPM (svmmla, mmla, h_float_mf8, none, none, set)
+#undef REQUIRED_EXTENSIONS
+
+#define REQUIRED_EXTENSIONS \
+  nonstreaming_sve (AARCH64_FL_SVE2 | AARCH64_FL_F8F32MM)
+DEF_SVE_FUNCTION_GS_FPM (svmmla, mmla, s_float_mf8, none, none, set)
+#undef REQUIRED_EXTENSIONS
+
+#define REQUIRED_EXTENSIONS nonstreaming_sve (AARCH64_FL_SVE_F16F32MM)
+DEF_SVE_FUNCTION (svmmla, mmla, cvt_f32_f16, none)
 #undef REQUIRED_EXTENSIONS

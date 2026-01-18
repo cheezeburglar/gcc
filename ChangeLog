@@ -1,3 +1,78 @@
+2026-01-14  Vineet Gupta  <vineet.gupta@linux.dev>
+
+	* MAINTAINERS: Update to my linux.dev email.
+
+2026-01-14  Jason Merrill  <jason@redhat.com>
+
+	* MAINTAINERS: Update Paolo Carlini email address.
+
+2026-01-14  Daniel Barboza  <daniel.barboza@oss.qualcomm.com>
+
+	* MAINTAINERS: Add myself to write after approval.
+
+2026-01-10  Jakub Jelinek  <jakub@redhat.com>
+
+	PR ada/123490
+	* config-ml.in: Restore ml_subdir being empty instead of /.
+	for the primary multilib.
+
+2026-01-09  Ben Boeckel  <ben.boeckel@kitware.com>
+
+	* config-ml.in: Replace gcc-bugs@ with bug reporting link.
+	* symlink-tree: Replace gcc-bugs@ with bug reporting link.
+
+2026-01-08  Aleksandar Rakic  <aleksandar.rakic@htecgroup.com>
+
+	* config-ml.in: Use with_multi_buildlist to build multidirs.
+	Skip configuration for subdir returned by
+	--print-multi-directory.
+	* configure: Regenerate.
+	* configure.ac: Source target-specific configuration fragment
+	for GCC. Pass through with_multi_buildlist to host and target.
+
+2026-01-08  Karl Meakin  <karl.meakin@arm.com>
+
+	* MAINTAINERS: Add myself to write after approval.
+
+2026-01-08  Pietro Monteiro  <pietro@sociotechnical.xyz>
+
+	* .forgejo/workflows/build-containers.yaml: New file.
+
+2026-01-06  Andrew Pinski  <andrew.pinski@oss.qualcomm.com>
+
+	* MAINTAINERS: Add myself as global reviewer.
+
+2026-01-06  supers1ngular  <supers1ngular@baylibre.com>
+
+	* MAINTAINERS: Add my bugzilla account.
+
+2026-01-05  Filip Kastl  <fkastl@suse.cz>
+
+	* MAINTAINERS: Put <jeffrey.law@oss.qualcomm.com> before
+	<jeffreyalaw@gmail.com>.
+
+2025-12-30  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* Makefile.def (flags_to_pass): Rename GA68, GA68FLAGS,
+	GA68_FOR_TARGET, GA68FLAGS_FOR_TARGET to A68, A68FLAGS,
+	A68_FOR_TARGET and A68FLAGS_FOR_TARGET.
+	* Makefile.tpl: Use A68, A68FLAGS, A68_FOR_BUILD and
+	A68_FOR_TARGET rather than GA68, GA68FLAGS, GA68_FOR_BUILD and
+	GA68_FOR_TARGET.
+	* Makefile.in: Regenerate.
+	* configure.ac: Set A68_FOR_BUILD rather than GA68_FOR_BUILD, and
+	invoke ACX_PROG_A68 rather than ACX_PROG_GA68.
+	Subst A68_FOR_BUILD rather than GA68_FOR_BUILD.
+	Subst A68 and A68FLAGS rather than GA68 and GA68FLAGS.
+	Set A68_FOR_TARGET rather than GA68_FOR_TARGET.
+	* configure: Regenerate.
+	* config-ml.in: Handle A68FLAGS and define A68 in sub-configures.
+
+2025-12-29  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* libtool.m4: Cherry-pick libtool commit
+	9196966580f6853a31187a7a3c7e7ff36ef08982.
+
 2025-12-19  Lewis Hyatt  <lhyatt@gmail.com>
 
 	PR bootstrap/12407

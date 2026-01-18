@@ -1,5 +1,5 @@
 /* Some code common to C++ and ObjC++ front ends.
-   Copyright (C) 2004-2025 Free Software Foundation, Inc.
+   Copyright (C) 2004-2026 Free Software Foundation, Inc.
    Contributed by Ziemowit Laski  <zlaski@apple.com>
 
 This file is part of GCC.
@@ -646,6 +646,8 @@ cp_common_init_ts (void)
   MARK_TS_TYPE_NON_COMMON (TEMPLATE_TYPE_PARM);
   MARK_TS_TYPE_NON_COMMON (TYPE_PACK_EXPANSION);
   MARK_TS_TYPE_NON_COMMON (PACK_INDEX_TYPE);
+  MARK_TS_TYPE_NON_COMMON (META_TYPE);
+  MARK_TS_TYPE_NON_COMMON (SPLICE_SCOPE);
 
   /* Statements.  */
   MARK_TS_EXP (CLEANUP_STMT);
@@ -696,6 +698,8 @@ cp_common_init_ts (void)
   MARK_TS_EXP (VEC_INIT_EXPR);
   MARK_TS_EXP (VEC_NEW_EXPR);
   MARK_TS_EXP (SPACESHIP_EXPR);
+  MARK_TS_EXP (SPLICE_EXPR);
+  MARK_TS_EXP (REFLECT_EXPR);
 
   /* Fold expressions.  */
   MARK_TS_EXP (BINARY_LEFT_FOLD_EXPR);

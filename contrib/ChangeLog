@@ -1,3 +1,29 @@
+2026-01-09  Jakub Jelinek  <jakub@redhat.com>
+
+	* update-copyright.py (GCCFilter): Don't filter out
+	gen-evolution.awk and gen-cxxapi-file.py.
+
+2026-01-08  Pietro Monteiro  <pietro@sociotechnical.xyz>
+
+	* ci-containers/README: New file.
+	* ci-containers/autoregen/Containerfile: New file.
+	* ci-containers/autoregen/autoregen.py: New file.
+	* ci-containers/build-image.sh: New file.
+
+2026-01-02  Jakub Jelinek  <jakub@redhat.com>
+
+	* update-copyright.py (LibPhobosFilter): Ignore also
+	__importc_builtins.di.
+	(LibGRustFilter): New filter.
+	(GCCCopyright): Add several external authors.
+	(GCCCmdLine): Use LibGRustFilter for libgrust.  Add libga68
+	directory, both to list of directories and default directories.
+
+2025-12-26  Matthew Fortune  <matthew.fortune@imgtec.com>
+
+	* test_installed: Use target to select default gcc/g++ etc.
+	under test.
+
 2025-12-15  Joseph Myers  <josmyers@redhat.com>
 
 	* test_installed (--enable-plugin, --with-plugincc=)

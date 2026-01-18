@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2025, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2026, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -27,14 +27,12 @@ with Aspects;        use Aspects;
 with Atree;          use Atree;
 with Contracts;      use Contracts;
 with Debug;          use Debug;
-with Einfo;          use Einfo;
 with Einfo.Entities; use Einfo.Entities;
 with Einfo.Utils;    use Einfo.Utils;
 with Elists;         use Elists;
 with Errout;         use Errout;
 with Expander;       use Expander;
 with Exp_Dbug;       use Exp_Dbug;
-with Fname;          use Fname;
 with Fname.UF;       use Fname.UF;
 with Freeze;         use Freeze;
 with Ghost;          use Ghost;
@@ -70,7 +68,6 @@ with Sem_Type;       use Sem_Type;
 with Sem_Util;       use Sem_Util;
 with Sem_Warn;       use Sem_Warn;
 with Stand;          use Stand;
-with Sinfo;          use Sinfo;
 with Sinfo.Nodes;    use Sinfo.Nodes;
 with Sinfo.Utils;    use Sinfo.Utils;
 with Sinfo.CN;       use Sinfo.CN;
@@ -2657,9 +2654,20 @@ package body Sem_Ch12 is
                if Ekind (Etype (Match)) /= E_Void
                  and then Is_Mutably_Tagged_Type (Etype (Match))
                then
+                  --  The declaration of the CW-equivalent type of a mutably
+                  --  tagged type is analyzed when the tagged type is frozen.
+
+                  if Nkind (N) /= N_Formal_Package_Declaration
+                    and then Ekind (Defining_Identifier (Assoc.An_Formal)) /=
+                                                              E_Incomplete_Type
+                  then
+                     Freeze_Before (N, Root_Type (Etype (Match)));
+                  end if;
+
                   Rewrite (Match, New_Occurrence_Of
                     (Class_Wide_Equivalent_Type
                       (Etype (Match)), Sloc (Match)));
+
                   Analyze (Match);
                end if;
 
@@ -18064,7 +18072,6 @@ package body Sem_Ch12 is
          ----------------------------------
 
          procedure Save_References_In_Aggregate (N : Node_Id) is
-            Nam   : Node_Id;
             Qual  : Node_Id   := Empty;
             Typ   : Entity_Id := Empty;
 
@@ -18120,16 +18127,16 @@ package body Sem_Ch12 is
                   end;
                end if;
 
-               --  If the aggregate is an actual in a call, it has been
-               --  resolved in the current context, to some local type. The
+               --  If the aggregate is an actual in a subprogram call, it has
+               --  been resolved in the current context to some local type. The
                --  enclosing call may have been disambiguated by the aggregate,
                --  and this disambiguation might fail at instantiation time
                --  because the type to which the aggregate did resolve is not
                --  preserved. In order to preserve some of this information,
                --  wrap the aggregate in a qualified expression, using the id
                --  of its type. For further disambiguation we qualify the type
-               --  name with its scope (if visible and not hidden by a local
-               --  homograph) because both id's will have corresponding
+               --  name with its scope recursively (if visible and not hidden
+               --  by a local homograph) because both will have corresponding
                --  entities in an instance. This resolves most of the problems
                --  with missing type information on aggregates in instances.
 
@@ -18139,24 +18146,40 @@ package body Sem_Ch12 is
                  and then Present (Typ)
                  and then Comes_From_Source (Typ)
                then
-                  Nam := Make_Identifier (Loc, Chars (Typ));
+                  declare
+                     function Qualify_Name (S, E : Entity_Id) return Node_Id is
+                       (if E = S
+                        then Make_Identifier (Loc, Chars (E))
+                        else Make_Selected_Component (Loc,
+                               Prefix        => Qualify_Name (S, Scope (E)),
+                               Selector_Name =>
+                                 Make_Identifier (Loc, Chars (E))));
+                     --  Return the qualified name of E up to scope S
 
-                  if Is_Immediately_Visible (Scope (Typ))
-                    and then
-                      (not In_Open_Scopes (Scope (Typ))
-                         or else Current_Entity (Scope (Typ)) = Scope (Typ))
-                  then
-                     Nam :=
-                       Make_Selected_Component (Loc,
-                         Prefix        =>
-                           Make_Identifier (Loc, Chars (Scope (Typ))),
-                         Selector_Name => Nam);
-                  end if;
+                     Nam : Node_Id;
+                     S   : Entity_Id;
 
-                  Qual :=
-                    Make_Qualified_Expression (Loc,
-                      Subtype_Mark => Nam,
-                      Expression   => Relocate_Node (N));
+                  begin
+                     S := Scope (Typ);
+                     while not Is_Immediately_Visible (S) loop
+                        S := Scope (S);
+                        exit when Is_Generic_Unit (S);
+                     end loop;
+
+                     if not Is_Generic_Unit (S)
+                       and then (not In_Open_Scopes (S)
+                                  or else Current_Entity (S) = S)
+                     then
+                        Nam := Qualify_Name (S, Typ);
+                     else
+                        Nam := Make_Identifier (Loc, Chars (Typ));
+                     end if;
+
+                     Qual :=
+                       Make_Qualified_Expression (Loc,
+                         Subtype_Mark => Nam,
+                         Expression   => Relocate_Node (N));
+                  end;
                end if;
 
             --  For a full aggregate, if the type is global and a derived
@@ -18641,27 +18664,6 @@ package body Sem_Ch12 is
 
       Save_References (Templ);
    end Save_Global_References;
-
-   ---------------------------------------
-   -- Save_Global_References_In_Aspects --
-   ---------------------------------------
-
-   procedure Save_Global_References_In_Aspects (N : Node_Id) is
-      Asp  : Node_Id;
-      Expr : Node_Id;
-
-   begin
-      Asp := First (Aspect_Specifications (N));
-      while Present (Asp) loop
-         Expr := Expression (Asp);
-
-         if Present (Expr) then
-            Save_Global_References (Expr);
-         end if;
-
-         Next (Asp);
-      end loop;
-   end Save_Global_References_In_Aspects;
 
    ------------------------------------------
    -- Set_Copied_Sloc_For_Inherited_Pragma --

@@ -1,5 +1,5 @@
 /* Definitions of various defaults for tm.h macros.
-   Copyright (C) 1992-2025 Free Software Foundation, Inc.
+   Copyright (C) 1992-2026 Free Software Foundation, Inc.
    Contributed by Ron Guilmette (rfg@monkeys.com)
 
 This file is part of GCC.
@@ -390,7 +390,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 /* Provide defaults for stuff that may not be defined when using
    sjlj exceptions.  */
 #ifndef EH_RETURN_DATA_REGNO
-#define EH_RETURN_DATA_REGNO(N) INVALID_REGNUM
+#define EH_RETURN_DATA_REGNO(N) (void (N), INVALID_REGNUM)
 #endif
 
 /* Offset between the eh handler address and entry in eh tables.  */

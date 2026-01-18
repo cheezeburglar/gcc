@@ -1,6 +1,6 @@
 ; Options for the language- and target-independent parts of the compiler.
 
-; Copyright (C) 2003-2025 Free Software Foundation, Inc.
+; Copyright (C) 2003-2026 Free Software Foundation, Inc.
 ;
 ; This file is part of GCC.
 ;
@@ -2359,6 +2359,10 @@ Enum(lto_partition_model) String(cache) Value(LTO_PARTITION_CACHE)
 flto-partition=
 Common Joined RejectNegative Enum(lto_partition_model) Var(flag_lto_partition) Init(LTO_PARTITION_BALANCED)
 Specify the algorithm to partition symbols and vars at linktime.
+
+flto-toplevel-asm-heuristics
+Common Var(flag_toplevel_asm_heuristics) Init(0)
+Enable heuristics to recognize symbol identifiers in toplevel (not extended) assembly and prevent their mangling/deletion.
 
 ; The initial value of -1 comes from Z_DEFAULT_COMPRESSION in zlib.h.
 flto-compression-level=

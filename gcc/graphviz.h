@@ -1,5 +1,5 @@
 /* Helper code for graphviz output.
-   Copyright (C) 2019-2025 Free Software Foundation, Inc.
+   Copyright (C) 2019-2026 Free Software Foundation, Inc.
    Contributed by David Malcolm <dmalcolm@redhat.com>.
 
 This file is part of GCC.
@@ -249,6 +249,9 @@ enum class compass_pt
  n, ne, e, se, s, sw, w, nw, c
  /* "_" clashes with intl macro */
 };
+
+bool
+get_compass_pt_from_string (const char *str, enum compass_pt &out);
 
 /* port : ':' ID [ ':' compass_pt ]
         | ':' compass_pt

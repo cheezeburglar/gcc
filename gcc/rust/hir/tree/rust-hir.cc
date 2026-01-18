@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2025 Free Software Foundation, Inc.
+// Copyright (C) 2020-2026 Free Software Foundation, Inc.
 
 // This file is part of GCC.
 
@@ -1775,16 +1775,13 @@ WhileLetLoopExpr::to_string () const
     }
 
   str += "\n Match arm patterns: ";
-  if (match_arm_patterns.empty ())
+  if (match_arm_pattern == nullptr)
     {
       str += "none";
     }
   else
     {
-      for (const auto &pattern : match_arm_patterns)
-	{
-	  str += "\n  " + pattern->to_string ();
-	}
+      str += "\n  " + match_arm_pattern->to_string ();
     }
 
   str += "\n Scrutinee expr: " + condition->to_string ();
@@ -1898,17 +1895,10 @@ MatchArm::to_string () const
     }
 
   str += "\nPatterns: ";
-  if (match_arm_patterns.empty ())
-    {
-      str += "none";
-    }
+  if (match_arm_pattern == nullptr)
+    str += "none";
   else
-    {
-      for (const auto &pattern : match_arm_patterns)
-	{
-	  str += "\n " + pattern->to_string ();
-	}
-    }
+    str += "\n " + match_arm_pattern->to_string ();
 
   str += "\nGuard expr: ";
   if (!has_match_arm_guard ())

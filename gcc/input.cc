@@ -1,5 +1,5 @@
 /* Data and functions related to line maps and input files.
-   Copyright (C) 2004-2025 Free Software Foundation, Inc.
+   Copyright (C) 2004-2026 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -1072,6 +1072,35 @@ int
 get_discriminator_from_loc (location_t locus)
 {
   return get_discriminator_from_loc (line_table, locus);
+}
+
+/* Create a location with hierarchical discriminator components.  */
+
+location_t
+location_with_discriminator_components (location_t locus,
+					const discriminator_components &comp)
+{
+  gcc_assert (comp.base <= DISCR_BASE_MAX);
+  gcc_assert (comp.multiplicity <= DISCR_MULTIPLICITY_MAX);
+  gcc_assert (comp.copyid <= DISCR_COPYID_MAX);
+  unsigned int discriminator = (comp.base << DISCR_BASE_SHIFT)
+    | (comp.multiplicity << DISCR_MULTIPLICITY_SHIFT)
+    | (comp.copyid << DISCR_COPYID_SHIFT);
+  return location_with_discriminator (locus, discriminator);
+}
+
+/* Get hierarchical discriminator components from a location.  */
+
+discriminator_components
+get_discriminator_components_from_loc (location_t locus)
+{
+  unsigned int discriminator = get_discriminator_from_loc (locus);
+  discriminator_components comp;
+  comp.base = discriminator & DISCR_BASE_MASK;
+  comp.multiplicity = (discriminator >> DISCR_MULTIPLICITY_SHIFT)
+    & DISCR_MULTIPLICITY_MASK;
+  comp.copyid = (discriminator >> DISCR_COPYID_SHIFT) & DISCR_COPYID_MASK;
+  return comp;
 }
 
 #if CHECKING_P

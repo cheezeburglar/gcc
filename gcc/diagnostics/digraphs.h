@@ -1,5 +1,5 @@
 /* Directed graphs associated with a diagnostic.
-   Copyright (C) 2025 Free Software Foundation, Inc.
+   Copyright (C) 2025-2026 Free Software Foundation, Inc.
    Contributed by David Malcolm <dmalcolm@redhat.com>
 
 This file is part of GCC.
@@ -225,6 +225,12 @@ class digraph : public object
 
   const char *get_graph_kind () const;
   void set_graph_kind (const char *);
+
+  const std::map<std::string, node *> &
+  get_all_nodes () const
+  {
+    return m_id_to_node_map;
+  }
 
  private:
   void

@@ -1,5 +1,5 @@
 /* Declarations for managing different output formats for diagnostics.
-   Copyright (C) 2023-2025 Free Software Foundation, Inc.
+   Copyright (C) 2023-2026 Free Software Foundation, Inc.
    Contributed by David Malcolm <dmalcolm@redhat.com>.
 
 This file is part of GCC.
@@ -22,6 +22,7 @@ along with GCC; see the file COPYING3.  If not see
 #define GCC_DIAGNOSTICS_SINK_H
 
 #include "diagnostic.h"
+#include "diagnostics/logical-locations.h"
 
 namespace diagnostics {
 
@@ -100,6 +101,10 @@ public:
 
   virtual void
   report_global_digraph (const lazily_created<digraphs::digraph> &) = 0;
+
+  virtual void
+  report_digraph_for_logical_location (const lazily_created<digraphs::digraph> &,
+				       logical_locations::key) = 0;
 
   context &get_context () const { return m_context; }
   pretty_printer *get_printer () const { return m_printer.get (); }

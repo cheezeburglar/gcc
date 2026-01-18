@@ -1,5 +1,5 @@
 /* Definitions of Tensilica's Xtensa target machine for GNU compiler.
-   Copyright (C) 2001-2025 Free Software Foundation, Inc.
+   Copyright (C) 2001-2026 Free Software Foundation, Inc.
    Contributed by Bob Wilson (bwilson@tensilica.com) at Tensilica.
 
 This file is part of GCC.
@@ -521,6 +521,10 @@ typedef struct xtensa_args
 
 /* Stack pointer value doesn't matter at exit.  */
 #define EXIT_IGNORE_STACK 1
+
+/* The "return" pattern requires A0 register as return address, and is
+   also required so that restoring A0 in the epilogue is not dead code.  */
+#define EPILOGUE_USES(REGNO) ((REGNO) == A0_REG)
 
 /* Size in bytes of the trampoline, as an integer.  Make sure this is
    a multiple of TRAMPOLINE_ALIGNMENT to avoid -Wpadded warnings.  */

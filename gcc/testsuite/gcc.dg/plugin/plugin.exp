@@ -1,4 +1,4 @@
-#   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+#   Copyright (C) 2009-2026 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -200,6 +200,7 @@ set plugin_test_list [list \
 	  cpython-plugin-test-PyList_Append.c \
 	  cpython-plugin-test-PyList_New.c \
 	  cpython-plugin-test-PyLong_FromLong.c } \
+    { progress_notifications_plugin.cc } \
 ]
 
 foreach plugin_test $plugin_test_list {

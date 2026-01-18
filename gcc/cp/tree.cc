@@ -1,5 +1,5 @@
 /* Language-dependent node constructors for parse phase of GNU compiler.
-   Copyright (C) 1987-2025 Free Software Foundation, Inc.
+   Copyright (C) 1987-2026 Free Software Foundation, Inc.
    Hacked by Michael Tiemann (tiemann@cygnus.com)
 
 This file is part of GCC.
@@ -48,6 +48,7 @@ static tree handle_init_priority_attribute (tree *, tree, tree, int, bool *);
 static tree handle_abi_tag_attribute (tree *, tree, tree, int, bool *);
 static tree handle_contract_attribute (tree *, tree, tree, int, bool *);
 static tree handle_no_dangling_attribute (tree *, tree, tree, int, bool *);
+static tree handle_annotation_attribute (tree *, tree, tree, int, bool *);
 
 /* If REF is an lvalue, returns the kind of lvalue that REF is.
    Otherwise, returns clk_none.  */
@@ -568,6 +569,7 @@ builtin_valid_in_constant_expr_p (const_tree decl)
 	  case CP_BUILT_IN_IS_CORRESPONDING_MEMBER:
 	  case CP_BUILT_IN_IS_POINTER_INTERCONVERTIBLE_WITH_CLASS:
 	  case CP_BUILT_IN_EH_PTR_ADJUST_REF:
+	  case CP_BUILT_IN_IS_STRING_LITERAL:
 	    return true;
 	  default:
 	    break;
@@ -3281,6 +3283,7 @@ bot_manip (tree* tp, int* walk_subtrees, void* data_)
       TARGET_EXPR_LIST_INIT_P (u) = TARGET_EXPR_LIST_INIT_P (t);
       TARGET_EXPR_DIRECT_INIT_P (u) = TARGET_EXPR_DIRECT_INIT_P (t);
       TARGET_EXPR_ELIDING_P (u) = TARGET_EXPR_ELIDING_P (t);
+      TREE_CONSTANT (u) = TREE_CONSTANT (t);
 
       /* Map the old variable to the new one.  */
       splay_tree_insert (target_remap,
@@ -4507,6 +4510,12 @@ cp_tree_equal (tree t1, tree t2)
 	return equivalent_member_references (t1, t2);
       break;
 
+    case REFLECT_EXPR:
+      if (!cp_tree_equal (REFLECT_EXPR_HANDLE (t1), REFLECT_EXPR_HANDLE (t2))
+	  || REFLECT_EXPR_KIND (t1) != REFLECT_EXPR_KIND (t2))
+	return false;
+      return true;
+
     default:
       break;
     }
@@ -5602,7 +5611,9 @@ const scoped_attribute_specs std_attribute_table =
 static const attribute_spec internal_attributes[] =
 {
   { "aligned", 0, 1, false, false, false, false,
-    handle_alignas_attribute, attr_aligned_exclusions }
+    handle_alignas_attribute, attr_aligned_exclusions },
+  { "annotation ", 1, 1, false, false, false, false,
+    handle_annotation_attribute, NULL }
 };
 
 const scoped_attribute_specs internal_attribute_table =
@@ -5887,6 +5898,78 @@ handle_no_dangling_attribute (tree *node, tree name, tree args, int,
       *no_add_attrs = true;
     }
 
+  return NULL_TREE;
+}
+
+/* Perform checking for annotations.  */
+
+tree
+handle_annotation_attribute (tree *node, tree ARG_UNUSED (name),
+			     tree args, int ARG_UNUSED (flags),
+			     bool *no_add_attrs)
+{
+  if (TYPE_P (*node)
+      && TREE_CODE (*node) != ENUMERAL_TYPE
+      && TREE_CODE (*node) != RECORD_TYPE
+      && TREE_CODE (*node) != UNION_TYPE)
+    {
+      error ("annotation on a type other than class or enumeration "
+	     "definition");
+      *no_add_attrs = true;
+      return NULL_TREE;
+    }
+  if (TREE_CODE (*node) == LABEL_DECL)
+    {
+      error ("annotation applied to a label");
+      *no_add_attrs = true;
+      return NULL_TREE;
+    }
+  if (TREE_CODE (*node) == FIELD_DECL && DECL_UNNAMED_BIT_FIELD (*node))
+    {
+      error ("annotation on unnamed bit-field");
+      *no_add_attrs = true;
+      return NULL_TREE;
+    }
+  if (!type_dependent_expression_p (TREE_VALUE (args)))
+    {
+      if (!structural_type_p (TREE_TYPE (TREE_VALUE (args))))
+	{
+	  auto_diagnostic_group d;
+	  error ("annotation does not have structural type");
+	  structural_type_p (TREE_TYPE (TREE_VALUE (args)), true);
+	  *no_add_attrs = true;
+	  return NULL_TREE;
+	}
+      if (CLASS_TYPE_P (TREE_TYPE (TREE_VALUE (args))))
+	{
+	  tree arg = make_tree_vec (1);
+	  tree type = TREE_TYPE (TREE_VALUE (args));
+	  tree ctype
+	    = cp_build_qualified_type (type, cp_type_quals (type)
+					     | TYPE_QUAL_CONST);
+	  TREE_VEC_ELT (arg, 0)
+	    = cp_build_reference_type (ctype, /*rval=*/false);
+	  if (!is_xible (INIT_EXPR, type, arg))
+	    {
+	      auto_diagnostic_group d;
+	      error ("annotation does not have copy constructible type");
+	      is_xible (INIT_EXPR, type, arg, /*explain=*/true);
+	      *no_add_attrs = true;
+	      return NULL_TREE;
+	    }
+	}
+    }
+  if (!processing_template_decl)
+    {
+      location_t loc = EXPR_LOCATION (TREE_VALUE (args));
+      TREE_VALUE (args) = cxx_constant_value (TREE_VALUE (args));
+      if (error_operand_p (TREE_VALUE (args)))
+        *no_add_attrs = true;
+      auto suppression
+	= make_temp_override (suppress_location_wrappers, 0);
+      TREE_VALUE (args) = maybe_wrap_with_location (TREE_VALUE (args), loc);
+    }
+  ATTR_UNIQUE_VALUE_P (args) = 1;
   return NULL_TREE;
 }
 
@@ -6357,10 +6440,13 @@ decl_linkage (tree decl)
     {
       /* But this could be a typedef name for linkage purposes, in which
 	 case we're interested in the linkage of the main decl.  */
-      if (decl == TYPE_NAME (TYPE_MAIN_VARIANT (TREE_TYPE (decl)))
-	  /* Likewise for the injected-class-name.  */
-	  || DECL_SELF_REFERENCE_P (decl))
-	decl = TYPE_MAIN_DECL (TREE_TYPE (decl));
+      tree type = TREE_TYPE (decl);
+      if (type == error_mark_node)
+	return lk_none;
+      else if (decl == TYPE_NAME (TYPE_MAIN_VARIANT (type))
+	       /* Likewise for the injected-class-name.  */
+	       || DECL_SELF_REFERENCE_P (decl))
+	decl = TYPE_MAIN_DECL (type);
       else
 	return lk_none;
     }
@@ -6808,6 +6894,14 @@ maybe_adjust_arg_pos_for_attribute (const_tree fndecl)
   /* The manual states that it's the user's responsibility to account
      for the implicit this parameter.  */
   return n > 0 ? n - 1 : 0;
+}
+
+/* True if ATTR is annotation.  */
+
+bool
+annotation_p (tree attr)
+{
+  return is_attribute_p ("annotation ", get_attribute_name (attr));
 }
 
 

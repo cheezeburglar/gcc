@@ -1,6 +1,6 @@
 ;; DFA-based pipeline description for MIPS P8700.
 ;;
-;; Copyright (C) 2025 Free Software Foundation, Inc.
+;; Copyright (C) 2025-2026 Free Software Foundation, Inc.
 ;;
 ;; This file is part of GCC.
 ;;
@@ -82,7 +82,7 @@
 (define_insn_reservation "mips_p8700_fpu_div" 17
   (and (eq_attr "tune" "mips_p8700")
        (eq_attr "type" "fdiv,fsqrt"))
-  "mips_p8700_fpu_long, mips_p8700_fpu_apu*17")
+  "mips_p8700_fpu_long, mips_p8700_fpu_apu*6")
 
 (define_insn_reservation "mips_p8700_fpu_fcvt" 4
   (and (eq_attr "tune" "mips_p8700")

@@ -1,5 +1,5 @@
 /* Loop Vectorization
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
    Contributed by Dorit Naishlos <dorit@il.ibm.com> and
    Ira Rosen <irar@il.ibm.com>
 
@@ -59,6 +59,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "case-cfn-macros.h"
 #include "langhooks.h"
 #include "opts.h"
+#include "hierarchical_discriminator.h"
 
 /* Loop Vectorization Pass.
 
@@ -1792,9 +1793,13 @@ vect_analyze_loop_costing (loop_vec_info loop_vinfo,
 	    }
 	}
       /* Reject vectorizing for a single scalar iteration, even if
-	 we could in principle implement that using partial vectors.  */
+	 we could in principle implement that using partial vectors.
+	 But allow such vectorization if VF == 1 in case we do not
+	 need to peel for gaps (if we need, avoid vectorization for
+	 reasons of code footprint).  */
       unsigned peeling_gap = LOOP_VINFO_PEELING_FOR_GAPS (loop_vinfo);
-      if (scalar_niters <= peeling_gap + 1)
+      if (scalar_niters <= peeling_gap + 1
+	  && (assumed_vf > 1 || peeling_gap != 0))
 	{
 	  if (dump_enabled_p ())
 	    dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
@@ -2730,6 +2735,8 @@ again:
   LOOP_VINFO_MUST_USE_PARTIAL_VECTORS_P (loop_vinfo) = false;
   LOOP_VINFO_USING_PARTIAL_VECTORS_P (loop_vinfo) = false;
   LOOP_VINFO_USING_SELECT_VL_P (loop_vinfo) = false;
+  LOOP_VINFO_USING_DECREMENTING_IV_P (loop_vinfo) = false;
+
   if (loop_vinfo->scan_map)
     loop_vinfo->scan_map->empty ();
 
@@ -5998,7 +6005,7 @@ vect_create_epilog_for_reduction (loop_vec_info loop_vinfo,
 	       && (mode1 = targetm.vectorize.split_reduction (mode)) != mode)
 	nunits1 = GET_MODE_NUNITS (mode1).to_constant ();
 
-      tree vectype1 = vectype;
+      tree vectype1 = compute_vectype;
       if (mode1 != mode)
 	{
 	  vectype1 = get_related_vectype_for_scalar_type (TYPE_MODE (vectype),
@@ -6979,6 +6986,21 @@ vectorizable_reduction (loop_vec_info loop_vinfo,
 			       "invariants\n");
 	    return false;
 	  }
+	else if (SLP_TREE_DEF_TYPE (child) == vect_internal_def
+		 && !useless_type_conversion_p (SLP_TREE_VECTYPE (slp_node),
+						SLP_TREE_VECTYPE (child)))
+	  {
+	    /* With bools we can have mask and non-mask precision vectors
+	       or different non-mask precisions.  while pattern recog is
+	       supposed to guarantee consistency here, we do not have
+	       pattern stmts for PHIs (PR123316).
+	       Deal with that here instead of ICEing later.  */
+	    if (dump_enabled_p ())
+	      dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+			       "incompatible vector type setup from "
+			       "bool pattern detection\n");
+	    return false;
+	  }
       /* Analysis for double-reduction is done on the outer
 	 loop PHI, nested cycles have no further restrictions.  */
       SLP_TREE_TYPE (slp_node) = cycle_phi_info_type;
@@ -7107,6 +7129,13 @@ vectorizable_reduction (loop_vec_info loop_vinfo,
 	  vdef_slp = SLP_TREE_CHILDREN (vdef_slp)[reduc_idx];
 	}
       reduc_chain_length++;
+    }
+  if (!slp_for_stmt_info)
+    {
+      if (dump_enabled_p ())
+	dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+			 "only noop-conversions in the reduction chain.\n");
+      return false;
     }
   stmt_info = SLP_TREE_REPRESENTATIVE (slp_for_stmt_info);
 
@@ -11182,6 +11211,23 @@ vect_transform_loop (loop_vec_info loop_vinfo, gimple *loop_vectorized_call)
 			      &step_vector, &niters_vector_mult_vf, th,
 			      check_profitability, niters_no_overflow,
 			      &advance);
+
+  /* Assign hierarchical discriminators to the vectorized loop.  */
+  poly_uint64 vf_val = LOOP_VINFO_VECT_FACTOR (loop_vinfo);
+  unsigned int vf_int = constant_lower_bound (vf_val);
+  if (vf_int > DISCR_MULTIPLICITY_MAX)
+    vf_int = DISCR_MULTIPLICITY_MAX;
+
+  /* Assign unique copy_id dynamically instead of using hardcoded constants.
+     Epilogue and main vectorized loops get different copy_ids.  */
+  gimple *loop_last = last_nondebug_stmt (loop->header);
+  location_t loop_loc
+    = loop_last ? gimple_location (loop_last) : UNKNOWN_LOCATION;
+  if (loop_loc != UNKNOWN_LOCATION)
+    {
+      unsigned int copyid = allocate_copyid_base (loop_loc, 1);
+      assign_discriminators_to_loop (loop, vf_int, copyid);
+    }
   if (LOOP_VINFO_SCALAR_LOOP (loop_vinfo)
       && LOOP_VINFO_SCALAR_LOOP_SCALING (loop_vinfo).initialized_p ())
     {

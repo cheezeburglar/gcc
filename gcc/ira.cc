@@ -1,5 +1,5 @@
 /* Integrated Register Allocator (IRA) entry point.
-   Copyright (C) 2006-2025 Free Software Foundation, Inc.
+   Copyright (C) 2006-2026 Free Software Foundation, Inc.
    Contributed by Vladimir Makarov <vmakarov@redhat.com>.
 
 This file is part of GCC.
@@ -1841,6 +1841,12 @@ ira_setup_alts (rtx_insn *insn)
 
 		  case 'g':
 		    goto op_success;
+		    break;
+
+		  case '{':
+		    if (REG_P (op) || SUBREG_P (op))
+		      goto op_success;
+		    win_p = true;
 		    break;
 
 		  default:

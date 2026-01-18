@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Free Software Foundation, Inc.
+// Copyright (C) 2023-2026 Free Software Foundation, Inc.
 
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -1496,6 +1496,16 @@
 #endif /* !defined(__cpp_lib_constexpr_dynamic_alloc) */
 #undef __glibcxx_want_constexpr_dynamic_alloc
 
+#if !defined(__cpp_lib_constexpr_flat_map)
+# if (__cplusplus >  202302L)
+#  define __glibcxx_constexpr_flat_map 202502L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_constexpr_flat_map)
+#   define __cpp_lib_constexpr_flat_map 202502L
+#  endif
+# endif
+#endif /* !defined(__cpp_lib_constexpr_flat_map) */
+#undef __glibcxx_want_constexpr_flat_map
+
 #if !defined(__cpp_lib_constexpr_flat_set)
 # if (__cplusplus >  202302L)
 #  define __glibcxx_constexpr_flat_set 202502L
@@ -2525,5 +2535,15 @@
 # endif
 #endif /* !defined(__cpp_lib_is_implicit_lifetime) */
 #undef __glibcxx_want_is_implicit_lifetime
+
+#if !defined(__cpp_lib_reflection)
+# if (__cplusplus >  202302L) && (__cpp_impl_reflection >= 202506L)
+#  define __glibcxx_reflection 202506L
+#  if defined(__glibcxx_want_all) || defined(__glibcxx_want_reflection)
+#   define __cpp_lib_reflection 202506L
+#  endif
+# endif
+#endif /* !defined(__cpp_lib_reflection) */
+#undef __glibcxx_want_reflection
 
 #undef __glibcxx_want_all

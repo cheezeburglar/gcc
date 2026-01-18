@@ -1,5 +1,5 @@
 /* Compiler driver program that can handle many languages.
-   Copyright (C) 1987-2025 Free Software Foundation, Inc.
+   Copyright (C) 1987-2026 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -727,6 +727,13 @@ proper position among the other output files.  */
 #define CPP_SPEC ""
 #endif
 
+/* libc can define LIBC_CPP_SPEC to provide extra args to the C preprocessor
+   or extra switch-translations. */
+
+#ifndef LIBC_CPP_SPEC
+#define LIBC_CPP_SPEC ""
+#endif
+
 /* Operating systems can define OS_CC1_SPEC to provide extra args to cc1 and
    cc1plus or extra switch-translations.  The OS_CC1_SPEC is appended
    to CC1_SPEC in the initialization of cc1_spec.  */
@@ -750,6 +757,12 @@ proper position among the other output files.  */
    or extra switch-translations.  */
 #ifndef LINK_SPEC
 #define LINK_SPEC ""
+#endif
+
+/* libc can define LIBC_LINK_SPEC to provide extra args to the linker
+   or extra switch-translations.  */
+#ifndef LIBC_LINK_SPEC
+#define LIBC_LINK_SPEC ""
 #endif
 
 /* config.h can define LIB_SPEC to override the default libraries.  */
@@ -986,8 +999,12 @@ proper position among the other output files.  */
 /* Here is the spec for running the linker, after compiling all files.  */
 
 #if defined(TARGET_PROVIDES_LIBATOMIC) && defined(USE_LD_AS_NEEDED)
+#ifdef USE_LD_AS_NEEDED_LDSCRIPT
+#define LINK_LIBATOMIC_SPEC "%{!fno-link-libatomic:-latomic_asneeded} "
+#else
 #define LINK_LIBATOMIC_SPEC "%{!fno-link-libatomic:" LD_AS_NEEDED_OPTION \
 			    " -latomic " LD_NO_AS_NEEDED_OPTION "} "
+#endif
 #else
 #define LINK_LIBATOMIC_SPEC ""
 #endif
@@ -1212,14 +1229,14 @@ proper position among the other output files.  */
 
 static const char *asm_debug = ASM_DEBUG_SPEC;
 static const char *asm_debug_option = ASM_DEBUG_OPTION_SPEC;
-static const char *cpp_spec = CPP_SPEC;
+static const char *cpp_spec = CPP_SPEC LIBC_CPP_SPEC;
 static const char *cc1_spec = CC1_SPEC OS_CC1_SPEC;
 static const char *cc1plus_spec = CC1PLUS_SPEC;
 static const char *link_gcc_c_sequence_spec = LINK_GCC_C_SEQUENCE_SPEC;
 static const char *link_ssp_spec = LINK_SSP_SPEC;
 static const char *asm_spec = ASM_SPEC;
 static const char *asm_final_spec = ASM_FINAL_SPEC;
-static const char *link_spec = LINK_SPEC;
+static const char *link_spec = LINK_SPEC LIBC_LINK_SPEC;
 static const char *lib_spec = LIB_SPEC;
 static const char *link_gomp_spec = "";
 static const char *libgcc_spec = LIBGCC_SPEC;
@@ -1832,6 +1849,16 @@ init_gcc_specs (struct obstack *obstack, const char *shared_name,
   char *buf;
 
 #if USE_LD_AS_NEEDED
+#if defined(USE_LD_AS_NEEDED_LDSCRIPT) && !defined(USE_LIBUNWIND_EXCEPTIONS)
+  buf = concat ("%{static|static-libgcc|static-pie:", static_name, " ", eh_name, "}"
+		"%{!static:%{!static-libgcc:%{!static-pie:"
+		"%{!shared-libgcc:",
+		static_name, " ",
+		shared_name, "_asneeded}"
+		"%{shared-libgcc:",
+		shared_name, "%{!shared: ", static_name, "}"
+		"}}"
+#else
   buf = concat ("%{static|static-libgcc|static-pie:", static_name, " ", eh_name, "}"
 		"%{!static:%{!static-libgcc:%{!static-pie:"
 		"%{!shared-libgcc:",
@@ -1841,6 +1868,7 @@ init_gcc_specs (struct obstack *obstack, const char *shared_name,
 		"%{shared-libgcc:",
 		shared_name, "%{!shared: ", static_name, "}"
 		"}}"
+#endif
 #else
   buf = concat ("%{static|static-libgcc:", static_name, " ", eh_name, "}"
 		"%{!static:%{!static-libgcc:"
@@ -8933,7 +8961,7 @@ driver::maybe_print_and_exit () const
     {
       printf (_("%s %s%s\n"), progname, pkgversion_string,
 	      version_string);
-      printf ("Copyright %s 2025 Free Software Foundation, Inc.\n",
+      printf ("Copyright %s 2026 Free Software Foundation, Inc.\n",
 	      _("(C)"));
       fputs (_("This is free software; see the source for copying conditions.  There is NO\n\
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"),

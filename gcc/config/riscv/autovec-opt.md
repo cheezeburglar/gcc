@@ -1,5 +1,5 @@
 ;; Machine description for optimization of RVV auto-vectorization.
-;; Copyright (C) 2023-2025 Free Software Foundation, Inc.
+;; Copyright (C) 2023-2026 Free Software Foundation, Inc.
 ;; Contributed by Juzhe Zhong (juzhe.zhong@rivai.ai), RiVAI Technologies Ltd.
 
 ;; This file is part of GCC.
@@ -1915,7 +1915,7 @@
  [(set (match_operand:VWEXTI_D       0 "register_operand")
        (plus:VWEXTI_D
 	 (vec_duplicate:VWEXTI_D
-	   (any_extend:<VEL>
+	   (zero_extend:<VEL>
 	     (match_operand:<VSUBEL> 2 "register_operand")))
 	   (match_operand:VWEXTI_D   1 "register_operand")))]
   "TARGET_VECTOR && TARGET_64BIT && can_create_pseudo_p ()"
@@ -1936,7 +1936,7 @@
        (minus:VWEXTI_D
 	 (match_operand:VWEXTI_D     1 "register_operand")
 	 (vec_duplicate:VWEXTI_D
-	   (any_extend:<VEL>
+	   (zero_extend:<VEL>
 	     (match_operand:<VSUBEL> 2 "register_operand")))))]
   "TARGET_VECTOR && TARGET_64BIT && can_create_pseudo_p ()"
   "#"

@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2025 Free Software Foundation, Inc.
+// Copyright (C) 2020-2026 Free Software Foundation, Inc.
 
 // This file is part of GCC.
 
@@ -639,7 +639,7 @@ ASTLoweringExpr::visit (AST::BreakExpr &expr)
 
   HIR::Expr *break_expr
     = expr.has_break_expr ()
-	? ASTLoweringExpr::translate (expr.get_break_expr ())
+	? ASTLoweringExpr::translate (expr.get_break_expr_unchecked ())
 	: nullptr;
 
   auto crate_num = mappings.get_current_crate ();

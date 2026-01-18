@@ -1,6 +1,6 @@
 ; Parameter options of the compiler.
 
-; Copyright (C) 2019-2025 Free Software Foundation, Inc.
+; Copyright (C) 2019-2026 Free Software Foundation, Inc.
 ;
 ; This file is part of GCC.
 ;
@@ -69,6 +69,10 @@ Enable asan detection of use-after-return bugs.
 -param=auto-profile-bbs=
 Common Joined UInteger Var(param_auto_profile_bbs) Init(1) IntegerRange(0, 1) Param Optimization
 Build basic block profile using auto profile.
+
+-param=auto-profile-reorder-only=
+Common Joined UInteger Var(param_auto_profile_reorder_only) Init(0) IntegerRange(0, 1) Param Optimization
+Eanble only function reordering with auto-profile.
 
 -param=cycle-accurate-model=
 Common Joined UInteger Var(param_cycle_accurate_model) Init(1) IntegerRange(0, 1) Param Optimization
@@ -272,6 +276,10 @@ Percentage penalty the recursive functions will receive when they are evaluated 
 -param=ipa-cp-single-call-penalty=
 Common Joined UInteger Var(param_ipa_cp_single_call_penalty) Init(15) IntegerRange(0, 100) Param Optimization
 Percentage penalty functions containing a single call to another function will receive when they are evaluated for cloning.
+
+-param=ipa-cp-sweeps=
+Common Joined UInteger Var(param_ipa_cp_sweeps) Init(3) IntegerRange(1, 100) Param Optimization
+The number of times the interprocedural constant propagation will traverse all functions to make cloning decisions.
 
 -param=ipa-cp-unit-growth=
 Common Joined UInteger Var(param_ipa_cp_unit_growth) Init(10) Param Optimization

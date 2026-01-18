@@ -1,5 +1,5 @@
 ;; Machine description for AArch64 AdvSIMD architecture.
-;; Copyright (C) 2011-2025 Free Software Foundation, Inc.
+;; Copyright (C) 2011-2026 Free Software Foundation, Inc.
 ;; Contributed by ARM Ltd.
 ;;
 ;; This file is part of GCC.
@@ -17,6 +17,24 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GCC; see the file COPYING3.  If not see
 ;; <http://www.gnu.org/licenses/>.
+
+;; Code organisation:
+;
+;; The lines of is an instruction is aarch64, simd, sve, sve2, or sme are
+;; a little blurry.
+;;
+;; Therefore code is organised by the following rough principles:
+;;
+;; - aarch64.md: For shared parts of the architecture (such as defining
+;;     registers and constants) and for instructions that operate on non-SIMD
+;;     registers.
+;; - aarch64-simd.md: For instructions that operate on non-scaling SIMD
+;;     registers.
+;; - aarch64-sve.md for SVE instructions that are pre SVE2.
+;; - aarch64-sme.md for any scalable SIMD instruction that is incompatible with
+;;     non-streaming mode. This usually means it uses the ZA or ZT register.
+;; - aarch64-sve2.md for any scalable SIMD instruction that either is
+;;     streaming compatible, or theoretically could be later.
 
 ;; The following define_subst rules are used to produce patterns representing
 ;; the implicit zeroing effect of 64-bit Advanced SIMD operations, in effect
@@ -10650,3 +10668,18 @@
     return "<insn>\t%0.<V4SF_ONLY:Vtype>, %2.16b, %3.b[%4]";
   }
 )
+
+(define_insn "@aarch64_<insn><mode>"
+  [(set (match_operand:VDQ_HSF_FMMLA 0 "register_operand")
+	(unspec:VDQ_HSF_FMMLA
+	 [(match_operand:V16QI 2 "register_operand")
+	  (match_operand:V16QI 3 "register_operand")
+	  (match_operand:VDQ_HSF_FMMLA 1 "register_operand")
+	  (reg:DI FPM_REGNUM)]
+	 FMMLA))]
+  ""
+  {@ [ cons: =0 , 1 , 2 , 3 ]
+     [ w        , 0 , w , w ] <insn>\t%0.<Vtype>, %2.16b, %3.16b
+  }
+)
+

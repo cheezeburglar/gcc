@@ -1,5 +1,5 @@
 /* Build expressions with type checking for C compiler.
-   Copyright (C) 1987-2025 Free Software Foundation, Inc.
+   Copyright (C) 1987-2026 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -630,6 +630,34 @@ remove_qualifiers (tree t)
 	 : TYPE_MAIN_VARIANT (t);
 }
 
+
+/* Helper function for composite_type_internal.  Find a compatible type
+   in a (transparent) union U compatible to T.  If found, return the
+   type of the corresponding member.  Otherwise, return the union type U.  */
+static tree
+transparent_union_replacement (tree u, tree t)
+{
+  if (u == error_mark_node || t == error_mark_node
+      || TREE_CODE (u) != UNION_TYPE
+      || !(TYPE_TRANSPARENT_AGGR (u) || TYPE_NAME (u) == NULL_TREE)
+      || comptypes (u, t))
+    return u;
+
+  for (tree memb = TYPE_FIELDS (u); memb; memb = DECL_CHAIN (memb))
+    {
+      tree m = remove_qualifiers (TREE_TYPE (memb));
+      if (comptypes (m, t))
+	{
+	  pedwarn (input_location, OPT_Wpedantic,
+		    "function types not truly compatible in ISO C");
+	  return m;
+	}
+    }
+
+  return u;
+}
+
+
 
 /* Return the composite type of two compatible types.
 
@@ -689,13 +717,12 @@ composite_type_internal (tree t1, tree t2, tree cond,
     case POINTER_TYPE:
       /* For two pointers, do this recursively on the target type.  */
       {
-	tree pointed_to_1 = TREE_TYPE (t1);
-	tree pointed_to_2 = TREE_TYPE (t2);
-	tree target = composite_type_internal (pointed_to_1, pointed_to_2,
+	gcc_checking_assert (TYPE_QUALS (t1) == TYPE_QUALS (t2));
+	tree target = composite_type_internal (TREE_TYPE (t1), TREE_TYPE (t2),
 					       cond, cache);
-	t1 = c_build_pointer_type_for_mode (target, TYPE_MODE (t1), false);
-	t1 = c_build_type_attribute_variant (t1, attributes);
-	return qualify_type (t1, t2);
+	tree n = c_build_pointer_type_for_mode (target, TYPE_MODE (t1), false);
+	return c_build_type_attribute_qual_variant (n, attributes,
+						    TYPE_QUALS (t2));
       }
 
     case ARRAY_TYPE:
@@ -906,9 +933,6 @@ composite_type_internal (tree t1, tree t2, tree cond,
 						cond, cache);
 	tree p1 = TYPE_ARG_TYPES (t1);
 	tree p2 = TYPE_ARG_TYPES (t2);
-	int len;
-	tree newargs, n;
-	int i;
 
 	/* Save space: see if the result is identical to one of the args.  */
 	if (valtype == TREE_TYPE (t1) && !TYPE_ARG_TYPES (t2))
@@ -934,86 +958,30 @@ composite_type_internal (tree t1, tree t2, tree cond,
 
 	/* If both args specify argument types, we must merge the two
 	   lists, argument by argument.  */
+	tree newargs = NULL_TREE;
+	tree *endp = &newargs;
 
-	for (len = 0, newargs = p1;
-	     newargs && newargs != void_list_node;
-	     len++, newargs = TREE_CHAIN (newargs))
-	  ;
-
-	for (i = 0; i < len; i++)
-	  newargs = tree_cons (NULL_TREE, NULL_TREE, newargs);
-
-	n = newargs;
-
-	for (; p1 && p1 != void_list_node;
-	     p1 = TREE_CHAIN (p1), p2 = TREE_CHAIN (p2), n = TREE_CHAIN (n))
+	for (; p1; p1 = TREE_CHAIN (p1), p2 = TREE_CHAIN (p2))
 	  {
-	     tree mv1 = remove_qualifiers (TREE_VALUE (p1));
-	     tree mv2 = remove_qualifiers (TREE_VALUE (p2));
+	    if (p1 == void_list_node)
+	      {
+		*endp = void_list_node;
+		break;
+	      }
+	    tree mv1 = remove_qualifiers (TREE_VALUE (p1));
+	    tree mv2 = remove_qualifiers (TREE_VALUE (p2));
 
-	    /* A null type means arg type is not specified.
-	       Take whatever the other function type has.  */
-	    if (TREE_VALUE (p1) == NULL_TREE)
-	      {
-		TREE_VALUE (n) = TREE_VALUE (p2);
-		goto parm_done;
-	      }
-	    if (TREE_VALUE (p2) == NULL_TREE)
-	      {
-		TREE_VALUE (n) = TREE_VALUE (p1);
-		goto parm_done;
-	      }
+	    gcc_assert (mv1);
+	    gcc_assert (mv2);
 
-	    /* Given  wait (union {union wait *u; int *i} *)
-	       and  wait (union wait *),
-	       prefer  union wait *  as type of parm.  */
-	    if (TREE_CODE (TREE_VALUE (p1)) == UNION_TYPE
-		&& TREE_VALUE (p1) != TREE_VALUE (p2))
-	      {
-		tree memb;
-		for (memb = TYPE_FIELDS (TREE_VALUE (p1));
-		     memb; memb = DECL_CHAIN (memb))
-		  {
-		    tree mv3 = TREE_TYPE (memb);
-		    if (mv3 && mv3 != error_mark_node
-			&& TREE_CODE (mv3) != ARRAY_TYPE)
-		      mv3 = TYPE_MAIN_VARIANT (mv3);
-		    if (comptypes (mv3, mv2))
-		      {
-			TREE_VALUE (n) = composite_type_internal (TREE_TYPE (memb),
-								  TREE_VALUE (p2),
-								  cond, cache);
-			pedwarn (input_location, OPT_Wpedantic,
-				 "function types not truly compatible in ISO C");
-			goto parm_done;
-		      }
-		  }
-	      }
-	    if (TREE_CODE (TREE_VALUE (p2)) == UNION_TYPE
-		&& TREE_VALUE (p2) != TREE_VALUE (p1))
-	      {
-		tree memb;
-		for (memb = TYPE_FIELDS (TREE_VALUE (p2));
-		     memb; memb = DECL_CHAIN (memb))
-		  {
-		    tree mv3 = TREE_TYPE (memb);
-		    if (mv3 && mv3 != error_mark_node
-			&& TREE_CODE (mv3) != ARRAY_TYPE)
-		      mv3 = TYPE_MAIN_VARIANT (mv3);
-		    if (comptypes (mv3, mv1))
-		      {
-			TREE_VALUE (n)
-				= composite_type_internal (TREE_TYPE (memb),
-							   TREE_VALUE (p1),
-							   cond, cache);
-			pedwarn (input_location, OPT_Wpedantic,
-				 "function types not truly compatible in ISO C");
-			goto parm_done;
-		      }
-		  }
-	      }
-	    TREE_VALUE (n) = composite_type_internal (mv1, mv2, cond, cache);
-	  parm_done: ;
+	    mv1 = transparent_union_replacement (mv1, mv2);
+	    mv2 = transparent_union_replacement (mv2, mv1);
+
+	    *endp = tree_cons (NULL_TREE,
+			       composite_type_internal (mv1, mv2, cond, cache),
+			       NULL_TREE);
+
+	    endp = &TREE_CHAIN (*endp);
 	  }
 
 	t1 = c_build_function_type (valtype, newargs);
@@ -1668,6 +1636,11 @@ comptypes_internal (const_tree type1, const_tree type2,
       || TREE_CODE (t1) == ERROR_MARK || TREE_CODE (t2) == ERROR_MARK)
     return true;
 
+  /* Qualifiers must match. C99 6.7.3p9 */
+
+  if (TYPE_QUALS (t1) != TYPE_QUALS (t2))
+    return false;
+
   /* Enumerated types are compatible with integer types, but this is
      not transitive: two enumerated types in the same translation unit
      are compatible with each other only if they are the same type.  */
@@ -1703,11 +1676,6 @@ comptypes_internal (const_tree type1, const_tree type2,
   if (TREE_CODE (t1) != TREE_CODE (t2))
     return false;
 
-  /* Qualifiers must match. C99 6.7.3p9 */
-
-  if (TYPE_QUALS (t1) != TYPE_QUALS (t2))
-    return false;
-
   /* Allow for two different type nodes which have essentially the same
      definition.  Note that we already checked for equality of the type
      qualifiers (just above).  */
@@ -1720,7 +1688,7 @@ comptypes_internal (const_tree type1, const_tree type2,
 
   /* 1 if no need for warning yet, 2 if warning cause has been seen.  */
   if (!(attrval = comp_type_attributes (t1, t2)))
-     return false;
+    return false;
 
   if (2 == attrval)
     data->warning_needed = true;
@@ -2160,24 +2128,12 @@ type_lists_compatible_p (const_tree args1, const_tree args2,
       tree a2 = TREE_VALUE (args2);
       tree mv1 = remove_qualifiers (a1);
       tree mv2 = remove_qualifiers (a2);
-      /* A null pointer instead of a type
-	 means there is supposed to be an argument
-	 but nothing is specified about what type it has.
-	 So match anything that self-promotes.  */
-      if ((a1 == NULL_TREE) != (a2 == NULL_TREE))
-	data->different_types_p = true;
-      if (a1 == NULL_TREE)
-	{
-	  if (c_type_promotes_to (a2) != a2)
-	    return false;
-	}
-      else if (a2 == NULL_TREE)
-	{
-	  if (c_type_promotes_to (a1) != a1)
-	    return false;
-	}
+
+      gcc_assert (mv2);
+      gcc_assert (mv2);
+
       /* If one of the lists has an error marker, ignore this arg.  */
-      else if (TREE_CODE (a1) == ERROR_MARK
+      if (TREE_CODE (a1) == ERROR_MARK
 	       || TREE_CODE (a2) == ERROR_MARK)
 	;
       else if (!comptypes_internal (mv1, mv2, data))
@@ -2592,6 +2548,19 @@ maybe_get_constexpr_init (tree expr)
   return build_zero_cst (TREE_TYPE (expr));
 }
 
+/* Helper function for convert_lvalue_to_rvalue called via
+   walk_tree_without_duplicates.  Find DATA inside of the expression.  */
+
+static tree
+c_find_var_r (tree *tp, int *walk_subtrees, void *data)
+{
+  if (TYPE_P (*tp))
+    *walk_subtrees = 0;
+  else if (*tp == (tree) data)
+    return *tp;
+  return NULL_TREE;
+}
+
 /* Convert expression EXP (location LOC) from lvalue to rvalue,
    including converting functions and arrays to pointers if CONVERT_P.
    If READ_P, also mark the expression as having been read.  If
@@ -2665,6 +2634,25 @@ convert_lvalue_to_rvalue (location_t loc, struct c_expr exp,
 
       /* EXPR is always read.  */
       mark_exp_read (exp.value);
+
+      /* Optimize the common case where c_build_function_call_vec
+	 immediately folds __atomic_load (&expr, &tmp, SEQ_CST); into
+	 tmp = __atomic_load_<N> (&expr, SEQ_CST);
+	 In that case tmp is not addressable and can be initialized
+	 fully by the rhs of the MODIFY_EXPR.  */
+      tree tem = func_call;
+      if (CONVERT_EXPR_P (tem) && VOID_TYPE_P (TREE_TYPE (tem)))
+	{
+	  tem = TREE_OPERAND (tem, 0);
+	  if (TREE_CODE (tem) == MODIFY_EXPR
+	      && TREE_OPERAND (tem, 0) == tmp
+	      && !walk_tree_without_duplicates (&TREE_OPERAND (tem, 1),
+						c_find_var_r, tmp))
+	    {
+	      TREE_ADDRESSABLE (tmp) = 0;
+	      func_call = TREE_OPERAND (tem, 1);
+	    }
+	}
 
       /* Return tmp which contains the value loaded.  */
       exp.value = build4 (TARGET_EXPR, nonatomic_type, tmp, func_call,
@@ -3090,7 +3078,6 @@ static tree
 build_counted_by_ref (tree datum, tree subdatum,
 		      tree *counted_by_type)
 {
-  tree type = TREE_TYPE (datum);
   tree sub_type = TREE_TYPE (subdatum);
   if (!c_flexible_array_member_type_p (sub_type)
       && TREE_CODE (sub_type) != POINTER_TYPE)
@@ -3098,28 +3085,46 @@ build_counted_by_ref (tree datum, tree subdatum,
 
   tree attr_counted_by = lookup_attribute ("counted_by",
 					   DECL_ATTRIBUTES (subdatum));
+  if (!attr_counted_by)
+    return NULL_TREE;
+
   tree counted_by_ref = NULL_TREE;
   *counted_by_type = NULL_TREE;
-  if (attr_counted_by)
+
+  tree type = TREE_TYPE (datum);
+
+  /* If the type of the containing structure is an anonymous struct/union,
+     and this anonymous struct/union is not a root type, get the first
+     outer named structure/union type.  */
+  while (TREE_CODE (datum) == COMPONENT_REF
+	 && c_type_tag (type) == NULL_TREE
+	 && DECL_NAME (TREE_OPERAND (datum, 1)) == NULL_TREE)
     {
-      tree field_id = TREE_VALUE (TREE_VALUE (attr_counted_by));
-      counted_by_ref
-	= build_component_ref (UNKNOWN_LOCATION,
-			       datum, field_id,
-			       UNKNOWN_LOCATION, UNKNOWN_LOCATION);
-      counted_by_ref = build_fold_addr_expr (counted_by_ref);
-
-      /* Get the TYPE of the counted_by field.  */
-      tree counted_by_field = lookup_field (type, field_id);
-      gcc_assert (counted_by_field);
-
-      do
-	{
-	  *counted_by_type = TREE_TYPE (TREE_VALUE (counted_by_field));
-	  counted_by_field = TREE_CHAIN (counted_by_field);
-	}
-      while (counted_by_field);
+      datum = TREE_OPERAND (datum, 0);
+      type = TREE_TYPE (datum);
     }
+
+  tree field_id = TREE_VALUE (TREE_VALUE (attr_counted_by));
+  tree counted_by_field = lookup_field (type, field_id);
+  gcc_assert (counted_by_field);
+
+  tree counted_by_subdatum;
+  do
+    {
+      counted_by_subdatum = TREE_VALUE (counted_by_field);
+      /* Get the TYPE of the counted_by field.  */
+      *counted_by_type = TREE_TYPE (counted_by_subdatum);
+
+      counted_by_ref
+	= build3 (COMPONENT_REF, TREE_TYPE (counted_by_subdatum),
+		  datum, counted_by_subdatum, NULL_TREE);
+
+      datum = counted_by_ref;
+      counted_by_field = TREE_CHAIN (counted_by_field);
+    }
+  while (counted_by_field);
+
+  counted_by_ref = build_fold_addr_expr (counted_by_ref);
   return counted_by_ref;
 }
 
@@ -5174,14 +5179,14 @@ parser_build_binary_op (location_t location, enum tree_code code,
     {
       if ((TREE_CODE (type1) == POINTER_TYPE
 	   || TREE_CODE (type1) == NULLPTR_TYPE)
-	  && TREE_CODE (type2) == INTEGER_TYPE
+	  && INTEGRAL_TYPE_P (type2)
 	  && null_pointer_constant_p (arg2.value))
 	warning_at (arg2.get_location(), OPT_Wzero_as_null_pointer_constant,
 		    "zero as null pointer constant");
 
       if ((TREE_CODE (type2) == POINTER_TYPE
 	   || TREE_CODE (type2) == NULLPTR_TYPE)
-	  && TREE_CODE (type1) == INTEGER_TYPE
+	  && INTEGRAL_TYPE_P (type1)
 	  && null_pointer_constant_p (arg1.value))
 	warning_at (arg1.get_location(), OPT_Wzero_as_null_pointer_constant,
 		    "zero as null pointer constant");
@@ -6524,8 +6529,6 @@ build_conditional_expr (location_t colon_loc, tree ifexp, bool ifexp_bcp,
 {
   tree type1;
   tree type2;
-  enum tree_code code1;
-  enum tree_code code2;
   tree result_type = NULL;
   tree semantic_result_type = NULL;
   tree orig_op1 = op1, orig_op2 = op2;
@@ -6558,9 +6561,9 @@ build_conditional_expr (location_t colon_loc, tree ifexp, bool ifexp_bcp,
   tree bltin1 = NULL_TREE;
   tree bltin2 = NULL_TREE;
   type1 = type_or_builtin_type (op1, &bltin1);
-  code1 = TREE_CODE (type1);
+  const enum tree_code code1 = TREE_CODE (type1);
   type2 = type_or_builtin_type (op2, &bltin2);
-  code2 = TREE_CODE (type2);
+  const enum tree_code code2 = TREE_CODE (type2);
 
   if (code1 == POINTER_TYPE && reject_gcc_builtin (op1))
     return error_mark_node;
@@ -6615,12 +6618,12 @@ build_conditional_expr (location_t colon_loc, tree ifexp, bool ifexp_bcp,
       && c_inhibit_evaluation_warnings == 0)
     {
       if ((code1 == POINTER_TYPE || code1 == NULLPTR_TYPE)
-	  && code2 == INTEGER_TYPE && null_pointer_constant_p (orig_op2))
+	  && INTEGRAL_TYPE_P (type2) && null_pointer_constant_p (orig_op2))
 	warning_at (op2_loc, OPT_Wzero_as_null_pointer_constant,
 		    "zero as null pointer constant");
 
       if ((code2 == POINTER_TYPE || code2 == NULLPTR_TYPE)
-	  && code1 == INTEGER_TYPE && null_pointer_constant_p (orig_op1))
+	  && INTEGRAL_TYPE_P (type1) && null_pointer_constant_p (orig_op1))
 	warning_at (op1_loc, OPT_Wzero_as_null_pointer_constant,
 		    "zero as null pointer constant");
     }
@@ -9168,7 +9171,7 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
 	       || coder == BITINT_TYPE))
     {
       if (null_pointer_constant && c_inhibit_evaluation_warnings == 0
-	  && coder == INTEGER_TYPE)
+	  && coder != NULLPTR_TYPE)
 	warning_at (location, OPT_Wzero_as_null_pointer_constant,
 		    "zero as null pointer constant");
       /* A NULLPTR type is just a nullptr always.  */
@@ -14466,8 +14469,10 @@ build_binary_op (location_t location, enum tree_code code,
 	  if (code1 == COMPLEX_TYPE || code1 == VECTOR_TYPE)
 	    tcode1 = TREE_CODE (TREE_TYPE (TREE_TYPE (op1)));
 
-	  if (!(((tcode0 == INTEGER_TYPE || tcode0 == BITINT_TYPE)
-		 && (tcode1 == INTEGER_TYPE || tcode1 == BITINT_TYPE))
+	  if (!(((tcode0 == INTEGER_TYPE || tcode0 == BITINT_TYPE
+		  || (tcode0 == ENUMERAL_TYPE && code0 == VECTOR_TYPE))
+		 && (tcode1 == INTEGER_TYPE || tcode1 == BITINT_TYPE
+		     || (tcode1 == ENUMERAL_TYPE && code1 == VECTOR_TYPE)))
 		|| (tcode0 == FIXED_POINT_TYPE && tcode1 == FIXED_POINT_TYPE)))
 	    resultcode = RDIV_EXPR;
 	  else

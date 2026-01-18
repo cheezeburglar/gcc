@@ -1,6 +1,6 @@
 /* C++-specific tree lowering bits; see also c-gimplify.cc and gimple.cc.
 
-   Copyright (C) 2002-2025 Free Software Foundation, Inc.
+   Copyright (C) 2002-2026 Free Software Foundation, Inc.
    Contributed by Jason Merrill <jason@redhat.com>
 
 This file is part of GCC.
@@ -74,6 +74,11 @@ enum fold_flags {
      definitely not in a manifestly constant-evaluated
      context.  */
   ff_mce_false = 1 << 1,
+  /* Whether we're only folding non-ODR usages of constants.
+     This happens before saving the constexpr funcdef, so
+     we should do as little other folding as possible.
+     Mutually exclusive with ff_mce_false.  */
+  ff_only_non_odr = 1 << 2,
 };
 
 using fold_flags_t = int;
@@ -82,7 +87,11 @@ struct cp_fold_data
 {
   hash_set<tree> pset;
   fold_flags_t flags;
-  cp_fold_data (fold_flags_t flags): flags (flags) {}
+  cp_fold_data (fold_flags_t flags): flags (flags)
+  {
+    gcc_checking_assert (!(flags & ff_mce_false)
+			 || !(flags & ff_only_non_odr));
+  }
 };
 
 /* Forward declarations.  */
@@ -477,7 +486,7 @@ lvalue_has_side_effects (tree e)
 
 /* Return true if FN is an immediate-escalating function.  */
 
-static bool
+bool
 immediate_escalating_function_p (tree fn)
 {
   if (!fn || !flag_immediate_escalation)
@@ -515,7 +524,7 @@ unchecked_immediate_escalating_function_p (tree fn)
 
 /* Promote FN to an immediate function, including its clones.  */
 
-static void
+void
 promote_function_to_consteval (tree fn)
 {
   SET_DECL_IMMEDIATE_FUNCTION_P (fn);
@@ -847,6 +856,13 @@ cp_gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
 
     case CALL_EXPR:
       ret = GS_OK;
+      /* At this point any function that takes/returns a consteval-only
+	 expression is a problem.  */
+      for (int i = 0; i < call_expr_nargs (*expr_p); ++i)
+	if (check_out_of_consteval_use (CALL_EXPR_ARG (*expr_p, i)))
+	  ret = GS_ERROR;
+      if (consteval_only_p (TREE_TYPE (*expr_p)))
+	ret = GS_ERROR;
       if (flag_strong_eval_order == 2
 	  && CALL_EXPR_FN (*expr_p)
 	  && !CALL_EXPR_OPERATOR_SYNTAX (*expr_p)
@@ -955,6 +971,13 @@ cp_gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
 			  "%qs used outside of constant expressions",
 			  "__builtin_eh_ptr_adjust_ref");
 		*expr_p = void_node;
+		break;
+	      case CP_BUILT_IN_IS_STRING_LITERAL:
+		*expr_p
+		  = fold_builtin_is_string_literal (EXPR_LOCATION (*expr_p),
+						    call_expr_nargs (*expr_p),
+						    &CALL_EXPR_ARG (*expr_p,
+								    0));
 		break;
 	      default:
 		break;
@@ -1284,6 +1307,23 @@ cp_build_init_expr_for_ctor (tree call, tree init)
   return init;
 }
 
+/* For every DECL_EXPR check if it declares a consteval-only variable and
+   if so, overwrite it with a no-op.  The point here is not to leak
+   consteval-only variables into the middle end.  */
+
+static tree
+wipe_consteval_only_r (tree *stmt_p, int *, void *)
+{
+  if (TREE_CODE (*stmt_p) == DECL_EXPR)
+    {
+      tree d = DECL_EXPR_DECL (*stmt_p);
+      if (VAR_P (d) && consteval_only_p (d))
+	/* Wipe the DECL_EXPR so that it doesn't get into gimple.  */
+	*stmt_p = void_node;
+    }
+  return NULL_TREE;
+}
+
 /* A walk_tree callback for cp_fold_function and cp_fully_fold_init to handle
    immediate functions.  */
 
@@ -1311,12 +1351,32 @@ cp_fold_immediate_r (tree *stmt_p, int *walk_subtrees, void *data_)
       return NULL_TREE;
     }
 
+  /* Most invalid uses of consteval-only types should have been already
+     detected at this point.  And the valid ones won't be needed
+     anymore.  */
+  if (flag_reflection
+      && complain
+      && (data->flags & ff_genericize)
+      && TREE_CODE (stmt) == STATEMENT_LIST)
+    for (tree s : tsi_range (stmt))
+      if (check_out_of_consteval_use (s))
+	*stmt_p = void_node;
+
   tree decl = NULL_TREE;
   bool call_p = false;
 
   /* We are looking for &fn or fn().  */
   switch (code)
     {
+    case DECL_EXPR:
+      /* Clear consteval-only DECL_EXPRs.  */
+      if (flag_reflection)
+	{
+	  tree d = DECL_EXPR_DECL (stmt);
+	  if (VAR_P (d) && consteval_only_p (d))
+	    *stmt_p = void_node;
+	}
+      break;
     case CALL_EXPR:
     case AGGR_INIT_EXPR:
       if (tree fn = cp_get_callee (stmt))
@@ -1335,8 +1395,15 @@ cp_fold_immediate_r (tree *stmt_p, int *walk_subtrees, void *data_)
       if (IF_STMT_CONSTEVAL_P (stmt))
 	{
 	  if (!data->pset.add (stmt))
-	    cp_walk_tree (&ELSE_CLAUSE (stmt), cp_fold_immediate_r, data_,
-			  NULL);
+	    {
+	      cp_walk_tree (&ELSE_CLAUSE (stmt), cp_fold_immediate_r, data_,
+			    nullptr);
+	      if (flag_reflection)
+		/* Check & clear consteval-only DECL_EXPRs even here,
+		   because we wouldn't be walking this subtree otherwise.  */
+		cp_walk_tree (&THEN_CLAUSE (stmt), wipe_consteval_only_r,
+			      data_, nullptr);
+	    }
 	  *walk_subtrees = 0;
 	  return NULL_TREE;
 	}
@@ -1410,6 +1477,22 @@ cp_fold_immediate_r (tree *stmt_p, int *walk_subtrees, void *data_)
 	  *walk_subtrees = 0;
 	  return stmt;
 	}
+      /* If we called a consteval function and it evaluated to a consteval-only
+	 expression, it could be a problem if we are outside a manifestly
+	 constant-evaluated context.  */
+      else if ((data->flags & ff_genericize)
+	       && check_out_of_consteval_use (e, complain))
+	{
+	  *stmt_p = void_node;
+	  if (complain & tf_error)
+	    return NULL_TREE;
+	  else
+	    {
+	      *walk_subtrees = 0;
+	      return stmt;
+	    }
+	}
+
       /* We've evaluated the consteval function call.  */
       if (call_p)
 	{
@@ -1437,6 +1520,38 @@ cp_fold_immediate_r (tree *stmt_p, int *walk_subtrees, void *data_)
 	 see the call when cp_fold_function __static_i_and_d.)  */
       else if (!call_p)
 	remember_escalating_expr (stmt);
+    }
+
+  return NULL_TREE;
+}
+
+/* A walk_tree helper to replace constant-initialized references in an
+   OMP_CLAUSE with the the declaration that they refer to.  Such refs
+   will have been folded out in the body by cp_fold_non_odr_use_1 and
+   so we need to follow suit to prevent confusion.  */
+
+static tree
+cp_fold_omp_clause_refs_r (tree *expr_p, int *walk_subtrees, void */*data*/)
+{
+  tree expr = *expr_p;
+
+  if (TYPE_P (expr))
+    {
+      *walk_subtrees = 0;
+      return NULL_TREE;
+    }
+
+  if (DECL_P (expr))
+    {
+      *walk_subtrees = 0;
+
+      if (decl_constant_var_p (expr)
+	  && TYPE_REF_P (TREE_TYPE (expr)))
+	{
+	  tree init = maybe_constant_value (expr);
+	  if (TREE_CONSTANT (init))
+	    *expr_p = tree_strip_nop_conversions (init);
+	}
     }
 
   return NULL_TREE;
@@ -1529,6 +1644,22 @@ cp_fold_r (tree *stmt_p, int *walk_subtrees, void *data_)
       *walk_subtrees = 0;
       return NULL_TREE;
 
+    case OMP_CLAUSE:
+      if ((data->flags & ff_only_non_odr)
+	  && omp_clause_num_ops[OMP_CLAUSE_CODE (stmt)] >= 1
+	  && OMP_CLAUSE_CODE (stmt) >= OMP_CLAUSE_PRIVATE
+	  && OMP_CLAUSE_CODE (stmt) <= OMP_CLAUSE__SCANTEMP_
+	  && OMP_CLAUSE_DECL (stmt))
+	{
+	  tree *decl = &OMP_CLAUSE_DECL (stmt);
+	  cp_walk_tree (decl, cp_fold_omp_clause_refs_r, NULL, NULL);
+	  if (TREE_CODE (*decl) == ADDR_EXPR
+	      && DECL_P (TREE_OPERAND (*decl, 0)))
+	    *decl = TREE_OPERAND (*decl, 0);
+	  data->pset.add (*decl);
+	}
+      break;
+
     case IF_STMT:
       if (IF_STMT_CONSTEVAL_P (stmt))
 	{
@@ -1618,6 +1749,17 @@ cp_fold_function (tree fndecl)
   if (deferred_escalating_exprs
       && !deferred_escalating_exprs->contains (current_function_decl))
     DECL_ESCALATION_CHECKED_P (fndecl) = true;
+}
+
+/* Fold any non-ODR usages of constant variables in FNDECL.  This occurs
+   before saving the constexpr fundef, so do as little other folding
+   as possible.  */
+
+void
+cp_fold_function_non_odr_use (tree fndecl)
+{
+  cp_fold_data data (ff_only_non_odr);
+  cp_walk_tree (&DECL_SAVED_TREE (fndecl), cp_fold_r, &data, NULL);
 }
 
 /* We've stashed immediate-escalating functions.  Now see if they indeed
@@ -1962,6 +2104,20 @@ cp_genericize_r (tree *stmt_p, int *walk_subtrees, void *data)
 	      cp_walk_tree (&DECL_INITIAL (decl), cp_genericize_r, data, NULL);
 	  wtd->no_sanitize_p = no_sanitize_p;
 	}
+      if (flag_reflection)
+	/* Wipe consteval-only vars from BIND_EXPR_VARS and BLOCK_VARS.  */
+	for (tree *p = &BIND_EXPR_VARS (stmt); *p; )
+	  {
+	    if (VAR_P (*p) && consteval_only_p (*p))
+	      {
+		if (BIND_EXPR_BLOCK (stmt)
+		    && *p == BLOCK_VARS (BIND_EXPR_BLOCK (stmt)))
+		  BLOCK_VARS (BIND_EXPR_BLOCK (stmt)) = DECL_CHAIN (*p);
+		*p = DECL_CHAIN (*p);
+		continue;
+	      }
+	    p = &DECL_CHAIN (*p);
+	  }
       wtd->bind_expr_stack.safe_push (stmt);
       cp_walk_tree (&BIND_EXPR_BODY (stmt),
 		    cp_genericize_r, data, NULL);
@@ -2921,6 +3077,50 @@ cxx_omp_disregard_value_expr (tree decl, bool shared)
   return false;
 }
 
+/* Fold any non-ODR-usages of a constant variable in expression X.  */
+
+static tree
+cp_fold_non_odr_use_1 (tree x)
+{
+  tree var = x;
+  while (!VAR_P (var))
+    switch (TREE_CODE (var))
+      {
+      case ARRAY_REF:
+      case BIT_FIELD_REF:
+      case COMPONENT_REF:
+      case VIEW_CONVERT_EXPR:
+      CASE_CONVERT:
+	var = TREE_OPERAND (var, 0);
+	break;
+
+      case INDIRECT_REF:
+	if (REFERENCE_REF_P (var))
+	  var = TREE_OPERAND (var, 0);
+	else
+	  return x;
+	break;
+
+      default:
+	return x;
+      }
+
+  if (TREE_THIS_VOLATILE (var)
+      || !decl_constant_var_p (var))
+    return x;
+
+  /* We mustn't fold std::hardware_destructive_interference_size here
+     so that maybe_warn_about_constant_value can complain if it's used
+     in a manifestly constant-evaluated context.  */
+  if (decl_in_std_namespace_p (var)
+      && DECL_NAME (var)
+      && id_equal (DECL_NAME (var), "hardware_destructive_interference_size"))
+    return x;
+
+  tree t = maybe_constant_value (x);
+  return TREE_CONSTANT (t) ? t : x;
+}
+
 /* Fold expression X which is used as an rvalue if RVAL is true.  */
 
 static tree
@@ -2931,8 +3131,17 @@ cp_fold_maybe_rvalue (tree x, bool rval, fold_flags_t flags)
       x = cp_fold (x, flags);
       if (rval)
 	x = mark_rvalue_use (x);
-      if (rval && DECL_P (x)
-	  && !TYPE_REF_P (TREE_TYPE (x)))
+      if (rval && (flags & ff_only_non_odr))
+	{
+	  tree v = cp_fold_non_odr_use_1 (x);
+	  if (v != x)
+	    {
+	      x = v;
+	      continue;
+	    }
+	}
+      else if (rval && DECL_P (x)
+	       && !TYPE_REF_P (TREE_TYPE (x)))
 	{
 	  tree v = decl_constant_value (x);
 	  if (v != x && v != error_mark_node)
@@ -2964,6 +3173,15 @@ tree
 cp_fold_rvalue (tree x)
 {
   return cp_fold_rvalue (x, ff_none);
+}
+
+/* Fold any non-ODR used constants in an expression X which
+   is used as an rvalue if RVAL is true.  */
+
+tree
+cp_fold_non_odr_use (tree x, bool rval)
+{
+  return cp_fold_maybe_rvalue (x, rval, ff_only_non_odr);
 }
 
 /* Perform folding on expression X.  */
@@ -3029,7 +3247,7 @@ c_fully_fold (tree x, bool /*in_init*/, bool */*maybe_const*/, bool lval)
   return cp_fold_maybe_rvalue (x, !lval);
 }
 
-static GTY((deletable)) hash_map<tree, tree> *fold_caches[2];
+static GTY((deletable)) hash_map<tree, tree> *fold_caches[3];
 
 /* Subroutine of cp_fold.  Returns which fold cache to use according
    to the given flags.  We need multiple caches since the result of
@@ -3039,6 +3257,8 @@ static hash_map<tree, tree> *&
 get_fold_cache (fold_flags_t flags)
 {
   if (flags & ff_mce_false)
+    return fold_caches[2];
+  else if (flags & ff_only_non_odr)
     return fold_caches[1];
   else
     return fold_caches[0];
@@ -3103,7 +3323,7 @@ cp_fold (tree x, fold_flags_t flags)
       /* Strip CLEANUP_POINT_EXPR if the expression doesn't have side
 	 effects.  */
       r = cp_fold (TREE_OPERAND (x, 0), flags);
-      if (!TREE_SIDE_EFFECTS (r))
+      if (!TREE_SIDE_EFFECTS (r) && !(flags & ff_only_non_odr))
 	x = r;
       break;
 
@@ -3138,6 +3358,13 @@ cp_fold (tree x, fold_flags_t flags)
 
       if (op0 == error_mark_node)
 	x = error_mark_node;
+      else if (flags & ff_only_non_odr)
+	{
+	  if (op0 != TREE_OPERAND (x, 0))
+	    x = build1_loc (loc, code, TREE_TYPE (x), op0);
+	  if (code == NOP_EXPR)
+	    REINTERPRET_CAST_P (x) = REINTERPRET_CAST_P (org_x);
+	}
       else if (code == CONVERT_EXPR
 	  && SCALAR_TYPE_P (TREE_TYPE (x))
 	  && op0 != void_node)
@@ -3160,7 +3387,15 @@ cp_fold (tree x, fold_flags_t flags)
 
     case EXCESS_PRECISION_EXPR:
       op0 = cp_fold_maybe_rvalue (TREE_OPERAND (x, 0), rval_ops, flags);
-      x = fold_convert_loc (EXPR_LOCATION (x), TREE_TYPE (x), op0);
+      if (op0 == error_mark_node)
+	x = error_mark_node;
+      else if (flags & ff_only_non_odr)
+	{
+	  if (op0 != TREE_OPERAND (x, 0))
+	    x = build1_loc (EXPR_LOCATION (x), code, TREE_TYPE (x), op0);
+	}
+      else
+	x = fold_convert_loc (EXPR_LOCATION (x), TREE_TYPE (x), op0);
       break;
 
     case INDIRECT_REF:
@@ -3171,6 +3406,15 @@ cp_fold (tree x, fold_flags_t flags)
 	  if (p != x)
 	    return cp_fold (p, flags);
 	}
+      /* When folding non-ODR usages of constants, we also want to
+	 remove any constant-initialized references, even when
+	 used as lvalues.  */
+      if ((flags & ff_only_non_odr) && REFERENCE_REF_P (x))
+	{
+	  tree r = cp_fold_non_odr_use_1 (x);
+	  if (r != x)
+	    return convert_from_reference (cp_fold (r, flags));
+	}
       goto unary;
 
     case ADDR_EXPR:
@@ -3179,7 +3423,8 @@ cp_fold (tree x, fold_flags_t flags)
 
       /* Cope with user tricks that amount to offsetof.  */
       if (op0 != error_mark_node
-	  && !FUNC_OR_METHOD_TYPE_P (TREE_TYPE (op0)))
+	  && !FUNC_OR_METHOD_TYPE_P (TREE_TYPE (op0))
+	  && !(flags & ff_only_non_odr))
 	{
 	  tree val = get_base_address (op0);
 	  if (val
@@ -3219,7 +3464,10 @@ cp_fold (tree x, fold_flags_t flags)
 	x = error_mark_node;
       else if (op0 != TREE_OPERAND (x, 0))
 	{
-	  x = fold_build1_loc (loc, code, TREE_TYPE (x), op0);
+	  if (flags & ff_only_non_odr)
+	    x = build1_loc (loc, code, TREE_TYPE (x), op0);
+	  else
+	    x = fold_build1_loc (loc, code, TREE_TYPE (x), op0);
 	  if (code == INDIRECT_REF
 	      && (INDIRECT_REF_P (x) || TREE_CODE (x) == MEM_REF))
 	    {
@@ -3228,7 +3476,7 @@ cp_fold (tree x, fold_flags_t flags)
 	      TREE_THIS_VOLATILE (x) = TREE_THIS_VOLATILE (org_x);
 	    }
 	}
-      else
+      else if (!(flags & ff_only_non_odr))
 	x = fold (x);
 
       gcc_assert (TREE_CODE (x) != COND_EXPR
@@ -3239,6 +3487,11 @@ cp_fold (tree x, fold_flags_t flags)
       op0 = cp_fold_rvalue (TREE_OPERAND (x, 0), flags);
       if (op0 == error_mark_node)
 	x = error_mark_node;
+      else if (flags & ff_only_non_odr)
+	{
+	  if (op0 != TREE_OPERAND (x, 0))
+	    x = build1_loc (EXPR_LOCATION (x), code, TREE_TYPE (x), op0);
+	}
       else
 	x = fold_convert (TREE_TYPE (x), op0);
       break;
@@ -3301,6 +3554,15 @@ cp_fold (tree x, fold_flags_t flags)
 				  code != COMPOUND_EXPR, flags);
       if (clear_decl_read)
 	DECL_READ_P (op0) = 0;
+
+      if (flags & ff_only_non_odr)
+	{
+	  if (op0 == error_mark_node || op1 == error_mark_node)
+	    x = error_mark_node;
+	  else if (op0 != TREE_OPERAND (x, 0) || op1 != TREE_OPERAND (x, 1))
+	    x = build2_loc (loc, code, TREE_TYPE (x), op0, op1);
+	  break;
+	}
 
       /* decltype(nullptr) has only one value, so optimize away all comparisons
 	 with that type right away, keeping them in the IL causes troubles for
@@ -3366,6 +3628,19 @@ cp_fold (tree x, fold_flags_t flags)
       op0 = cp_fold_rvalue (TREE_OPERAND (x, 0), flags);
       op1 = cp_fold (TREE_OPERAND (x, 1), flags);
       op2 = cp_fold (TREE_OPERAND (x, 2), flags);
+
+      if (flags & ff_only_non_odr)
+	{
+	  if (op0 == error_mark_node
+	      || op1 == error_mark_node
+	      || op2 == error_mark_node)
+	    x = error_mark_node;
+	  else if (op0 != TREE_OPERAND (x, 0)
+		   || op1 != TREE_OPERAND (x, 1)
+		   || op2 != TREE_OPERAND (x, 2))
+	    x = build3_loc (loc, code, TREE_TYPE (x), op0, op1, op2);
+	  break;
+	}
 
       if (TREE_CODE (TREE_TYPE (x)) == BOOLEAN_TYPE)
 	{
@@ -3473,7 +3748,8 @@ cp_fold (tree x, fold_flags_t flags)
 	    && DECL_DECLARED_CONSTEXPR_P (current_function_decl))
 	  nw = 1;
 
-	if (callee && fndecl_built_in_p (callee, BUILT_IN_FRONTEND))
+	if (callee && !(flags & ff_only_non_odr)
+	    && fndecl_built_in_p (callee, BUILT_IN_FRONTEND))
 	  {
 	    iloc_sentinel ils (EXPR_LOCATION (x));
 	    switch (DECL_FE_FUNCTION_CODE (callee))
@@ -3504,14 +3780,6 @@ cp_fold (tree x, fold_flags_t flags)
 	    break;
 	  }
 
-	if (callee
-	    && fndecl_built_in_p (callee, CP_BUILT_IN_SOURCE_LOCATION,
-				  BUILT_IN_FRONTEND))
-	  {
-	    x = fold_builtin_source_location (x);
-	    break;
-	  }
-
 	bool changed = false;
 	int m = call_expr_nargs (x);
 	for (int i = 0; i < m; i++)
@@ -3530,7 +3798,9 @@ cp_fold (tree x, fold_flags_t flags)
 		changed = true;
 	      }
 	  }
-	if (x == error_mark_node)
+	/* Don't fold away the function entirely if we're just folding
+	   non-ODR-used variables.  */
+	if (x == error_mark_node || (flags & ff_only_non_odr))
 	  break;
 
 	optimize = nw;
@@ -3655,7 +3925,8 @@ cp_fold (tree x, fold_flags_t flags)
 	  TREE_THIS_VOLATILE (x) = TREE_THIS_VOLATILE (org_x);
 	}
 
-      x = fold (x);
+      if (!(flags & ff_only_non_odr))
+	x = fold (x);
       break;
 
     case SAVE_EXPR:

@@ -1,5 +1,5 @@
 /* Helper code for graphviz output.
-   Copyright (C) 2019-2025 Free Software Foundation, Inc.
+   Copyright (C) 2019-2026 Free Software Foundation, Inc.
    Contributed by David Malcolm <dmalcolm@redhat.com>.
 
 This file is part of GCC.
@@ -351,6 +351,58 @@ void
 kv_stmt::print (writer &w) const
 {
   m_kv.print (w);
+}
+
+bool
+get_compass_pt_from_string (const char *str, enum compass_pt &out)
+{
+  if (strcmp (str, "n") == 0)
+    {
+      out = compass_pt::n;
+      return true;
+    }
+  if (strcmp (str, "ne") == 0)
+    {
+      out = compass_pt::ne;
+      return true;
+    }
+  if (strcmp (str, "e") == 0)
+    {
+      out = compass_pt::e;
+      return true;
+    }
+  if (strcmp (str, "se") == 0)
+    {
+      out = compass_pt::se;
+      return true;
+    }
+  if (strcmp (str, "s") == 0)
+    {
+      out = compass_pt::s;
+      return true;
+    }
+  if (strcmp (str, "sw") == 0)
+    {
+      out = compass_pt::sw;
+      return true;
+    }
+  if (strcmp (str, "w") == 0)
+    {
+      out = compass_pt::w;
+      return true;
+    }
+  if (strcmp (str, "nw") == 0)
+    {
+      out = compass_pt::nw;
+      return true;
+    }
+  if (strcmp (str, "c") == 0)
+    {
+      out = compass_pt::c;
+      return true;
+    }
+
+  return false;
 }
 
 // struct node_id

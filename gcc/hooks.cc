@@ -1,5 +1,5 @@
 /* General-purpose hooks.
-   Copyright (C) 2002-2025 Free Software Foundation, Inc.
+   Copyright (C) 2002-2026 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -595,7 +595,10 @@ hook_stringslice_locationtptr_true (string_slice, location_t *)
 }
 
 bool
-hook_stringslice_stringslice_unreachable (string_slice, string_slice)
+hook_stringslice_consttree_stringslice_consttree_unreachable (string_slice,
+							      const_tree,
+							      string_slice,
+							      const_tree)
 {
   gcc_unreachable ();
 }

@@ -1,5 +1,5 @@
 /* General-purpose hooks.
-   Copyright (C) 2002-2025 Free Software Foundation, Inc.
+   Copyright (C) 2002-2026 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -139,6 +139,6 @@ extern opt_machine_mode hook_optmode_mode_uhwi_none (machine_mode,
 						     unsigned HOST_WIDE_INT);
 
 extern bool hook_stringslice_locationtptr_true (string_slice, location_t *);
-extern bool hook_stringslice_stringslice_unreachable (string_slice, string_slice);
+extern bool hook_stringslice_consttree_stringslice_consttree_unreachable (string_slice, const_tree, string_slice, const_tree);
 
 #endif

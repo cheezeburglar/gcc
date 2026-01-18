@@ -1,5 +1,5 @@
 /* Implementation of selftests.
-   Copyright (C) 2015-2025 Free Software Foundation, Inc.
+   Copyright (C) 2015-2026 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -83,6 +83,7 @@ selftest::run_tests ()
   splay_tree_cc_tests ();
   xml_cc_tests ();
   graphviz_cc_tests ();
+  pub_sub_cc_tests ();
 
   /* Mid-level data structures.  */
   input_cc_tests ();

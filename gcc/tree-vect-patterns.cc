@@ -1,5 +1,5 @@
 /* Analysis Utilities for Loop Vectorization.
-   Copyright (C) 2006-2025 Free Software Foundation, Inc.
+   Copyright (C) 2006-2026 Free Software Foundation, Inc.
    Contributed by Dorit Nuzman <dorit@il.ibm.com>
 
 This file is part of GCC.
@@ -6006,7 +6006,9 @@ vect_recog_bool_pattern (vec_info *vinfo,
       || rhs_code == VIEW_CONVERT_EXPR
       || rhs_code == FLOAT_EXPR)
     {
-      if (VECT_SCALAR_BOOLEAN_TYPE_P (TREE_TYPE (lhs)))
+      if (! (INTEGRAL_TYPE_P (TREE_TYPE (lhs))
+	     || SCALAR_FLOAT_TYPE_P (TREE_TYPE (lhs)))
+	  || VECT_SCALAR_BOOLEAN_TYPE_P (TREE_TYPE (lhs)))
 	return NULL;
       vectype = get_vectype_for_scalar_type (vinfo, TREE_TYPE (lhs));
 

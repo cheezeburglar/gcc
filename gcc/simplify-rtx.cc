@@ -1,5 +1,5 @@
 /* RTL simplification functions for GNU compiler.
-   Copyright (C) 1987-2025 Free Software Foundation, Inc.
+   Copyright (C) 1987-2026 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -4193,7 +4193,9 @@ simplify_context::simplify_binary_operation_1 (rtx_code code,
 		 Keeps shift and AND in the same mode, improving recognition.
 		 Only applied when subreg is a lowpart, shift is valid,
 		 and no precision is lost.  */
-	      if (SUBREG_P (op0) && subreg_lowpart_p (op0)
+	      if (SUBREG_P (op0)
+		  && subreg_lowpart_p (op0)
+		  && !paradoxical_subreg_p (op0)
 		  && GET_CODE (XEXP (op0, 0)) == LSHIFTRT
 		  /* simplify_subreg asserts the object being accessed is not
 		     VOIDmode or BLKmode.  We may have a REG_EQUAL note which
@@ -4792,6 +4794,43 @@ simplify_ashift:
 		    << UINTVAL (trueop1));
 	  rtx new_op1 = immed_wide_int_const (c, int_mode);
 	  return simplify_gen_binary (MULT, int_mode, op0, new_op1);
+	}
+
+      /* If we're shifting left a signed bitfield extraction and the
+	 shift count + bitfield size is a natural integral mode and
+	 the field starts at offset 0 (counting from the LSB), then
+	 this can be simplified to a sign extension of a left shift.
+
+	 Some ISAs (RISC-V 64-bit) have inherent support for such
+	 instructions and it's better for various optimizations to
+	 express as a SIGN_EXTEND rather than a shifted SIGN_EXTRACT.  */
+      if (GET_CODE (op0) == SIGN_EXTRACT
+	  && REG_P (XEXP (op0, 0))
+	  /* The size of the bitfield, the location of the bitfield and
+	     shift count must be CONST_INTs.  */
+	  && CONST_INT_P (op1)
+	  && CONST_INT_P (XEXP (op0, 1))
+	  && CONST_INT_P (XEXP (op0, 2)))
+	{
+	  int size = INTVAL (op1) + INTVAL (XEXP (op0, 1));
+	  machine_mode smaller_mode;
+	  /* Now we need to verify the size of the bitfield plus the shift
+	     count is an integral mode and smaller than MODE.  This is
+	     requirement for using SIGN_EXTEND.  We also need to verify the
+	     field starts at bit location 0 and that the subreg lowpart also
+	     starts at zero.  */
+	  if (int_mode_for_size (size, size).exists (&smaller_mode)
+	      && mode > smaller_mode
+	      && (subreg_lowpart_offset (smaller_mode, mode).to_constant ()
+		  == UINTVAL (XEXP (op0, 2)))
+	      && XEXP (op0, 2) == CONST0_RTX (mode))
+	    {
+	      /* Everything passed.  So we just need to get the subreg of the
+		 original input, shift it and sign extend the result.  */
+	      rtx op = gen_lowpart (smaller_mode, XEXP (op0, 0));
+	      rtx x = gen_rtx_ASHIFT (smaller_mode, op, op1);
+	      return gen_rtx_SIGN_EXTEND (mode, x);
+	    }
 	}
       goto canonicalize_shift;
 
@@ -5820,11 +5859,11 @@ simplify_const_binary_operation (enum rtx_code code, machine_mode mode,
 	    /* The shift count might be in SImode while int_mode might
 	       be narrower.  On IA-64 it is even DImode.  If the shift
 	       count is too large and doesn't fit into int_mode, we'd
-	       ICE.  So, if int_mode is narrower than word, use
-	       word_mode for the shift count.  */
+	       ICE.  So, if int_mode is narrower than
+	       HOST_BITS_PER_WIDE_INT, use DImode for the shift count.  */
 	    if (GET_MODE (op1) == VOIDmode
-		&& GET_MODE_PRECISION (int_mode) < BITS_PER_WORD)
-	      pop1 = rtx_mode_t (op1, word_mode);
+		&& GET_MODE_PRECISION (int_mode) < HOST_BITS_PER_WIDE_INT)
+	      pop1 = rtx_mode_t (op1, DImode);
 
 	    wide_int wop1 = pop1;
 	    if (SHIFT_COUNT_TRUNCATED)
@@ -5875,11 +5914,11 @@ simplify_const_binary_operation (enum rtx_code code, machine_mode mode,
 	    /* The rotate count might be in SImode while int_mode might
 	       be narrower.  On IA-64 it is even DImode.  If the shift
 	       count is too large and doesn't fit into int_mode, we'd
-	       ICE.  So, if int_mode is narrower than word, use
-	       word_mode for the shift count.  */
+	       ICE.  So, if int_mode is narrower than
+	       HOST_BITS_PER_WIDE_INT, use DImode for the shift count.  */
 	    if (GET_MODE (op1) == VOIDmode
-		&& GET_MODE_PRECISION (int_mode) < BITS_PER_WORD)
-	      pop1 = rtx_mode_t (op1, word_mode);
+		&& GET_MODE_PRECISION (int_mode) < HOST_BITS_PER_WIDE_INT)
+	      pop1 = rtx_mode_t (op1, DImode);
 
 	    if (wi::neg_p (pop1))
 	      return NULL_RTX;
@@ -5980,8 +6019,9 @@ simplify_const_binary_operation (enum rtx_code code, machine_mode mode,
 	      wide_int shift
 		= rtx_mode_t (op1,
 			      GET_MODE (op1) == VOIDmode
-			      && GET_MODE_PRECISION (int_mode) < BITS_PER_WORD
-			      ? word_mode : mode);
+			      && (GET_MODE_PRECISION (int_mode)
+				  < HOST_BITS_PER_WIDE_INT)
+			      ? DImode : mode);
 	      if (SHIFT_COUNT_TRUNCATED)
 		shift = wi::umod_trunc (shift, GET_MODE_PRECISION (int_mode));
 	      else if (wi::geu_p (shift, GET_MODE_PRECISION (int_mode)))
@@ -6509,8 +6549,9 @@ simplify_context::simplify_relational_operation_1 (rtx_code code,
 	  /* only enters if op1 is 0 */
 	  /* Verify IOR operand is NE */
 	  && GET_CODE (XEXP (op0, 0)) == NE
+	  && GET_MODE (XEXP (XEXP (op0, 0), 0)) == cmp_mode
 	  /* Verify second NE operand is 0 */
-	  && XEXP (XEXP (op0, 0), 1) == CONST0_RTX (mode))
+	  && XEXP (XEXP (op0, 0), 1) == CONST0_RTX (cmp_mode))
 	{
 	  rtx t = gen_rtx_IOR (cmp_mode, XEXP (XEXP (op0, 0), 0), XEXP (op0, 1));
 	  t = gen_rtx_fmt_ee (code, mode, t, CONST0_RTX (mode));

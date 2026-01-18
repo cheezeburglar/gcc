@@ -1,5 +1,5 @@
 /* Statement Analysis and Transformation for Vectorization
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
    Contributed by Dorit Naishlos <dorit@il.ibm.com>
    and Ira Rosen <irar@il.ibm.com>
 
@@ -2087,6 +2087,7 @@ get_load_store_type (vec_info  *vinfo, stmt_vec_info stmt_info,
   tree *ls_type = &ls->ls_type;
   bool *slp_perm = &ls->slp_perm;
   unsigned *n_perms = &ls->n_perms;
+  unsigned *n_loads = &ls->n_loads;
   tree *supported_offset_vectype = &ls->supported_offset_vectype;
   int *supported_scale = &ls->supported_scale;
   loop_vec_info loop_vinfo = dyn_cast <loop_vec_info> (vinfo);
@@ -2103,6 +2104,7 @@ get_load_store_type (vec_info  *vinfo, stmt_vec_info stmt_info,
   *ls_type = NULL_TREE;
   *slp_perm = false;
   *n_perms = -1U;
+  *n_loads = -1U;
   ls->subchain_p = false;
 
   bool perm_ok = true;
@@ -2110,7 +2112,7 @@ get_load_store_type (vec_info  *vinfo, stmt_vec_info stmt_info,
 
   if (SLP_TREE_LOAD_PERMUTATION (slp_node).exists ())
     perm_ok = vect_transform_slp_perm_load (vinfo, slp_node, vNULL, NULL,
-					    vf, true, n_perms);
+					    vf, true, n_perms, n_loads);
 
   if (STMT_VINFO_GROUPED_ACCESS (stmt_info))
     {
@@ -3438,9 +3440,9 @@ vectorizable_call (vec_info *vinfo,
   loop_vec_info loop_vinfo = dyn_cast <loop_vec_info> (vinfo);
   bb_vec_info bb_vinfo = dyn_cast <bb_vec_info> (vinfo);
   tree fndecl, new_temp, rhs_type;
-  enum vect_def_type dt[4]
+  enum vect_def_type dt[5]
     = { vect_unknown_def_type, vect_unknown_def_type, vect_unknown_def_type,
-	vect_unknown_def_type };
+	vect_unknown_def_type, vect_unknown_def_type };
   tree vectypes[ARRAY_SIZE (dt)] = {};
   slp_tree slp_op[ARRAY_SIZE (dt)] = {};
   auto_vec<tree, 8> vargs;
@@ -3481,8 +3483,8 @@ vectorizable_call (vec_info *vinfo,
 
   /* Bail out if the function has more than four arguments, we do not have
      interesting builtin functions to vectorize with more than two arguments
-     except for fma.  No arguments is also not good.  */
-  if (nargs == 0 || nargs > 4)
+     except for fma (cond_fma has more).  No arguments is also not good.  */
+  if (nargs == 0 || nargs > 5)
     return false;
 
   /* Ignore the arguments of IFN_GOMP_SIMD_LANE, they are magic.  */
@@ -3625,6 +3627,33 @@ vectorizable_call (vec_info *vinfo,
     ifn = vectorizable_internal_function (cfn, callee, vectype_out,
 					  vectype_in);
 
+  /* Check if the operation traps.  */
+  bool could_trap = gimple_could_trap_p (STMT_VINFO_STMT (stmt_info));
+  if (could_trap && cost_vec && loop_vinfo)
+    {
+      /* If the operation can trap it must be conditional, otherwise fail.  */
+      internal_fn cond_fn = get_conditional_internal_fn (ifn);
+      internal_fn cond_len_fn = get_len_internal_fn (ifn);
+      if (LOOP_VINFO_CAN_USE_PARTIAL_VECTORS_P (loop_vinfo))
+	{
+	  /* We assume that BB SLP fills all lanes, so no inactive lanes can
+	     cause issues.  */
+	  if ((cond_fn == IFN_LAST
+	       || !direct_internal_fn_supported_p (cond_fn, vectype_out,
+						   OPTIMIZE_FOR_SPEED))
+	      && (cond_len_fn == IFN_LAST
+		  || !direct_internal_fn_supported_p (cond_len_fn, vectype_out,
+						      OPTIMIZE_FOR_SPEED)))
+	    {
+	      if (dump_enabled_p ())
+		dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
+				 "can't use a fully-masked loop because no"
+				 " conditional operation is available.\n");
+	      LOOP_VINFO_CAN_USE_PARTIAL_VECTORS_P (loop_vinfo) = false;
+	    }
+	}
+    }
+
   /* If that fails, try asking for a target-specific built-in function.  */
   if (ifn == IFN_LAST)
     {
@@ -3749,7 +3778,7 @@ vectorizable_call (vec_info *vinfo,
       else if (reduc_idx >= 0)
 	gcc_unreachable ();
     }
-  else if (masked_loop_p && mask_opno == -1 && reduc_idx >= 0)
+  else if (masked_loop_p && mask_opno == -1 && (reduc_idx >= 0 || could_trap))
     {
       ifn = cond_fn;
       vect_nargs += 2;
@@ -3793,7 +3822,8 @@ vectorizable_call (vec_info *vinfo,
 	    {
 	      int varg = 0;
 	      /* Add the mask if necessary.  */
-	      if (masked_loop_p && mask_opno == -1 && reduc_idx >= 0)
+	      if (masked_loop_p && mask_opno == -1
+		  && (reduc_idx >= 0 || could_trap))
 		{
 		  gcc_assert (internal_fn_mask_index (ifn) == varg);
 		  unsigned int vec_num = vec_oprnds0.length ();
@@ -3807,10 +3837,18 @@ vectorizable_call (vec_info *vinfo,
 		  vargs[varg++] = vec_oprndsk[i];
 		}
 	      /* Add the else value if necessary.  */
-	      if (masked_loop_p && mask_opno == -1 && reduc_idx >= 0)
+	      if (masked_loop_p && mask_opno == -1
+		 && (reduc_idx >= 0 || could_trap))
 		{
 		  gcc_assert (internal_fn_else_index (ifn) == varg);
-		  vargs[varg++] = vargs[reduc_idx + 1];
+		  if (reduc_idx >= 0)
+		    vargs[varg++] = vargs[reduc_idx + 1];
+		  else
+		    {
+		      auto else_value = targetm.preferred_else_value
+			(cond_fn, vectype_out, varg - 1, &vargs[1]);
+		      vargs[varg++] = else_value;
+		    }
 		}
 	      if (clz_ctz_arg1)
 		vargs[varg++] = clz_ctz_arg1;
@@ -6312,7 +6350,8 @@ vectorizable_shift (vec_info *vinfo,
     {
       if (dump_enabled_p ())
         dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
-                         "no optab.\n");
+			 "no shift optab for %s and %T.\n",
+			 get_tree_code_name (code), vectype);
       return false;
     }
   vec_mode = TYPE_MODE (vectype);
@@ -6321,7 +6360,7 @@ vectorizable_shift (vec_info *vinfo,
     {
       if (dump_enabled_p ())
         dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
-                         "op not supported by target.\n");
+			 "shift op not supported by target.\n");
       return false;
     }
   /* vector lowering cannot optimize vector shifts using word arithmetic.  */
@@ -6687,7 +6726,8 @@ vectorizable_operation (vec_info *vinfo,
     {
       if (dump_enabled_p ())
 	dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
-			 "no optab.\n");
+			 "no optab for %s and %T.\n",
+			 get_tree_code_name (code), vectype);
       return false;
     }
   target_support_p = can_implement_p (optab, vec_mode);
@@ -11842,18 +11882,20 @@ vectorizable_load (vec_info *vinfo,
 	 in PR101120 and friends.  */
       if (costing_p)
 	{
-	  gcc_assert (ls.n_perms != -1U);
+	  gcc_assert (ls.n_perms != -1U && ls.n_loads != -1U);
 	  if (ls.n_perms != 0)
 	    inside_cost = record_stmt_cost (cost_vec, ls.n_perms, vec_perm,
 					    slp_node, 0, vect_body);
+	  if (n_adjacent_loads > 0)
+	    n_adjacent_loads = ls.n_loads;
 	}
       else
 	{
-	  unsigned n_perms2;
+	  unsigned n_perms2, n_loads2;
 	  bool ok = vect_transform_slp_perm_load (vinfo, slp_node, dr_chain,
 						  gsi, vf, false, &n_perms2,
-						  nullptr, true);
-	  gcc_assert (ok && ls.n_perms == n_perms2);
+						  &n_loads2, true);
+	  gcc_assert (ok && ls.n_perms == n_perms2 && ls.n_loads == n_loads2);
 	}
     }
 

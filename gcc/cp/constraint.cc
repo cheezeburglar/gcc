@@ -1,5 +1,5 @@
 /* Processing rules for constraints.
-   Copyright (C) 2013-2025 Free Software Foundation, Inc.
+   Copyright (C) 2013-2026 Free Software Foundation, Inc.
    Contributed by Andrew Sutton (andrew.n.sutton@gmail.com)
 
 This file is part of GCC.
@@ -3315,6 +3315,9 @@ diagnose_trait_expr (location_t loc, tree expr, tree args)
       break;
     case CPTK_IS_VOLATILE:
       inform (loc, "%qT is not a volatile type", t1);
+      break;
+    case CPTK_IS_CONSTEVAL_ONLY:
+      inform (decl_loc, "%qT is not consteval-only", t1);
       break;
     case CPTK_RANK:
       inform (loc, "%qT cannot yield a rank", t1);

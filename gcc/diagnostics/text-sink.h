@@ -1,5 +1,5 @@
 /* Classic text-based output of diagnostics.
-   Copyright (C) 2023-2025 Free Software Foundation, Inc.
+   Copyright (C) 2023-2026 Free Software Foundation, Inc.
    Contributed by David Malcolm <dmalcolm@redhat.com>.
 
 This file is part of GCC.
@@ -81,6 +81,13 @@ public:
   void
   report_global_digraph (const lazily_created<digraphs::digraph> &)
     final override
+  {
+    // no-op for text
+  }
+
+  void
+  report_digraph_for_logical_location (const lazily_created<digraphs::digraph> &,
+				       logical_locations::key) final override
   {
     // no-op for text
   }

@@ -1,5 +1,5 @@
 /* gfortran header file
-   Copyright (C) 2000-2025 Free Software Foundation, Inc.
+   Copyright (C) 2000-2026 Free Software Foundation, Inc.
    Contributed by Andy Vaught
 
 This file is part of GCC.
@@ -3998,6 +3998,7 @@ bool gfc_numeric_ts (gfc_typespec *);
 int gfc_kind_max (gfc_expr *, gfc_expr *);
 
 bool gfc_check_conformance (gfc_expr *, gfc_expr *, const char *, ...) ATTRIBUTE_PRINTF_3;
+bool gfc_check_type_spec_parms (gfc_expr *, gfc_expr *, const char *);
 bool gfc_check_assign (gfc_expr *, gfc_expr *, int, bool c = true);
 bool gfc_check_pointer_assign (gfc_expr *lvalue, gfc_expr *rvalue,
 			       bool suppres_type_test = false,
@@ -4052,6 +4053,7 @@ void gfc_free_statements (gfc_code *);
 void gfc_free_association_list (gfc_association_list *);
 
 /* resolve.cc */
+void gfc_resolve_symbol (gfc_symbol *);
 void gfc_expression_rank (gfc_expr *);
 bool gfc_op_rank_conformable (gfc_expr *, gfc_expr *);
 bool gfc_resolve_ref (gfc_expr *);

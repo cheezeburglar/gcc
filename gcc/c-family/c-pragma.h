@@ -1,5 +1,5 @@
 /* Pragma related interfaces.
-   Copyright (C) 1995-2025 Free Software Foundation, Inc.
+   Copyright (C) 1995-2026 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -61,6 +61,7 @@ enum pragma_kind {
   PRAGMA_OMP_END,
   PRAGMA_OMP_FLUSH,
   PRAGMA_OMP_FOR,
+  PRAGMA_OMP_GROUPPRIVATE,
   PRAGMA_OMP_INTEROP,
   PRAGMA_OMP_LOOP,
   PRAGMA_OMP_NOTHING,

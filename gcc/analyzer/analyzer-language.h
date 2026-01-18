@@ -1,5 +1,5 @@
 /* Interface between analyzer and frontends.
-   Copyright (C) 2022-2025 Free Software Foundation, Inc.
+   Copyright (C) 2022-2026 Free Software Foundation, Inc.
    Contributed by David Malcolm <dmalcolm@redhat.com>.
 
 This file is part of GCC.
@@ -40,11 +40,6 @@ class translation_unit
   virtual tree lookup_type_by_id (tree id) const = 0;
   virtual tree lookup_global_var_by_id (tree id) const = 0;
 };
-
-typedef void (*finish_translation_unit_callback)
-   (logger *, const translation_unit &);
-void register_finish_translation_unit_callback (
-    finish_translation_unit_callback callback);
 
 /* Analyzer hook for frontends to call at the end of the TU.  */
 

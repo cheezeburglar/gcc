@@ -1,5 +1,5 @@
 /* Language-level data type conversion for GNU C++.
-   Copyright (C) 1987-2025 Free Software Foundation, Inc.
+   Copyright (C) 1987-2026 Free Software Foundation, Inc.
    Hacked by Michael Tiemann (tiemann@cygnus.com)
 
 This file is part of GCC.
@@ -994,8 +994,13 @@ ocp_convert (tree type, tree expr, int convtype, int flags,
       if (invalid_nonstatic_memfn_p (loc, expr, complain))
 	/* We displayed the error message.  */;
       else
-	error_at (loc, "conversion from %qH to non-scalar type %qI requested",
-		  TREE_TYPE (expr), type);
+	{
+	  auto_diagnostic_group d;
+	  error_at (loc, "conversion from %qH to non-scalar type %qI requested",
+		    TREE_TYPE (expr), type);
+	  maybe_show_nonconverting_candidate (type, TREE_TYPE (expr), expr,
+					      flags);
+	}
     }
   return error_mark_node;
 }
@@ -1206,6 +1211,12 @@ convert_to_void (tree expr, impl_conv_void implicit, tsubst_flags_t complain)
      satisfaction may produce ill-formed programs.  */
    if (concept_check_p (expr))
      expr = evaluate_concept_check (expr);
+
+  /* Detect using expressions of consteval-only types outside manifestly
+     constant-evaluated contexts.  We are going to discard this expression,
+     so we can't wait till cp_fold_immediate_r.  */
+  if (check_out_of_consteval_use (expr))
+    return error_mark_node;
 
   if (VOID_TYPE_P (TREE_TYPE (expr)))
     return expr;

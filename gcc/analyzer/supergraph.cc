@@ -1,5 +1,5 @@
 /* "Supergraph" classes that combine CFGs and callgraph into one digraph.
-   Copyright (C) 2019-2025 Free Software Foundation, Inc.
+   Copyright (C) 2019-2026 Free Software Foundation, Inc.
    Contributed by David Malcolm <dmalcolm@redhat.com>.
 
 This file is part of GCC.
@@ -142,8 +142,7 @@ supergraph::supergraph (region_model_manager &mgr,
 			logger *logger)
 : m_next_snode_id (0)
 {
-  auto_timevar tv (TV_ANALYZER_SUPERGRAPH);
-
+  auto_timevar tv (TV_ANALYZER_SUPERGRAPH_CREATION);
   LOG_FUNC (logger);
 
   /* For each BB, if present, the stmt that terminates it.  */

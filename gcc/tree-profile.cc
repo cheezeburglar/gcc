@@ -1,5 +1,5 @@
 /* Calculate branch probabilities, and basic block execution counts.
-   Copyright (C) 1990-2025 Free Software Foundation, Inc.
+   Copyright (C) 1990-2026 Free Software Foundation, Inc.
    Contributed by James E. Wilson, UC Berkeley/Cygnus Support;
    based on some ideas from Dain Samples of UC Berkeley.
    Further mangling by Bob Manson, Cygnus Support.
@@ -1847,19 +1847,32 @@ tree_profiling (void)
 	can_support_atomic = have_atomic_8;
     }
 
-  if (flag_profile_update != PROFILE_UPDATE_SINGLE && needs_split)
-    counter_update = COUNTER_UPDATE_ATOMIC_PARTIAL;
-
   if (flag_profile_update == PROFILE_UPDATE_ATOMIC
       && !can_support_atomic)
     {
-      warning (0, "target does not support atomic profile update, "
-	       "single mode is selected");
+      if (needs_split)
+	{
+	  warning (0, "target does not fully support atomic profile "
+		   "update, single mode is selected with partial "
+		   "atomic updates");
+	  counter_update = COUNTER_UPDATE_ATOMIC_PARTIAL;
+	}
+      else
+	warning (0, "target does not support atomic profile update, "
+		 "single mode is selected");
       flag_profile_update = PROFILE_UPDATE_SINGLE;
     }
   else if (flag_profile_update == PROFILE_UPDATE_PREFER_ATOMIC)
-    flag_profile_update
-      = can_support_atomic ? PROFILE_UPDATE_ATOMIC : PROFILE_UPDATE_SINGLE;
+    {
+      if (can_support_atomic)
+	flag_profile_update = PROFILE_UPDATE_ATOMIC;
+      else
+	{
+	  if (needs_split)
+	    counter_update = COUNTER_UPDATE_ATOMIC_PARTIAL;
+	  flag_profile_update = PROFILE_UPDATE_SINGLE;
+	}
+    }
 
   if (flag_profile_update == PROFILE_UPDATE_ATOMIC)
     {

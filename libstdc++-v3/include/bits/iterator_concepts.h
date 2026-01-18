@@ -1,6 +1,6 @@
 // Concepts and traits for use with iterators -*- C++ -*-
 
-// Copyright (C) 2019-2025 Free Software Foundation, Inc.
+// Copyright (C) 2019-2026 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -1005,7 +1005,7 @@ namespace ranges
     // for use by __range_iter_t below.
     template<typename _Tp>
       requires is_array_v<_Tp> || __member_begin<_Tp&> || __adl_begin<_Tp&>
-      auto
+      constexpr auto
       __begin(_Tp& __t)
       {
 	if constexpr (is_array_v<_Tp>)

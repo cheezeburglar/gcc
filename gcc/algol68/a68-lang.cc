@@ -263,6 +263,9 @@ a68_option_lang_mask (void)
 static tree
 a68_type_for_mode (enum machine_mode mode, int unsignedp)
 {
+  if (mode == TImode)
+    return unsignedp ? unsigned_intTI_type_node : intTI_type_node;
+
   if (mode == QImode)
     return unsignedp ? a68_short_short_bits_type :a68_short_short_int_type;
 
@@ -319,6 +322,11 @@ a68_type_for_size (unsigned int bits, int unsignedp)
 {
   if (unsignedp)
     {
+      /* Handle TImode as a special case because it is used by some backends
+	 (e.g. ARM) even though it is not available for normal use.  */
+      if (bits == TYPE_PRECISION (unsigned_intTI_type_node))
+	return unsigned_intTI_type_node;
+
       if (bits <= TYPE_PRECISION (a68_short_short_bits_type))
 	return a68_short_short_bits_type;
       if (bits <= TYPE_PRECISION (a68_short_bits_type))
@@ -441,9 +449,11 @@ static void
 a68_init_options (unsigned int argc ATTRIBUTE_UNUSED,
 		  cl_decoded_option *decoded_options ATTRIBUTE_UNUSED)
 {
-  /* Create an empty module files map.  */
+  /* Create an empty module files map and fill in some modules that are
+     provided by the run-time libga68 library.  */
   A68_MODULE_FILES = hash_map<nofree_string_hash,const char*>::create_ggc (16);
   A68_MODULE_FILES->empty ();
+  A68_MODULE_FILES->put (ggc_strdup ("TRANSPUT"), ggc_strdup ("ga68"));
 }
 
 #undef LANG_HOOKS_INIT_OPTIONS
@@ -629,6 +639,9 @@ a68_post_options (const char **filename ATTRIBUTE_UNUSED)
   /* -fbounds-check is equivalent to -fcheck=bounds  */
   if (flag_bounds_check)
     OPTION_BOUNDS_CHECKING (&A68_JOB) = true;
+
+  /* No psABI change warnings for Algol 68.  */
+  warn_psabi = 0;
 
   return false;
 }

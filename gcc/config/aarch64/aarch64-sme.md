@@ -1,5 +1,5 @@
 ;; Machine description for AArch64 SME.
-;; Copyright (C) 2023-2025 Free Software Foundation, Inc.
+;; Copyright (C) 2023-2026 Free Software Foundation, Inc.
 ;;
 ;; This file is part of GCC.
 ;;
@@ -16,6 +16,24 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GCC; see the file COPYING3.  If not see
 ;; <http://www.gnu.org/licenses/>.
+
+;; Code organisation:
+;
+;; The lines of is an instruction is aarch64, simd, sve, sve2, or sme are
+;; a little blurry.
+;;
+;; Therefore code is organised by the following rough principles:
+;;
+;; - aarch64.md: For shared parts of the architecture (such as defining
+;;     registers and constants) and for instructions that operate on non-SIMD
+;;     registers.
+;; - aarch64-simd.md: For instructions that operate on non-scaling SIMD
+;;     registers.
+;; - aarch64-sve.md for SVE instructions that are pre SVE2.
+;; - aarch64-sme.md for any scalable SIMD instruction that is incompatible with
+;;     non-streaming mode. This usually means it uses the ZA or ZT register.
+;; - aarch64-sve2.md for any scalable SIMD instruction that either is
+;;     streaming compatible, or theoretically could be later.
 
 ;; The file is organised into the following sections (search for the full
 ;; line):
@@ -1055,7 +1073,7 @@
 	  [(match_operand:SVE_FULL 0 "register_operand" "w")
 	   (match_operand:DI       1 "const_int_operand")]
 	  UNSPEC_SME_WRITE))]
-  "TARGET_SME_LUTv2"
+  "TARGET_SME_LUTv2 && TARGET_STREAMING"
   "movt\tzt0 [%1, mul vl], %0"
 )
 
@@ -2774,6 +2792,6 @@
 	   (reg:DI SME_STATE_REGNUM)
 	   (match_operand:VNx32QI 1 "register_operand" "w")]
 	  UNSPEC_SME_LUTI_ZT))]
-  "TARGET_SME_LUTv2"
+  "TARGET_SME_LUTv2 && TARGET_STREAMING"
   "luti4\t%0, zt0, {%Z1 - %T1}"
 )

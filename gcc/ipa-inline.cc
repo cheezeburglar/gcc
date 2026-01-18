@@ -1,5 +1,5 @@
 /* Inlining decision heuristics.
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
    Contributed by Jan Hubicka
 
 This file is part of GCC.
@@ -450,6 +450,12 @@ can_inline_edge_p (struct cgraph_edge *e, bool report,
   if (inlinable && !strub_inlinable_to_p (callee, caller))
     {
       e->inline_failed = CIF_UNSPECIFIED;
+      inlinable = false;
+    }
+  if (inlinable && callee->must_remain_in_tu_body
+      && caller->lto_file_data != callee->lto_file_data)
+    {
+      e->inline_failed = CIF_MUST_REMAIN_IN_TU;
       inlinable = false;
     }
   if (!inlinable && report)

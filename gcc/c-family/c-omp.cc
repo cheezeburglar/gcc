@@ -1,7 +1,7 @@
 /* This file contains routines to construct OpenACC and OpenMP constructs,
    called from parsing in the C and C++ front ends.
 
-   Copyright (C) 2005-2025 Free Software Foundation, Inc.
+   Copyright (C) 2005-2026 Free Software Foundation, Inc.
    Contributed by Richard Henderson <rth@redhat.com>,
 		  Diego Novillo <dnovillo@redhat.com>.
 
@@ -4655,8 +4655,8 @@ const struct c_omp_directive c_omp_directives[] = {
     C_OMP_DIR_CONSTRUCT, true },
   /* { "fuse", nullptr, nullptr, PRAGMA_OMP_FUSE,
     C_OMP_DIR_CONSTRUCT, true },  */
-  /* { "groupprivate", nullptr, nullptr, PRAGMA_OMP_GROUPPRIVATE,
-    C_OMP_DIR_DECLARATIVE, false },  */
+  { "groupprivate", nullptr, nullptr, PRAGMA_OMP_GROUPPRIVATE,
+    C_OMP_DIR_DECLARATIVE, false },
   /* { "interchange", nullptr, nullptr, PRAGMA_OMP_INTERCHANGE,
     C_OMP_DIR_CONSTRUCT, true },  */
   { "interop", nullptr, nullptr, PRAGMA_OMP_INTEROP,

@@ -1,5 +1,5 @@
 /* Definitions for C++ name lookup routines.
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
    Contributed by Gabriel Dos Reis <gdr@integrable-solutions.net>
 
 This file is part of GCC.
@@ -1583,6 +1583,13 @@ name_lookup::adl_type (tree type)
       adl_type (TYPE_PTRMEM_POINTED_TO_TYPE (type));
       return;
     }
+  else if (REFLECTION_TYPE_P (type))
+    {
+      /* The namespace std::meta is an associated namespace of
+	 std::meta::info.  */
+      adl_namespace (std_meta_node);
+      return;
+    }
 
   switch (TREE_CODE (type))
     {
@@ -2765,7 +2772,10 @@ strip_using_decl (tree decl)
   if (decl == NULL_TREE)
     return NULL_TREE;
 
-  while (TREE_CODE (decl) == USING_DECL && !DECL_DEPENDENT_P (decl))
+  while (TREE_CODE (decl) == USING_DECL
+	 && !DECL_DEPENDENT_P (decl)
+	 && (LIKELY (!cp_preserve_using_decl)
+	     || TREE_CODE (USING_DECL_DECLS (decl)) == NAMESPACE_DECL))
     decl = USING_DECL_DECLS (decl);
 
   if (TREE_CODE (decl) == USING_DECL && DECL_DEPENDENT_P (decl)
@@ -6336,7 +6346,8 @@ lookup_using_decl (tree scope, name_lookup &lookup)
     {
       auto_diagnostic_group d;
       error ("reference to %qD is ambiguous", lookup.name);
-      print_candidates (TREE_CODE (lookup.value) == TREE_LIST
+      print_candidates (input_location,
+			TREE_CODE (lookup.value) == TREE_LIST
 			? lookup.value : lookup.type);
       return NULL_TREE;
     }
@@ -6469,7 +6480,7 @@ set_decl_namespace (tree decl, tree scope, bool friendp)
       auto_diagnostic_group d;
       DECL_CONTEXT (decl) = FROB_CONTEXT (scope);
       error ("reference to %qD is ambiguous", decl);
-      print_candidates (old);
+      print_candidates (input_location, old);
       return;
     }
 
@@ -6682,6 +6693,15 @@ handle_namespace_attrs (tree ns, tree attributes)
 	    DECL_ATTRIBUTES (ns) = tree_cons (name, args,
 					      DECL_ATTRIBUTES (ns));
 	}
+      else if (annotation_p (d))
+	{
+	  const attribute_spec *as = lookup_attribute_spec (TREE_PURPOSE (d));
+	  bool no_add_attrs = false;
+	  as->handler (&ns, name, args, 0, &no_add_attrs);
+	  if (!no_add_attrs)
+	    DECL_ATTRIBUTES (ns) = tree_cons (TREE_PURPOSE (d), args,
+					      DECL_ATTRIBUTES (ns));
+	}
       else if (!attribute_ignored_p (d))
 	{
 	  warning (OPT_Wattributes, "%qD attribute directive ignored",
@@ -6719,9 +6739,10 @@ do_namespace_alias (location_t loc, tree alias, tree name_space)
   if (name_space == error_mark_node)
     return;
 
-  gcc_assert (TREE_CODE (name_space) == NAMESPACE_DECL);
-
-  name_space = ORIGINAL_NAMESPACE (name_space);
+  if (TREE_CODE (name_space) == NAMESPACE_DECL)
+    name_space = ORIGINAL_NAMESPACE (name_space);
+  else
+    gcc_assert (TREE_CODE (name_space) == SPLICE_EXPR);
 
   /* Build the alias.  */
   alias = build_lang_decl_loc (loc, NAMESPACE_DECL, alias, void_type_node);
@@ -7531,7 +7552,9 @@ lookup_qualified_name (tree scope, tree name, LOOK_want want, bool complain)
 
 	  /* If we have a known type overload, pull it out.  This can happen
 	     for using decls.  */
-	  if (TREE_CODE (t) == OVERLOAD && TREE_TYPE (t) != unknown_type_node)
+	  if (TREE_CODE (t) == OVERLOAD
+	      && TREE_TYPE (t) != unknown_type_node
+	      && LIKELY (!cp_preserve_using_decl))
 	    t = OVL_FUNCTION (t);
 	}
     }
@@ -8004,6 +8027,7 @@ binding_to_template_parms_of_scope_p (cxx_binding *binding,
   /* The template of the current scope, iff said scope is a primary
      template.  */
   tmpl = (tinfo
+	  && TREE_CODE (TI_TEMPLATE (tinfo)) == TEMPLATE_DECL
 	  && PRIMARY_TEMPLATE_P (TI_TEMPLATE (tinfo))
 	  ? TI_TEMPLATE (tinfo)
 	  : NULL_TREE);
@@ -9153,6 +9177,8 @@ finish_using_directive (tree target, tree attribs)
 		diagnosed = true;
 	      }
 	  }
+	else if (annotation_p (a))
+	  error ("annotation on using directive");
 	else if (!attribute_ignored_p (a))
 	  warning (OPT_Wattributes, "%qD attribute directive ignored", name);
       }
@@ -9288,7 +9314,8 @@ make_namespace_finish (tree ns, tree *slot, bool from_import = false)
   /* An unnamed namespace implicitly has a using-directive inserted so
      that its contents are usable in the surrounding context.  */
   if (!DECL_NAMESPACE_INLINE_P (ns) && !DECL_NAME (ns))
-    add_using_namespace (NAMESPACE_LEVEL (ctx)->using_directives, ns);
+    add_using_namespace (NAMESPACE_LEVEL (ctx)->using_directives, ns,
+			 from_import);
 }
 
 /* NS is a possibly-imported namespace that is now needed for
@@ -9365,7 +9392,7 @@ push_namespace (tree name, bool make_inline)
 	if (TREE_CHAIN (lookup.value))
 	  {
 	    error ("%<namespace %E%> is ambiguous", name);
-	    print_candidates (lookup.value);
+	    print_candidates (input_location, lookup.value);
 	  }
       }
     else if (TREE_CODE (lookup.value) == NAMESPACE_DECL)

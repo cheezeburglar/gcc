@@ -1,5 +1,5 @@
 /* Function summary pass.
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
    Contributed by Jan Hubicka
 
 This file is part of GCC.
@@ -272,7 +272,10 @@ redirect_to_unreachable (struct cgraph_edge *e)
   if (callee)
     callee->remove_symbol_and_inline_clones ();
   if (e->has_callback)
-    e->purge_callback_edges ();
+    for (cgraph_edge *cbe = e->first_callback_edge (); cbe;
+	 cbe = cbe->next_callback_edge ())
+      /* If the carrying edge is unreachable, so are the callback calls.  */
+      redirect_to_unreachable (cbe);
   return e;
 }
 

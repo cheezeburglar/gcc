@@ -1,7 +1,7 @@
 # configure.ac for GCC
 # Process this file with autoconf to generate a configuration script.
 
-# Copyright (C) 1997-2025 Free Software Foundation, Inc.
+# Copyright (C) 1997-2026 Free Software Foundation, Inc.
 
 #This file is part of GCC.
 
@@ -887,6 +887,9 @@ AC_MSG_RESULT($enable_multiarch$ma_msg_suffix)
 AC_SUBST(with_cpu)
 AC_SUBST(with_float)
 
+# needed for restricting the fixedincludes multilibs that we install
+AC_SUBST(with_multi_buildlist)
+
 # default stack clash protection guard size as power of twos in bytes.
 # Please keep these in sync with params.def.
 stk_clash_min=12
@@ -1220,6 +1223,9 @@ AC_ARG_WITH(multilib-generator,
 [AS_HELP_STRING([--with-multilib-generator], [Multi-libs configuration string (RISC-V only)])],
 :,
 with_multilib_generator=default)
+
+AC_ARG_WITH(picolibc,
+[AS_HELP_STRING([--with-picolibc], [Support for picolibc, including command line options and spec rules])])
 
 # -------------------------
 # Checks for other programs
@@ -4748,52 +4754,6 @@ bar:
       [AC_DEFINE(HAVE_AS_SPARC_GOTDATA_OP, 1,
 		[Define if your assembler and linker support GOTDATA_OP relocs.])])
 
-    gcc_GAS_CHECK_FEATURE([unaligned pcrel relocs],
-      gcc_cv_as_sparc_ua_pcrel,
-      [-K PIC],
-[.text
-foo:
-	nop
-.data
-.align 4
-.byte 0
-.uaword %r_disp32(foo)],
-      [if test x$gcc_cv_ld != x \
-       && $gcc_cv_ld -o conftest conftest.o -G > /dev/null 2>&1; then
-	 gcc_cv_as_sparc_ua_pcrel=yes
-       fi
-       rm -f conftest],
-      [AC_DEFINE(HAVE_AS_SPARC_UA_PCREL, 1,
-		[Define if your assembler and linker support unaligned PC relative relocs.])
-
-      gcc_GAS_CHECK_FEATURE([unaligned pcrel relocs against hidden symbols],
-	gcc_cv_as_sparc_ua_pcrel_hidden,
-	[-K PIC],
-[.data
-.align 4
-.byte 0x31
-.uaword %r_disp32(foo)
-.byte 0x32, 0x33, 0x34
-.global foo
-.hidden foo
-foo:
-.skip 4],
-	[if test x$gcc_cv_ld != x && test x$gcc_cv_objdump != x \
-	 && $gcc_cv_ld -o conftest conftest.o -G > /dev/null 2>&1 \
-	 && $gcc_cv_objdump -s -j .data conftest 2> /dev/null \
-	    | grep ' 31000000 07323334' > /dev/null 2>&1; then
-	    if $gcc_cv_objdump -R conftest 2> /dev/null \
-	       | grep 'DISP32' > /dev/null 2>&1; then
-		:
-	    else
-		gcc_cv_as_sparc_ua_pcrel_hidden=yes
-	    fi
-	 fi
-	 rm -f conftest],
-	 [AC_DEFINE(HAVE_AS_SPARC_UA_PCREL_HIDDEN, 1,
-		   [Define if your assembler and linker support unaligned PC relative relocs against hidden symbols.])])
-    ]) # unaligned pcrel relocs
-
     gcc_GAS_CHECK_FEATURE([offsetable %lo()],
       gcc_cv_as_sparc_offsetable_lo10,
       [-xarch=v9],
@@ -4949,11 +4909,6 @@ foo:	nop
 	    [Define if your macOS assembler supports -mllvm -x86-pad-for-align=false.])])
        ;;
     esac
-
-    gcc_GAS_CHECK_FEATURE([-xbrace_comment], gcc_cv_as_ix86_xbrace_comment,
-      [-xbrace_comment=no], [.text],,
-      [AC_DEFINE(HAVE_AS_XBRACE_COMMENT_OPTION, 1,
-		[Define if your assembler supports -xbrace_comment option.])])
 
     gcc_GAS_CHECK_FEATURE([filds and fists mnemonics],
        gcc_cv_as_ix86_filds,,
@@ -6440,6 +6395,17 @@ AC_DEFINE_UNQUOTED(LD_COMPRESS_DEBUG_OPTION, "$gcc_cv_ld_compress_debug_option",
 [Define to the linker option to enable compressed debug sections.])
 AC_MSG_RESULT($gcc_cv_ld_compress_debug)
 
+AC_MSG_CHECKING(linker support for -z ctf)
+gcc_cv_ld_ctf=no
+# Check for Solaris ld 1.3315 introduced in Solaris 11.4 SRU 84.  ld -z ctf
+# already went in in SRU 81, but lacked GNU CTF to Solaris CTF conversion.
+if $gcc_cv_ld --help 2>&1 | grep -- '-z ctf' > /dev/null \
+  && test x$gnu_ld = xno && test "$ld_vers_minor" -ge 3315; then
+  gcc_cv_ld_ctf=yes
+  AC_DEFINE(HAVE_LD_CTF, 1, [Define if your linker supports -z ctf.])
+fi
+AC_MSG_RESULT($gcc_cv_ld_ctf)
+
 if test x"$ld64_flag" = x"yes"; then
 
   # Set defaults for possibly untestable items.
@@ -6640,10 +6606,12 @@ gcc_cv_ld_as_needed,
 [gcc_cv_ld_as_needed=no
 gcc_cv_ld_as_needed_option='--as-needed'
 gcc_cv_ld_no_as_needed_option='--no-as-needed'
+gcc_cv_ld_use_as_needed_ldscript=no
 if test $in_tree_ld = yes ; then
   if test "$gcc_cv_gld_major_version" -eq 2 -a "$gcc_cv_gld_minor_version" -ge 16 -o "$gcc_cv_gld_major_version" -gt 2 \
      && test $in_tree_ld_is_elf = yes; then
     gcc_cv_ld_as_needed=yes
+    gcc_cv_ld_use_as_needed_ldscript=yes
     if test "$gcc_cv_gld_major_version" -eq 2 -a "$gcc_cv_gld_minor_version" -ge 28; then
       gcc_cv_ld_as_needed_option='--push-state --as-needed'
       gcc_cv_ld_no_as_needed_option='--pop-state'
@@ -6653,6 +6621,7 @@ elif test x$gcc_cv_ld != x; then
   # Check if linker supports --as-needed and --no-as-needed options
   if $gcc_cv_ld --help 2>&1 | grep as-needed > /dev/null; then
     gcc_cv_ld_as_needed=yes
+    gcc_cv_ld_use_as_needed_ldscript=yes
     if $gcc_cv_ld --help 2>&1 | grep push-state > /dev/null \
        && $gcc_cv_ld --help 2>&1 | grep pop-state > /dev/null \
        && echo "$ld_ver" | grep GNU > /dev/null \
@@ -6671,6 +6640,7 @@ elif test x$gcc_cv_ld != x; then
       gcc_cv_ld_as_needed=yes
       gcc_cv_ld_as_needed_option="-z ignore"
       gcc_cv_ld_no_as_needed_option="-z record"
+      gcc_cv_ld_use_as_needed_ldscript=no
       ;;
   esac
 fi
@@ -6679,6 +6649,7 @@ case "$target" in
     if echo "$ld_ver" | grep GNU > /dev/null; then
       # Doesn't work with gld on Solaris/x86 due to PR ld/12320.
       gcc_cv_ld_as_needed=no
+      gcc_cv_ld_use_as_needed_ldscript=no
     fi
     ;;
 esac
@@ -6690,6 +6661,10 @@ if test x"$gcc_cv_ld_as_needed" = xyes; then
 [Define to the linker option to ignore unused dependencies.])
 	AC_DEFINE_UNQUOTED(LD_NO_AS_NEEDED_OPTION, "$gcc_cv_ld_no_as_needed_option",
 [Define to the linker option to keep unused dependencies.])
+fi
+if test x"$gcc_cv_ld_use_as_needed_ldscript" = xyes; then
+	AC_DEFINE(USE_LD_AS_NEEDED_LDSCRIPT, 1,
+[Define if your linker supports AS_NEEDED in linker scripts.])
 fi
 
 AC_MSG_CHECKING(linker mapfile support for clearing hardware capabilities)

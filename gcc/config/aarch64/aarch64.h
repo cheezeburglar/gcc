@@ -1,5 +1,5 @@
 /* Machine description for AArch64 architecture.
-   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2009-2026 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GCC.
@@ -406,6 +406,16 @@ constexpr auto AARCH64_FL_DEFAULT_ISA_MODE ATTRIBUTE_UNUSED
 /* CB<cc> instructions are enabled through +cmpbr,
    but are incompatible with -mtrack-speculation. */
 #define TARGET_CMPBR (AARCH64_HAVE_ISA (CMPBR) && !aarch64_track_speculation)
+
+/* PCDPHINT instructions are enabled through +pcdphint.  */
+#define TARGET_PCDPHINT AARCH64_HAVE_ISA (PCDPHINT)
+
+/* F8F32MM instructions, enabled through +f8f32mm.  */
+#define TARGET_F8F32MM (AARCH64_HAVE_ISA (F8F32MM))
+/* F8F16MM instructions, enabled through +f8f16mm.  */
+#define TARGET_F8F16MM (AARCH64_HAVE_ISA (F8F16MM))
+/* SVE_F16F32MM instructions, enabled through +sve-f16f32mm.  */
+#define TARGET_SVE_F16F32MM (AARCH64_HAVE_ISA (SVE_F16F32MM))
 
 /* Make sure this is always defined so we don't have to check for ifdefs
    but rather use normal ifs.  */

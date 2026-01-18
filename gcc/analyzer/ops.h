@@ -1,5 +1,5 @@
 /* Operations within the code being analyzed.
-   Copyright (C) 2019-2025 Free Software Foundation, Inc.
+   Copyright (C) 2019-2026 Free Software Foundation, Inc.
    Contributed by David Malcolm <dmalcolm@redhat.com>.
 
 This file is part of GCC.
@@ -810,7 +810,6 @@ public:
 
 protected:
   eh_dispatch_edge_op (supernode *src_snode,
-		       supernode *dst_snode,
 		       enum kind kind_,
 		       ::edge cfg_edge,
 		       const geh_dispatch &geh_dispatch_stmt,
@@ -834,7 +833,6 @@ private:
 			std::unique_ptr<rejected_constraint> *out) const = 0;
 
   supernode *m_src_snode;
-  supernode *m_dst_snode;
   eh_region m_eh_region;
 };
 
@@ -845,7 +843,6 @@ class eh_dispatch_try_edge_op : public eh_dispatch_edge_op
 {
 public:
   eh_dispatch_try_edge_op (supernode *src_snode,
-			   supernode *dst_snode,
 			   ::edge cfg_edge,
 			   const geh_dispatch &geh_dispatch_stmt,
 			   eh_region eh_reg,

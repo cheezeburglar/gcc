@@ -1,5 +1,5 @@
 /* Definitions for GCC.  Part of the machine description for CRIS.
-   Copyright (C) 1998-2025 Free Software Foundation, Inc.
+   Copyright (C) 1998-2026 Free Software Foundation, Inc.
    Contributed by Axis Communications.  Written by Hans-Peter Nilsson.
 
 This file is part of GCC.
@@ -2061,7 +2061,7 @@ cris_rtx_costs (rtx x, machine_mode mode, int outer_code, int opno,
 	  }
       /* fall through */
 
-    case ZERO_EXTEND: case SIGN_EXTEND:
+    case ZERO_EXTEND: case SIGN_EXTEND: case POST_INC:
       *total = rtx_cost (XEXP (x, 0), VOIDmode, (enum rtx_code) outer_code,
 			 opno, speed);
       return true;

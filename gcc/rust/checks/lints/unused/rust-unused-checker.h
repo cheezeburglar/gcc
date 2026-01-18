@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Free Software Foundation, Inc.
+// Copyright (C) 2025-2026 Free Software Foundation, Inc.
 
 // This file is part of GCC.
 
@@ -43,6 +43,8 @@ private:
   virtual void visit (HIR::IdentifierPattern &identifier) override;
   virtual void visit (HIR::AssignmentExpr &identifier) override;
   virtual void visit (HIR::StructPatternFieldIdent &identifier) override;
+  virtual void visit (HIR::EmptyStmt &stmt) override;
+  virtual void visit_loop_label (HIR::LoopLabel &label) override;
 };
 } // namespace Analysis
 } // namespace Rust

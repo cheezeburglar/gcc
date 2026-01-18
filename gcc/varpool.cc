@@ -1,5 +1,5 @@
 /* Callgraph handling code.
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
    Contributed by Jan Hubicka
 
 This file is part of GCC.
@@ -337,6 +337,10 @@ varpool_node::ctor_useable_for_folding_p (void)
   /* If we do not have a constructor, we can't use it.  */
   if (DECL_INITIAL (real_node->decl) == error_mark_node
       && !real_node->lto_file_data)
+    return false;
+
+  /* Folding may cross TU boundaries.  */
+  if (must_remain_in_tu_body)
     return false;
 
   /* Vtables are defined by their types and must match no matter of interposition

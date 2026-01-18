@@ -1,6 +1,6 @@
 /* Threads compatibility routines for libgcc2 and libobjc for VxWorks.  */
 /* Compile this one with gcc.  */
-/* Copyright (C) 1997-2025 Free Software Foundation, Inc.
+/* Copyright (C) 1997-2026 Free Software Foundation, Inc.
    Contributed by Mike Stump <mrs@wrs.com>.
 
 This file is part of GCC.
@@ -289,7 +289,6 @@ extern int __gthread_cond_wait_recursive (__gthread_cond_t *cond,
 
 #include <limits.h>
 #include <time.h>
-#include <tickLib.h>
 #include <sysLib.h>
 #include <version.h>
 

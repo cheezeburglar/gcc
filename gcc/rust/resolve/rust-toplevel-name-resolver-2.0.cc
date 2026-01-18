@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2025 Free Software Foundation, Inc.
+// Copyright (C) 2020-2026 Free Software Foundation, Inc.
 
 // This file is part of GCC.
 
@@ -496,6 +496,16 @@ flatten_glob (const AST::UseTreeGlob &glob, std::vector<AST::SimplePath> &paths,
     paths.emplace_back (AST::SimplePath ({}, false, glob.get_locus ()));
 }
 
+static bool
+has_prelude_import (const std::vector<AST::Attribute> &attributes)
+{
+  for (const auto &attr : attributes)
+    if (attr.get_path ().as_string () == "prelude_import")
+      return true;
+
+  return false;
+}
+
 void
 TopLevel::visit (AST::UseDeclaration &use)
 {
@@ -523,7 +533,8 @@ TopLevel::visit (AST::UseDeclaration &use)
 
   for (auto &&glob : glob_path)
     imports.emplace_back (
-      ImportKind::Glob (std::move (glob), values_rib, types_rib, macros_rib));
+      ImportKind::Glob (std::move (glob), values_rib, types_rib, macros_rib,
+			has_prelude_import (use.get_outer_attrs ())));
 
   for (auto &&rebind : rebind_path)
     imports.emplace_back (

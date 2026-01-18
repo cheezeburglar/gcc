@@ -1,5 +1,5 @@
 /* Callgraph handling code.
-   Copyright (C) 2003-2025 Free Software Foundation, Inc.
+   Copyright (C) 2003-2026 Free Software Foundation, Inc.
    Contributed by Jan Hubicka
 
 This file is part of GCC.
@@ -1264,6 +1264,34 @@ cgraph_edge::remove (cgraph_edge *edge)
   /* Put the edge onto the free list.  */
   symtab->free_edge (edge);
 }
+
+/* Returns the next speculative_id based on currently in use
+   for the given statement for the edge.
+   Returns 0 if no speculative edges exist for this statement. */
+
+int
+cgraph_edge::get_next_speculative_id ()
+{
+  int max_id = -1;
+  cgraph_edge *e;
+
+  /* Iterate through all edges leaving this caller */
+  for (e = caller->callees; e; e = e->next_callee)
+    {
+      /* Match the specific GIMPLE statement and check the
+	 speculative flag */
+      if (e->call_stmt == call_stmt
+	  && e->lto_stmt_uid == lto_stmt_uid
+	  && e->speculative)
+	{
+	  if (e->speculative_id > max_id)
+	    max_id = e->speculative_id;
+	}
+    }
+
+  return max_id + 1;
+}
+
 
 /* Turn edge into speculative call calling N2. Update
    the profile so the direct call is taken COUNT times
@@ -2816,6 +2844,7 @@ static bool
 cgraph_node_cannot_be_local_p_1 (cgraph_node *node, void *)
 {
   return !(!node->force_output
+	   && !node->ref_by_asm
 	   && !node->ifunc_resolver
 	   /* Limitation of gas requires us to output targets of symver aliases
 	      as global symbols.  This is binutils PR 25295.  */
@@ -3976,6 +4005,11 @@ cgraph_node::verify_node (void)
       error ("inline clone is forced to output");
       error_found = true;
     }
+  if (inlined_to && ref_by_asm)
+    {
+      error ("inline clone is referenced by assembly");
+      error_found = true;
+    }
   if (symtab->state != LTO_STREAMING)
     {
       if (calls_comdat_local && !same_comdat_group)
@@ -4370,7 +4404,8 @@ cgraph_node::verify_node (void)
 	    }
 
 	  if (e->has_callback
-	      && !callback_is_special_cased (e->callee->decl, e->call_stmt))
+	      && !callback_is_special_cased (e->callee->decl, e->call_stmt)
+	      && !fndecl_built_in_p (e->callee->decl, BUILT_IN_UNREACHABLE))
 	    {
 	      int ncallbacks = 0;
 	      int nfound_edges = 0;
@@ -4396,6 +4431,16 @@ cgraph_node::verify_node (void)
 			 nfound_edges);
 		}
 	    }
+
+	  if (e->has_callback
+	      && fndecl_built_in_p (e->callee->decl, BUILT_IN_UNREACHABLE))
+	    for (cgraph_edge *cbe = e->first_callback_edge (); cbe;
+		 cbe = cbe->next_callback_edge ())
+	      if (!fndecl_built_in_p (cbe->callee->decl, BUILT_IN_UNREACHABLE))
+		error ("callback-carrying edge is pointing towards "
+		       "__builtin_unreachable, but its callback edge %s -> %s "
+		       "is not",
+		       cbe->caller->name (), cbe->callee->name ());
 
 	  if (!e->aux && !e->speculative && !e->callback && !e->has_callback)
 	    {

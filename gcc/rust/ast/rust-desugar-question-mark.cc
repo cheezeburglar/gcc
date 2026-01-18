@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Free Software Foundation, Inc.
+// Copyright (C) 2025-2026 Free Software Foundation, Inc.
 
 // This file is part of GCC.
 
@@ -39,11 +39,7 @@ MatchArm
 make_match_arm (std::unique_ptr<Pattern> &&pattern)
 {
   auto loc = pattern->get_locus ();
-
-  auto patterns = std::vector<std::unique_ptr<Pattern>> ();
-  patterns.emplace_back (std::move (pattern));
-
-  return MatchArm (std::move (patterns), loc);
+  return MatchArm (std::move (pattern), loc);
 }
 
 MatchCase

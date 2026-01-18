@@ -1,5 +1,5 @@
 // Feature test macro definitions                                  -*- C++ -*-
-// Copyright (C) 2023-2025 Free Software Foundation, Inc.
+// Copyright (C) 2023-2026 Free Software Foundation, Inc.
 
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -1352,6 +1352,14 @@ ftms = {
 };
 
 ftms = {
+  name = constexpr_flat_map;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
   name = constexpr_flat_set;
   values = {
     v = 202502;
@@ -2242,6 +2250,15 @@ ftms = {
   values = {
     v = 202406;
     cxxmin = 26;
+  };
+};
+
+ftms = {
+  name = reflection;
+  values = {
+    v = 202506;
+    cxxmin = 26;
+    extra_cond = "__cpp_impl_reflection >= 202506L";
   };
 };
 

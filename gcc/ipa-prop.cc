@@ -1,5 +1,5 @@
 /* Interprocedural analyses.
-   Copyright (C) 2005-2025 Free Software Foundation, Inc.
+   Copyright (C) 2005-2026 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -2243,9 +2243,9 @@ determine_known_aggregate_parts (struct ipa_func_body_info *fbi,
     {
       gimple *stmt = SSA_NAME_DEF_STMT (dom_vuse);
 
-      if (gimple_code (stmt) == GIMPLE_PHI)
+      if (gphi *phi = dyn_cast <gphi *> (stmt))
 	{
-	  dom_vuse = get_continuation_for_phi (stmt, &r, true,
+	  dom_vuse = get_continuation_for_phi (phi, &r, true,
 					       fbi->aa_walk_budget,
 					       &visited, false, NULL, NULL);
 	  continue;

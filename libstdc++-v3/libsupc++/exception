@@ -1,6 +1,6 @@
 // Exception Handling support header for -*- C++ -*-
 
-// Copyright (C) 1995-2025 Free Software Foundation, Inc.
+// Copyright (C) 1995-2026 Free Software Foundation, Inc.
 //
 // This file is part of GCC.
 //
@@ -61,9 +61,12 @@ namespace std _GLIBCXX_VISIBILITY(default)
     _GLIBCXX26_CONSTEXPR bad_exception() _GLIBCXX_USE_NOEXCEPT { }
 
 #if __cplusplus >= 202400L
-    constexpr virtual ~bad_exception() _GLIBCXX_TXN_SAFE_DYN noexcept {}
+    [[__gnu__::__gnu_inline__]]
+    constexpr inline virtual ~bad_exception() _GLIBCXX_TXN_SAFE_DYN noexcept {}
 
-    constexpr virtual const char* what() const _GLIBCXX_TXN_SAFE_DYN noexcept
+    [[__gnu__::__gnu_inline__]]
+    constexpr inline virtual const char* what() const _GLIBCXX_TXN_SAFE_DYN
+      noexcept
     {
       return "std::bad_exception";
     }

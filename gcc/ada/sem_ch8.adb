@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2025, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2026, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -25,7 +25,6 @@
 
 with Atree;          use Atree;
 with Debug;          use Debug;
-with Einfo;          use Einfo;
 with Einfo.Utils;    use Einfo.Utils;
 with Elists;         use Elists;
 with Errout;         use Errout;
@@ -68,7 +67,6 @@ with Sem_Res;        use Sem_Res;
 with Sem_Util;       use Sem_Util;
 with Sem_Type;       use Sem_Type;
 with Stand;          use Stand;
-with Sinfo;          use Sinfo;
 with Sinfo.Nodes;    use Sinfo.Nodes;
 with Sinfo.Utils;    use Sinfo.Utils;
 with Sinfo.CN;       use Sinfo.CN;
@@ -3678,13 +3676,34 @@ package body Sem_Ch8 is
       then
          --  Do not mention the renaming if it comes from an instance
 
-         if not Is_Actual then
-            Error_Msg_N ("expect valid subprogram name in renaming", N);
-         else
+         if Is_Actual then
             Error_Msg_NE ("no visible subprogram for formal&", N, Nam);
+         else
+            Error_Msg_N ("expect valid subprogram name in renaming", N);
          end if;
 
          return;
+
+      --  RM 8.5.4(6): A name that denotes a formal parameter of the subprogram
+      --  specification is not allowed within Nam. But this was not enforced by
+      --  GNAT historically, so we restrict it to direct names.
+
+      elsif Nkind (Nam) = N_Identifier and then not Is_Actual then
+         declare
+            F : Node_Id;
+
+         begin
+            F := First_Formal (New_S);
+            while Present (F) loop
+               if Chars (F) = Chars (Nam) then
+                  Error_Msg_NE
+                    ("formal parameter& cannot be used in renaming", N, F);
+                  return;
+               end if;
+
+               Next_Formal (F);
+            end loop;
+         end;
       end if;
 
       --  Find the renamed entity that matches the given specification. Disable
@@ -8564,8 +8583,7 @@ package body Sem_Ch8 is
                   if Ekind (P_Name) /= E_Function
                     and then not Is_Overloaded (P)
                   then
-                     Error_Msg_NE
-                       ("invalid prefix& in selected component", N, P_Name);
+                     Error_Msg_N ("invalid prefix& in selected component", P);
                      Diagnose_Call;
                      return;
 
@@ -8690,7 +8708,7 @@ package body Sem_Ch8 is
                   end if;
                end;
 
-               Error_Msg_N ("invalid prefix in selected component&", P);
+               Error_Msg_N ("invalid prefix& in selected component", P);
 
                if Is_Incomplete_Type (P_Type)
                  and then Is_Access_Type (Etype (P))
@@ -8701,7 +8719,7 @@ package body Sem_Ch8 is
                end if;
 
             else
-               Error_Msg_N ("invalid prefix in selected component", P);
+               Error_Msg_N ("invalid prefix& in selected component", P);
             end if;
          end if;
       else
@@ -9559,26 +9577,17 @@ package body Sem_Ch8 is
             return;
          end if;
 
+         --  We need to mark the previous use clauses as effective, but each
+         --  use clause may in turn render other use clauses effective.
+
          Curr := Current_Use_Clause (Pak);
          while Present (Curr)
            and then not Is_Effective_Use_Clause (Curr)
          loop
-            --  We need to mark the previous use clauses as effective, but
-            --  each use clause may in turn render other use_package_clauses
-            --  effective. Additionally, it is possible to have a parent
-            --  package renamed as a child of itself so we must check the
-            --  prefix entity is not the same as the package we are marking.
+            --  It is possible to have a child package without a prefix that
+            --  relies on a previous use clause.
 
-            if Nkind (Name (Curr)) /= N_Identifier
-              and then Present (Prefix (Name (Curr)))
-              and then Entity (Prefix (Name (Curr))) /= Pak
-            then
-               Mark_Use_Package (Entity (Prefix (Name (Curr))));
-
-            --  It is also possible to have a child package without a prefix
-            --  that relies on a previous use_package_clause.
-
-            elsif Nkind (Name (Curr)) = N_Identifier
+            if Nkind (Name (Curr)) = N_Identifier
               and then Is_Child_Unit (Entity (Name (Curr)))
             then
                Mark_Use_Package (Scope (Entity (Name (Curr))));

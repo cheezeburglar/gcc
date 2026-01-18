@@ -1,6 +1,6 @@
 // Nested Exception support header (nested_exception class) for -*- C++ -*-
 
-// Copyright (C) 2009-2025 Free Software Foundation, Inc.
+// Copyright (C) 2009-2026 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -72,7 +72,8 @@ namespace std _GLIBCXX_VISIBILITY(default)
     nested_exception& operator=(const nested_exception&) noexcept = default;
 
 #if __cplusplus >= 202400L
-    constexpr virtual ~nested_exception() noexcept {}
+    [[__gnu__::__gnu_inline__]]
+    constexpr inline virtual ~nested_exception() noexcept {}
 #else
     virtual ~nested_exception() noexcept;
 #endif

@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2025 Free Software Foundation, Inc.
+// Copyright (C) 2020-2026 Free Software Foundation, Inc.
 
 // This file is part of GCC.
 
@@ -251,7 +251,7 @@ MacroBuiltin::include_handler (location_t invoc_locus,
     parsed_items = parser.parse_items ().value_or (
       std::vector<std::unique_ptr<AST::Item>>{});
   else
-    parsed_expr = parser.parse_expr ();
+    parsed_expr = parser.parse_expr ().value ();
 
   bool has_error = !parser.get_errors ().empty ();
 

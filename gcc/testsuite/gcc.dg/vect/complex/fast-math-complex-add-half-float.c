@@ -1,5 +1,5 @@
 /* { dg-do compile } */
-/* { dg-additional-options "-ffast-math" } */
+/* { dg-additional-options "-ffast-math --param vect-epilogues-nomask=0" } */
 /* { dg-require-effective-target vect_complex_add_half } */
 /* { dg-require-effective-target float16 } */
 /* { dg-add-options arm_v8_3a_fp16_complex_neon } */
@@ -8,5 +8,5 @@
 #define N 200
 #include "complex-add-template.c"
 
-/* { dg-final { scan-tree-dump-times "stmt.*COMPLEX_ADD_ROT270" 1 "vect" } } */
-/* { dg-final { scan-tree-dump-times "stmt.*COMPLEX_ADD_ROT90" 1 "vect" } } */
+/* { dg-final { scan-tree-dump-times "add new stmt: \[^\n\r]*COMPLEX_ADD_ROT270" 2 "vect" } } */
+/* { dg-final { scan-tree-dump-times "add new stmt: \[^\n\r]*COMPLEX_ADD_ROT90" 2 "vect" } } */

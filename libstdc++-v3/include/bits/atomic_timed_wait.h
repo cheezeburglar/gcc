@@ -1,6 +1,6 @@
 // -*- C++ -*- header.
 
-// Copyright (C) 2020-2025 Free Software Foundation, Inc.
+// Copyright (C) 2020-2026 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -140,7 +140,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	  auto __res = __detail::__wait_until(__addr, __args, __atime);
 	  if (__res._M_timeout)
 	    return false; // C++26 will also return last observed __val
-	  __val = __args._M_setup_wait(__addr, __vfn, __res);
+	  __val = __args._M_on_wake(__addr, __vfn, __res);
 	}
       return true; // C++26 will also return last observed __val
     }
@@ -192,7 +192,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
 	  auto __res = __detail::__wait_for(__addr, __args, __rtime);
 	  if (__res._M_timeout)
 	    return false; // C++26 will also return last observed __val
-	  __val = __args._M_setup_wait(__addr, __vfn);
+	  __val = __args._M_on_wake(__addr, __vfn, __res);
 	}
       return true; // C++26 will also return last observed __val
     }

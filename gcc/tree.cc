@@ -1,5 +1,5 @@
 /* Language-independent node constructors for parse phase of GNU compiler.
-   Copyright (C) 1987-2025 Free Software Foundation, Inc.
+   Copyright (C) 1987-2026 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -4000,14 +4000,26 @@ decl_address_ip_invariant_p (const_tree op)
   /* The conditions below are slightly less strict than the one in
      staticp.  */
 
+  symtab_node* node;
   switch (TREE_CODE (op))
     {
     case LABEL_DECL:
-    case FUNCTION_DECL:
     case STRING_CST:
       return true;
 
+    case FUNCTION_DECL:
+      /* Disable const propagation of symbols defined in assembly.  */
+      node = symtab_node::get (op);
+      return !node || !node->must_remain_in_tu_name;
+
     case VAR_DECL:
+      if (TREE_STATIC (op) || DECL_EXTERNAL (op))
+	  {
+	    /* Disable const propagation of symbols defined in assembly.  */
+	    node = symtab_node::get (op);
+	    if (node && node->must_remain_in_tu_name)
+	      return false;
+	  }
       if (((TREE_STATIC (op) || DECL_EXTERNAL (op))
            && !DECL_DLLIMPORT_P (op))
           || DECL_THREAD_LOCAL_P (op))
@@ -15306,6 +15318,13 @@ valid_new_delete_pair_p (tree new_asm, tree delete_asm,
   if ((new_name[2] != 'w' || delete_name[2] != 'l')
       && (new_name[2] != 'a' || delete_name[2] != 'a'))
     return false;
+  if (new_name[3] == 'I' || delete_name[3] == 'I')
+    {
+      /* When ::operator new or ::operator delete are function templates,
+	 return uncertain mismatch, we need demangler in that case.  */
+      *pcertain = false;
+      return false;
+    }
   /* 'j', 'm' and 'y' correspond to size_t.  */
   if (new_name[3] != 'j' && new_name[3] != 'm' && new_name[3] != 'y')
     return false;
@@ -15610,7 +15629,8 @@ disjoint_version_decls (tree fn1, tree fn2)
 	      for (string_slice v1 : fn1_versions)
 		{
 		  for (string_slice v2 : fn2_versions)
-		    if (targetm.target_option.same_function_versions (v1, v2))
+		    if (targetm.target_option.same_function_versions
+			  (v1, NULL_TREE, v2, NULL_TREE))
 		      return false;
 		}
 	      return true;
@@ -15628,7 +15648,8 @@ disjoint_version_decls (tree fn1, tree fn2)
 	      if (!v2.is_valid ())
 		v2 = "default";
 	      for (string_slice v1 : fn1_versions)
-		if (targetm.target_option.same_function_versions (v1, v2))
+		if (targetm.target_option.same_function_versions
+		      (v1, NULL_TREE, v2, NULL_TREE))
 		  return false;
 	      return true;
 	    }
@@ -15647,7 +15668,8 @@ disjoint_version_decls (tree fn1, tree fn2)
 	  if (!v2.is_valid ())
 	    v2 = "default";
 
-	  if (targetm.target_option.same_function_versions (v1, v2))
+	  if (targetm.target_option.same_function_versions (v1, NULL_TREE,
+							    v2, NULL_TREE))
 	    return false;
 
 	  return true;
@@ -15695,30 +15717,32 @@ diagnose_versioned_decls (tree old_decl, tree new_decl)
      the two sets of target_clones imply the same set of versions.  */
   if (old_target_clones_attr && new_target_clones_attr)
     {
-      auto_vec<string_slice> fn1_versions = get_clone_versions (old_decl);
-      auto_vec<string_slice> fn2_versions = get_clone_versions (new_decl);
+      auto_vec<string_slice> old_versions = get_clone_versions (old_decl);
+      auto_vec<string_slice> new_versions = get_clone_versions (new_decl);
 
       bool mergeable = true;
 
-      if (fn1_versions.length () != fn2_versions.length ())
+      if (old_versions.length () != new_versions.length ())
 	mergeable = false;
 
       /* Check both inclusion directions.  */
-      for (auto fn1v : fn1_versions)
+      for (auto oldv: old_versions)
 	{
 	  bool matched = false;
-	  for (auto fn2v : fn2_versions)
-	    if (targetm.target_option.same_function_versions (fn1v, fn2v))
+	  for (auto newv: new_versions)
+	    if (targetm.target_option.same_function_versions (oldv, old_decl,
+							      newv, new_decl))
 	      matched = true;
 	  if (!matched)
 	    mergeable = false;
 	}
 
-      for (auto fn2v : fn2_versions)
+      for (auto newv: new_versions)
 	{
 	  bool matched = false;
-	  for (auto fn1v : fn1_versions)
-	    if (targetm.target_option.same_function_versions (fn1v, fn2v))
+	  for (auto oldv: old_versions)
+	    if (targetm.target_option.same_function_versions (oldv, old_decl,
+							      newv, new_decl))
 	      matched = true;
 	  if (!matched)
 	    mergeable = false;
@@ -15767,9 +15791,9 @@ diagnose_versioned_decls (tree old_decl, tree new_decl)
       return true;
     }
 
-  /* The only remaining case is two target_version annotated decls.  Must
-     be mergeable as otherwise are distinct.  */
-  return false;
+  /* The only remaining case is two target_version annotated decls.  */
+  return !targetm.target_option.same_function_versions
+	    (old_target_attr, old_decl, new_target_attr, new_decl);
 }
 
 void

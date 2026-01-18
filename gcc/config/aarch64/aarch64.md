@@ -1,5 +1,5 @@
 ;; Machine description for AArch64 architecture.
-;; Copyright (C) 2009-2025 Free Software Foundation, Inc.
+;; Copyright (C) 2009-2026 Free Software Foundation, Inc.
 ;; Contributed by ARM Ltd.
 ;;
 ;; This file is part of GCC.
@@ -17,6 +17,24 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GCC; see the file COPYING3.  If not see
 ;; <http://www.gnu.org/licenses/>.
+
+;; Code organisation:
+;
+;; The lines of is an instruction is aarch64, simd, sve, sve2, or sme are
+;; a little blurry.
+;;
+;; Therefore code is organised by the following rough principles:
+;;
+;; - aarch64.md: For shared parts of the architecture (such as defining
+;;     registers and constants) and for instructions that operate on non-SIMD
+;;     registers.
+;; - aarch64-simd.md: For instructions that operate on non-scaling SIMD
+;;     registers.
+;; - aarch64-sve.md for SVE instructions that are pre SVE2.
+;; - aarch64-sme.md for any scalable SIMD instruction that is incompatible with
+;;     non-streaming mode. This usually means it uses the ZA or ZT register.
+;; - aarch64-sve2.md for any scalable SIMD instruction that either is
+;;     streaming compatible, or theoretically could be later.
 
 ;; Register numbers
 (define_constants
@@ -371,6 +389,7 @@
     UNSPEC_SYSREG_WDI
     UNSPEC_SYSREG_WTI
     UNSPEC_PLDX
+    UNSPEC_PLDIR
     ;; Represents an SVE-style lane index, in which the indexing applies
     ;; within the containing 128-bit block.
     UNSPEC_SVE_LANE_SELECT
@@ -1337,6 +1356,17 @@
   [(set_attr "type" "load_4")]
 )
 
+(define_insn "aarch64_pldir"
+  [(unspec [(match_operand:DI 0 "aarch64_prefetch_operand" "Dp")]
+	     UNSPEC_PLDIR)]
+  ""
+  {
+    operands[0] = gen_rtx_MEM (DImode, operands[0]);
+    return "prfm\\tir, %0";
+  }
+  [(set_attr "type" "load_4")]
+)
+
 (define_insn "aarch64_pldx"
   [(unspec [(match_operand 0 "" "")
 	    (match_operand:DI 1 "aarch64_prefetch_operand" "Dp")] UNSPEC_PLDX)]
@@ -1946,6 +1976,18 @@
 	rtx tmp = gen_reg_rtx (intmode);
 	emit_move_insn (tmp, gen_int_mode (ival, intmode));
 	emit_move_insn (operands[0], gen_lowpart (<MODE>mode, tmp));
+	DONE;
+      }
+
+    /* Expand into a literal load using anchors.  */
+    if (GET_CODE (operands[1]) == CONST_DOUBLE
+	&& !aarch64_can_const_movi_rtx_p (operands[1], <MODE>mode)
+	&& !aarch64_float_const_representable_p (operands[1])
+	&& !aarch64_float_const_zero_rtx_p (operands[1])
+	&& !aarch64_float_const_rtx_p (operands[1]))
+      {
+	operands[1] = force_const_mem (<MODE>mode, operands[1]);
+	emit_move_insn (operands[0], operands[1]);
 	DONE;
       }
   }

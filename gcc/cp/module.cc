@@ -1,5 +1,5 @@
 /* C++ modules.  Experimental!
-   Copyright (C) 2017-2025 Free Software Foundation, Inc.
+   Copyright (C) 2017-2026 Free Software Foundation, Inc.
    Written by Nathan Sidwell <nathan@acm.org> while at FaceBook
 
    This file is part of GCC.
@@ -2969,6 +2969,7 @@ static char const *const merge_kind_name[MK_hwm] =
 /* Mergeable entity location data.  */
 struct merge_key {
   cp_ref_qualifier ref_q : 2;
+  unsigned coro_disc : 2;  /* Discriminator for coroutine transforms.  */
   unsigned index;
 
   tree ret;  /* Return type, if appropriate.  */
@@ -2977,7 +2978,7 @@ struct merge_key {
   tree constraints;  /* Constraints.  */
 
   merge_key ()
-    :ref_q (REF_QUAL_NONE), index (0),
+    :ref_q (REF_QUAL_NONE), coro_disc (0), index (0),
      ret (NULL_TREE), args (NULL_TREE),
      constraints (NULL_TREE)
   {
@@ -4590,6 +4591,17 @@ dumper::impl::nested_name (tree t)
   else
     fputs ("#null#", stream);
 
+  if (t && TREE_CODE (t) == FUNCTION_DECL && DECL_COROUTINE_P (t))
+    if (tree ramp = DECL_RAMP_FN (t))
+      {
+	if (DECL_ACTOR_FN (ramp) == t)
+	  fputs (".actor", stream);
+	else if (DECL_DESTROY_FN (ramp) == t)
+	  fputs (".destroy", stream);
+	else
+	  gcc_unreachable ();
+      }
+
   if (origin >= 0)
     {
       const module_state *module = (*modules)[origin];
@@ -6085,9 +6097,9 @@ trees_out::lang_decl_bools (tree t, bits_out& bits)
   /* Do not write lang->u.base.not_really_extern, importer will set
      when reading the definition (if any).  */
   WB (lang->u.base.initialized_in_class);
+
   WB (lang->u.base.threadprivate_or_deleted_p);
-  /* Do not write lang->u.base.anticipated_p, it is a property of the
-     current TU.  */
+  WB (lang->u.base.anticipated_p);
   WB (lang->u.base.friend_or_tls);
   WB (lang->u.base.unknown_bound_p);
   /* Do not write lang->u.base.odr_used, importer will recalculate if
@@ -6095,12 +6107,18 @@ trees_out::lang_decl_bools (tree t, bits_out& bits)
   WB (lang->u.base.concept_p);
   WB (lang->u.base.var_declared_inline_p);
   WB (lang->u.base.dependent_init_p);
+
   /* When building a header unit, everthing is marked as purview, (so
      we know which decls to write).  But when we import them we do not
      want to mark them as in module purview.  */
   WB (lang->u.base.module_purview_p && !header_module_p ());
   WB (lang->u.base.module_attach_p);
+  /* Importer will set module_import_p and module_entity_p themselves
+     as appropriate.  */
   WB (lang->u.base.module_keyed_decls_p);
+
+  WB (lang->u.base.omp_declare_mapper_p);
+
   switch (lang->u.base.selector)
     {
     default:
@@ -6109,6 +6127,7 @@ trees_out::lang_decl_bools (tree t, bits_out& bits)
     case lds_fn:  /* lang_decl_fn.  */
       WB (lang->u.fn.global_ctor_p);
       WB (lang->u.fn.global_dtor_p);
+
       WB (lang->u.fn.static_function);
       WB (lang->u.fn.pure_virtual);
       WB (lang->u.fn.defaulted_p);
@@ -6118,13 +6137,13 @@ trees_out::lang_decl_bools (tree t, bits_out& bits)
       gcc_assert (!lang->u.fn.pending_inline_p);
       WB (lang->u.fn.nonconverting);
       WB (lang->u.fn.thunk_p);
+
       WB (lang->u.fn.this_thunk_p);
-      /* Do not stream lang->u.hidden_friend_p, it is a property of
-	 the TU.  */
       WB (lang->u.fn.omp_declare_reduction_p);
       WB (lang->u.fn.has_dependent_explicit_spec_p);
       WB (lang->u.fn.immediate_fn_p);
       WB (lang->u.fn.maybe_deleted);
+      WB (lang->u.fn.coroutine_p);
       WB (lang->u.fn.implicit_constexpr);
       WB (lang->u.fn.escalated_p);
       WB (lang->u.fn.xobj_func);
@@ -6164,17 +6183,23 @@ trees_in::lang_decl_bools (tree t, bits_in& bits)
   lang->u.base.use_template = v;
   /* lang->u.base.not_really_extern is not streamed.  */
   RB (lang->u.base.initialized_in_class);
+
   RB (lang->u.base.threadprivate_or_deleted_p);
-  /* lang->u.base.anticipated_p is not streamed.  */
+  RB (lang->u.base.anticipated_p);
   RB (lang->u.base.friend_or_tls);
   RB (lang->u.base.unknown_bound_p);
   /* lang->u.base.odr_used is not streamed.  */
   RB (lang->u.base.concept_p);
   RB (lang->u.base.var_declared_inline_p);
   RB (lang->u.base.dependent_init_p);
+
   RB (lang->u.base.module_purview_p);
   RB (lang->u.base.module_attach_p);
+  /* module_import_p and module_entity_p are not streamed.  */
   RB (lang->u.base.module_keyed_decls_p);
+
+  RB (lang->u.base.omp_declare_mapper_p);
+
   switch (lang->u.base.selector)
     {
     default:
@@ -6183,19 +6208,22 @@ trees_in::lang_decl_bools (tree t, bits_in& bits)
     case lds_fn:  /* lang_decl_fn.  */
       RB (lang->u.fn.global_ctor_p);
       RB (lang->u.fn.global_dtor_p);
+
       RB (lang->u.fn.static_function);
       RB (lang->u.fn.pure_virtual);
       RB (lang->u.fn.defaulted_p);
       RB (lang->u.fn.has_in_charge_parm_p);
       RB (lang->u.fn.has_vtt_parm_p);
+      /* lang->u.f.n.pending_inline_p is not streamed.  */
       RB (lang->u.fn.nonconverting);
       RB (lang->u.fn.thunk_p);
+
       RB (lang->u.fn.this_thunk_p);
-      /* lang->u.fn.hidden_friend_p is not streamed.  */
       RB (lang->u.fn.omp_declare_reduction_p);
       RB (lang->u.fn.has_dependent_explicit_spec_p);
       RB (lang->u.fn.immediate_fn_p);
       RB (lang->u.fn.maybe_deleted);
+      RB (lang->u.fn.coroutine_p);
       RB (lang->u.fn.implicit_constexpr);
       RB (lang->u.fn.escalated_p);
       RB (lang->u.fn.xobj_func);
@@ -9815,6 +9843,10 @@ trees_out::type_node (tree type)
 	    wu (nunits.coeffs[ix]);
 	}
       break;
+
+    case META_TYPE:
+      /* No additional data.  */
+      break;
     }
 
   tree_node (TYPE_ATTRIBUTES (type));
@@ -10659,6 +10691,11 @@ trees_in::tree_node (bool is_use)
 	      if (!get_overrun ())
 		res = build_vector_type (res, nunits);
 	    }
+	    break;
+
+	  case META_TYPE:
+	    if (!get_overrun ())
+	      res = meta_info_type_node;
 	    break;
 	  }
 
@@ -11566,7 +11603,12 @@ trees_out::get_merge_kind (tree decl, depset *dep)
 	    gcc_checking_assert
 	      (DECL_IMPLICIT_TYPEDEF_P (STRIP_TEMPLATE (decl)));
 
-	    mk = MK_local_type;
+	    if (has_definition (ctx))
+	      mk = MK_local_type;
+	    else
+	      /* We're not providing a definition of the context to key
+		 the local type into; use the keyed map instead.  */
+	      mk = MK_keyed;
 	    break;
 
 	  case RECORD_TYPE:
@@ -11696,6 +11738,25 @@ trees_in::decl_container ()
   return container;
 }
 
+/* Gets a 2-bit discriminator to distinguish coroutine actor or destroy
+   functions from a normal function.  */
+
+static int
+get_coroutine_discriminator (tree inner)
+{
+  if (DECL_COROUTINE_P (inner))
+    if (tree ramp = DECL_RAMP_FN (inner))
+      {
+	if (DECL_ACTOR_FN (ramp) == inner)
+	  return 1;
+	else if (DECL_DESTROY_FN (ramp) == inner)
+	  return 2;
+	else
+	  gcc_unreachable ();
+      }
+  return 0;
+}
+
 /* Write out key information about a mergeable DEP.  Does not write
    the contents of DEP itself.  The context has already been
    written.  The container has already been streamed.  */
@@ -11787,6 +11848,7 @@ trees_out::key_mergeable (int tag, merge_kind mk, tree decl, tree inner,
 	      tree fn_type = TREE_TYPE (inner);
 
 	      key.ref_q = type_memfn_rqual (fn_type);
+	      key.coro_disc = get_coroutine_discriminator (inner);
 	      key.args = TYPE_ARG_TYPES (fn_type);
 
 	      if (tree reqs = get_constraints (inner))
@@ -11923,7 +11985,12 @@ trees_out::key_mergeable (int tag, merge_kind mk, tree decl, tree inner,
       tree_node (name);
       if (streaming_p ())
 	{
-	  unsigned code = (key.ref_q << 0) | (key.index << 2);
+	  /* Check we have enough bits for the index.  */
+	  gcc_checking_assert (key.index < (1u << (sizeof (unsigned) * 8 - 4)));
+
+	  unsigned code = ((key.ref_q << 0)
+			   | (key.coro_disc << 2)
+			   | (key.index << 4));
 	  u (code);
 	}
 
@@ -11947,8 +12014,8 @@ trees_out::key_mergeable (int tag, merge_kind mk, tree decl, tree inner,
     }
 }
 
-/* DECL is a new declaration that may be duplicated in OVL.  Use RET &
-   ARGS to find its clone, or NULL.  If DECL's DECL_NAME is NULL, this
+/* DECL is a new declaration that may be duplicated in OVL.  Use KEY
+   to find its clone, or NULL.  If DECL's DECL_NAME is NULL, this
    has been found by a proxy.  It will be an enum type located by its
    first member.
 
@@ -12003,6 +12070,7 @@ check_mergeable_decl (merge_kind mk, tree decl, tree ovl, merge_key const &key)
 		 || same_type_p (key.ret, fndecl_declared_return_type (m_inner)))
 		&& type_memfn_rqual (m_type) == key.ref_q
 		&& compparms (key.args, TYPE_ARG_TYPES (m_type))
+		&& get_coroutine_discriminator (m_inner) == key.coro_disc
 		/* Reject if old is a "C" builtin and new is not "C".
 		   Matches decls_match behaviour.  */
 		&& (!DECL_IS_UNDECLARED_BUILTIN (m_inner)
@@ -12125,7 +12193,8 @@ trees_in::key_mergeable (int tag, merge_kind mk, tree decl, tree inner,
       merge_key key;
       unsigned code = u ();
       key.ref_q = cp_ref_qualifier ((code >> 0) & 3);
-      key.index = code >> 2;
+      key.coro_disc = (code >> 2) & 3;
+      key.index = code >> 4;
 
       if (mk == MK_enum)
 	key.ret = tree_node ();
@@ -12179,7 +12248,8 @@ trees_in::key_mergeable (int tag, merge_kind mk, tree decl, tree inner,
 	       && DECL_MODULE_KEYED_DECLS_P (name))
 	{
 	  gcc_checking_assert (TREE_CODE (container) == NAMESPACE_DECL
-			       || TREE_CODE (container) == TYPE_DECL);
+			       || TREE_CODE (container) == TYPE_DECL
+			       || TREE_CODE (container) == FUNCTION_DECL);
 	  if (auto *set = keyed_table->get (name))
 	    if (key.index < set->length ())
 	      {
@@ -12858,6 +12928,12 @@ has_definition (tree decl)
 	  if (use_tpl < 2)
 	    return true;
 	}
+
+      /* Coroutine transform functions always need to be emitted
+	 into the importing TU if the ramp function will be.  */
+      if (DECL_COROUTINE_P (decl))
+	if (tree ramp = DECL_RAMP_FN (decl))
+	  return has_definition (ramp);
       break;
 
     case TYPE_DECL:
@@ -13041,6 +13117,17 @@ trees_out::write_function_def (tree decl)
       state->write_location (*this, f->function_start_locus);
       state->write_location (*this, f->function_end_locus);
     }
+
+  if (DECL_COROUTINE_P (decl))
+    {
+      tree ramp = DECL_RAMP_FN (decl);
+      tree_node (ramp);
+      if (!ramp)
+	{
+	  tree_node (DECL_ACTOR_FN (decl));
+	  tree_node (DECL_DESTROY_FN (decl));
+	}
+    }
 }
 
 void
@@ -13056,13 +13143,13 @@ trees_in::read_function_def (tree decl, tree maybe_template)
   tree initial = tree_node ();
   tree saved = tree_node ();
   tree context = tree_node ();
-  constexpr_fundef cexpr;
   post_process_data pdata {};
   pdata.decl = maybe_template;
 
   tree maybe_dup = odr_duplicate (maybe_template, DECL_SAVED_TREE (decl));
   bool installing = maybe_dup && !DECL_SAVED_TREE (decl);
 
+  constexpr_fundef cexpr;
   if (u ())
     {
       cexpr.parms = chained_decls ();
@@ -13074,7 +13161,6 @@ trees_in::read_function_def (tree decl, tree maybe_template)
     cexpr.decl = NULL_TREE;
 
   unsigned flags = u ();
-
   if (flags & 2)
     {
       pdata.start_locus = state->read_location (*this);
@@ -13083,6 +13169,21 @@ trees_in::read_function_def (tree decl, tree maybe_template)
       pdata.returns_null = flags & 8;
       pdata.returns_abnormally = flags & 16;
       pdata.infinite_loop = flags & 32;
+    }
+
+  tree coro_actor = NULL_TREE;
+  tree coro_destroy = NULL_TREE;
+  tree coro_ramp = NULL_TREE;
+  if (DECL_COROUTINE_P (decl))
+    {
+      coro_ramp = tree_node ();
+      if (!coro_ramp)
+	{
+	  coro_actor = tree_node ();
+	  coro_destroy = tree_node ();
+	  if ((coro_actor == NULL_TREE) != (coro_destroy == NULL_TREE))
+	    set_overrun ();
+	}
     }
 
   if (get_overrun ())
@@ -13099,6 +13200,11 @@ trees_in::read_function_def (tree decl, tree maybe_template)
 	SET_DECL_FRIEND_CONTEXT (decl, context);
       if (cexpr.decl)
 	register_constexpr_fundef (cexpr);
+
+      if (coro_ramp)
+	coro_set_ramp_function (decl, coro_ramp);
+      else if (coro_actor && coro_destroy)
+	coro_set_transform_functions (decl, coro_actor, coro_destroy);
 
       if (DECL_LOCAL_DECL_P (decl))
 	/* Block-scope OMP UDRs aren't real functions, and don't need a
@@ -17556,6 +17662,7 @@ module_state::read_cluster (unsigned snum)
       cfun->language->returns_null = pdata.returns_null;
       cfun->language->returns_abnormally = pdata.returns_abnormally;
       cfun->language->infinite_loop = pdata.infinite_loop;
+      cfun->coroutine_component = DECL_COROUTINE_P (decl);
 
       /* Make sure we emit explicit instantiations.
 	 FIXME do we want to do this in expand_or_defer_fn instead?  */
@@ -21945,23 +22052,12 @@ check_module_decl_linkage (tree decl)
     }
 }
 
-/* DECL is keyed to CTX for odr purposes.  */
+/* Given a scope CTX, find the scope we want to attach the key to,
+   or NULL if no key scope is required.  */
 
-void
-maybe_key_decl (tree ctx, tree decl)
+static tree
+adjust_key_scope (tree ctx)
 {
-  if (!modules_p ())
-    return;
-
-  /* We only need to deal with lambdas attached to var, field,
-     parm, type, or concept decls.  */
-  if (TREE_CODE (ctx) != VAR_DECL
-      && TREE_CODE (ctx) != FIELD_DECL
-      && TREE_CODE (ctx) != PARM_DECL
-      && TREE_CODE (ctx) != TYPE_DECL
-      && TREE_CODE (ctx) != CONCEPT_DECL)
-    return;
-
   /* For members, key it to the containing type to handle deduplication
      correctly.  For fields, this is necessary as FIELD_DECLs have no
      dep and so would only be streamed after the lambda type, defeating
@@ -21976,8 +22072,48 @@ maybe_key_decl (tree ctx, tree decl)
      Perhaps sort_cluster can be adjusted to handle this better, but
      this is a simple workaround (and might down on the number of
      entries in keyed_table as a bonus).  */
-  while (DECL_CLASS_SCOPE_P (ctx))
-    ctx = TYPE_NAME (DECL_CONTEXT (ctx));
+  while (!DECL_NAMESPACE_SCOPE_P (ctx))
+    if (DECL_CLASS_SCOPE_P (ctx))
+      ctx = TYPE_NAME (DECL_CONTEXT (ctx));
+    else
+      ctx = DECL_CONTEXT (ctx);
+
+  return ctx;
+}
+
+/* DECL is keyed to CTX for odr purposes.  */
+
+void
+maybe_key_decl (tree ctx, tree decl)
+{
+  if (!modules_p ())
+    return;
+
+  /* We only need to deal here with decls attached to var, field,
+     parm, type, function, or concept decls.  */
+  if (TREE_CODE (ctx) != VAR_DECL
+      && TREE_CODE (ctx) != FIELD_DECL
+      && TREE_CODE (ctx) != PARM_DECL
+      && TREE_CODE (ctx) != TYPE_DECL
+      && TREE_CODE (ctx) != FUNCTION_DECL
+      && TREE_CODE (ctx) != CONCEPT_DECL)
+    return;
+
+  gcc_checking_assert (LAMBDA_TYPE_P (TREE_TYPE (decl))
+		       || TREE_CODE (ctx) == FUNCTION_DECL);
+
+  /* We don't need to use the keyed map for functions with definitions,
+     as we can instead use the MK_local_type handling for streaming.  */
+  if (TREE_CODE (ctx) == FUNCTION_DECL
+      && (has_definition (ctx)
+	  /* If we won't be streaming this definition there's also no
+	     need to record the key, as it will not be useful for merging
+	     (this function is non-inline and so a matching declaration
+	     will always be an ODR violation anyway).  */
+	  || !module_maybe_has_cmi_p ()))
+    return;
+
+  ctx = adjust_key_scope (ctx);
 
   if (!keyed_table)
     keyed_table = new keyed_map_t (EXPERIMENT (1, 400));
@@ -21988,16 +22124,23 @@ maybe_key_decl (tree ctx, tree decl)
       retrofit_lang_decl (ctx);
       DECL_MODULE_KEYED_DECLS_P (ctx) = true;
     }
+  if (CHECKING_P)
+    for (tree t : vec)
+      gcc_checking_assert (t != decl);
+
   vec.safe_push (decl);
 }
 
-/* Find the scope that the lambda DECL is keyed to, if any.  */
+/* Find the scope that the local type or lambda DECL is keyed to, if any.  */
 
 static tree
 get_keyed_decl_scope (tree decl)
 {
-  gcc_checking_assert (LAMBDA_TYPE_P (TREE_TYPE (decl)));
-  tree scope = LAMBDA_TYPE_EXTRA_SCOPE (TREE_TYPE (decl));
+  gcc_checking_assert (DECL_IMPLICIT_TYPEDEF_P (STRIP_TEMPLATE (decl)));
+
+  tree scope = (LAMBDA_TYPE_P (TREE_TYPE (decl))
+		? LAMBDA_TYPE_EXTRA_SCOPE (TREE_TYPE (decl))
+		: CP_DECL_CONTEXT (decl));
   if (!scope)
     return NULL_TREE;
 
@@ -22005,12 +22148,14 @@ get_keyed_decl_scope (tree decl)
 		       || TREE_CODE (scope) == FIELD_DECL
 		       || TREE_CODE (scope) == PARM_DECL
 		       || TREE_CODE (scope) == TYPE_DECL
+		       || (TREE_CODE (scope) == FUNCTION_DECL
+			   && !has_definition (scope))
 		       || TREE_CODE (scope) == CONCEPT_DECL);
 
-  while (DECL_CLASS_SCOPE_P (scope))
-    scope = TYPE_NAME (DECL_CONTEXT (scope));
+  scope = adjust_key_scope (scope);
 
-  gcc_checking_assert (DECL_LANG_SPECIFIC (scope)
+  gcc_checking_assert (scope
+		       && DECL_LANG_SPECIFIC (scope)
 		       && DECL_MODULE_KEYED_DECLS_P (scope));
   return scope;
 }

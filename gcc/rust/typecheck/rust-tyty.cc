@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2025 Free Software Foundation, Inc.
+// Copyright (C) 2020-2026 Free Software Foundation, Inc.
 
 // This file is part of GCC.
 
@@ -1604,7 +1604,6 @@ VariantDef::get_field_at_index (size_t index)
 std::vector<StructFieldType *> &
 VariantDef::get_fields ()
 {
-  rust_assert (type != NUM);
   return fields;
 }
 

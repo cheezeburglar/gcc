@@ -1457,7 +1457,7 @@ if test "${build}" != "${host}" ; then
   DLLTOOL_FOR_BUILD=${DLLTOOL_FOR_BUILD-dlltool}
   DSYMUTIL_FOR_BUILD=${DSYMUTIL_FOR_BUILD-dsymutil}
   GFORTRAN_FOR_BUILD=${GFORTRAN_FOR_BUILD-gfortran}
-  GA68_FOR_BUILD=${GA68_FOR_BUILD-ga68}
+  A68_FOR_BUILD=${A68_FOR_BUILD-ga68}
   GOC_FOR_BUILD=${GOC_FOR_BUILD-gccgo}
   GDC_FOR_BUILD=${GDC_FOR_BUILD-gdc}
   GNATMAKE_FOR_BUILD=${GNATMAKE_FOR_BUILD-gnatmake}
@@ -1474,7 +1474,7 @@ else
   DLLTOOL_FOR_BUILD="\$(DLLTOOL)"
   DSYMUTIL_FOR_BUILD="\$(DSYMUTIL)"
   GFORTRAN_FOR_BUILD="\$(GFORTRAN)"
-  GA68_FOR_BUILD="\$(GA68)"
+  A68_FOR_BUILD="\$(A68)"
   GOC_FOR_BUILD="\$(GOC)"
   GDC_FOR_BUILD="\$(GDC)"
   GNATMAKE_FOR_BUILD="\$(GNATMAKE)"
@@ -1528,7 +1528,7 @@ int main() {}])],
 fi
 
 ACX_PROG_GNAT
-ACX_PROG_GA68
+ACX_PROG_A68
 ACX_PROG_GDC
 ACX_PROG_CARGO
 ACX_PROG_CMP_IGNORE_INITIAL
@@ -3830,6 +3830,21 @@ if test x${enable_multilib} = x ; then
   target_configargs="--enable-multilib ${target_configargs}"
 fi
 
+# Source target-specific configuration fragment for GCC
+if test -d ${srcdir}/gcc; then
+  . ${srcdir}/gcc/configure.tgt
+fi
+
+# Pass through with_multi_buildlist to host and target.  'gcc' needs it for the
+# fixed includes which are multilib'd and target libraries need it as they use
+# config-ml.in.
+if test x${with_multi_buildlist} != x ; then
+  target_configargs="--with-multi-buildlist=${with_multi_buildlist} \
+  ${target_configargs}"
+  host_configargs="--with-multi-buildlist=${with_multi_buildlist} \
+  ${host_configargs}"
+fi
+
 # Pass --with-newlib if appropriate.  Note that target_configdirs has
 # changed from the earlier setting of with_newlib.
 if test x${with_newlib} != xno && echo " ${target_configdirs} " | grep " newlib " > /dev/null 2>&1 && test -d ${srcdir}/newlib ; then
@@ -4020,7 +4035,7 @@ AC_SUBST(CXX_FOR_BUILD)
 AC_SUBST(DLLTOOL_FOR_BUILD)
 AC_SUBST(DSYMUTIL_FOR_BUILD)
 AC_SUBST(GFORTRAN_FOR_BUILD)
-AC_SUBST(GA68_FOR_BUILD)
+AC_SUBST(A68_FOR_BUILD)
 AC_SUBST(GOC_FOR_BUILD)
 AC_SUBST(GDC_FOR_BUILD)
 AC_SUBST(GNATMAKE_FOR_BUILD)
@@ -4116,9 +4131,9 @@ AC_SUBST(CC)
 AC_SUBST(CXX)
 AC_SUBST(CFLAGS)
 AC_SUBST(CXXFLAGS)
-AC_SUBST(GA68)
-AC_SUBST(GA68FLAGS)
-GA68FLAGS=${GA68FLAGS-${CFLAGS}}
+AC_SUBST(A68)
+AC_SUBST(A68FLAGS)
+A68FLAGS=${A68FLAGS-${CFLAGS}}
 AC_SUBST(GDC)
 AC_SUBST(GDCFLAGS)
 GDCFLAGS=${GDCFLAGS-${CFLAGS}}
@@ -4167,7 +4182,7 @@ NCN_STRICT_CHECK_TARGET_TOOLS(CC_FOR_TARGET, cc gcc)
 NCN_STRICT_CHECK_TARGET_TOOLS(CXX_FOR_TARGET, c++ g++ cxx gxx)
 NCN_STRICT_CHECK_TARGET_TOOLS(GCC_FOR_TARGET, gcc, ${CC_FOR_TARGET})
 NCN_STRICT_CHECK_TARGET_TOOLS(GFORTRAN_FOR_TARGET, gfortran)
-NCN_STRICT_CHECK_TARGET_TOOLS(GA68_FOR_TARGET, ga68)
+NCN_STRICT_CHECK_TARGET_TOOLS(A68_FOR_TARGET, ga68)
 NCN_STRICT_CHECK_TARGET_TOOLS(GOC_FOR_TARGET, gccgo)
 NCN_STRICT_CHECK_TARGET_TOOLS(GDC_FOR_TARGET, gdc)
 NCN_STRICT_CHECK_TARGET_TOOLS(GM2_FOR_TARGET, gm2)
@@ -4219,7 +4234,7 @@ GCC_TARGET_TOOL(gfortran, GFORTRAN_FOR_TARGET, GFORTRAN,
 		[gcc/gfortran -B$$r/$(HOST_SUBDIR)/gcc/], fortran)
 GCC_TARGET_TOOL(gccgo, GOC_FOR_TARGET, GOC,
 		[gcc/gccgo -B$$r/$(HOST_SUBDIR)/gcc/], go)
-GCC_TARGET_TOOL(ga68, GA68_FOR_TARGET, GA68,
+GCC_TARGET_TOOL(ga68, A68_FOR_TARGET, A68,
                 [gcc/ga68 -B$$r/$(HOST_SUBDIR)/gcc/], algol68)
 GCC_TARGET_TOOL(gdc, GDC_FOR_TARGET, GDC,
 		[gcc/gdc -B$$r/$(HOST_SUBDIR)/gcc/], d)

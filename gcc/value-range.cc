@@ -1,5 +1,5 @@
 /* Support routines for value ranges.
-   Copyright (C) 2019-2025 Free Software Foundation, Inc.
+   Copyright (C) 2019-2026 Free Software Foundation, Inc.
    Major hacks by Aldy Hernandez <aldyh@redhat.com> and
    Andrew MacLeod <amacleod@redhat.com>.
 
@@ -2163,6 +2163,13 @@ irange::intersect (const vrange &v)
     }
 
   m_kind = VR_RANGE;
+  // Snap subranges if there is a bitmask.  See PR 123319.
+  if (!m_bitmask.unknown_p ())
+    {
+      snap_subranges ();
+      if (undefined_p ())
+	return true;
+    }
   // The range has been altered, so normalize it even if nothing
   // changed in the mask.
   if (!intersect_bitmask (r))

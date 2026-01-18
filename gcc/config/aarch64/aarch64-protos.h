@@ -1,5 +1,5 @@
 /* Machine description for AArch64 architecture.
-   Copyright (C) 2009-2025 Free Software Foundation, Inc.
+   Copyright (C) 2009-2026 Free Software Foundation, Inc.
    Contributed by ARM Ltd.
 
    This file is part of GCC.
@@ -481,6 +481,7 @@ struct cpu_branch_cost
 {
   int predictable;    /* Predictable branch or optimizing for size.  */
   int unpredictable;  /* Unpredictable branch or optimizing for speed.  */
+  int br_mispredict_factor;  /* Scale factor for cost of misprediction on branches.  */
 };
 
 /* Control approximate alternatives to certain FP operators.  */

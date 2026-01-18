@@ -1,4 +1,4 @@
-// Copyright (C) 2025 Free Software Foundation, Inc.
+// Copyright (C) 2025-2026 Free Software Foundation, Inc.
 
 // This file is part of GCC.
 
@@ -86,6 +86,24 @@ UnusedCollector::visit (HIR::StructPatternFieldIdent &pattern)
     unused_context.add_mut (pattern.get_mappings ().get_hirid ());
 
   walk (pattern);
+}
+
+void
+UnusedCollector::visit (HIR::BreakExpr &expr)
+{
+  if (!expr.has_label ())
+    return;
+  mark_label_used (expr.get_label ());
+  walk (expr);
+}
+
+void
+UnusedCollector::visit (HIR::ContinueExpr &expr)
+{
+  if (!expr.has_label ())
+    return;
+  mark_label_used (expr.get_label ());
+  walk (expr);
 }
 
 } // namespace Analysis

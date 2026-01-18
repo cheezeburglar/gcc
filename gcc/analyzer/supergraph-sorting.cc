@@ -1,5 +1,5 @@
 /* Sorting the nodes in the supergraph.
-   Copyright (C) 2025 Free Software Foundation, Inc.
+   Copyright (C) 2025-2026 Free Software Foundation, Inc.
    Contributed by David Malcolm <dmalcolm@redhat.com>.
 
 This file is part of GCC.
@@ -24,6 +24,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "cgraph.h"
 #include "alloc-pool.h"
 #include "fibonacci_heap.h"
+#include "timevar.h"
 
 #include "analyzer/supergraph.h"
 #include "analyzer/analyzer-logging.h"
@@ -254,6 +255,7 @@ get_node_ordering (const supergraph &sg,
 void
 supergraph::sort_nodes (logger *logger)
 {
+  auto_timevar tv (TV_ANALYZER_SUPERGRAPH_SORTING);
   LOG_SCOPE (logger);
 
   const std::vector<supernode *> ordering = get_node_ordering (*this, logger);

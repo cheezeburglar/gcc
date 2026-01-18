@@ -1,5 +1,5 @@
 /* Perform type resolution on the various structures.
-   Copyright (C) 2001-2025 Free Software Foundation, Inc.
+   Copyright (C) 2001-2026 Free Software Foundation, Inc.
    Contributed by Andy Vaught
 
 This file is part of GCC.
@@ -3687,6 +3687,20 @@ resolve_function (gfc_expr *expr)
     gfc_warning (OPT_Wdeprecated_declarations,
 		 "Using function %qs at %L is deprecated",
 		 sym->name, &expr->where);
+
+  /* Check an external function supplied as a dummy argument has an external
+     attribute when a program unit uses 'implicit none (external)'.  */
+  if (expr->expr_type == EXPR_FUNCTION
+      && expr->symtree
+      && expr->symtree->n.sym->attr.dummy
+      && expr->symtree->n.sym->ns->has_implicit_none_export
+      && !gfc_is_intrinsic(expr->symtree->n.sym, 0, expr->where))
+    {
+      gfc_error ("Dummy procedure %qs at %L requires an EXTERNAL attribute",
+		 sym->name, &expr->where);
+      return false;
+    }
+
   return t;
 }
 
@@ -4166,6 +4180,16 @@ resolve_call (gfc_code *c)
 
   /* Resume assumed_size checking.  */
   need_full_assumed_size--;
+
+  /* If 'implicit none (external)' and the symbol is a dummy argument,
+     check for an 'external' attribute.  */
+  if (csym->ns->has_implicit_none_export
+      && csym->attr.external == 0 && csym->attr.dummy == 1)
+    {
+      gfc_error ("Dummy procedure %qs at %L requires an EXTERNAL attribute",
+		 csym->name, &c->loc);
+      return false;
+    }
 
   /* If external, check for usage.  */
   if (csym && is_external_proc (csym))
@@ -7743,6 +7767,9 @@ resolve_typebound_function (gfc_expr* e)
 	 is present.  */
       ts = expr->ts;
       declared = ts.u.derived;
+      if (!resolve_fl_derived (declared))
+	return false;
+
       c = gfc_find_component (declared, "_vptr", true, true, NULL);
       if (c->ts.u.derived == NULL)
 	c->ts.u.derived = gfc_find_derived_vtab (declared);
@@ -7782,6 +7809,22 @@ resolve_typebound_function (gfc_expr* e)
 
   if (!gfc_resolve_ref (e))
     return false;
+
+  /* It can happen that a generic, typebound procedure is marked as overridable
+     with all of the specific procedures being non-overridable. If this is the
+     case, it is safe to resolve the compcall.  */
+  if (!expr && overridable
+      && e->value.compcall.tbp->is_generic
+      && e->value.compcall.tbp->u.generic->specific
+      && e->value.compcall.tbp->u.generic->specific->non_overridable)
+    {
+      gfc_tbp_generic *g = e->value.compcall.tbp->u.generic;
+      for (; g; g = g->next)
+	if (!g->specific->non_overridable)
+	  break;
+      if (g == NULL && resolve_compcall (e, &name))
+	return true;
+    }
 
   /* Get the CLASS declared type.  */
   declared = get_declared_from_expr (&class_ref, &new_ref, e, true);
@@ -9799,10 +9842,9 @@ done_errmsg:
       /* Resolving the expr3 in the loop over all objects to allocate would
 	 execute loop invariant code for each loop item.  Therefore do it just
 	 once here.  */
-      mpz_t nelem;
       if (code->expr3 && code->expr3->mold
 	  && code->expr3->ts.type == BT_DERIVED
-	  && !(code->expr3->ref && gfc_array_size (code->expr3, &nelem)))
+	  && !(code->expr3->ref && code->expr3->ref->type == REF_ARRAY))
 	{
 	  /* Default initialization via MOLD (non-polymorphic).  */
 	  gfc_expr *rhs = gfc_default_initializer (&code->expr3->ts);
@@ -17853,6 +17895,27 @@ resolve_fl_parameter (gfc_symbol *sym)
       return false;
     }
 
+  /* Some programmers can have a typo when using an implied-do loop to
+     initialize an array constant.  For example,
+       INTEGER I,J
+       INTEGER, PARAMETER :: A(3) = [(I, I = 1, 3)]     ! OK
+       INTEGER, PARAMETER :: B(3) = [(A(J), I = 1, 3)]  ! Not OK, J undefined
+     This check catches the typo.  */
+  if (sym->attr.dimension
+      && sym->value && sym->value->expr_type == EXPR_ARRAY
+      && !gfc_is_constant_expr (sym->value))
+    {
+      /* PR fortran/117070 argues a nonconstant proc pointer can appear in
+	 the array constructor of a paramater.  This seems inconsistant with
+	 the concept of a parameter. TODO: Needs an interpretation.  */
+      if (sym->value->ts.type == BT_DERIVED
+	  && sym->value->ts.u.derived
+	  && sym->value->ts.u.derived->attr.proc_pointer_comp)
+	return true;
+      gfc_error ("Expecting constant expression near %L", &sym->value->where);
+      return false;
+    }
+
   return true;
 }
 
@@ -18816,6 +18879,13 @@ skip_interfaces:
 
   if (sym->param_list)
     resolve_pdt (sym);
+}
+
+
+void gfc_resolve_symbol (gfc_symbol *sym)
+{
+  resolve_symbol (sym);
+  return;
 }
 
 

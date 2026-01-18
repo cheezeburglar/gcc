@@ -1,5 +1,5 @@
 /* Interprocedural Identical Code Folding pass
-   Copyright (C) 2014-2025 Free Software Foundation, Inc.
+   Copyright (C) 2014-2026 Free Software Foundation, Inc.
 
    Contributed by Jan Hubicka <hubicka@ucw.cz> and Martin Liska <mliska@suse.cz>
 
@@ -533,6 +533,10 @@ sem_function::equals_wpa (sem_item *item,
   cgraph_node *cnode2 = dyn_cast <cgraph_node *> (item->node);
 
   m_compared_func = static_cast<sem_function *> (item);
+
+  if (cnode->must_remain_in_tu_name || cnode2->must_remain_in_tu_name
+      || cnode->must_remain_in_tu_body || cnode2->must_remain_in_tu_body)
+    return return_false_with_msg ("must remain in TU");
 
   if (cnode->thunk != cnode2->thunk)
     return return_false_with_msg ("thunk mismatch");
@@ -1650,6 +1654,10 @@ sem_variable::equals_wpa (sem_item *item,
 			  hash_map <symtab_node *, sem_item *> &ignored_nodes)
 {
   gcc_assert (item->type == VAR);
+
+  if (node->must_remain_in_tu_name || item->node->must_remain_in_tu_name
+      || node->must_remain_in_tu_body || item->node->must_remain_in_tu_body)
+    return return_false_with_msg ("must remain in TU");
 
   if (node->num_references () != item->node->num_references ())
     return return_false_with_msg ("different number of references");

@@ -1,5 +1,5 @@
 /* Definitions of target machine for GCC, for SPARC running Solaris 2
-   Copyright (C) 1992-2025 Free Software Foundation, Inc.
+   Copyright (C) 1992-2026 Free Software Foundation, Inc.
    Contributed by Ron Guilmette (rfg@netcom.com).
    Additional changes by David V. Henkel-Wallace (gumby@cygnus.com).
 
@@ -40,17 +40,6 @@ along with GCC; see the file COPYING3.  If not see
 
 /* Redue ggc-page.cc's chunk size to account for mmap red-zone pages.  */
 #define GGC_QUIRE_SIZE 510
-
-/* Select a format to encode pointers in exception handling data.  CODE
-   is 0 for data, 1 for code labels, 2 for function pointers.  GLOBAL is
-   true if the symbol may be affected by dynamic relocations.
-
-   Some Solaris dynamic linkers don't handle unaligned section relative
-   relocs properly, so force them to be aligned.  */
-#ifndef HAVE_AS_SPARC_UA_PCREL
-#define ASM_PREFERRED_EH_DATA_FORMAT(CODE,GLOBAL)		\
-  ((flag_pic || GLOBAL) ? DW_EH_PE_aligned : DW_EH_PE_absptr)
-#endif
 
 
 
@@ -240,7 +229,7 @@ extern const char *host_detect_local_cpu (int argc, const char **argv);
 %{m64:%{m32:%emay not use both -m32 and -m64}} \
 %{m64:-mptr64 -mstack-bias -mno-v8plus \
   %{!mcpu*:-%{!mv8plus:mcpu=v9}}} \
-" ASAN_CC1_SPEC
+" ASAN_CC1_SPEC SCTF_CC1_SPEC
 #else
 #define CC1_SPEC "\
 %{m32:%{m64:%emay not use both -m32 and -m64}} \
@@ -248,7 +237,7 @@ extern const char *host_detect_local_cpu (int argc, const char **argv);
   %{!mcpu*:%{!mv8plus:-mcpu=v9}}} \
 %{mv8plus:-m32 -mptr32 -mno-stack-bias \
   %{!mcpu*:-mcpu=v9}} \
-" ASAN_CC1_SPEC
+" ASAN_CC1_SPEC SCTF_CC1_SPEC
 #endif
 
 /* Support for a compile-time default CPU, et cetera.  The rules are:
@@ -326,14 +315,6 @@ extern const char *host_detect_local_cpu (int argc, const char **argv);
 /* Register the Solaris-specific #pragma directives.  */
 #define REGISTER_TARGET_PRAGMAS() solaris_register_pragmas ()
 
-#if HAVE_GNU_AS && defined(HAVE_AS_TLS)
-/* Use GNU extensions to TLS support.  */
-#undef TARGET_SUN_TLS
-#undef TARGET_GNU_TLS
-#define TARGET_SUN_TLS 0
-#define TARGET_GNU_TLS 1
-#endif
-
 #undef  LOCAL_LABEL_PREFIX
 #define LOCAL_LABEL_PREFIX  "."
 
@@ -385,23 +366,6 @@ extern const char *host_detect_local_cpu (int argc, const char **argv);
       fprintf (FILE, "\tcall\t");					\
       targetm.asm_out.print_operand (FILE, XEXP (DECL_RTL (FN), 0), 0);	\
       fprintf (FILE, "\n\tnop\n");					\
-    }									\
-  while (0)
-
-/* Solaris as has a bug: a .common directive in .tbss or .tdata section
-   behaves as .tls_common rather than normal non-TLS .common.  */
-#undef  ASM_OUTPUT_ALIGNED_COMMON
-#define ASM_OUTPUT_ALIGNED_COMMON(FILE, NAME, SIZE, ALIGN)		\
-  do									\
-    {									\
-      if (TARGET_SUN_TLS						\
-	  && in_section							\
-	  && ((in_section->common.flags & SECTION_TLS) == SECTION_TLS))	\
-	switch_to_section (bss_section);				\
-      fprintf ((FILE), "%s", COMMON_ASM_OP);				\
-      assemble_name ((FILE), (NAME));					\
-      fprintf ((FILE), "," HOST_WIDE_INT_PRINT_UNSIGNED",%u\n",		\
-	       (SIZE), (ALIGN) / BITS_PER_UNIT);			\
     }									\
   while (0)
 

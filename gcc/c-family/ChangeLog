@@ -1,3 +1,30 @@
+2026-01-15  Jakub Jelinek  <jakub@redhat.com>
+
+	* c.opt.urls: Regenerate.
+
+2026-01-15  Marek Polacek  <polacek@redhat.com>
+	    Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/120775
+	PR c++/123081
+	PR c++/122634
+	* c-attribs.cc (attribute_takes_identifier_p): Return false for C++
+	annotations.  Handle "old parm name".
+	* c-cppbuiltin.cc (c_cpp_builtins): Define __cpp_impl_reflection.
+	* c.opt (freflection): New.
+
+2026-01-07  Tobias Burnus  <tburnus@baylibre.com>
+
+	* c-omp.cc (c_omp_directives): Uncomment 'groupprivate'.
+	* c-pragma.cc (omp_pragmas): Add PRAGMA_OMP_GROUPPRIVATE.
+	* c-pragma.h (enum pragma_kind): Likewise.
+
+2025-12-26  Egas Ribeiro  <egas.g.ribeiro@gmail.com>
+
+	PR c++/121864
+	* c-opts.cc (c_common_finish): Use out_fname as fallback when
+	fdeps_file is NULL in error message.
+
 2025-12-23  Yuao Ma  <c8ef@outlook.com>
 
 	* c-common.cc: Mention c_common_init_options.
@@ -16820,7 +16847,7 @@
 	* c-common.c: Include gt-c-family-c-common.h.
 	* c-pragma.c: Include gt-c-family-c-pragma.h.
 
-Copyright (C) 2010-2025 Free Software Foundation, Inc.
+Copyright (C) 2010-2026 Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

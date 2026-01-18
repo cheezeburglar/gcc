@@ -1,5 +1,5 @@
 /* Symbol table.
-   Copyright (C) 2012-2025 Free Software Foundation, Inc.
+   Copyright (C) 2012-2026 Free Software Foundation, Inc.
    Contributed by Jan Hubicka
 
 This file is part of GCC.
@@ -2452,7 +2452,7 @@ address_matters_1 (symtab_node *n, void *)
 
   if (!n->address_can_be_compared_p ())
     return false;
-  if (n->externally_visible || n->force_output)
+  if (n->externally_visible || n->force_output || n->ref_by_asm)
     return true;
 
   for (unsigned int i = 0; n->iterate_referring (i, ref); i++)

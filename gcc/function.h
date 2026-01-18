@@ -1,5 +1,5 @@
 /* Structure for saving state for a nested function.
-   Copyright (C) 1989-2025 Free Software Foundation, Inc.
+   Copyright (C) 1989-2026 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -273,6 +273,11 @@ struct GTY(()) function {
   /* Annotated gconds so that basic conditions in the same expression map to
      the same uid.  This is used for condition coverage.  */
   hash_map <gcond*, unsigned> *GTY((skip)) cond_uids;
+
+  /* Per-function copyid allocator for hierarchical discriminators.
+     Tracks the next available copyid for each location to ensure uniqueness
+     across code duplication passes (unrolling, vectorization, etc.).  */
+  struct copyid_allocator *GTY((skip)) copyid_alloc;
 
   /* For function.cc.  */
 

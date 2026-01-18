@@ -1,5 +1,5 @@
 /* Definition of RISC-V target for GNU compiler.
-   Copyright (C) 2016-2025 Free Software Foundation, Inc.
+   Copyright (C) 2016-2026 Free Software Foundation, Inc.
    Contributed by Andrew Waterman (andrew@sifive.com).
 
 This file is part of GCC.
@@ -86,7 +86,10 @@ enum rvv_max_lmul_enum {
   RVV_M4 = 4,
   RVV_M8 = 8,
   /* For dynamic LMUL, we compare COST start with LMUL8.  */
-  RVV_DYNAMIC = 9
+  RVV_DYNAMIC = 9,
+  /* For dynamic LMUL based on conversions, set LMUL based on
+     type size ratio.  */
+  RVV_CONV_DYNAMIC = 10
 };
 
 enum riscv_multilib_select_kind {
@@ -155,7 +158,8 @@ enum rvv_vector_bits_enum {
 
 /* The maximum LMUL according to user configuration.  */
 #define TARGET_MAX_LMUL                                                        \
-  (int) (rvv_max_lmul == RVV_DYNAMIC ? RVV_M8 : rvv_max_lmul)
+  (int) ((rvv_max_lmul == RVV_DYNAMIC || rvv_max_lmul == RVV_CONV_DYNAMIC) \
+	 ? RVV_M8 : rvv_max_lmul)
 
 /* TLS types.  */
 enum riscv_tls_type {

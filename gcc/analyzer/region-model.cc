@@ -1,5 +1,5 @@
 /* Classes for modeling the state of memory.
-   Copyright (C) 2019-2025 Free Software Foundation, Inc.
+   Copyright (C) 2019-2026 Free Software Foundation, Inc.
    Contributed by David Malcolm <dmalcolm@redhat.com>.
 
 This file is part of GCC.
@@ -44,6 +44,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-pretty-print.h"
 #include "fold-const.h"
 #include "selftest-tree.h"
+#include "context.h"
+#include "channels.h"
 
 #include "text-art/tree-widget.h"
 
@@ -69,8 +71,6 @@ along with GCC; see the file COPYING3.  If not see
 #if ENABLE_ANALYZER
 
 namespace ana {
-
-auto_vec<pop_frame_callback> region_model::pop_frame_callbacks;
 
 /* Dump T to PP in language-independent form, for debugging/logging/dumping
    purposes.  */
@@ -6501,7 +6501,13 @@ region_model::pop_frame (tree result_lvalue,
     }
 
   unbind_region_and_descendents (frame_reg,poison_kind::popped_stack);
-  notify_on_pop_frame (this, &pre_popped_model, retval, ctxt);
+
+  if (auto chan = g->get_channels ().analyzer_events_channel.get_if_active ())
+    {
+      gcc::topics::analyzer_events::on_frame_popped msg
+	{this, &pre_popped_model, retval, ctxt};
+      chan->publish (msg);
+    }
 }
 
 /* Get the number of frames in this region_model's stack.  */

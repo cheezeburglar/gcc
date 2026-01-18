@@ -1,5 +1,5 @@
 /* Part of CPP library.
-   Copyright (C) 1997-2025 Free Software Foundation, Inc.
+   Copyright (C) 1997-2026 Free Software Foundation, Inc.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -542,6 +542,14 @@ struct cpp_reader
   /* Descriptor for converting from the source character set to the
      wide execution character set.  */
   struct cset_converter wide_cset_desc;
+
+  /* Descriptor for converting from the execution character set to the
+     source character set.  */
+  struct cset_converter reverse_narrow_cset_desc;
+
+  /* Descriptor for converting from the UTF-8 execution character set to the
+     source character set.  */
+  struct cset_converter reverse_utf8_cset_desc;
 
   /* Date and time text.  Calculated together if either is requested.  */
   const unsigned char *date;

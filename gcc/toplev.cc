@@ -1,5 +1,5 @@
 /* Top level of GCC compilers (cc1, cc1plus, etc.)
-   Copyright (C) 1987-2025 Free Software Foundation, Inc.
+   Copyright (C) 1987-2026 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -1436,7 +1436,8 @@ process_options ()
 
   /* CTF is supported for only C at this time.  */
   if (!lang_GNU_C ()
-      && ctf_debug_info_level > CTFINFO_LEVEL_NONE)
+      && ctf_debug_info_level > CTFINFO_LEVEL_NONE
+      && warn_complain_wrong_lang)
     {
       /* Compiling with -flto results in frontend language of GNU GIMPLE.  It
 	 is not useful to warn in that case.  */

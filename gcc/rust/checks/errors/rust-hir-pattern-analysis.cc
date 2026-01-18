@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2024 Free Software Foundation, Inc.
+// Copyright (C) 2020-2026 Free Software Foundation, Inc.
 
 // This file is part of GCC.
 
@@ -1463,10 +1463,10 @@ static MatchArm
 lower_arm (Resolver::TypeCheckContext *ctx, HIR::MatchCase &arm,
 	   TyTy::BaseType *scrutinee_ty)
 {
-  rust_assert (arm.get_arm ().get_patterns ().size () > 0);
+  rust_assert (arm.get_arm ().get_pattern () != nullptr);
 
   DeconstructedPat pat
-    = lower_pattern (ctx, *arm.get_arm ().get_patterns ().at (0), scrutinee_ty);
+    = lower_pattern (ctx, *arm.get_arm ().get_pattern (), scrutinee_ty);
   return MatchArm (pat, arm.get_arm ().has_match_arm_guard ());
 }
 

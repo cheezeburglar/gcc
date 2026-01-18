@@ -1,3 +1,85 @@
+2026-01-16  Jakub Jelinek  <jakub@redhat.com>
+	    Peter Damianov  <peter0x44@disroot.org>
+
+	PR c/123437
+	* c-typeck.cc (build_binary_op): Don't use RDIV_EXPR
+	resultcode if both types are integral, _BitInt or
+	newly VECTOR_TYPE of ENUMERAL_TYPE.
+
+2026-01-14  Qing Zhao  <qing.zhao@oracle.com>
+
+	* c-decl.cc (grokfield): Call verify_counted_by_for_top_anonymous_type
+	for named field.
+	(verify_counted_by_attribute): Change the prototype to a recursive
+	routine.
+	(verify_counted_by_for_top_anonymous_type): New routine.
+	(finish_struct): Set C_TYPE_FIELDS_HAS_COUNTED_BY and call the routine
+	verify_counted_by_attribute only for named structure.
+	* c-parser.cc (c_parser_declaration_or_fndef): Call
+	verify_counted_by_for_top_anonymous_type for the decl.
+	(c_parser_parameter_declaration): Call
+	verify_counted_by_for_top_anonymous_type for the parameter.
+	(c_parser_type_name): Call verify_counted_by_for_top_anonymous_type
+	for the type.
+	* c-tree.h (C_TYPE_FIELDS_HAS_COUNTED_BY): New flag.
+	(verify_counted_by_for_top_anonymous_type): New routine.
+	* c-typeck.cc (build_counted_by_ref): Locate the root named structure,
+	build a chain of component_ref starting from the root structure.
+
+2026-01-13  Martin Uecker  <uecker@tugraz.at>
+
+	PR c/123309
+	* c-typeck.cc (transparent_union_replacement): New function.
+	(composite_type_internal): Rewrite logic.
+	(type_lists_compatible_p): Remove dead code for NULL arguments.
+
+2026-01-10  Martin Uecker  <uecker@tugraz.at>
+
+	PR c/123435
+	PR c/123463
+	* c-typeck.cc (comptypes_internal): Test for qualifiers first.
+
+2026-01-09  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/123475
+	* c-typeck.cc (c_find_var_r): New function.
+	(convert_lvalue_to_rvalue): If c_build_function_call_vec
+	folded __atomic_load (&expr, &tmp, SEQ_CST); into
+	(void) (tmp = __atomic_load_<N> (&expr, SEQ_CST)), drop
+	TREE_ADDRESSABLE flag from tmp and set TARGET_EXPR
+	initializer just to the rhs of the MODIFY_EXPR.
+
+2026-01-08  Qing Zhao  <qing.zhao@oracle.com>
+
+	* c-parser.cc (has_counted_by_object): Support pointers.
+	(get_counted_by_ref): Support pointers.
+	(c_parser_postfix_expression): Support pointers.
+
+2026-01-07  Tobias Burnus  <tburnus@baylibre.com>
+
+	* c-parser.cc (OMP_GROUPPRIVATE_CLAUSE_MASK,
+	c_parser_omp_groupprivate): New.
+	(c_parser_pragma): Call it.
+	(c_maybe_parse_omp_decl): Uncomment PRAGMA_OMP_GROUPPRIVATE
+	check.
+
+2026-01-03  Martin Uecker  <uecker@tugraz.at>
+
+	PR c/121507
+	* c-decl.cc (start_function): Adapt condition.
+
+2026-01-03  Martin Uecker  <uecker@tugraz.at>
+
+	PR c/121081
+	* c-typeck.cc (composite_type_internal): Properly copy
+	atomic qualifier.
+
+2026-01-03  Martin Uecker  <uecker@tugraz.at>
+
+	PR c/117687
+	* c-typeck.cc (parser_build_binary_op,build_conditional_expr,
+	convert_for_assignment): Adapt conditions.
+
 2025-12-23  Dhruv Chawla  <dhruvc@nvidia.com>
 
 	* Make-lang.in: Bump GCOV version to 3.
@@ -12298,7 +12380,7 @@
 	* c-decl.c: Likewise.  Include gt-c-c-decl.h, not gt-c-decl.h.
 	* c-parser.c: Likewise.  Include gt-c-c-parser.h, not gt-c-parser.h.
 
-Copyright (C) 2012-2025 Free Software Foundation, Inc.
+Copyright (C) 2012-2026 Free Software Foundation, Inc.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

@@ -1,5 +1,5 @@
 /* Command line option handling.  Interactions with diagnostics code.
-   Copyright (C) 2010-2025 Free Software Foundation, Inc.
+   Copyright (C) 2010-2026 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -19,6 +19,8 @@ along with GCC; see the file COPYING3.  If not see
 
 #ifndef GCC_OPTS_DIAGNOSTIC_H
 #define GCC_OPTS_DIAGNOSTIC_H
+
+#include "diagnostics/sink.h"
 
 /* Abstract subclass of diagnostics::option_id_manager for gcc options.  */
 
@@ -60,6 +62,18 @@ private:
   const diagnostics::context &m_context;
   void *m_opts;
 };
+
+class gcc_extension_factory
+{
+public:
+  virtual ~gcc_extension_factory () {}
+
+  virtual std::unique_ptr<diagnostics::sink::extension>
+  make_cfg_extension (diagnostics::sink &sink) const = 0;
+
+  static const gcc_extension_factory *singleton;
+};
+
 
 extern void
 handle_OPT_fdiagnostics_add_output_ (const gcc_options &opts,

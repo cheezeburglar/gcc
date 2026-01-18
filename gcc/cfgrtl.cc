@@ -1,5 +1,5 @@
 /* Control flow graph manipulation code for GNU compiler.
-   Copyright (C) 1987-2025 Free Software Foundation, Inc.
+   Copyright (C) 1987-2026 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -5393,6 +5393,7 @@ struct cfg_hooks rtl_cfg_hooks = {
   rtl_verify_flow_info,
   rtl_dump_bb,
   rtl_dump_bb_for_graph,
+  rtl_dump_bb_as_sarif_properties,
   rtl_create_basic_block,
   rtl_redirect_edge_and_branch,
   rtl_redirect_edge_and_branch_force,
@@ -5435,6 +5436,7 @@ struct cfg_hooks cfg_layout_rtl_cfg_hooks = {
   rtl_verify_flow_info_1,
   rtl_dump_bb,
   rtl_dump_bb_for_graph,
+  rtl_dump_bb_as_sarif_properties,
   cfg_layout_create_basic_block,
   cfg_layout_redirect_edge_and_branch,
   cfg_layout_redirect_edge_and_branch_force,

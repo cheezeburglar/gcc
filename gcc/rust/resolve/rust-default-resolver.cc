@@ -1,4 +1,4 @@
-// Copyright (C) 2020-2025 Free Software Foundation, Inc.
+// Copyright (C) 2020-2026 Free Software Foundation, Inc.
 
 // This file is part of GCC.
 
@@ -91,8 +91,7 @@ DefaultResolver::visit (AST::ForLoopExpr &expr)
 void
 DefaultResolver::visit_if_let_patterns (AST::IfLetExpr &expr)
 {
-  for (auto &pattern : expr.get_patterns ())
-    visit (pattern);
+  visit (expr.get_pattern ());
 }
 
 void

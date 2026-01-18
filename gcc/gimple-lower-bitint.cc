@@ -1,5 +1,5 @@
 /* Lower _BitInt(N) operations to scalar operations.
-   Copyright (C) 2023-2025 Free Software Foundation, Inc.
+   Copyright (C) 2023-2026 Free Software Foundation, Inc.
    Contributed by Jakub Jelinek <jakub@redhat.com>.
 
 This file is part of GCC.
@@ -6438,7 +6438,7 @@ bitint_dom_walker::before_dom_children (basic_block bb)
 	    vuse = vop;
 	  if (vuse != lvop
 	      && walk_non_aliased_vuses (&ref, vuse, false, vuse_eq,
-					 NULL, NULL, limit, lvop) == NULL)
+					 NULL, NULL, NULL, limit, lvop) == NULL)
 	    bitmap_clear_bit (m_loads, SSA_NAME_VERSION (s));
 	}
     }

@@ -1,5 +1,5 @@
 /* Subroutines used for code generation for RISC-V.
-   Copyright (C) 2011-2025 Free Software Foundation, Inc.
+   Copyright (C) 2011-2026 Free Software Foundation, Inc.
    Contributed by Andrew Waterman (andrew@sifive.com).
    Based on MIPS target for GNU compiler.
 
@@ -3440,8 +3440,11 @@ riscv_legitimize_const_move (machine_mode mode, rtx dest, rtx src)
   src = force_const_mem (mode, src);
 
   /* When using explicit relocs, constant pool references are sometimes
-     not legitimate addresses.  */
-  riscv_split_symbol (dest, XEXP (src, 0), mode, &XEXP (src, 0));
+     not legitimate addresses.   If DEST is not a suitable register (ie,
+     not a Pmode pseudo), then let RISCV_SPLIT_SYMBOL generate a fresh
+     temporary.  */
+  riscv_split_symbol (GET_MODE (dest) == Pmode ? dest : NULL_RTX,
+		      XEXP (src, 0), mode, &XEXP (src, 0));
   riscv_emit_move (dest, src);
 }
 
@@ -12579,9 +12582,7 @@ riscv_conditional_register_usage (void)
 	call_used_regs[regno] = 1;
     }
 
-  if (TARGET_VECTOR)
-    global_regs[VXRM_REGNUM] = 1;
-  else
+  if (!TARGET_VECTOR)
     {
       for (int regno = V_REG_FIRST; regno <= V_REG_LAST; regno++)
 	fixed_regs[regno] = call_used_regs[regno] = 1;
@@ -14785,6 +14786,37 @@ riscv_c_mode_for_floating_type (enum tree_index ti)
   return default_mode_for_floating_type (ti);
 }
 
+/* Implement TARGET_C_BITINT_TYPE_INFO.
+   Return true if _BitInt(N) is supported and fill its details into *INFO.  */
+bool
+riscv_bitint_type_info (int n, struct bitint_info *info)
+{
+  if (n <= 8)
+    info->limb_mode = QImode;
+  else if (n <= 16)
+    info->limb_mode = HImode;
+  else if (n <= 32)
+    info->limb_mode = SImode;
+  else if (n <= 64)
+    info->limb_mode = DImode;
+  else if (n <= 128 && TARGET_64BIT)
+    info->limb_mode = TImode;
+  else
+    info->limb_mode = TARGET_64BIT ? DImode : SImode;
+
+  info->abi_limb_mode = info->limb_mode;
+
+  if (n > 64 && TARGET_64BIT)
+    info->abi_limb_mode = TImode;
+
+  if (n > 32 && !TARGET_64BIT)
+    info->abi_limb_mode = DImode;
+
+  info->big_endian = TARGET_BIG_ENDIAN;
+  info->extended = true;
+  return true;
+}
+
 /* This parses the version string STR and modifies the feature mask and
    priority required to select those targets.
    If LOC is nonnull, report diagnostics against *LOC, otherwise
@@ -14868,7 +14900,8 @@ compare_fmv_features (const struct riscv_feature_bits &mask1,
    version.  */
 
 bool
-riscv_same_function_versions (string_slice v1, string_slice v2)
+riscv_same_function_versions (string_slice v1, const_tree, string_slice v2,
+			      const_tree)
 {
   struct riscv_feature_bits mask1, mask2;
   int prio1, prio2;
@@ -16770,6 +16803,9 @@ riscv_prefetch_offset_address_p (rtx x, machine_mode mode)
 
 #undef TARGET_C_MODE_FOR_FLOATING_TYPE
 #define TARGET_C_MODE_FOR_FLOATING_TYPE riscv_c_mode_for_floating_type
+
+#undef TARGET_C_BITINT_TYPE_INFO
+#define TARGET_C_BITINT_TYPE_INFO riscv_bitint_type_info
 
 #undef TARGET_USE_BY_PIECES_INFRASTRUCTURE_P
 #define TARGET_USE_BY_PIECES_INFRASTRUCTURE_P riscv_use_by_pieces_infrastructure_p

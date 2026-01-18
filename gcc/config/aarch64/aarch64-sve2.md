@@ -1,5 +1,5 @@
 ;; Machine description for AArch64 SVE2.
-;; Copyright (C) 2019-2025 Free Software Foundation, Inc.
+;; Copyright (C) 2019-2026 Free Software Foundation, Inc.
 ;; Contributed by ARM Ltd.
 ;;
 ;; This file is part of GCC.
@@ -17,6 +17,24 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GCC; see the file COPYING3.  If not see
 ;; <http://www.gnu.org/licenses/>.
+; 
+;; Code organisation:
+;
+;; The lines of is an instruction is aarch64, simd, sve, sve2, or sme are
+;; a little blurry.
+;;
+;; Therefore code is organised by the following rough principles:
+;;
+;; - aarch64.md: For shared parts of the architecture (such as defining
+;;     registers and constants) and for instructions that operate on non-SIMD
+;;     registers.
+;; - aarch64-simd.md: For instructions that operate on non-scaling SIMD
+;;     registers.
+;; - aarch64-sve.md for SVE instructions that are pre SVE2.
+;; - aarch64-sme.md for any scalable SIMD instruction that is incompatible with
+;;     non-streaming mode. This usually means it uses the ZA or ZT register.
+;; - aarch64-sve2.md for any scalable SIMD instruction that either is
+;;     streaming compatible, or theoretically could be later.
 
 ;; The file is organised into the following sections (search for the full
 ;; line):
@@ -135,6 +153,9 @@
 ;; ---- Optional AES extensions
 ;; ---- Optional SHA-3 extensions
 ;; ---- Optional SM4 extensions
+;;
+;; == FMMLA extensions
+;; ---- [FP] Matrix multiply-accumulate widening
 
 ;; =========================================================================
 ;; == Moves
@@ -4656,3 +4677,47 @@
   "sm4ekey\t%0.s, %1.s, %2.s"
   [(set_attr "type" "crypto_sm4")]
 )
+
+;; =========================================================================
+;; == FMMLA extensions
+;; =========================================================================
+
+;; -------------------------------------------------------------------------
+;; ---- [FP] Matrix multiply-accumulate widening
+;; -------------------------------------------------------------------------
+;; Includes:
+;; - FMMLA (F8F16MM,F8F32MM,SVE_F16F32MM)
+;; -------------------------------------------------------------------------
+
+
+(define_insn "@aarch64_sve2_<sve_fp_op><SVE_FULL_HSF_FMMLA:mode><VNx16QI_ONLY:mode>"
+  [(set (match_operand:SVE_FULL_HSF_FMMLA 0 "register_operand")
+	(unspec:SVE_FULL_HSF_FMMLA
+	  [(match_operand:VNx16QI_ONLY 2 "register_operand")
+	   (match_operand:VNx16QI_ONLY 3 "register_operand")
+	   (match_operand:SVE_FULL_HSF_FMMLA 1 "register_operand")
+	   (reg:DI FPM_REGNUM)]
+	  FMMLA))]
+  "TARGET_SVE2 && TARGET_NON_STREAMING"
+  {@ [ cons: =0 , 1 , 2 , 3 ; attrs: movprfx ]
+     [ w        , 0 , w , w ; *              ] fmmla\t%0.<SVE_FULL_HSF_FMMLA:Vetype>, %2.b, %3.b
+     [ ?&w      , w , w , w ; yes            ] movprfx\t%0, %1\;fmmla\t%0.<SVE_FULL_HSF_FMMLA:Vetype>, %2.b, %3.b
+  }
+  [(set_attr "sve_type" "sve_fp_mul")]
+)
+
+(define_insn "@aarch64_sve2_<sve_fp_op><VNx4SF_ONLY:mode><VNx8HF_ONLY:mode>"
+  [(set (match_operand:VNx4SF_ONLY 0 "register_operand")
+	(unspec:VNx4SF_ONLY
+	 [(match_operand:VNx8HF_ONLY 2 "register_operand")
+	  (match_operand:VNx8HF_ONLY 3 "register_operand")
+	  (match_operand:VNx4SF_ONLY 1 "register_operand")]
+	 FMMLA))]
+  "TARGET_SVE2 && TARGET_SVE_F16F32MM && TARGET_NON_STREAMING"
+  {@ [ cons: =0 , 1 , 2 , 3 ; attrs: movprfx ]
+     [ w        , 0 , w , w ; *              ] fmmla\t%0.s, %2.h, %3.h
+     [ ?&w      , w , w , w ; yes            ] movprfx\t%0, %1\;fmmla\t%0.s, %2.h, %3.h
+  }
+  [(set_attr "sve_type" "sve_fp_mul")]
+)
+
