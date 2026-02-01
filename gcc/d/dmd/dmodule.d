@@ -30,19 +30,18 @@ import dmd.dmacro;
 import dmd.doc;
 import dmd.dscope;
 import dmd.dsymbol;
-import dmd.dsymbolsem : dsymbolSemantic, importAll, load, include;
+import dmd.dsymbolsem : dsymbolSemantic;
 import dmd.errors;
 import dmd.errorsink;
 import dmd.expression;
-import dmd.expressionsem;
 import dmd.file_manager;
 import dmd.func;
 import dmd.globals;
-import dmd.gluelayer;
 import dmd.id;
 import dmd.identifier;
 import dmd.location;
 import dmd.parse;
+import dmd.root.aav;
 import dmd.root.array;
 import dmd.root.file;
 import dmd.root.filename;
@@ -411,6 +410,8 @@ extern (C++) final class Module : Package
     SearchOptFlags searchCacheFlags;       // cached flags
     bool insearch;
 
+    bool isExplicitlyOutOfBinary; // Is this module known to be out of binary, and must be DllImport'd?
+
     /**
      * A root module is one that will be compiled all the way to
      * object code.  This field holds the root module that caused
@@ -455,6 +456,7 @@ extern (C++) final class Module : Package
         else if (!FileName.equalsExt(srcfilename, mars_ext) &&
                  !FileName.equalsExt(srcfilename, hdr_ext) &&
                  !FileName.equalsExt(srcfilename, c_ext) &&
+                 !FileName.equalsExt(srcfilename, h_ext) &&
                  !FileName.equalsExt(srcfilename, i_ext) &&
                  !FileName.equalsExt(srcfilename, dd_ext))
         {
@@ -473,7 +475,7 @@ extern (C++) final class Module : Package
         if (doHdrGen)
             hdrfile = setOutfilename(global.params.dihdr.name, global.params.dihdr.dir, arg, hdr_ext);
 
-        this.edition = Edition.legacy;
+        this.edition = Edition.min;
     }
 
     extern (D) this(const(char)[] filename, Identifier ident, int doDocComment, int doHdrGen)
@@ -489,12 +491,6 @@ extern (C++) final class Module : Package
     extern (D) static Module create(const(char)[] filename, Identifier ident, int doDocComment, int doHdrGen)
     {
         return new Module(Loc.initial, filename, ident, doDocComment, doHdrGen);
-    }
-
-    static const(char)* find(const(char)* filename)
-    {
-        ImportPathInfo pathThatFoundThis; // is this needed? In fact is this function needed still???
-        return find(filename.toDString, pathThatFoundThis).ptr;
     }
 
     extern (D) static const(char)[] find(const(char)[] filename, out ImportPathInfo pathThatFoundThis)
@@ -531,6 +527,7 @@ extern (C++) final class Module : Package
         auto m = new Module(loc, filename, ident, 0, 0);
 
         // TODO: apply import path information (pathInfo) on to module
+        m.isExplicitlyOutOfBinary = importPathThatFindUs.isOutOfBinary;
 
         if (!m.read(loc))
             return null;
@@ -544,6 +541,8 @@ extern (C++) final class Module : Package
             }
             buf.printf("%s\t(%s)", ident.toChars(), m.srcfile.toChars());
             message("import    %s", buf.peekChars());
+            if (loc != Loc.initial)
+                message("(imported from %s)", loc.toChars());
         }
         if((m = m.parse()) is null) return null;
 
@@ -697,7 +696,8 @@ extern (C++) final class Module : Package
 
         const(ubyte)[] srctext;
         if (global.preprocess &&
-            FileName.equalsExt(srcfile.toString(), c_ext) &&
+            (FileName.equalsExt(srcfile.toString(), c_ext) ||
+             FileName.equalsExt(srcfile.toString(), h_ext)) &&
             FileName.exists(srcfile.toString()))
         {
             /* Apply C preprocessor to the .c file, returning the contents
@@ -780,10 +780,12 @@ extern (C++) final class Module : Package
         DsymbolTable dst;
         Package ppack = null;
 
-        /* If it has the extension ".c", it is a "C" file.
+        /* If it has the extension ".c" or ".h", it is a "C" file.
          * If it has the extension ".i", it is a preprocessed "C" file.
          */
-        if (FileName.equalsExt(arg, c_ext) || FileName.equalsExt(arg, i_ext))
+        if (FileName.equalsExt(arg, c_ext) ||
+            FileName.equalsExt(arg, h_ext) ||
+            FileName.equalsExt(arg, i_ext))
         {
             filetype = FileType.c;
 
@@ -950,32 +952,6 @@ extern (C++) final class Module : Package
         return needmoduleinfo || global.params.cov;
     }
 
-    /*******************************************
-     * Print deprecation warning if we're deprecated, when
-     * this module is imported from scope sc.
-     *
-     * Params:
-     *  sc = the scope into which we are imported
-     *  loc = the location of the import statement
-     */
-    void checkImportDeprecation(Loc loc, Scope* sc)
-    {
-        if (md && md.isdeprecated && !sc.isDeprecated)
-        {
-            Expression msg = md.msg;
-            if (StringExp se = msg ? msg.toStringExp() : null)
-            {
-                const slice = se.peekString();
-                if (slice.length)
-                {
-                    deprecation(loc, "%s `%s` is deprecated - %.*s", kind, toPrettyChars, cast(int)slice.length, slice.ptr);
-                    return;
-                }
-            }
-            deprecation(loc, "%s `%s` is deprecated", kind, toPrettyChars);
-        }
-    }
-
     override bool isPackageAccessible(Package p, Visibility visibility, SearchOptFlags flags = SearchOpt.all)
     {
         if (insearch) // don't follow import cycles
@@ -1008,22 +984,31 @@ extern (C++) final class Module : Package
     extern (D) static void addDeferredSemantic(Dsymbol s)
     {
         //printf("Module::addDeferredSemantic('%s')\n", s.toChars());
-        if (!deferred.contains(s))
+        if (!s.deferred)
+        {
+            s.deferred = true;
             deferred.push(s);
+        }
     }
 
     extern (D) static void addDeferredSemantic2(Dsymbol s)
     {
         //printf("Module::addDeferredSemantic2('%s')\n", s.toChars());
-        if (!deferred2.contains(s))
+        if (!s.deferred2)
+        {
+            s.deferred2 = true;
             deferred2.push(s);
+        }
     }
 
     extern (D) static void addDeferredSemantic3(Dsymbol s)
     {
         //printf("Module::addDeferredSemantic3('%s')\n", s.toChars());
-        if (!deferred.contains(s))
+        if (!s.deferred3)
+        {
+            s.deferred3 = true;
             deferred3.push(s);
+        }
     }
 
     /******************************************
@@ -1057,6 +1042,8 @@ extern (C++) final class Module : Package
                 todoalloc = todo;
             }
             memcpy(todo, deferred.tdata(), len * Dsymbol.sizeof);
+            foreach (Dsymbol s; Module.deferred[])
+                s.deferred = false;
             deferred.setDim(0);
 
             foreach (i; 0..len)
@@ -1082,6 +1069,7 @@ extern (C++) final class Module : Package
         for (size_t i = 0; i < a.length; i++)
         {
             Dsymbol s = (*a)[i];
+            s.deferred2 = false;
             //printf("[%d] %s semantic2a\n", i, s.toPrettyChars());
             s.semantic2(null);
 
@@ -1099,6 +1087,7 @@ extern (C++) final class Module : Package
         for (size_t i = 0; i < a.length; i++)
         {
             Dsymbol s = (*a)[i];
+            s.deferred3 = false;
             //printf("[%d] %s semantic3a\n", i, s.toPrettyChars());
             s.semantic3(null);
 
@@ -1154,16 +1143,10 @@ extern (C++) final class Module : Package
     }
 
     // Back end
-    int doppelganger; // sub-module
-    Symbol* cov; // private uint[] __coverage;
+    void* cov; // private uint[] __coverage;
     uint[] covb; // bit array of valid code line numbers
-    Symbol* sictor; // module order independent constructor
-    Symbol* sctor; // module constructor
-    Symbol* sdtor; // module destructor
-    Symbol* ssharedctor; // module shared constructor
-    Symbol* sshareddtor; // module shared destructor
-    Symbol* stest; // module unit test
-    Symbol* sfilename; // symbol for filename
+    void* sfilename; // symbol for filename
+    bool hasCDtor; // this module has a (shared) module constructor or destructor and we are codegenning it
 
     uint[uint] ctfe_cov; /// coverage information from ctfe execution_count[line]
 
@@ -1196,75 +1179,6 @@ extern (C++) final class Module : Package
         if (!_escapetable)
             _escapetable = new Escape();
         return _escapetable;
-    }
-
-    /****************************
-     * A Singleton that loads core.stdc.config
-     * Returns:
-     *  Module of core.stdc.config, null if couldn't find it
-     */
-    extern (D) static Module loadCoreStdcConfig()
-    {
-        __gshared Module core_stdc_config;
-        auto pkgids = new Identifier[2];
-        pkgids[0] = Id.core;
-        pkgids[1] = Id.stdc;
-        return loadModuleFromLibrary(core_stdc_config, pkgids, Id.config);
-    }
-
-    /****************************
-     * A Singleton that loads core.atomic
-     * Returns:
-     *  Module of core.atomic, null if couldn't find it
-     */
-    extern (D) static Module loadCoreAtomic()
-    {
-        __gshared Module core_atomic;
-        auto pkgids = new Identifier[1];
-        pkgids[0] = Id.core;
-        return loadModuleFromLibrary(core_atomic, pkgids, Id.atomic);
-    }
-
-    /****************************
-     * A Singleton that loads std.math
-     * Returns:
-     *  Module of std.math, null if couldn't find it
-     */
-    extern (D) static Module loadStdMath()
-    {
-        __gshared Module std_math;
-        auto pkgids = new Identifier[1];
-        pkgids[0] = Id.std;
-        return loadModuleFromLibrary(std_math, pkgids, Id.math);
-    }
-
-    /**********************************
-     * Load a Module from the library.
-     * Params:
-     *  mod = cached return value of this call
-     *  pkgids = package identifiers
-     *  modid = module id
-     * Returns:
-     *  Module loaded, null if cannot load it
-     */
-    extern (D) private static Module loadModuleFromLibrary(ref Module mod, Identifier[] pkgids, Identifier modid)
-    {
-        if (mod)
-            return mod;
-
-        auto imp = new Import(Loc.initial, pkgids[], modid, null, true);
-        // Module.load will call fatal() if there's no module available.
-        // Gag the error here, pushing the error handling to the caller.
-        const errors = global.startGagging();
-        imp.load(null);
-        if (imp.mod)
-        {
-            imp.mod.importAll(null);
-            imp.mod.dsymbolSemantic(null);
-        }
-        global.endGagging(errors);
-        mod = imp.mod;
-        return mod;
     }
 }
 
@@ -1306,82 +1220,7 @@ extern (C++) struct ModuleDeclaration
     }
 }
 
-/****************************************
- * Create array of the local classes in the Module, suitable
- * for inclusion in ModuleInfo
- * Params:
- *      mod = the Module
- *      aclasses = array to fill in
- * Returns: array of local classes
- */
-void getLocalClasses(Module mod, ref ClassDeclarations aclasses)
-{
-    //printf("members.length = %d\n", mod.members.length);
-    int pushAddClassDg(size_t n, Dsymbol sm)
-    {
-        if (!sm)
-            return 0;
-
-        if (auto cd = sm.isClassDeclaration())
-        {
-            // compatibility with previous algorithm
-            if (cd.parent && cd.parent.isTemplateMixin())
-                return 0;
-
-            if (cd.classKind != ClassKind.objc)
-                aclasses.push(cd);
-        }
-        return 0;
-    }
-
-    _foreach(null, mod.members, &pushAddClassDg);
-}
-
-
 alias ForeachDg = int delegate(size_t idx, Dsymbol s);
-
-/***************************************
- * Expands attribute declarations in members in depth first
- * order. Calls dg(size_t symidx, Dsymbol *sym) for each
- * member.
- * If dg returns !=0, stops and returns that value else returns 0.
- * Use this function to avoid the O(N + N^2/2) complexity of
- * calculating dim and calling N times getNth.
- * Returns:
- *  last value returned by dg()
- */
-int _foreach(Scope* sc, Dsymbols* members, scope ForeachDg dg, size_t* pn = null)
-{
-    assert(dg);
-    if (!members)
-        return 0;
-    size_t n = pn ? *pn : 0; // take over index
-    int result = 0;
-    foreach (size_t i; 0 .. members.length)
-    {
-        import dmd.attrib : AttribDeclaration;
-        import dmd.dtemplate : TemplateMixin;
-
-        Dsymbol s = (*members)[i];
-        if (AttribDeclaration a = s.isAttribDeclaration())
-            result = _foreach(sc, a.include(sc), dg, &n);
-        else if (TemplateMixin tm = s.isTemplateMixin())
-            result = _foreach(sc, tm.members, dg, &n);
-        else if (s.isTemplateInstance())
-        {
-        }
-        else if (s.isUnitTestDeclaration())
-        {
-        }
-        else
-            result = dg(n++, s);
-        if (result)
-            break;
-    }
-    if (pn)
-        *pn = n; // update index
-    return result;
-}
 
 /**
  * Process the content of a source file
@@ -1445,7 +1284,7 @@ private const(char)[] processSource (const(ubyte)[] src, Module mod)
                 dbuf.writeUTF8(u);
             }
             else
-                dbuf.writeByte(u);
+                dbuf.writeByte(cast(ubyte)u);
         }
         dbuf.writeByte(0); //add null terminator
         return dbuf.extractSlice();
@@ -1514,7 +1353,7 @@ private const(char)[] processSource (const(ubyte)[] src, Module mod)
                 dbuf.writeUTF8(u);
             }
             else
-                dbuf.writeByte(u);
+                dbuf.writeByte(cast(ubyte)u);
         }
         dbuf.writeByte(0); //add a terminating null byte
         return dbuf.extractSlice();
@@ -1592,9 +1431,8 @@ FuncDeclaration findGetMembers(ScopeDsymbol dsym)
         {
             Scope sc;
             sc.eSink = global.errorSink;
-            auto parameters = new Parameters();
             Parameters* p = new Parameter(STC.in_, Type.tchar.constOf().arrayOf(), null, null);
-            parameters.push(p);
+            auto parameters = new Parameters(p);
             Type tret = null;
             TypeFunction tf = new TypeFunction(parameters, tret, VarArg.none, LINK.d);
             tfgetmembers = tf.dsymbolSemantic(Loc.initial, &sc).isTypeFunction();

@@ -1,3 +1,125 @@
+2026-01-31  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* a68.h: Prototypes for a68_bits_test and a68_lower_test3.
+	* a68-low-bits.cc (a68_bits_test): New function.
+	* a68-low-prelude.cc (a68_lower_test3): Likewise.
+	* a68-parser-prelude.cc (gnu_prelude): Declare TEST operators and
+	their priority.
+	* ga68.texi (Extended bits operators): New section.
+
+2026-01-31  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* ga68.texi (POSIX files): Document SET and CLEAR operators.
+	* a68.h: Prototypes for a68_bits_set, a68_bits_clear,
+	a68_lower_set3 and a68_lower_clear3.
+	* a68-low-bits.cc (a68_bits_set): New function.
+	(a68_bits_clear): Likewise.
+	* a68-low-prelude.cc (a68_lower_set3): Likewise.
+	(a68_lower_clear3): Likewise.
+	* a68-parser-prelude.cc (gnu_prelude): Declare operators SET and
+	CLEAR and their priorities.
+
+2026-01-30  Marc Poulhiès  <dkm@kataplop.net>
+
+	* ga68-coding-guidelines.texi: Typo fix.
+
+2026-01-29  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* ga68.vw: Update formal grammar to express the GNU extension.
+	* a68-parser.cc (a68_dont_mark_here): Likewise.
+	* a68-parser-scanner.cc (SINGLE_QUOTE_CHAR): Define.
+	(get_next_token): Recognize ' as QUOTE_SYMBOL.
+	(tokenise_source): Acknowledge QUOTE_SYMBOL.
+	* a68-parser-keywords.cc (a68_set_up_tables): Likewise.
+	* a68-parser-bottom-up.cc (reduce_primary_parts): Adjust parser to
+	brief form of selection.
+	* a68-parser-attrs.def (QUOTE_SYMBOL): New attribute.
+	* ga68.texi (Brief selection): New section.
+
+2026-01-29  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* ga68.vw: Fix grammar for formal holes.
+	* ga68.texi (Particular programs): New section.
+	(Comments): Likewise.
+	* a68.h: Prototypes for a68_is_c_mode, a68_make_fomal_hole_decl,
+	a68_lower_formal_hole.
+	* a68-parser-attrs.def (FORMAL_HOLE): New attribute.
+	(LANGUAGE_INDICANT): Likewise.
+	* a68-parser-extract.cc (a68_elaborate_bold_tags): Elaborate
+	language indicants.
+	* a68-parser-moids-check.cc (mode_check_unit): Check mode in
+	formal holes.
+	* a68-low-units.cc (a68_lower_formal_hole): New function.
+	* a68-low.cc (a68_make_formal_hole_decl): Likewise.
+	* a68-moids-misc.cc (a68_is_c_mode): Likewise.
+	* a68-parser-bottom-up.cc (reduce_formal_holes): Likewise.
+
+2026-01-24  Jose E. Marchesi  <jemarch@gnu.org>
+
+	PR algol68/123733
+	* README: Mention minimum version of libgc.
+
+2026-01-24  Jose E. Marchesi  <jemarch@gnu.org>
+
+	Revert:
+	2026-01-17  Jose E. Marchesi  <jemarch@gnu.org>
+
+	* a68-parser-prelude.cc (stand_prelude): Remove definitions for ^
+	operator.
+	* ga68.texi (Real operators): Remove entries for ^.
+	(Integral operators): Likewise.
+
+2026-01-24  Jose E. Marchesi  <jemarch@gnu.org>
+
+	PR algol68/123785
+	* a68-lang.cc (a68_init): Call a68_build_a68_type_nodes abefore
+	targetm.init_builtins.
+
+2026-01-22  Mohammad-Reza Nabipoor  <mnabipoor@gnu.org>
+
+	PR algol68/123734
+	* ga68.texi: Fix code examples to make them compilable.
+	And s/consists on/consists of/g.
+
+2026-01-20  Jakub Jelinek  <jakub@redhat.com>
+
+	* lang.opt (std=algol68, std=gnu68): Add dot at the end of the
+	description.
+
+2026-01-20  Pietro Monteiro  <pietro@sociotechnical.xyz>
+
+	* a68-low-clauses.cc (a68_lower_collateral_clause): Update
+	call to a68_lower_alloca.
+	* a68-low-coercions.cc (a68_lower_widening): Likewise.
+	* a68-low-generator.cc (allocator_t): Adjust typedef.
+	(fill_in_buffer): Adjust call to allocator.
+	(gen_mode): Likewise.
+	* a68-low-multiples.cc (a68_row_malloc): Change type parameter to MOID_T
+	from tree. Adjust call to a68_lower_malloc.
+	* a68-low-posix.cc (a68_posix_fgets): Adjust call to a68_row_malloc.
+	(a68_posix_gets): Likewise.
+	* a68-low-runtime.def (MALLOC_LEAF): Add definition for
+	_libga68_malloc_leaf.
+	* a68-low-strings.cc (a68_string_concat): Adjust call to
+	a68_lower_malloc.
+	(a68_string_from_char): Likewise.
+	* a68-low-units.cc (a68_lower_slice): Likewise.
+	* a68-low.cc (a68_low_dup): Adjust calls to a68_lower_malloc
+	and a68_lower_alloca.
+	(a68_lower_alloca): Change type parameter to MOID_T from tree.
+	(a68_lower_malloc): Likewise. Use _libga68_malloc_leaf if the MOID_T
+	doesn't have refs, use _libga68_malloc otherwise.
+	* a68-parser-modes.cc (a68_create_mode): Set has_refs on the new mode.
+	(is_mode_has_refs): New function.
+	(compute_derived_modes): Set has_refs on the chain of modes.
+	* a68-parser.cc (a68_new_moid): Set has_refs to false by
+	default.
+	* a68-types.h (struct MOID_T): Add member `has_refs`.
+	(HAS_REFS): New macro.
+	* a68.h (a68_row_malloc): Update prototype.
+	(a68_lower_alloca): Likewise.
+	(a68_lower_malloc): Likewise.
+
 2026-01-17  Jose E. Marchesi  <jemarch@gnu.org>
 
 	* a68-parser-prelude.cc (stand_prelude): Remove definitions for ^

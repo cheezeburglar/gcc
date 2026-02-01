@@ -21,6 +21,7 @@ import dmd.aggregate;
 import dmd.arraytypes;
 import dmd.astenums;
 import dmd.ast_node;
+import dmd.ctfeexpr : isCtfeReferenceValid;
 import dmd.dcast : implicitConvTo;
 import dmd.dclass;
 import dmd.declaration;
@@ -31,6 +32,7 @@ import dmd.dsymbol;
 import dmd.dtemplate;
 import dmd.errors;
 import dmd.errorsink;
+import dmd.expressionsem : getDsymbol;
 import dmd.func;
 import dmd.globals;
 import dmd.hdrgen;
@@ -49,7 +51,7 @@ import dmd.root.string;
 import dmd.root.utf;
 import dmd.target;
 import dmd.tokens;
-import dmd.typesem;
+import dmd.typesem : toHeadMutable, size, mutableOf, unSharedOf;
 import dmd.visitor;
 
 enum LOGSEMANTIC = false;
@@ -86,7 +88,7 @@ inout(Expression) lastComma(inout Expression e)
  *     exps  = array of Expressions
  *     names = optional array of names corresponding to Expressions
  */
-void expandTuples(Expressions* exps, Identifiers* names = null)
+void expandTuples(Expressions* exps, ArgumentLabels* names = null)
 {
     //printf("expandTuples()\n");
     if (exps is null)
@@ -116,7 +118,7 @@ void expandTuples(Expressions* exps, Identifiers* names = null)
             }
             foreach (i; 1 .. length)
             {
-                names.insert(index + i, cast(Identifier) null);
+                names.insert(index + i, ArgumentLabel(cast(Identifier) null, Loc.init));
             }
         }
     }
@@ -306,6 +308,7 @@ extern (C++) abstract class Expression : ASTNode
     {
     bool parens;    // if this is a parenthesized expression
     bool rvalue;    // true if this is considered to be an rvalue, even if it is an lvalue
+    bool gcPassDone; // `checkGC` has been run on this expression
     }
     import dmd.common.bitfields;
     mixin(generateBitFields!(BitFields, ubyte));
@@ -524,20 +527,6 @@ extern (C++) abstract class Expression : ASTNode
     bool checkType()
     {
         return false;
-    }
-
-    /******************************
-     * Take address of expression.
-     */
-    final Expression addressOf()
-    {
-        //printf("Expression::addressOf()\n");
-        debug
-        {
-            assert(op == EXP.error || isLvalue());
-        }
-        Expression e = new AddrExp(loc, this, type.pointerTo());
-        return e;
     }
 
     /******************************
@@ -1405,6 +1394,8 @@ extern (C++) final class StringExp : Expression
 
     /// If the string is parsed from a hex string literal
     bool hexString = false;
+    /// If the string is from a collected C macro
+    bool cMacro = false;
 
     enum char NoPostfix = 0;
 
@@ -1416,13 +1407,14 @@ extern (C++) final class StringExp : Expression
         this.sz = 1;                    // work around LDC bug #1286
     }
 
-    extern (D) this(Loc loc, const(void)[] string, size_t len, ubyte sz, char postfix = NoPostfix) scope
+    extern (D) this(Loc loc, const(void)[] string, size_t len, ubyte sz, char postfix = NoPostfix, bool cMacro = false) scope
     {
         super(loc, EXP.string_);
         this.string = cast(char*)string.ptr; // note that this.string should be const
         this.len = len;
         this.sz = sz;
         this.postfix = postfix;
+        this.cMacro = cMacro;
     }
 
     static StringExp create(Loc loc, const(char)* s)
@@ -1902,6 +1894,12 @@ extern (C++) final class ArrayLiteralExp : Expression
 
     Expressions* elements;
 
+    Expression lowering;
+
+    // aaLiteral is set if this is an array of values of an AA literal
+    // only used during CTFE to show the original AA in error messages instead
+    AssocArrayLiteralExp aaLiteral;
+
     extern (D) this(Loc loc, Type type, Expressions* elements) @safe
     {
         super(loc, EXP.arrayLiteral);
@@ -1913,8 +1911,7 @@ extern (C++) final class ArrayLiteralExp : Expression
     {
         super(loc, EXP.arrayLiteral);
         this.type = type;
-        elements = new Expressions();
-        elements.push(e);
+        elements = new Expressions(e);
     }
 
     extern (D) this(Loc loc, Type type, Expression basis, Expressions* elements) @safe
@@ -2005,7 +2002,7 @@ extern (C++) final class ArrayLiteralExp : Expression
                     if (ch.op != EXP.int64)
                         return null;
                     if (sz == 1)
-                        buf.writeByte(cast(uint)ch.toInteger());
+                        buf.writeByte(cast(ubyte)ch.toInteger());
                     else if (sz == 2)
                         buf.writeword(cast(uint)ch.toInteger());
                     else
@@ -2055,8 +2052,9 @@ extern (C++) final class AssocArrayLiteralExp : Expression
 
     Expressions* keys;
     Expressions* values;
-    /// Lower to core.internal.newaa for static initializaton
-    Expression lowering;
+
+    Expression lowering;     // call to _d_assocarrayliteralTX()
+    Expression loweringCtfe; // result of interpreting lowering for static initializaton
 
     extern (D) this(Loc loc, Expressions* keys, Expressions* values) @safe
     {
@@ -2211,56 +2209,6 @@ extern (C++) final class StructLiteralExp : Expression
         auto exp = new StructLiteralExp(loc, sd, arraySyntaxCopy(elements), type ? type : stype);
         exp.origin = this;
         return exp;
-    }
-
-    /**************************************
-     * Gets expression at offset of type.
-     * Returns NULL if not found.
-     */
-    extern (D) Expression getField(Type type, uint offset)
-    {
-        //printf("StructLiteralExp::getField(this = %s, type = %s, offset = %u)\n",
-        //  /*toChars()*/"", type.toChars(), offset);
-        Expression e = null;
-        int i = getFieldIndex(type, offset);
-
-        if (i != -1)
-        {
-            //printf("\ti = %d\n", i);
-            if (i >= sd.nonHiddenFields())
-                return null;
-
-            assert(i < elements.length);
-            e = (*elements)[i];
-            if (e)
-            {
-                //printf("e = %s, e.type = %s\n", e.toChars(), e.type.toChars());
-
-                /* If type is a static array, and e is an initializer for that array,
-                 * then the field initializer should be an array literal of e.
-                 */
-                auto tsa = type.isTypeSArray();
-                if (tsa && e.type.castMod(0) != type.castMod(0))
-                {
-                    const length = cast(size_t)tsa.dim.toInteger();
-                    auto z = new Expressions(length);
-                    foreach (ref q; *z)
-                        q = e.copy();
-                    e = new ArrayLiteralExp(loc, type, z);
-                }
-                else
-                {
-                    e = e.copy();
-                    e.type = type;
-                }
-                if (useStaticInit && e.type.needsNested())
-                    if (auto se = e.isStructLiteralExp())
-                    {
-                        se.useStaticInit = true;
-                    }
-            }
-        }
-        return e;
     }
 
     /************************************
@@ -2445,7 +2393,7 @@ extern (C++) final class NewExp : Expression
     Expression thisexp;         // if !=null, 'this' for class being allocated
     Type newtype;
     Expressions* arguments;     // Array of Expression's
-    Identifiers* names;         // Array of names corresponding to expressions
+    ArgumentLabels* names;         // Array of names(name and location of name) corresponding to expressions
     Expression placement;       // if !=null, then PlacementExpression
 
     Expression argprefix;       // expression to be evaluated just before arguments[]
@@ -2457,9 +2405,10 @@ extern (C++) final class NewExp : Expression
 
     /// Puts the `arguments` and `names` into an `ArgumentList` for easily passing them around.
     /// The fields are still separate for backwards compatibility
+
     extern (D) ArgumentList argumentList() { return ArgumentList(arguments, names); }
 
-    extern (D) this(Loc loc, Expression placement, Expression thisexp, Type newtype, Expressions* arguments, Identifiers* names = null) @safe
+    extern (D) this(Loc loc, Expression placement, Expression thisexp, Type newtype, Expressions* arguments, ArgumentLabels* names = null) @safe
     {
         super(loc, EXP.new_);
         this.placement = placement;
@@ -3271,41 +3220,49 @@ extern (C++) final class DotTypeExp : UnaExp
 struct ArgumentList
 {
     Expressions* arguments; // function arguments
-    Identifiers* names;     // named argument identifiers
+    ArgumentLabels* names;  // named argument labels
 
     size_t length() const @nogc nothrow pure @safe { return arguments ? arguments.length : 0; }
 
     /// Returns: whether this argument list contains any named arguments
-    bool hasNames() const @nogc nothrow pure @safe
+    bool hasArgNames() const @nogc nothrow pure @safe
     {
         if (names is null)
             return false;
-        foreach (name; *names)
-            if (name !is null)
+        foreach (argLabel; *names)
+            if (argLabel.name !is null)
                 return true;
 
         return false;
     }
 }
 
+// Contains both `name` and `location of the name` for an expression.
+struct ArgumentLabel
+{
+    Identifier name;    // name of the argument
+    Loc loc;            // location of the name
+ }
+
 /***********************************************************
  */
 extern (C++) final class CallExp : UnaExp
 {
     Expressions* arguments; // function arguments
-    Identifiers* names;     // named argument identifiers
+    ArgumentLabels *names;  // named argument labels
     FuncDeclaration f;      // symbol to call
     bool directcall;        // true if a virtual call is devirtualized
     bool inDebugStatement;  /// true if this was in a debug statement
     bool ignoreAttributes;  /// don't enforce attributes (e.g. call @gc function in @nogc code)
     bool isUfcsRewrite;     /// the first argument was pushed in here by a UFCS rewrite
     VarDeclaration vthis2;  // container for multi-context
+    Expression loweredFrom; // set if this is the result of a lowering
 
     /// Puts the `arguments` and `names` into an `ArgumentList` for easily passing them around.
     /// The fields are still separate for backwards compatibility
     extern (D) ArgumentList argumentList() { return ArgumentList(arguments, names); }
 
-    extern (D) this(Loc loc, Expression e, Expressions* exps, Identifiers* names = null) @safe
+    extern (D) this(Loc loc, Expression e, Expressions* exps, ArgumentLabels *names = null) @safe
     {
         super(loc, EXP.call, e);
         this.arguments = exps;
@@ -3474,6 +3431,13 @@ extern (C++) final class AddrExp : UnaExp
         type = t;
     }
 
+    override Optional!bool toBool()
+    {
+        if (isCtfeReferenceValid(e1))
+            return typeof(return)(true);
+        return UnaExp.toBool();
+    }
+
     override void accept(Visitor v)
     {
         v.visit(this);
@@ -3562,6 +3526,8 @@ extern (C++) final class ComExp : UnaExp
  */
 extern (C++) final class NotExp : UnaExp
 {
+    Expression loweredFrom; // for lowering of `aa1 != aa2` to `!_d_aaEqual(aa1, aa2)`
+
     extern (D) this(Loc loc, Expression e) @safe
     {
         super(loc, EXP.not, e);
@@ -3606,6 +3572,7 @@ extern (C++) final class CastExp : UnaExp
     Type to;                    // type to cast to
     ubyte mod = cast(ubyte)~0;  // MODxxxxx
     bool trusted; // assume cast is safe
+    Expression lowering;
 
     extern (D) this(Loc loc, Expression e, Type t) @safe
     {
@@ -3785,6 +3752,7 @@ extern (C++) final class ArrayExp : UnaExp
 
     size_t currentDimension;    // for opDollar
     VarDeclaration lengthVar;
+    bool modifiable = false;    // is this expected to be an lvalue in an AssignExp? propagate to IndexExp
 
     extern (D) this(Loc loc, Expression e1, Expression index = null)
     {
@@ -3851,11 +3819,20 @@ extern (C++) final class CommaExp : BinExp
     /// false will be passed will be from the parser.
     bool allowCommaExp;
 
+    /// The original expression before any rewriting occurs.
+    /// This is used in error messages.
+    Expression originalExp;
 
     extern (D) this(Loc loc, Expression e1, Expression e2, bool generated = true) @safe
     {
         super(loc, EXP.comma, e1, e2);
         allowCommaExp = isGenerated = generated;
+    }
+
+    extern (D) this(Loc loc, Expression e1, Expression e2, Expression oe) @safe
+    {
+        this(loc, e1, e2);
+        originalExp = oe;
     }
 
     override bool isLvalue()
@@ -3973,6 +3950,7 @@ extern (C++) final class DelegateFuncptrExp : UnaExp
 extern (C++) final class IndexExp : BinExp
 {
     VarDeclaration lengthVar;
+    Expression loweredFrom;     // for associative array lowering to _d_aaGetY or _d_aaGetRvalueX
     bool modifiable = false;    // assume it is an rvalue
     bool indexIsInBounds;       // true if 0 <= e2 && e2 <= e1.length - 1
 
@@ -4007,29 +3985,6 @@ extern (C++) final class IndexExp : BinExp
             return e1.isLvalue();
         }
         return true;
-    }
-
-    extern (D) Expression markSettingAAElem()
-    {
-        if (e1.type.toBasetype().ty == Taarray)
-        {
-            Type t2b = e2.type.toBasetype();
-            if (t2b.ty == Tarray && t2b.nextOf().isMutable())
-            {
-                error(loc, "associative arrays can only be assigned values with immutable keys, not `%s`", e2.type.toChars());
-                return ErrorExp.get();
-            }
-            modifiable = true;
-
-            if (auto ie = e1.isIndexExp())
-            {
-                Expression ex = ie.markSettingAAElem();
-                if (ex.op == EXP.error)
-                    return ex;
-                assert(ex == e1);
-            }
-        }
-        return this;
     }
 
     override void accept(Visitor v)
@@ -4762,7 +4717,6 @@ extern (C++) final class RemoveExp : BinExp
     extern (D) this(Loc loc, Expression e1, Expression e2)
     {
         super(loc, EXP.remove, e1, e2);
-        type = Type.tbool;
     }
 
     override void accept(Visitor v)
@@ -4780,6 +4734,7 @@ extern (C++) final class RemoveExp : BinExp
  */
 extern (C++) final class EqualExp : BinExp
 {
+    Expression lowering;
     extern (D) this(EXP op, Loc loc, Expression e1, Expression e2) @safe
     {
         super(loc, op, e1, e2);

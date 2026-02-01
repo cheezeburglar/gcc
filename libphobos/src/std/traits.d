@@ -4728,10 +4728,7 @@ It will return `void` if a symbol without a template is given.
 alias TemplateOf(alias T : Base!Args, alias Base, Args...) = Base;
 
 /// ditto
-alias TemplateOf(T : Base!Args, alias Base, Args...) = Base;
-
-/// ditto
-alias TemplateOf(T) = void;
+alias TemplateOf(alias T) = void;
 
 ///
 @safe unittest
@@ -4768,6 +4765,10 @@ alias TemplateOf(T) = void;
 {
     static assert(is(TemplateOf!(int[]) == void));
     static assert(is(TemplateOf!bool == void));
+
+    // https://github.com/dlang/phobos/issues/10527
+    static void foo() {}
+    static assert(is(TemplateOf!foo == void));
 }
 
 /**
@@ -7610,6 +7611,8 @@ enum bool isSomeFunction(alias T) =
 /**
 Detect whether `T` is a callable object, which can be called with the
 function call operator `$(LPAREN)...$(RPAREN)`.
+
+$(NOTE Implicit Function Template Instantiation is *not* attempted - see below.)
  */
 template isCallable(alias callable)
 {
@@ -7633,7 +7636,7 @@ template isCallable(alias callable)
     }
 }
 
-/// Functions, lambdas, and aggregate types with (static) opCall.
+/// Functions, function pointers, delegates, lambdas.
 @safe unittest
 {
     void f() { }
@@ -7642,6 +7645,17 @@ template isCallable(alias callable)
     static assert( isCallable!f);
     static assert( isCallable!g);
 
+    auto fp = &f;
+    static assert( isCallable!fp);
+    static assert( isCallable!((int x) {}));
+
+    int x;
+    static assert(!isCallable!x);
+}
+
+/// Aggregate types with (static) opCall.
+@safe unittest
+{
     class C { int opCall(int) { return 0; } }
     auto c = new C;
     struct S { static int opCall(int) { return 0; } }
@@ -7656,7 +7670,7 @@ template isCallable(alias callable)
     static assert(!isCallable!I);
 }
 
-/// Templates
+/// Template functions are only detected if they are instantiable with `!()`.
 @safe unittest
 {
     void f()() { }
@@ -7668,9 +7682,11 @@ template isCallable(alias callable)
     static assert( isCallable!g);
     static assert( isCallable!S1);
     static assert( isCallable!S2);
+
+    static assert(!isCallable!((x) {}));
 }
 
-/// Overloaded functions and function templates.
+/// Overloaded functions and function templates instantiable with `!()`.
 @safe unittest
 {
     static struct Wrapper

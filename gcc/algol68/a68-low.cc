@@ -631,6 +631,35 @@ a68_make_variable_declaration_decl (NODE_T *identifier,
   return decl;
 }
 
+/* Make an extern declaration for a formal hole.  */
+
+tree
+a68_make_formal_hole_decl (NODE_T *p, const char *extern_symbol)
+{
+  /* The CTYPE of MODE is a pointer to a function.  We need the pointed
+     function type for the FUNCTION_DECL.  */
+  tree type = (IS (MOID (p), PROC_SYMBOL)
+	       ? TREE_TYPE (CTYPE (MOID (p)))
+	       : CTYPE (MOID (p)));
+
+  gcc_assert (strlen (extern_symbol) > 0);
+  const char *sym = (extern_symbol[0] == '&'
+		     ? extern_symbol + 1
+		     : extern_symbol);
+
+  tree decl = build_decl (a68_get_node_location (p),
+			  VAR_DECL,
+			  get_identifier (sym),
+			  type);
+  DECL_EXTERNAL (decl) = 1;
+  TREE_PUBLIC (decl) = 1;
+  DECL_INITIAL (decl) = a68_get_skip_tree (MOID (p));
+
+  if (extern_symbol[0] == '&')
+    decl = fold_build1 (ADDR_EXPR, type, decl);
+  return decl;
+}
+
 /* Do a checked indirection.
 
    P is a tree node used for its location information.
@@ -741,12 +770,14 @@ a68_low_dup (tree expr, bool use_heap)
       tree element_pointer_type = TREE_TYPE (elements);
       tree element_type = TREE_TYPE (element_pointer_type);
       tree new_elements_size = save_expr (a68_multiple_elements_size (expr));
+      tree new_elements_type = TREE_TYPE (TREE_TYPE (elements));
+      MOID_T *new_elements_moid = a68_type_moid (new_elements_type);
       tree new_elements = a68_lower_tmpvar ("new_elements%",
 					    TREE_TYPE (elements),
 					    (use_heap
-					     ? a68_lower_malloc (TREE_TYPE (TREE_TYPE (elements)),
+					     ? a68_lower_malloc (new_elements_moid,
 								 new_elements_size)
-					     : a68_lower_alloca (TREE_TYPE (TREE_TYPE (elements)),
+					     : a68_lower_alloca (new_elements_moid,
 								 new_elements_size)));
 
       /* Then copy the elements.
@@ -1110,8 +1141,9 @@ a68_lower_memcpy (tree dst, tree src, tree size)
    pointer to it.  */
 
 tree
-a68_lower_alloca (tree type, tree size)
+a68_lower_alloca (MOID_T *m, tree size)
 {
+  tree type = CTYPE (m);
   tree call = builtin_decl_explicit (BUILT_IN_ALLOCA_WITH_ALIGN);
   call = build_call_expr_loc (UNKNOWN_LOCATION, call, 2,
 			      size,
@@ -1121,14 +1153,17 @@ a68_lower_alloca (tree type, tree size)
 }
 
 
-/* Build a tree that allocates SIZE bytes on the heap and returns a *TYPE
-   pointer to it.  */
+/* Build a tree that allocates SIZE bytes on the heap and returns a pointer to
+   a tree with type equivalent to mode M.  */
 
 tree
-a68_lower_malloc (tree type, tree size)
+a68_lower_malloc (MOID_T *m, tree size)
 {
+  tree type = CTYPE (m);
+  a68_libcall_fn libcall
+    = (HAS_REFS (m) || HAS_ROWS (m)) ? A68_LIBCALL_MALLOC : A68_LIBCALL_MALLOC_LEAF;
   return fold_convert (build_pointer_type (type),
-		       a68_build_libcall (A68_LIBCALL_MALLOC, ptr_type_node,
+		       a68_build_libcall (libcall, ptr_type_node,
 					  1, size));
 }
 
@@ -1614,6 +1649,9 @@ a68_lower_tree (NODE_T *p, LOW_CTX_T ctx)
     case AND_FUNCTION:
     case OR_FUNCTION:
       res = a68_lower_logic_function (p, ctx);
+      break;
+    case FORMAL_HOLE:
+      res = a68_lower_formal_hole (p, ctx);
       break;
     case IDENTITY_RELATION:
       res = a68_lower_identity_relation (p, ctx);

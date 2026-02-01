@@ -72,7 +72,7 @@ Build basic block profile using auto profile.
 
 -param=auto-profile-reorder-only=
 Common Joined UInteger Var(param_auto_profile_reorder_only) Init(0) IntegerRange(0, 1) Param Optimization
-Eanble only function reordering with auto-profile.
+Enable only function reordering with auto-profile.
 
 -param=cycle-accurate-model=
 Common Joined UInteger Var(param_cycle_accurate_model) Init(1) IntegerRange(0, 1) Param Optimization
@@ -519,6 +519,16 @@ Size cut-off for callee including inlined calls to be cloned for a particular ca
 -param=lto-max-locality-partition=
 Common Joined UInteger Var(param_max_locality_partition_size) Init(1000000) Param
 Maximal size of a locality partition for LTO (in estimated instructions). Value of 0 results in default value being used.
+
+Enum
+Name(lto_locality_heuristics) Type(enum lto_locality_heuristics) UnknownError(unknown LTO locality partitioning heuristics %qs)
+
+EnumValue
+Enum(lto_locality_heuristics) String(cpp_template) Value(LTO_LOCALITY_CPP_TEMPLATE)
+
+-param=lto-partition-locality-heuristics=
+Common Joined RejectNegative Enum(lto_locality_heuristics) Var(flag_lto_locality_heuristics) Init(LTO_LOCALITY_DEFAULT_HEURISTIC) Optimization
+Choose static heuristics for locality layout. Option cpp_template groups by C++ template instantiation type.
 
 -param=max-average-unrolled-insns=
 Common Joined UInteger Var(param_max_average_unrolled_insns) Init(80) Param Optimization

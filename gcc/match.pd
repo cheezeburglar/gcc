@@ -214,7 +214,9 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 (simplify (abs (convert @0))
  (if (ANY_INTEGRAL_TYPE_P (TREE_TYPE (@0))
       && !TYPE_UNSIGNED (TREE_TYPE (@0))
-      && element_precision (type) > element_precision (TREE_TYPE (@0)))
+      && element_precision (type) > element_precision (TREE_TYPE (@0))
+      && (!VECTOR_TYPE_P (type)
+	  || target_supports_op_p (TREE_TYPE (@0), ABSU_EXPR, optab_vector)))
   (with { tree utype = unsigned_type_for (TREE_TYPE (@0)); }
    (convert (absu:utype @0)))))
 
@@ -5176,7 +5178,8 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
         (op:c @2 @1))
   (if (INTEGRAL_TYPE_P (type)
        && TYPE_PRECISION (type) > 1
-       && (INTEGRAL_TYPE_P (TREE_TYPE (@0))))
+       && INTEGRAL_TYPE_P (TREE_TYPE (@0))
+       && expr_no_side_effects_p (@2))
        (op (mult (convert:type @0) @2) @1))))
 
 /* (zero_one != 0) ? z <op> y : y -> ((typeof(y))zero_one * z) <op> y */
@@ -5188,7 +5191,8 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
         @1)
   (if (INTEGRAL_TYPE_P (type)
        && TYPE_PRECISION (type) > 1
-       && (INTEGRAL_TYPE_P (TREE_TYPE (@0))))
+       && INTEGRAL_TYPE_P (TREE_TYPE (@0))
+       && expr_no_side_effects_p (@2))
        (op (mult (convert:type @0) @2) @1))))
 
 /* ?: Value replacement. */
@@ -6242,14 +6246,16 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 (for op (negate bit_not abs absu)
  (simplify
   (op (vec_cond:s @0 @1 @2))
-  (vec_cond @0 (op! @1) (op! @2))))
+  (vec_cond @0 (op!:type @1) (op!:type @2))))
 
 /* Sink unary conversions to branches, but only if we do fold both
    and the target's truth type is the same as we already have.  */
 (simplify
  (convert (vec_cond:s @0 @1 @2))
  (if (VECTOR_TYPE_P (type)
-      && types_match (TREE_TYPE (@0), truth_type_for (type)))
+      && types_match (TREE_TYPE (@0), truth_type_for (type))
+      && (expand_vec_cond_expr_p (type, TREE_TYPE (@0))
+	  || !expand_vec_cond_expr_p (TREE_TYPE (@1), TREE_TYPE (@0))))
   (vec_cond @0 (convert! @1) (convert! @2))))
 
 /* Likewise for view_convert of nop_conversions. */
@@ -6258,7 +6264,9 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
  (if (VECTOR_TYPE_P (type) && VECTOR_TYPE_P (TREE_TYPE (@1))
       && known_eq (TYPE_VECTOR_SUBPARTS (type),
 		   TYPE_VECTOR_SUBPARTS (TREE_TYPE (@1)))
-      && tree_nop_conversion_p (TREE_TYPE (type), TREE_TYPE (TREE_TYPE (@1))))
+      && tree_nop_conversion_p (TREE_TYPE (type), TREE_TYPE (TREE_TYPE (@1)))
+      && (expand_vec_cond_expr_p (type, TREE_TYPE (@0))
+	  || !expand_vec_cond_expr_p (TREE_TYPE (@1), TREE_TYPE (@0))))
   (vec_cond @0 (view_convert! @1) (view_convert! @2))))
 
 /* Sink binary operation to branches, but only if we can fold it.  */
@@ -6277,7 +6285,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 		  missing the legacy vcond{,u,eq} cases.  Do this only when
 		  lowering will be able to fixup..  */
 	       && !expand_vec_cond_expr_p (TREE_TYPE (@1), TREE_TYPE (@0)))))
-   (vec_cond @0 (op! @1 @3) (op! @2 @4))))
+   (vec_cond @0 (op!:type @1 @3) (op!:type @2 @4))))
 
 /* (@0 ? @2 : @3) lop (@1 ? @2 : @3)  -->  (@0 lop @1) ? @2 : @3.  */
 (for lop (bit_and bit_ior bit_xor)
@@ -6297,7 +6305,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 	   || expand_vec_cond_expr_p (type, TREE_TYPE (@0))
 	   || (optimize_vectors_before_lowering_p ()
 	       && !expand_vec_cond_expr_p (TREE_TYPE (@1), TREE_TYPE (@0)))))
-   (vec_cond @0 (op! @1 @3) (op! @2 @3))))
+   (vec_cond @0 (op!:type @1 @3) (op!:type @2 @3))))
  (simplify
   (op @3 (vec_cond:s @0 @1 @2))
   (if (VECTOR_TYPE_P (type)
@@ -6306,7 +6314,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 	   || expand_vec_cond_expr_p (type, TREE_TYPE (@0))
 	   || (optimize_vectors_before_lowering_p ()
 	       && !expand_vec_cond_expr_p (TREE_TYPE (@1), TREE_TYPE (@0)))))
-   (vec_cond @0 (op! @3 @1) (op! @3 @2)))))
+   (vec_cond @0 (op!:type @3 @1) (op!:type @3 @2)))))
 
 #if GIMPLE
 (match (nop_atomic_bit_test_and_p @0 @1 @4)
@@ -6462,7 +6470,9 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
    (eqne (cnd @0 @1 @2) (cnd @3 @1 @2))
     (if (!HONOR_NANS (@1)
 	 && types_match (TREE_TYPE (@0), TREE_TYPE (@3))
-         && types_match (type, TREE_TYPE (@0)))
+         && types_match (type, TREE_TYPE (@0))
+	 && expr_no_side_effects_p (@1)
+	 && expr_no_side_effects_p (@2))
      (cnd (bit_and (bit_xor @0 @3) (ne:type @1 @2))
       { constant_boolean_node (eqne == NE_EXPR, type); }
       { constant_boolean_node (eqne != NE_EXPR, type); })))
@@ -6470,7 +6480,9 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
    (eqne (cnd @0 @1 @2) (cnd @3 @2 @1))
     (if (!HONOR_NANS (@1)
 	 && types_match (TREE_TYPE (@0), TREE_TYPE (@3))
-         && types_match (type, TREE_TYPE (@0)))
+         && types_match (type, TREE_TYPE (@0))
+	 && expr_no_side_effects_p (@1)
+	 && expr_no_side_effects_p (@2))
      (cnd (bit_ior (bit_xor @0 @3) (eq:type @1 @2))
       { constant_boolean_node (eqne != NE_EXPR, type); }
       { constant_boolean_node (eqne == NE_EXPR, type); })))))
@@ -8634,7 +8646,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
      pessimizes code and causes gimplification issues when applied late.  */
   (if (!FLOAT_TYPE_P (TREE_TYPE (@3))
        || !operation_could_trap_p (cmp, true, false, @3))
-   (cond @0 (cmp! @1 @3) (cmp! @2 @3)))))
+   (cond @0 (cmp!:type @1 @3) (cmp!:type @2 @3)))))
 
 /* Similar to above:
    (c ? a : b) op d  ->  c ? (a op d) : (b op d)
@@ -8645,13 +8657,13 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
 	 lrotate rrotate mult_highpart)
  (simplify
   (op (cond @0 @1 @2) @3)
-  (cond @0 (op! @1 @3) (op! @2 @3)))
+  (cond @0 (op!:type @1 @3) (op!:type @2 @3)))
 
  /* Support the variant
     d op (c ? a : b)  ->  c ? (d op a) : (d op b)  */
  (simplify
   (op @3 (cond @0 @1 @2))
-  (cond @0 (op! @3 @1) (op! @3 @2))))
+  (cond @0 (op!:type @3 @1) (op!:type @3 @2))))
 #endif
 
 /* Transform comparisons of the form (X & Y) CMP 0 to X CMP2 Z
@@ -8792,7 +8804,7 @@ DEFINE_INT_AND_FLOAT_ROUND_FN (RINT)
    (if (TYPE_UNSIGNED (TREE_TYPE (@0)))
     (convert (gt @0 (trunc_div! { TYPE_MAX_VALUE (TREE_TYPE (@0)); } @1)))
     (if (TYPE_MIN_VALUE (TREE_TYPE (@0)))
-     (if (integer_minus_onep (@1))
+     (if (!TYPE_UNSIGNED (TREE_TYPE (@1)) && integer_minus_onep (@1))
       (convert (eq @0 { TYPE_MIN_VALUE (TREE_TYPE (@0)); }))
       (with
        {
@@ -11411,10 +11423,11 @@ and,
 	    unsigned int elt_bits = tree_to_uhwi (TYPE_SIZE (elt_type));
 	    tree size = bitsize_int (elt_bits);
 	    tree pos = bitsize_int (elt_bits * i); }
-     (view_convert
-      (bit_and:elt_type
-       (BIT_FIELD_REF:elt_type @0 { size; } { pos; })
-       { elt; })))))))
+     (if (compare_tree_int (TYPE_SIZE (type), elt_bits) == 0)
+      (view_convert
+       (bit_and:elt_type
+        (BIT_FIELD_REF:elt_type @0 { size; } { pos; })
+        { elt; }))))))))
 
 /* Fold reduction of a single nonzero element constructor.  */
 (for reduc (IFN_REDUC_PLUS IFN_REDUC_IOR IFN_REDUC_XOR)
@@ -12226,3 +12239,13 @@ and,
         && TYPE_UNSIGNED (type)
         && @0 == @3)
     (bit_xor (rrotate @0 @4) @2)))
+
+/* Optimize extraction from a uniform vector to a representative element as
+   long as the requested element is within range.  */
+(simplify (IFN_VEC_EXTRACT (vec_duplicate @0) INTEGER_CST@1)
+ @0)
+
+/* Strip nop-conversions __builtin_constant_p arguments.  */
+(simplify
+ (BUILT_IN_CONSTANT_P (nop_convert@1 @0))
+ (BUILT_IN_CONSTANT_P @0))

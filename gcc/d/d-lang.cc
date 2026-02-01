@@ -304,6 +304,7 @@ d_init_options (unsigned int, cl_decoded_option *decoded_options)
   global.params.useDeprecated = DIAGNOSTICinform;
   global.params.useWarnings = DIAGNOSTICoff;
   global.params.v.errorLimit = flag_max_errors;
+  global.params.v.errorSupplementLimit = flag_max_errors;
   global.params.v.messageStyle = MessageStyle::gnu;
 
   /* Extra GDC-specific options.  */
@@ -1128,6 +1129,7 @@ d_parse_file (void)
 				      Identifier::idPool ("__stdin"),
 				      global.params.ddoc.doOutput,
 				      global.params.dihdr.doOutput);
+	  m->loc = Loc::singleFilename (in_fnames[i]);
 	  modules.push (m);
 
 	  /* Zero the padding past the end of the buffer so the D lexer has a
@@ -1148,6 +1150,7 @@ d_parse_file (void)
 	  Module *m = Module::create (in_fnames[i], Identifier::idPool (name),
 				      global.params.ddoc.doOutput,
 				      global.params.dihdr.doOutput);
+	  m->loc = Loc::singleFilename (in_fnames[i]);
 	  modules.push (m);
 	  FileName::free (name);
 	}

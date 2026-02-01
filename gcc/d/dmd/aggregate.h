@@ -120,7 +120,6 @@ public:
     Sizeok sizeok;              // set when structsize contains valid data
 
     virtual Scope *newScope(Scope *sc);
-    virtual void finalizeSize() = 0;
     uinteger_t size(Loc loc) override final;
     Type *getType() override final;
     bool isDeprecated() const override final; // is aggregate deprecated?
@@ -172,8 +171,6 @@ public:
     static StructDeclaration *create(Loc loc, Identifier *id, bool inObject);
     StructDeclaration *syntaxCopy(Dsymbol *s) override;
     const char *kind() const override;
-    void finalizeSize() override final;
-    bool isPOD();
     bool zeroInit() const;          // !=0 if initialize with 0 fill
     bool zeroInit(bool v);
     bool hasIdentityAssign() const; // true if has identity opAssign
@@ -196,7 +193,6 @@ public:
 
     unsigned numArgTypes() const;
     Type *argType(unsigned index);
-    bool hasRegularCtor(bool checkDisabled = false);
 };
 
 class UnionDeclaration final : public StructDeclaration
@@ -275,7 +271,6 @@ public:
     ThreeState isabstract;              // if abstract class
     Baseok baseok;                      // set the progress of base classes resolving
     ObjcClassDeclaration objc;          // Data for a class declaration that is needed for the Objective-C integration
-    Symbol *cpp_type_info_ptr_sym;      // cached instance of class Id.cpp_type_info_ptr
 
     static ClassDeclaration *create(Loc loc, Identifier *id, BaseClasses *baseclasses, Dsymbols *members, bool inObject);
     const char *toPrettyChars(bool QualifyTypes = false) override;
@@ -287,13 +282,11 @@ public:
     virtual bool isBaseOf(ClassDeclaration *cd, int *poffset);
 
     bool isBaseInfoComplete();
-    void finalizeSize() override;
     bool hasMonitor();
     bool isCOMclass() const;
     virtual bool isCOMinterface() const;
     bool isCPPclass() const;
     virtual bool isCPPinterface() const;
-    bool isAbstract();
     virtual int vtblOffset() const;
     const char *kind() const override;
 

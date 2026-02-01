@@ -78,6 +78,7 @@ d_decl_context (Dsymbol *dsym)
   Dsymbol *parent = dsym;
   Declaration *decl = dsym->isDeclaration ();
   AggregateDeclaration *ad = dsym->isAggregateDeclaration ();
+  FuncDeclaration *fd = dsym->isFuncDeclaration ();
 
   while ((parent = parent->toParent2 ()))
     {
@@ -98,18 +99,21 @@ d_decl_context (Dsymbol *dsym)
       if (decl != NULL && decl->isDataseg ())
 	continue;
 
+      /* Likewise generated functions are part of module context.  */
+      if (fd != NULL && fd->isGenerated ()
+	  && !(fd->isVirtual () && fd->vtblIndex != -1))
+	continue;
+
       /* Nested functions.  */
-      FuncDeclaration *fd = parent->isFuncDeclaration ();
-      if (fd != NULL)
-	return get_symbol_decl (fd);
+      if (FuncDeclaration *fdp = parent->isFuncDeclaration ())
+	return get_symbol_decl (fdp);
 
       /* Methods of classes or structs.  */
-      AggregateDeclaration *ad = parent->isAggregateDeclaration ();
-      if (ad != NULL)
+      if (AggregateDeclaration *adp = parent->isAggregateDeclaration ())
 	{
-	  tree context = build_ctype (ad->type);
+	  tree context = build_ctype (adp->type);
 	  /* Want the underlying RECORD_TYPE.  */
-	  if (ad->isClassDeclaration ())
+	  if (adp->isClassDeclaration ())
 	    context = TREE_TYPE (context);
 
 	  return context;
@@ -705,6 +709,11 @@ build_address (tree exp)
   if (TREE_CODE (exp) == CONST_DECL)
     exp = DECL_INITIAL (exp);
 
+  /* Type `noreturn' has no storage, return `null' for the expression.  */
+  if (DECL_P (exp) && TREE_CODE (exp) != FIELD_DECL
+      && TYPE_MAIN_VARIANT (TREE_TYPE (exp)) == noreturn_type_node)
+    return compound_expr (init, null_pointer_node);
+
   /* Some expression lowering may request an address of a compile-time constant,
      or other non-lvalue expression.  Make sure it is assigned to a location we
      can reference.  */
@@ -745,8 +754,12 @@ d_mark_addressable (tree exp, bool complain)
 {
   switch (TREE_CODE (exp))
     {
-    case ADDR_EXPR:
     case COMPONENT_REF:
+      if (complain && DECL_BIT_FIELD (TREE_OPERAND (exp, 1)))
+	error ("cannot take address of bit-field %qD", TREE_OPERAND (exp, 1));
+
+      /* Fall through.  */
+    case ADDR_EXPR:
     case ARRAY_REF:
     case REALPART_EXPR:
     case IMAGPART_EXPR:
@@ -2357,7 +2370,7 @@ d_build_call (TypeFunction *tf, tree callable, tree object,
 
 	  /* Type `noreturn` is a terminator, as no other arguments can possibly
 	     be evaluated after it.  */
-	  if (TREE_TYPE (targ) == noreturn_type_node)
+	  if (TYPE_MAIN_VARIANT (TREE_TYPE (targ)) == noreturn_type_node)
 	    noreturn_call = true;
 
 	  vec_safe_push (args, targ);
@@ -2377,7 +2390,12 @@ d_build_call (TypeFunction *tf, tree callable, tree object,
       unsigned int ix;
 
       FOR_EACH_VEC_SAFE_ELT (args, ix, arg)
-	saved_args = compound_expr (saved_args, arg);
+	{
+	  saved_args = compound_expr (saved_args, arg);
+
+	  if (TYPE_MAIN_VARIANT (TREE_TYPE (arg)) == noreturn_type_node)
+	    break;
+	}
 
       /* Add a stub result type for the expression.  */
       tree result = build_zero_cst (TREE_TYPE (ctype));

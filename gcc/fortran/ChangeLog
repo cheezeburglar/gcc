@@ -1,3 +1,64 @@
+2026-01-31  Paul Thomas  <pault@gcc.gnu.org>
+
+	* array.cc (resolve_array_list): Use macro IS_PDT.
+	* gfortran.h : Supply macros IS_PDT and IS_CLASS_PDT.
+	* match.cc (gfc_match_type_is): Use IS_PDT and IS_CLASS_PDT as
+	appropriate.
+	* resolve.cc (gfc_resolve_ref, build_init_assign,
+	resolve_component): Likewise.
+	* trans-array.cc (gfc_trans_array_constructor_value,
+	trans_array_constructor, structure_alloc_comps,
+	has_parameterized_comps): Likewise.
+	* trans-decl.cc (gfc_get_symbol_decl, gfc_init_default_dt,
+	gfc_trans_deferred_vars, gfc_generate_function_code): Likewise.
+	* trans-expr.cc (conv_dummy_value, gfc_conv_structure,
+	gfc_trans_assignment_1): Likewise.
+	* trans-stmt.cc (trans_associate_var, gfc_trans_allocate,
+	gfc_trans_deallocate): Likewise.
+
+2026-01-30  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/123868
+	* trans-array.cc (structure_alloc_comps): For COPY_ALLOC_COMP,
+	remove the add_when_allocated != NULL_TREE clause that PR121628
+	added.  This clause was redundant for scalars and caused double
+	allocation for arrays with nested allocatable components.
+
+2026-01-27  Tobias Burnus  <tburnus@baylibre.com>
+
+	* openmp.cc (resolve_omp_clauses): Reject groupprivate/device-local
+	variables in MAP clauses.
+
+2026-01-27  Wilco Dijkstra  <wilco.dijkstra@arm.com>
+
+	PR fortran/118955
+	* decl.cc (gfc_match_gcc_builtin): Add 'fastmath' option which
+	checks for fast-math before accepting a vector function.
+	* gfortran.texi (!GCC$ builtin): Update documentation.
+
+2026-01-25  Sandra Loosemore  <sloosemore@baylibre.com>
+
+	* lang.opt.urls: Regenerated.
+
+2026-01-24  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/123772
+	* trans.cc: Add global variable is_assign_call.
+	(gfc_finalize_tree_expr): Derived type function results
+	with components that have defined assignements are
+	handled in resolve.cc(generate_component_assignments), unless
+	the assignment was replaced by a subroutine call to the
+	subroutine associated with the assignment operator.
+	(trans_code): In the case of EXEC_ASSIGN_CALL, set the
+	is_asign_call before calling gfc_trans_call, then clear it
+	after.
+
+2026-01-19  Steven G. Kargl  <kargl@gcc.gnu.org>
+
+	PR fortran/123375
+	* decl.cc (gfc_match_import): Check that imported entity within
+	a interface is not from local scope.
+
 2026-01-17  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
 
 	PR fortran/122957

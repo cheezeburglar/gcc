@@ -3863,7 +3863,7 @@ AIX 7.1)}.
 @end itemize
 
 @item
-DOS---@uref{http://www.delorie.com/djgpp/,,DJGPP}.
+DOS---@uref{https://www.delorie.com/djgpp/,,DJGPP}.
 
 @item
 macOS:
@@ -4165,9 +4165,9 @@ specifying a @code{--with-multilib-list=} that only lists GFX9 or GFX10-3
 devices, while LLVM 15 is required for GFX 11 device and @code{gfx1036}.
 At least LLVM 16 is required for @code{gfx1150} and @code{gfx1151},
 LLVM 18 for @code{gfx942}, LLVM 19 for the generic @code{gfx9-generic},
-@code{gfx9-4-generic}, @code{gfx10-3-generic}, and @code{gfx11-generic}
-targets and for @code{gfx1152}, while LLVM 20 is required for
-@code{gfx950} and @code{gfx1153}.
+@code{gfx10-3-generic}, and @code{gfx11-generic} targets and for @code{gfx1152},
+while LLVM 20 is required for @code{gfx950}, @code{gfx1153}, and
+@code{gfx9-4-generic}.
 
 The supported ISA architectures are listed in the GCC manual. The generic
 ISA targets @code{gfx9-generic}, @code{gfx10-3-generic}, and
@@ -4176,10 +4176,7 @@ that @code{gfx9-generic} does not include @code{gfx908} or @code{gfx90a},
 that linking specific ISA code with generic code is currently not supported,
 and that only ROCm 6.4.0 or newer is able to execute generic code.
 
-Use Newlib (4.3.0 or newer; 4.4.0 contains some improvements and 4.5.0 fixes
-the device console output for GFX10 and GFX11 devices; post-4.5.0
-commits 2ef1a37e7 [Mar 25, 2025], f13e8e215 [Aug 8, 2025], and
-bd409f3c1 [Aug 27, 2025] fix SIMD math issues).
+Use Newlib (4.6.0 or newer).
 
 To run the binaries, install the HSA Runtime from the
 @uref{https://rocm.docs.amd.com/,,ROCm Platform}, and use

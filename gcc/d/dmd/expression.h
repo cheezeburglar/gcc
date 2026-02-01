@@ -51,14 +51,13 @@ namespace dmd
 {
     // in expressionsem.d
     Expression *expressionSemantic(Expression *e, Scope *sc);
-    void lowerNonArrayAggregate(StaticForeach *sfe, Scope *sc);
     // in typesem.d
     Expression *defaultInit(Type *mt, Loc loc, const bool isCfile = false);
 
     // Entry point for CTFE.
     // A compile-time result is required. Give an error if not possible
     Expression *ctfeInterpret(Expression *e);
-    void expandTuples(Expressions *exps, Identifiers *names = nullptr);
+    void expandTuples(Expressions *exps, ArgumentLabels *names = nullptr);
     Expression *optimize(Expression *exp, int result, bool keepLvalue = false);
 }
 
@@ -354,6 +353,7 @@ public:
     unsigned char sz;   // 1: char, 2: wchar, 4: dchar
     d_bool committed;   // if type is committed
     d_bool hexString;   // if string is parsed from a hex string literal
+    d_bool cMacro;      // If the string is from a collected C macro
 
     static StringExp *create(Loc loc, const char *s);
     static StringExp *create(Loc loc, const void *s, d_size_t len);
@@ -407,6 +407,8 @@ public:
     d_bool onstack;
     Expression *basis;
     Expressions *elements;
+    Expression *lowering;
+    AssocArrayLiteralExp* aaLiteral; // set if this is an array of keys/values of an AA literal
 
     static ArrayLiteralExp *create(Loc loc, Expressions *elements);
     ArrayLiteralExp *syntaxCopy() override;
@@ -425,6 +427,7 @@ public:
     Expressions *keys;
     Expressions *values;
     Expression* lowering;
+    Expression* loweringCtfe;
 
     bool equals(const RootObject * const o) const override;
     AssocArrayLiteralExp *syntaxCopy() override;
@@ -518,7 +521,7 @@ public:
     Expression *thisexp;        // if !NULL, 'this' for class being allocated
     Type *newtype;
     Expressions *arguments;     // Array of Expression's
-    Identifiers *names;         // Array of names corresponding to expressions
+    ArgumentLabels *names;      // Array of argument Labels (name and location of name) corresponding to expressions
     Expression *placement;      // if !NULL, placement expression
 
     Expression *argprefix;      // expression to be evaluated just before arguments[]
@@ -795,15 +798,30 @@ public:
 struct ArgumentList final
 {
     Expressions* arguments;
-    Identifiers* names;
+    ArgumentLabels* names;
     ArgumentList() :
         arguments(),
         names()
     {
     }
-    ArgumentList(Expressions* arguments, Identifiers* names = nullptr) :
+    ArgumentList(Expressions* arguments, ArgumentLabels* names = nullptr) :
         arguments(arguments),
         names(names)
+        {}
+};
+
+struct ArgumentLabel final
+{
+    Identifier* name;
+    Loc loc;
+    ArgumentLabel() :
+        name(),
+        loc()
+    {
+    }
+    ArgumentLabel(Identifier* name, Loc loc = Loc()) :
+        name(name),
+        loc(loc)
         {}
 };
 
@@ -811,13 +829,14 @@ class CallExp final : public UnaExp
 {
 public:
     Expressions *arguments;     // function arguments
-    Identifiers *names;
+    ArgumentLabels* names;      // function argument Labels (name + location of name)
     FuncDeclaration *f;         // symbol to call
     d_bool directcall;            // true if a virtual call is devirtualized
     d_bool inDebugStatement;      // true if this was in a debug statement
     d_bool ignoreAttributes;      // don't enforce attributes (e.g. call @gc function in @nogc code)
     d_bool isUfcsRewrite;       // the first argument was pushed in here by a UFCS rewrite
     VarDeclaration *vthis2;     // container for multi-context
+    Expression* loweredFrom;    // set if this is the result of a lowering
 
     static CallExp *create(Loc loc, Expression *e, Expressions *exps);
     static CallExp *create(Loc loc, Expression *e);
@@ -833,6 +852,7 @@ public:
 class AddrExp final : public UnaExp
 {
 public:
+    Optional<bool> toBool() override;
     void accept(Visitor *v) override { v->visit(this); }
 };
 
@@ -865,6 +885,7 @@ public:
 class NotExp final : public UnaExp
 {
 public:
+    Expression* loweredFrom;    // for lowering of `aa1 != aa2` to `!_d_aaEqual(aa1, aa2)`
     void accept(Visitor *v) override { v->visit(this); }
 };
 
@@ -882,6 +903,7 @@ public:
     Type *to;                   // type to cast to
     unsigned char mod;          // MODxxxxx
     d_bool trusted; // assume cast is safe
+    Expression* lowering;
 
     CastExp *syntaxCopy() override;
     bool isLvalue() override;
@@ -935,6 +957,7 @@ public:
 class ArrayLengthExp final : public UnaExp
 {
 public:
+    Expression lowering;
     void accept(Visitor *v) override { v->visit(this); }
 };
 
@@ -970,6 +993,7 @@ public:
     Expressions *arguments;             // Array of Expression's
     size_t currentDimension;            // for opDollar
     VarDeclaration *lengthVar;
+    d_bool modifiable;
 
     ArrayExp *syntaxCopy() override;
     bool isLvalue() override;
@@ -990,6 +1014,7 @@ class CommaExp final : public BinExp
 public:
     d_bool isGenerated;
     d_bool allowCommaExp;
+    Expression* originalExp;
     bool isLvalue() override;
     Optional<bool> toBool() override;
     void accept(Visitor *v) override { v->visit(this); }
@@ -999,6 +1024,7 @@ class IndexExp final : public BinExp
 {
 public:
     VarDeclaration *lengthVar;
+    Expression* loweredFrom;      // for associative array lowering to _d_aaGetY or _d_aaGetRvalueX
     d_bool modifiable;
     d_bool indexIsInBounds;       // true if 0 <= e2 && e2 <= e1.length - 1
 
@@ -1262,6 +1288,8 @@ public:
 class EqualExp final : public BinExp
 {
 public:
+    Expression* lowering;
+
     void accept(Visitor *v) override { v->visit(this); }
 };
 

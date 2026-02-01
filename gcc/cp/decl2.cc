@@ -52,9 +52,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "omp-general.h"
 #include "tree-inline.h"
 #include "escaped_string.h"
-#include "contracts.h"
 #include "gcc-rich-location.h"
 #include "tree-pretty-print-markup.h"
+#include "contracts.h"
 
 /* Id for dumping the raw trees.  */
 int raw_dump_id;
@@ -1958,9 +1958,6 @@ cp_check_const_attributes (tree attributes)
   tree attr;
   for (attr = attributes; attr; attr = TREE_CHAIN (attr))
     {
-      if (cxx_contract_attribute_p (attr))
-	continue;
-
       /* Annotation arguments are handled in handle_annotation_attribute.  */
       if (annotation_p (attr))
 	continue;
@@ -2599,17 +2596,7 @@ void
 comdat_linkage (tree decl)
 {
   if (flag_weak)
-    {
-      make_decl_one_only (decl, cxx_comdat_group (decl));
-      if (HAVE_COMDAT_GROUP && flag_contracts && DECL_CONTRACTS (decl))
-	{
-	  symtab_node *n = symtab_node::get (decl);
-	  if (tree pre = DECL_PRE_FN (decl))
-	    cgraph_node::get_create (pre)->add_to_same_comdat_group (n);
-	  if (tree post = DECL_POST_FN (decl))
-	    cgraph_node::get_create (post)->add_to_same_comdat_group (n);
-	}
-    }
+    make_decl_one_only (decl, cxx_comdat_group (decl));
   else if (TREE_CODE (decl) == FUNCTION_DECL
 	   || (VAR_P (decl) && DECL_ARTIFICIAL (decl)))
     /* We can just emit function and compiler-generated variables
@@ -3114,8 +3101,10 @@ min_vis_expr_r (tree *tp, int *walk_subtrees, void *data)
 	  break;
 	}
     addressable:
+      /* For _DECLs with no linkage refer to the linkage of the containing
+	 entity that does have a name with linkage.  */
       if (decl_linkage (t) == lk_none)
-	tpvis = type_visibility (TREE_TYPE (t));
+	tpvis = expr_visibility (DECL_CONTEXT (t));
       /* Decls that have had their visibility constrained will report
 	 as external linkage, but we still want to transitively constrain
 	 if we refer to them, so just check TREE_PUBLIC instead.  */
@@ -3140,7 +3129,7 @@ min_vis_expr_r (tree *tp, int *walk_subtrees, void *data)
 	  tpvis = type_visibility (BINFO_TYPE (r));
 	  if (tpvis > *vis_p)
 	    *vis_p = tpvis;
-	  tpvis = type_visibility (direct_base_parent (r));
+	  tpvis = type_visibility (direct_base_derived (r));
 	  *walk_subtrees = 0;
 	  break;
 	case REFLECT_DATA_MEMBER_SPEC:
@@ -3170,13 +3159,10 @@ min_vis_expr_r (tree *tp, int *walk_subtrees, void *data)
 	      *walk_subtrees = 0;
 	      break;
 	    }
-	  if ((VAR_P (r) && decl_function_context (r))
-	      || TREE_CODE (r) == PARM_DECL)
+	  if (VAR_P (r) || TREE_CODE (r) == PARM_DECL)
 	    {
-	      /* Block scope variables are local to the TU.  */
-	      tpvis = VISIBILITY_ANON;
-	      *walk_subtrees = 0;
-	      break;
+	      t = r;
+	      goto addressable;
 	    }
 	  break;
 	}
@@ -5907,6 +5893,12 @@ c_parse_final_cleanups (void)
 	   importer.  */
 	continue;
 
+      /* Emit wrappers where needed, and if that causes more to be added then
+	 make sure we account for possible additional instantiations.  */
+      if (flag_contracts)
+	if (emit_contract_wrapper_func (/*done*/false))
+	  reconsider = true;
+
       /* Write out virtual tables as required.  Writing out the
 	 virtual table for a template class may cause the
 	 instantiation of members of that class.  If we write out
@@ -6117,6 +6109,12 @@ c_parse_final_cleanups (void)
 	  && wrapup_global_declarations (pending_statics->address (),
 					 pending_statics->length ()))
 	reconsider = true;
+    }
+
+  if (flag_contracts)
+    {
+      emit_contract_wrapper_func (/*done*/true);
+      maybe_emit_violation_handler_wrappers ();
     }
 
   /* All templates have been instantiated.  */

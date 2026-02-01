@@ -1,3 +1,274 @@
+2026-01-31  Patrick Palka  <ppalka@redhat.com>
+
+	* include/bits/regex_executor.tcc (_ExecutorFrameBase): Add
+	#pragma GCC diagnostic to suppress -Wpedantic warning about
+	anonymous structs.
+
+2026-01-30  Patrick Palka  <ppalka@redhat.com>
+
+	* include/bits/regex_executor.tcc (__detail::_Executor::_M_node)
+	[__OPTIMIZE__]: Add [[gnu::always_inline]] attribute.  Declare
+	inline.
+
+2026-01-30  Patrick Palka  <ppalka@redhat.com>
+
+	PR libstdc++/86164
+	* include/bits/regex_executor.tcc (__detail::_ExecutorFrameOpcode):
+	Remove _S_fopcode_restore_current.
+	(__detail::_Executor::_M_handle_repeat): Pass _M_current when
+	pushing a fallback_next or fallback_rep_once_more frame.
+	(__detail::_Executor::_M_handle_match): Don't push a
+	restore_current frame.
+	(__detail::_Executor::_M_handle_backref): Likewise and simplify
+	accordingly.
+	(__detail::_Executor::_M_handle_alternative): Pass _M_current when
+	pushing a fallback_next or posix_alternative frame.
+	(__detail::_Executor::_M_dfs) <case _S_fopcode_fallback_next>:
+	Restore _M_current.
+	<case _S_fopcode_fallback_rep_once_more>: Likewise.
+	<case _S_fopcode_posix_alternative>: Likewise.
+	<case _S_fopcode_restore_current>: Remove.
+
+2026-01-30  Patrick Palka  <ppalka@redhat.com>
+
+	PR libstdc++/86164
+	* include/bits/regex.h (__detail::_Executor): Use inline
+	namespace _V2.
+	* include/bits/regex_executor.h (__detail::_ExecutorFrame):
+	Declare.
+	(__detail::_Executor): Use inline namespace _V2.
+	(__detail::_Executor::_M_node): Declare.
+	(__detail::_Executor::_M_frames): New data member.
+	* include/bits/regex_executor.tcc (__detail::_ExecutorFrameOpcode):
+	New.
+	(__detail::_ExecutorFrameBase): New.
+	(__detail::_ExecutorFrame): New.
+	(__detail::_Executor): Use inline namespace _V2.
+	(__detail::_Executor::_M_rep_once_more): Replace recursive
+	_M_dfs calls with an _S_opcode_next frame push, and any work
+	after such calls with an appropriate frame push.
+	(__detail::_M_handle_repeat): Likewise.
+	(__detail::_M_handle_subexpr_begin): Likewise.
+	(__detail::_M_handle_subexpr_end): Likewise.
+	(__detail::_M_handle_line_begin_assertion): Likewise.
+	(__detail::_M_handle_line_end_assertion): Likewise.
+	(__detail::_M_handle_word_boundary): Likewise.
+	(__detail::_M_handle_subexpr_lookahead): Likewise.
+	(__detail::_M_handle_match): Likewise.
+	(__detail::_M_handle_backref): Likewise.
+	(__detail::_M_handle_accept): Likewise.
+	(__detail::_M_handle_alternative): Likewise.
+	(__detail::_M_node): Factored out from _M_dfs.
+	(__detail::_M_dfs): Push an initial frame to _M_frames that
+	visits the starting node and pass this stack each subroutine.
+	Pop the latest _ExecutorFrame from _M_frames and handle
+	appropriately according to its _ExecutorFrameOpcode.  Loop until
+	_M_frames is empty.
+
+2026-01-29  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/std/expected (__expected::__trivially_replaceable)
+	(__expected::__usable_for_assign)
+	(__expected::__usable_for_trivial_assign)
+	(__expected::__can_reassign_type): New concepts.
+	(expected::operator=): Adjust constraints
+	on existing overloads and add defaulted overload.
+	(expected<cv void, E>::operator=): Likewise.
+	* testsuite/20_util/expected/requirements.cc: Check for trivial
+	and nothrow properties of assignments.
+
+2026-01-29  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/std/source_location: Check __glibcxx_contracts instead
+	of __cpp_lib_contracts.
+	* testsuite/18_support/contracts/includes.cc: New test.
+
+2026-01-29  vspefs  <vspefs@protonmail.com>
+
+	* src/c++23/std.cc.in (invoke_default_violation_handler): Change
+	to invoke_default_contract_violation_handler.
+
+2026-01-29  Jonathan Wakely  <jwakely@redhat.com>
+
+	* include/std/contracts: Replace non-ASCII characters.
+
+2026-01-28  Jonathan Wakely  <jwakely@redhat.com>
+
+	* src/experimental/Makefile.am: Change AM_CXXFLAGS to use C++20
+	by default.
+
+2026-01-28  Jonathan Wakely  <jwakely@redhat.com>
+
+	* src/experimental/contract26.cc: Use #error if built without
+	contracts support enabled.
+	* include/std/source_location: Remove stray whitespace.
+
+2026-01-28  Jonathan Wakely  <jwakely@redhat.com>
+
+	PR tree-optimization/122197
+	* include/bits/shared_ptr_base.h (~_Sp_counted_deleter): Use
+	diagnostic pragam to disable -Wfree-nonheap-object false
+	positive.
+	(~_Sp_counted_ptr_inplace): Likewise for -Warray-bounds false
+	positive.
+
+2026-01-28  Jonathan Wakely  <jwakely@redhat.com>
+
+	* config/locale/gnu/ctype_members.cc (use_table): New function.
+	(ctype<wchar_t>::do_narrow): Use use_table.
+
+2026-01-28  Soumya AR  <soumyaa@nvidia.com>
+
+	* include/bits/atomic_base.h:
+	Add fetch_min and fetch_max memberfunctions.
+	* include/bits/version.def:
+	Add __cpp_lib_atomic_min_max feature test macro.
+	* include/bits/version.h (defined): Regenerate.
+	* include/std/atomic: Extend for fetch_min/max non-member functions.
+	* src/c++23/std.cc.in: Export atomic_fetch_min, atomic_fetch_max,
+	atomic_fetch_min_explicit, atomic_fetch_max_explicit.
+	* testsuite/29_atomics/atomic_integral/nonmembers_fetch_minmax.cc:
+	New test.
+	* testsuite/29_atomics/atomic_ref/integral_fetch_minmax.cc: New test.
+
+2026-01-28  Nina Ranns  <dinka.ranns@gmail.com>
+	    Iain Sandoe  <iain@sandoe.co.uk>
+	    Ville Voutilainen  <ville.voutilainen@gmail.com>
+
+	* include/Makefile.am: Add contract include.
+	* include/Makefile.in: Regenerate.
+	* include/bits/version.def: Add ftm for contracts.
+	* include/bits/version.h: Regenerate.
+	* include/precompiled/stdc++.h: Add contracts header.
+	* include/std/source_location: Befriend the contract_violation
+	class so that we can initialise a source_location from an
+	existing __impl *.
+	* src/c++23/std.cc.in: Add contracts support.
+	* src/experimental/Makefile.am: Add new contract violation
+	implementation, remove the old one.
+	* src/experimental/Makefile.in: Regenerate.
+	* include/experimental/contract: Removed.
+	* src/experimental/contract.cc: Removed.
+	* include/std/contracts: New file.
+	* src/experimental/contract26.cc: New file.
+	* testsuite/18_support/contracts/invoke_default_cvh.cc: New test.
+	* testsuite/18_support/contracts/invoke_default_cvh2.cc: New test.
+
+2026-01-23  Tomasz Kamiński  <tkaminsk@redhat.com>
+
+	PR libstdc++/123758
+	* include/bits/funcwrap.h (_Cpy_base(_Cpy_base const&)):
+	Explicitly call _Mo_base() in initializer list.
+
+2026-01-22  Frank Scheiner  <frank.scheiner@web.de>
+
+	* config/abi/post/ia64-linux-gnu/baseline_symbols.txt:
+	Regenerate.
+
+2026-01-20  Jakub Jelinek  <jakub@redhat.com>
+
+	* include/bits/version.def (reflection): Add cxx11abi = yes;.
+	* include/bits/version.h: Regenerate.
+
+2026-01-19  Tomasz Kamiński  <tkaminsk@redhat.com>
+
+	PR libstdc++/114153
+	* include/bits/ranges_cmp.h (__detail::__less_builtin_ptr_cmp):
+	Add __not_overloaded_spaceship spaceship check.
+	* include/bits/stl_function.h (greater<void>::operator())
+	(less<void>::operator(), greater_equal<void>::operator())
+	(less_equal<void>::operator()): Implement using if constexpr.
+	(greater<void>::__S_cmp, less<void>::__S_cmp)
+	(greater_equal<void>::__ptr_comp, less_equal<void>::S_cmp):
+	Remove.
+	(greater<void>::__ptr_cmp, less<void>::__ptr_cmp)
+	(greater_equal<void>::__ptr_comp, less_equal<void>::ptr_cmp): Change
+	tostatic constexpr variable. Define in terms of requires expressions
+	and __not_overloaded_spaceship check.
+	* include/std/concepts: (__detail::__not_overloaded_spaceship):
+	Define.
+	* libsupc++/compare: (__detail::__3way_builtin_ptr_cmp): Use
+	__not_overloaded_spaceship concept.
+	* testsuite/20_util/function_objects/comparisons_pointer_spaceship.cc: New test.
+
+2026-01-19  Tomasz Kamiński  <tkaminsk@redhat.com>
+
+	* include/bits/erase_if.h (__detail::__erase_if): Pass mutable
+	iterators to __cont.erase.
+
+2026-01-19  François Dumont  <frs.dumont@gmail.com>
+
+	* include/bits/erase_if.h (__detail::__erase_if): New.
+	* include/debug/deque (std::erase_if<>(__debug::deque<>&, _Pred)): Use latter.
+	* include/debug/inplace_vector (std::erase_if<>(__debug::inplace_vector<>&, _Pred)):
+	Likewise.
+	* include/debug/vector (std::erase_if<>(__debug::vector<>&, _Pred)): Likewise.
+	* include/std/deque: Include erase_if.h.
+	(std::erase_if<>(std::vector<>&, _Pred)): Adapt to use __detail::__erase_if.
+	* include/std/inplace_vector (std::erase_if<>(std::inplace_vector<>&, _Pred)):
+	Likewise.
+	* include/std/string (std::erase_if<>(std::basic_string<>&, _Pred)): Likewise.
+	* include/std/vector (std::erase_if<>(std::vector<>&, _Pred)): Likewise.
+	* include/debug/forward_list
+	(std::erase_if<>(__debug::forward_list<>&, _Pred)): New.
+	(std::erase<>(__debug::forward_list<>&, const _Up&)): New.
+	* include/debug/list
+	(std::erase_if<>(__debug::list<>&, _Pred)): New.
+	(std::erase<>(__debug::list<>&, const _Up&)): New.
+	* include/debug/map (std::erase_if<>(__debug::map<>&, _Pred)): New.
+	(std::erase_if<>(__debug::multimap<>&, _Pred)): New.
+	* include/debug/set (std::erase_if<>(__debug::set<>&, _Pred)): New.
+	(std::erase_if<>(__debug::multiset<>&, _Pred)): New.
+	* include/debug/string
+	(std::erase_if<>(__gnu_debug::basic_string<>&, _Pred)): New.
+	(std::erase<>(__gnu_debug::basic_string<>&, const _Up&)): New.
+	* include/debug/unordered_map
+	(std::erase_if<>(__debug::unordered_map<>&, _Pred)): New.
+	(std::erase_if<>(__debug::unordered_multimap<>&, _Pred)): New.
+	* include/debug/unordered_set
+	(std::erase_if<>(__debug::unordered_set<>&, _Pred)): New.
+	(std::erase_if<>(__debug::unordered_multiset<>&, _Pred)): New.
+	* include/std/forward_list (std::erase_if<>(std::forward_list<>&, _Pred)):
+	Adapt to work exclusively for normal implementation.
+	(std::erase<>(std::forward_list<>&, const _Up&)): Likewise.
+	* include/std/list (std::erase_if<>(std::list<>&, _Pred)): Likewise.
+	(std::erase<>(std::list<>&, const _Up&)): Likewise.
+	* include/std/map (std::erase_if<>(std::map<>&, _Pred)): Likewise.
+	(std::erase_if<>(std::multimap<>&, _Pred)): Likewise.
+	Guard functions using __cpp_lib_erase_if.
+	* include/std/set (std::erase_if<>(std::set<>&, _Pred)): Likewise.
+	(std::erase_if<>(std::multiset<>&, _Pred)): Likewise.
+	Guard functions using __cpp_lib_erase_if.
+	* include/std/unordered_map
+	(std::erase_if<>(std::unordered_map<>&, _Pred)): Likewise.
+	(std::erase_if<>(std::unordered_multimap<>&, _Pred)): Likewise.
+	Guard functions using __cpp_lib_erase_if.
+	* include/std/unordered_set
+	(std::erase_if<>(std::unordered_set<>&, _Pred)): Likewise.
+	(std::erase_if<>(std::unordered_multiset<>&, _Pred)): Likewise.
+	Guard functions using __cpp_lib_erase_if.
+	* testsuite/21_strings/basic_string/debug/erase.cc: New test case.
+	* testsuite/23_containers/forward_list/debug/erase.cc: New test case.
+	* testsuite/23_containers/forward_list/debug/invalidation/erase.cc: New test case.
+	* testsuite/23_containers/list/debug/erase.cc: New test case.
+	* testsuite/23_containers/list/debug/invalidation/erase.cc: New test case.
+	* testsuite/23_containers/map/debug/erase_if.cc: New test case.
+	* testsuite/23_containers/map/debug/invalidation/erase_if.cc: New test case.
+	* testsuite/23_containers/multimap/debug/erase_if.cc: New test case.
+	* testsuite/23_containers/multimap/debug/invalidation/erase_if.cc: New test case.
+	* testsuite/23_containers/multiset/debug/erase_if.cc: New test case.
+	* testsuite/23_containers/multiset/debug/invalidation/erase_if.cc: New test case.
+	* testsuite/23_containers/set/debug/erase_if.cc: New test case.
+	* testsuite/23_containers/set/debug/invalidation/erase_if.cc: New test case.
+	* testsuite/23_containers/unordered_map/debug/erase_if.cc: New test case.
+	* testsuite/23_containers/unordered_map/debug/invalidation/erase_if.cc: New test case.
+	* testsuite/23_containers/unordered_multimap/debug/erase_if.cc: New test case.
+	* testsuite/23_containers/unordered_multimap/debug/invalidation/erase_if.cc: New test case.
+	* testsuite/23_containers/unordered_multiset/debug/erase_if.cc: New test case.
+	* testsuite/23_containers/unordered_multiset/debug/invalidation/erase_if.cc: New test case.
+	* testsuite/23_containers/unordered_set/debug/erase_if.cc: New test case.
+	* testsuite/23_containers/unordered_set/debug/invalidation/erase_if.cc: New test case.
+
 2026-01-15  Jakub Jelinek  <jakub@redhat.com>
 
 	* include/std/type_traits (std::is_reflection, std::is_fundamental,

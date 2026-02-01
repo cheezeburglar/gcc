@@ -11145,19 +11145,12 @@ aarch64_cannot_force_const_mem (machine_mode mode ATTRIBUTE_UNUSED, rtx x)
 	|| aarch64_sme_vq_unspec_p (x, &factor))
       return true;
 
+  /* Only allow symbols in literal pools with the large model (non-PIC).  */
   poly_int64 offset;
   rtx base = strip_offset_and_salt (x, &offset);
-  if (SYMBOL_REF_P (base) || LABEL_REF_P (base))
-    {
-      /* We checked for POLY_INT_CST offsets above.  */
-      if (aarch64_classify_symbol (base, offset.to_constant ())
-	  != SYMBOL_FORCE_TO_MEM)
-	return true;
-      else
-	/* Avoid generating a 64-bit relocation in ILP32; leave
-	   to aarch64_expand_mov_immediate to handle it properly.  */
-	return mode != ptr_mode;
-    }
+  if ((SYMBOL_REF_P (base) || LABEL_REF_P (base))
+      && aarch64_cmodel != AARCH64_CMODEL_LARGE)
+    return true;
 
   return aarch64_tls_referenced_p (x);
 }
@@ -14312,11 +14305,14 @@ aarch64_select_rtx_section (machine_mode mode,
 			    rtx x,
 			    unsigned HOST_WIDE_INT align)
 {
+  /* Forcing special symbols into the .text section is not correct (PR123791).
+     This is only an issue with the large code model.  */
   if (aarch64_can_use_per_function_literal_pools_p ())
     return function_section (current_function_decl);
 
   /* When using anchors for constants use the readonly section.  */
-  if (known_le (GET_MODE_SIZE (mode), 8))
+  if ((CONST_INT_P (x) || CONST_DOUBLE_P (x))
+      && known_le (GET_MODE_SIZE (mode), 8))
     return readonly_data_section;
 
   return default_elf_select_rtx_section (mode, x, align);
@@ -18536,6 +18532,8 @@ aarch64_possible_by_lane_insn_p (vec_info *m_vinfo, gimple *stmt)
   FOR_EACH_IMM_USE_FAST (use_p, iter, var)
     {
       gimple *new_stmt = USE_STMT (use_p);
+      if (is_gimple_debug (new_stmt))
+	continue;
       auto stmt_info = vect_stmt_to_vectorize (m_vinfo->lookup_stmt (new_stmt));
       auto rep_stmt = STMT_VINFO_STMT (stmt_info);
       /* Re-association is a problem here, since lane instructions are only

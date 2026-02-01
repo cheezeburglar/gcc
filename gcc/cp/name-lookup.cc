@@ -862,6 +862,14 @@ name_lookup::search_namespace_only (tree scope)
 	     the import bitmap.  Hence iterate over the former
 	     checking for bits set in the bitmap.  */
 	  bitmap imports = get_import_bitmap ();
+	  /* FIXME: For instantiations, we also want to include any
+	     declarations visible at the point it was defined, even
+	     if not visible from the current TU; we approximate
+	     this here, but a proper solution would involve caching
+	     phase 1 lookup results (PR c++/122609).  */
+	  unsigned orig_mod = 0;
+	  bitmap orig_imp = visible_from_instantiation_origination (&orig_mod);
+
 	  binding_cluster *cluster = BINDING_VECTOR_CLUSTER_BASE (val);
 	  int marker = 0;
 	  int dup_detect = 0;
@@ -922,18 +930,19 @@ name_lookup::search_namespace_only (tree scope)
 		  if (unsigned span = cluster->indices[jx].span)
 		    do
 		      if (bool (want & LOOK_want::ANY_REACHABLE)
-			  || bitmap_bit_p (imports, base))
+			  || bitmap_bit_p (imports, base)
+			  || (orig_imp && bitmap_bit_p (orig_imp, base)))
 			goto found;
 		    while (++base, --span);
 		continue;
 
 	      found:;
 		/* Is it loaded?  */
+		unsigned mod = cluster->indices[jx].base;
 		if (cluster->slots[jx].is_lazy ())
 		  {
 		    gcc_assert (cluster->indices[jx].span == 1);
-		    lazy_load_binding (cluster->indices[jx].base,
-				       scope, name, &cluster->slots[jx]);
+		    lazy_load_binding (mod, scope, name, &cluster->slots[jx]);
 		  }
 		tree bind = cluster->slots[jx];
 		if (!bind)
@@ -966,7 +975,8 @@ name_lookup::search_namespace_only (tree scope)
 			dup_detect |= dup;
 		      }
 
-		    if (bool (want & LOOK_want::ANY_REACHABLE))
+		    if (bool (want & LOOK_want::ANY_REACHABLE)
+			|| mod == orig_mod)
 		      {
 			type = STAT_TYPE (bind);
 			bind = STAT_DECL (bind);
@@ -3726,6 +3736,8 @@ push_local_extern_decl_alias (tree decl)
 	      alias = *iter;
 	      if (!validate_constexpr_redeclaration (alias, decl))
 		return;
+	      if (TREE_CODE (decl) == FUNCTION_DECL)
+		merge_decl_arguments (decl, alias, false, true, true);
 	      break;
 	    }
 
@@ -3739,7 +3751,9 @@ push_local_extern_decl_alias (tree decl)
 	      for (tree *chain = &DECL_ARGUMENTS (alias);
 		   *chain; chain = &DECL_CHAIN (*chain))
 		{
+		  tree next = DECL_CHAIN (*chain);
 		  *chain = copy_decl (*chain);
+		  DECL_CHAIN (*chain) = next;
 		  DECL_CONTEXT (*chain) = alias;
 		}
 
@@ -4737,7 +4751,8 @@ cp_binding_level_descriptor (cp_binding_level *scope)
     "template-explicit-spec-scope",
     "transaction-scope",
     "openmp-scope",
-    "lambda-scope"
+    "lambda-scope",
+    "contract-check-scope"
   };
   static_assert (ARRAY_SIZE (scope_kind_names) == sk_count,
 		 "must keep names aligned with scope_kind enum");
@@ -4828,6 +4843,7 @@ begin_scope (scope_kind kind, tree entity)
     case sk_scoped_enum:
     case sk_transaction:
     case sk_omp:
+    case sk_contract:
     case sk_stmt_expr:
     case sk_lambda:
       scope->keep = keep_next_level_flag;
@@ -6626,7 +6642,8 @@ handle_namespace_attrs (tree ns, tree attributes)
       tree name = get_attribute_name (d);
       tree args = TREE_VALUE (d);
 
-      if (is_attribute_p ("visibility", name))
+      if (is_attribute_p ("visibility", name)
+	  && is_attribute_namespace_p ("gnu", d))
 	{
 	  /* attribute visibility is a property of the syntactic block
 	     rather than the namespace as a whole, so we don't touch the
@@ -6648,7 +6665,8 @@ handle_namespace_attrs (tree ns, tree attributes)
 	  push_visibility (TREE_STRING_POINTER (x), 1);
 	  saw_vis = true;
 	}
-      else if (is_attribute_p ("abi_tag", name))
+      else if (is_attribute_p ("abi_tag", name)
+	       && is_attribute_namespace_p ("gnu", d))
 	{
 	  if (!DECL_NAME (ns))
 	    {
@@ -6675,7 +6693,8 @@ handle_namespace_attrs (tree ns, tree attributes)
 	    DECL_ATTRIBUTES (ns) = tree_cons (name, args,
 					      DECL_ATTRIBUTES (ns));
 	}
-      else if (is_attribute_p ("deprecated", name))
+      else if (is_attribute_p ("deprecated", name)
+	       && is_attribute_namespace_p ("", d))
 	{
 	  if (!DECL_NAME (ns))
 	    {
@@ -7916,7 +7935,17 @@ lookup_name_fuzzy (tree name, enum lookup_name_fuzzy_kind kind, location_t loc)
 {
   gcc_assert (TREE_CODE (name) == IDENTIFIER_NODE);
 
-  /* First, try some well-known names in the C++ standard library, in case
+  /* Look up function-like macros first; maybe misusing them. */
+  auto cpp_node = cpp_lookup (parse_in,
+			      (const unsigned char*)IDENTIFIER_POINTER (name),
+			      IDENTIFIER_LENGTH (name));
+  if (cpp_node && cpp_fun_like_macro_p (cpp_node))
+    return name_hint
+      (nullptr,
+       std::make_unique<macro_like_function_used> (loc,
+						   IDENTIFIER_POINTER (name)));
+
+  /* Then, try some well-known names in the C++ standard library, in case
      the user forgot a #include.  */
   const char *header_hint
     = get_cp_stdlib_header_for_name (IDENTIFIER_POINTER (name));
@@ -8957,6 +8986,7 @@ struct local_state_t
   int cp_unevaluated_operand;
   int c_inhibit_evaluation_warnings;
   int cp_noexcept_operand_;
+  bool has_cfun;
 
   static local_state_t
   save_and_clear ()
@@ -8968,6 +8998,9 @@ struct local_state_t
     ::c_inhibit_evaluation_warnings = 0;
     s.cp_noexcept_operand_ = ::cp_noexcept_operand;
     ::cp_noexcept_operand = 0;
+    s.has_cfun = !!cfun;
+    if (s.has_cfun)
+      push_function_context ();
     return s;
   }
 
@@ -8977,6 +9010,8 @@ struct local_state_t
     ::cp_unevaluated_operand = this->cp_unevaluated_operand;
     ::c_inhibit_evaluation_warnings = this->c_inhibit_evaluation_warnings;
     ::cp_noexcept_operand = this->cp_noexcept_operand_;
+    if (this->has_cfun)
+      pop_function_context ();
   }
 };
 
@@ -9005,7 +9040,6 @@ maybe_push_to_top_level (tree d)
   else
     {
       gcc_assert (!processing_template_decl);
-      push_function_context ();
       local_state_stack.safe_push (local_state_t::save_and_clear ());
     }
 
@@ -9020,10 +9054,7 @@ maybe_pop_from_top_level (bool push_to_top)
   if (push_to_top)
     pop_from_top_level ();
   else
-    {
-      local_state_stack.pop ().restore ();
-      pop_function_context ();
-    }
+    local_state_stack.pop ().restore ();
 }
 
 /* Push into the scope of the namespace NS, even if it is deeply

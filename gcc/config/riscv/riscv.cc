@@ -3607,7 +3607,7 @@ riscv_expand_mult_with_const_int (machine_mode mode, rtx dest, rtx multiplicand,
   return false;
 }
 
-/* Analyze src and emit const_poly_int mov sequence. 
+/* Analyze src and emit const_poly_int mov sequence.
 
    Essentially we want to generate (set (dest) (src)), where SRC is
    a poly_int.  We may need TMP as a scratch register.  We assume TMP
@@ -3691,7 +3691,7 @@ riscv_legitimize_poly_move (machine_mode mode, rtx dest, rtx tmp, rtx src)
       gcc_assert (set);
       gcc_assert (SET_SRC (set) == tmp);
       gcc_assert (SET_DEST (set) == dest);
- 
+
       /* Now back up one real insn and see if it sets TMP, if so adjust
 	 it so that it sets DEST.  */
       rtx_insn *insn2 = prev_nonnote_nondebug_insn (insn);
@@ -3702,7 +3702,7 @@ riscv_legitimize_poly_move (machine_mode mode, rtx dest, rtx tmp, rtx src)
 	  /* Turn the prior insn into a NOP.  But don't delete.  */
 	  SET_SRC (set) = SET_DEST (set);
 	}
- 
+
     }
 
   HOST_WIDE_INT constant = offset - factor;
@@ -6448,6 +6448,17 @@ riscv_pass_fpr_pair (machine_mode mode, unsigned regno1,
 				   GEN_INT (offset2))));
 }
 
+/* Return true if VLS mode MODE fits in general purpose registers per the
+   psABI.  The psABI allows aggregates up to 2 * XLEN bits to be passed in
+   GPRs.  */
+
+static bool
+riscv_vls_mode_fits_in_gprs_p (machine_mode mode)
+{
+  return riscv_vls_mode_p (mode)
+	 && known_le (GET_MODE_SIZE (mode), 2 * UNITS_PER_WORD);
+}
+
 static rtx
 riscv_pass_vls_aggregate_in_gpr (struct riscv_arg_info *info, machine_mode mode,
 				 unsigned gpr_base)
@@ -6460,15 +6471,28 @@ riscv_pass_vls_aggregate_in_gpr (struct riscv_arg_info *info, machine_mode mode,
   unsigned vls_size = GET_MODE_SIZE (mode).to_constant ();
   unsigned gpr_size =  GET_MODE_SIZE (Xmode);
 
-  if (IN_RANGE (vls_size, 0, gpr_size * 2))
+  if (riscv_vls_mode_fits_in_gprs_p (mode))
     {
       count = riscv_v_vls_mode_aggregate_gpr_count (vls_size, gpr_size);
+      unsigned gprs_left = MAX_ARGS_IN_REGISTERS - info->gpr_offset;
 
-      if (count + info->gpr_offset <= MAX_ARGS_IN_REGISTERS)
+      if (count <= gprs_left)
 	{
+	  /* Entire VLS fits in remaining GPRs.  */
 	  regnum = gpr_base + info->gpr_offset;
 	  info->num_gprs = count;
 	  gpr_mode = riscv_v_vls_to_gpr_mode (vls_size);
+	}
+      else if (gprs_left > 0)
+	{
+	  /* Per the psABI, split between GPRs and stack:
+	     "if only one register is available, the first XLEN bits are
+	     passed in a register and the remaining bits are passed on
+	     the stack."  */
+	  regnum = gpr_base + info->gpr_offset;
+	  info->num_gprs = gprs_left;
+	  info->stack_p = true;
+	  gpr_mode = Xmode;
 	}
     }
 
@@ -6816,11 +6840,12 @@ riscv_pass_aggregate_in_vr (struct riscv_arg_info *info,
 
 /* Fill INFO with information about a single argument, and return an RTL
    pattern to pass or return the argument. Return NULL_RTX if argument cannot
-   pass or return in registers, then the argument may be passed by reference or
-   through the stack or  .  CUM is the cumulative state for earlier arguments.
-   MODE is the mode of this argument and TYPE is its type (if known). NAMED is
-   true if this is a named (fixed) argument rather than a variable one. RETURN_P
-   is true if returning the argument, or false if passing the argument.  */
+   pass or return in registers, then the argument may be passed by reference
+   or through the stack.  CUM is the cumulative state for earlier arguments.
+   MODE is the mode of this argument and TYPE is its type (if known).
+   NAMED is true if this is a named (fixed) argument rather than a variable
+   one.  RETURN_P is true if returning the argument, or false if passing
+   the argument.  */
 
 static rtx
 riscv_get_arg_info (struct riscv_arg_info *info, const CUMULATIVE_ARGS *cum,
@@ -6836,8 +6861,10 @@ riscv_get_arg_info (struct riscv_arg_info *info, const CUMULATIVE_ARGS *cum,
   info->gpr_offset = cum->num_gprs;
   info->fpr_offset = cum->num_fprs;
 
-  /* Passed by reference when the scalable vector argument is anonymous.  */
-  if (riscv_vector_mode_p (mode) && !named)
+  /* Passed by reference when the scalable vector argument is anonymous.
+     VLS modes <= 2*XLEN follow regular aggregate rules per the psABI.  */
+  if (riscv_vector_mode_p (mode) && !named
+      && !riscv_vls_mode_fits_in_gprs_p (mode))
     return NULL_RTX;
 
   if (named)
@@ -6929,13 +6956,19 @@ riscv_get_arg_info (struct riscv_arg_info *info, const CUMULATIVE_ARGS *cum,
   if (!named && num_bytes != 0 && alignment > BITS_PER_WORD)
     info->gpr_offset += info->gpr_offset & 1;
 
-  /* Partition the argument between registers and stack.  */
-  info->num_fprs = 0;
-  info->num_gprs = MIN (num_words, MAX_ARGS_IN_REGISTERS - info->gpr_offset);
-  info->stack_p = (num_words - info->num_gprs) != 0;
+  if (riscv_vls_mode_p (mode))
+    return riscv_pass_vls_aggregate_in_gpr (info, mode, gpr_base);
+  else
+    {
+      /* Partition the argument between registers and stack.  */
+      info->num_fprs = 0;
+      info->num_gprs
+	= MIN (num_words, MAX_ARGS_IN_REGISTERS - info->gpr_offset);
+      info->stack_p = (num_words - info->num_gprs) != 0;
 
-  if (info->num_gprs || return_p)
-    return gen_rtx_REG (mode, gpr_base + info->gpr_offset);
+      if (info->num_gprs || return_p)
+	return gen_rtx_REG (mode, gpr_base + info->gpr_offset);
+    }
 
   return NULL_RTX;
 }
@@ -7065,19 +7098,17 @@ riscv_pass_by_reference (cumulative_args_t cum_v, const function_arg_info &arg)
       if (info.num_fprs)
 	return false;
 
-      /* Don't pass by reference if we can use general register(s) for vls.  */
-      if (info.num_gprs && riscv_vls_mode_p (arg.mode))
-	return false;
-
       /* Don't pass by reference if we can use vector register groups.  */
       if (info.num_vrs > 0 || info.num_mrs > 0)
 	return false;
     }
 
   /* Passed by reference when:
-     1. The scalable vector argument is anonymous.
-     2. Args cannot be passed through vector registers.  */
-  if (riscv_vector_mode_p (arg.mode))
+      (1) The scalable vector argument is anonymous.
+      (2) Args cannot be passed through vector registers.
+     VLS modes <= 2*XLEN follow regular aggregate rules per the psABI.  */
+  if (riscv_vector_mode_p (arg.mode)
+      && !riscv_vls_mode_fits_in_gprs_p (arg.mode))
     return true;
 
   /* Pass by reference if the data do not fit in two integer registers.  */
@@ -7246,6 +7277,20 @@ riscv_vector_required_min_vlen (const_tree type)
   return element_bitsize;
 }
 
+static bool
+riscv_vector_fractional_lmul_p (const_tree type)
+{
+  machine_mode mode = TYPE_MODE (type);
+  if (VECTOR_MODE_P (mode))
+    {
+      enum vlmul_type vlmul = get_vlmul (mode);
+      if (vlmul == LMUL_F2 || vlmul == LMUL_F4 || vlmul == LMUL_F8)
+       return true;
+    }
+
+  return false;
+}
+
 static void
 riscv_validate_vector_type (const_tree type, const char *hint)
 {
@@ -7309,6 +7354,14 @@ riscv_validate_vector_type (const_tree type, const char *hint)
 	input_location,
 	"%s %qT requires the minimal vector length %qd but %qd is given",
 	hint, type, required_min_vlen, TARGET_MIN_VLEN);
+      return;
+    }
+
+  if (riscv_vector_fractional_lmul_p (type)
+      && TARGET_XTHEADVECTOR)
+    {
+      error_at (input_location, "%s %qT requires the V ISA extension",
+		hint, type);
       return;
     }
 }
@@ -13793,7 +13846,9 @@ riscv_emit_mode_set (int entity, int mode, int prev_mode,
   switch (entity)
     {
     case RISCV_VXRM:
-      if (mode != VXRM_MODE_NONE && mode != prev_mode)
+      if (mode != VXRM_MODE_NONE
+	  && mode != VXRM_MODE_CLOBBER
+	  && mode != prev_mode)
 	emit_insn (gen_vxrmsi (gen_int_mode (mode, SImode)));
       break;
     case RISCV_FRM:

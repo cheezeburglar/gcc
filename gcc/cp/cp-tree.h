@@ -236,9 +236,8 @@ enum cp_tree_index
     CPTI_THREAD_ATEXIT,
     CPTI_DSO_HANDLE,
     CPTI_DCAST,
-
-    CPTI_PSEUDO_CONTRACT_VIOLATION,
     CPTI_META_INFO_TYPE,
+    CPTI_CONTRACT_VIOLATION_TYPE,
 
     CPTI_MAX
 };
@@ -269,8 +268,8 @@ extern GTY(()) tree cp_global_trees[CPTI_MAX];
 #define current_aggr			cp_global_trees[CPTI_AGGR_TAG]
 /* std::align_val_t */
 #define align_type_node			cp_global_trees[CPTI_ALIGN_TYPE]
-#define pseudo_contract_violation_type	cp_global_trees[CPTI_PSEUDO_CONTRACT_VIOLATION]
 #define meta_info_type_node		cp_global_trees[CPTI_META_INFO_TYPE]
+#define builtin_contract_violation_type	cp_global_trees[CPTI_CONTRACT_VIOLATION_TYPE]
 
 /* We cache these tree nodes so as to call get_identifier less frequently.
    For identifiers for functions, including special member functions such
@@ -454,7 +453,6 @@ extern GTY(()) tree cp_global_trees[CPTI_MAX];
       OVL_DEDUP_P (in OVERLOAD)
       INIT_EXPR_NRV_P (in INIT_EXPR)
       ATOMIC_CONSTR_MAP_INSTANTIATED_P (in ATOMIC_CONSTR)
-      contract_semantic (in ASSERTION_, PRECONDITION_, POSTCONDITION_STMT)
       RETURN_EXPR_LOCAL_ADDR_P (in RETURN_EXPR)
       PACK_INDEX_PARENTHESIZED_P (in PACK_INDEX_*)
       MUST_NOT_THROW_NOEXCEPT_P (in MUST_NOT_THROW_EXPR)
@@ -505,7 +503,6 @@ extern GTY(()) tree cp_global_trees[CPTI_MAX];
       LAMBDA_EXPR_CAPTURE_OPTIMIZED (in LAMBDA_EXPR)
       IMPLICIT_CONV_EXPR_BRACED_INIT (in IMPLICIT_CONV_EXPR)
       PACK_EXPANSION_AUTO_P (in *_PACK_EXPANSION)
-      contract_semantic (in ASSERTION_, PRECONDITION_, POSTCONDITION_STMT)
       STATIC_INIT_DECOMP_NONBASE_P (in the TREE_LIST
 				    for {static,tls}_aggregates)
       MUST_NOT_THROW_CATCH_P (in MUST_NOT_THROW_EXPR)
@@ -524,7 +521,6 @@ extern GTY(()) tree cp_global_trees[CPTI_MAX];
       LAMBDA_EXPR_STATIC_P (in LAMBDA_EXPR)
       TARGET_EXPR_ELIDING_P (in TARGET_EXPR)
       IF_STMT_VACUOUS_INIT_P (IF_STMT)
-      contract_semantic (in ASSERTION_, PRECONDITION_, POSTCONDITION_STMT)
       TYPENAME_IS_RESOLVING_P (in TYPENAME_TYPE)
    4: IDENTIFIER_MARKED (IDENTIFIER_NODEs)
       TREE_HAS_CONSTRUCTOR (in INDIRECT_REF, SAVE_EXPR, CONSTRUCTOR,
@@ -535,6 +531,7 @@ extern GTY(()) tree cp_global_trees[CPTI_MAX];
       LOOKUP_FOUND_P (in RECORD_TYPE, UNION_TYPE, ENUMERAL_TYPE, NAMESPACE_DECL)
       FNDECL_MANIFESTLY_CONST_EVALUATED (in FUNCTION_DECL)
       TARGET_EXPR_INTERNAL_P (in TARGET_EXPR)
+      CONTRACT_CONST (in ASSERTION_, PRECONDITION_, POSTCONDITION_STMT)
    5: IDENTIFIER_VIRTUAL_P (in IDENTIFIER_NODE)
       FUNCTION_RVALUE_QUALIFIED (in FUNCTION_TYPE, METHOD_TYPE)
       CALL_EXPR_REVERSE_ARGS (in CALL_EXPR, AGGR_INIT_EXPR)
@@ -585,6 +582,7 @@ extern GTY(()) tree cp_global_trees[CPTI_MAX];
       DECL_SELF_REFERENCE_P (in a TYPE_DECL)
       DECL_INVALID_OVERRIDER_P (in a FUNCTION_DECL)
       DECL_UNINSTANIATED_TEMPLATE_FRIEND_P (in TEMPLATE_DECL)
+      parm_used_in_post_p (in PARM_DECL)
    5: DECL_INTERFACE_KNOWN.
    6: DECL_THIS_STATIC (in VAR_DECL, FUNCTION_DECL or PARM_DECL)
       DECL_FIELD_IS_BASE (in FIELD_DECL)
@@ -2077,11 +2075,14 @@ struct GTY(()) saved_scope {
   tree x_current_class_ptr;
   tree x_current_class_ref;
 
+  /* Only used for uses of this in contract assertion.  */
+  tree x_contract_class_ptr;
+
   int x_processing_template_decl;
   int x_processing_specialization;
   int x_processing_constraint;
-  int x_processing_contract_condition;
   int suppress_location_wrappers;
+  BOOL_BITFIELD x_processing_postcondition : 1;
   BOOL_BITFIELD x_processing_explicit_instantiation : 1;
   BOOL_BITFIELD need_pop_function_context : 1;
   BOOL_BITFIELD x_processing_omp_trait_property_expr : 1;
@@ -2161,17 +2162,24 @@ extern GTY(()) struct saved_scope *scope_chain;
 #define processing_explicit_instantiation scope_chain->x_processing_explicit_instantiation
 #define processing_omp_trait_property_expr scope_chain->x_processing_omp_trait_property_expr
 
-/* Nonzero if we are parsing the conditional expression of a contract
-   condition. These expressions appear outside the parameter list (like a
-   trailing return type), but are potentially evaluated.  */
+/* Nonzero if we are parsing the expression of a contract condition. These
+   expressions appear outside the parameter list (like a trailing return
+   type), but are potentially evaluated.  */
 
-#define processing_contract_condition scope_chain->x_processing_contract_condition
+#define processing_contract_condition \
+  (scope_chain->bindings->kind == sk_contract)
+
+#define processing_postcondition scope_chain->x_processing_postcondition
 
 #define in_discarded_stmt scope_chain->discarded_stmt
 #define in_consteval_if_p scope_chain->consteval_if_p
 #define in_expansion_stmt scope_chain->expansion_stmt
 
 #define current_ref_temp_count scope_chain->ref_temp_count
+
+/* Nonzero if we're parsing a precondition on a constructor or postcondition
+   on destructor.  */
+#define contract_class_ptr scope_chain->x_contract_class_ptr
 
 /* RAII sentinel to handle clearing processing_template_decl and restoring
    it when done.  */
@@ -3175,6 +3183,13 @@ struct GTY(()) lang_decl_min {
   tree access;
 };
 
+enum lang_contract_helper
+{
+  ldf_contract_none = 0,
+  ldf_contract_pre,
+  ldf_contract_post
+};
+
 /* Additional DECL_LANG_SPECIFIC information for functions.  */
 
 struct GTY(()) lang_decl_fn {
@@ -3202,9 +3217,12 @@ struct GTY(()) lang_decl_fn {
   unsigned coroutine_p : 1;
   unsigned implicit_constexpr : 1;
   unsigned escalated_p : 1;
-  unsigned xobj_func : 1;
 
-  unsigned spare : 7;
+  unsigned xobj_func : 1;
+  unsigned contract_wrapper : 1;
+  ENUM_BITFIELD(lang_contract_helper) contract_helper : 2;
+
+  unsigned spare : 4;
 
   /* 32-bits padding on 64-bit host.  */
 
@@ -3351,6 +3369,9 @@ struct GTY(()) lang_decl {
   (&DECL_LANG_SPECIFIC (NODE)->u.decomp)
 
 #endif /* ENABLE_TREE_CHECKING */
+
+#define CONTRACT_HELPER(NODE) \
+ (LANG_DECL_FN_CHECK (NODE)->contract_helper)
 
 /* For a FUNCTION_DECL or a VAR_DECL, the language linkage for the
    declaration.  Some entities (like a member function in a local
@@ -3624,6 +3645,11 @@ struct GTY(()) lang_decl {
 #define DECL_XOBJ_MEMBER_FUNCTION_P(NODE)		\
   (TREE_CODE (STRIP_TEMPLATE (NODE)) == FUNCTION_DECL	\
    && DECL_FUNCTION_XOBJ_FLAG (NODE) == 1)
+
+/* Nonzero for FUNCTION_DECL means that this decl is a contract
+   wrapper function.  */
+#define DECL_CONTRACT_WRAPPER(NODE)	\
+  LANG_DECL_FN_CHECK (NODE)->contract_wrapper
 
 /* Nonzero if NODE is a member function with an object argument,
    in other words, a non-static member function.  */
@@ -6157,10 +6183,10 @@ extern int comparing_specializations;
    FIXME we should always do this except during deduction/ordering.  */
 extern int comparing_dependent_aliases;
 
-/* Nonzero if we want to consider different member expressions to compare
-   equal if they designate the same entity. This is set when comparing
-   contract conditions of overrides.  */
-extern bool comparing_override_contracts;
+/* True if we are matching contracts of two functions.  Depending on
+   whether a decl has been genericized or not, PARM_DECL may be adjusted
+   to be an invisible reference.  */
+extern bool comparing_contracts;
 
 /* In parser.cc.  */
 
@@ -6948,6 +6974,9 @@ struct cp_declarator {
       tree late_return_type;
       /* The trailing requires-clause, if any.  */
       tree requires_clause;
+      /* The function-contract-specifier-seq, if any.  */
+      tree contract_specifiers;
+      /* The position of the opening brace for a function definition.  */
       location_t parens_loc;
     } function;
     /* For arrays.  */
@@ -7427,6 +7456,7 @@ extern int decls_match				(tree, tree, bool = true);
 extern bool maybe_version_functions		(tree, tree);
 extern bool validate_constexpr_redeclaration	(tree, tree);
 extern bool merge_default_template_args		(tree, tree, bool);
+extern void merge_decl_arguments		(tree, tree, bool, bool, bool);
 extern tree duplicate_decls			(tree, tree,
 						 bool hiding = false,
 						 bool was_hidden = false);
@@ -7511,6 +7541,7 @@ extern tmpl_spec_kind current_tmpl_spec_kind	(int);
 extern tree cxx_builtin_function		(tree decl);
 extern tree cxx_builtin_function_ext_scope	(tree decl);
 extern tree cxx_simulate_builtin_function_decl	(tree);
+extern tree cxx_build_lang_qualified_type	(tree, tree, int);
 extern tree check_elaborated_type_specifier	(enum tag_types, tree, bool);
 extern void warn_extern_redeclared_static	(tree, tree);
 extern tree cxx_comdat_group			(tree);
@@ -7951,6 +7982,7 @@ extern void *finish_module_processing (cpp_reader *);
 extern char const *module_name (unsigned, bool header_ok);
 extern bitmap get_import_bitmap ();
 extern bitmap visible_instantiation_path (bitmap *);
+extern bitmap visible_from_instantiation_origination (unsigned *);
 extern void module_begin_main_file (cpp_reader *, line_maps *,
 				    const line_map_ordinary *);
 extern void module_preprocess_options (cpp_reader *);
@@ -7964,7 +7996,7 @@ extern bool maybe_clone_body			(tree);
 extern tree cp_build_range_for_decls (location_t, tree, tree *, bool);
 extern tree cp_convert_range_for (tree, tree, tree, cp_decomp *, bool,
 				  tree, bool);
-extern tree build_range_temp (tree);
+extern tree build_range_temp (tree, bool = false);
 extern tree cp_perform_range_for_lookup	(tree, tree *, tree *,
 					 tsubst_flags_t = tf_warning_or_error);
 extern void cp_convert_omp_range_for (tree &, tree &, tree &,
@@ -8638,6 +8670,7 @@ extern tree call_expr_dependent_name		(tree);
 extern tree maybe_get_fns			(tree) ATTRIBUTE_PURE;
 extern tree get_fns				(tree) ATTRIBUTE_PURE;
 extern tree get_first_fn			(tree) ATTRIBUTE_PURE;
+extern tree maybe_get_first_fn			(tree) ATTRIBUTE_PURE;
 extern tree ovl_scope				(tree);
 extern const char *cxx_printable_name		(tree, int);
 extern const char *cxx_printable_name_translate	(tree, int);
@@ -9064,6 +9097,7 @@ extern tree process_stmt_hotness_attribute	(tree, location_t);
 extern tree build_assume_call			(location_t, tree);
 extern tree process_stmt_assume_attribute	(tree, tree, location_t);
 extern bool simple_empty_class_p		(tree, tree, tree_code);
+extern tree build_source_location_impl		(location_t, tree, tree);
 extern tree fold_builtin_source_location	(const_tree);
 extern tree get_source_location_impl_type	();
 extern bool immediate_escalating_function_p	(tree);
@@ -9071,6 +9105,7 @@ extern void promote_function_to_consteval	(tree);
 extern tree cp_fold_immediate			(tree *, mce_value,
 						 tree = current_function_decl);
 extern void process_and_check_pending_immediate_escalating_fns ();
+extern bool is_invisiref_parm 			(const_tree);
 
 /* in name-lookup.cc */
 extern tree strip_using_decl                    (tree);
@@ -9334,7 +9369,7 @@ extern void coro_set_ramp_function		(tree, tree);
 /* In reflect.cc */
 extern void init_reflection ();
 extern bool metafunction_p (tree) ATTRIBUTE_PURE;
-extern tree direct_base_parent (tree) ATTRIBUTE_PURE;
+extern tree direct_base_derived (tree) ATTRIBUTE_PURE;
 extern tree process_metafunction (const constexpr_ctx *, tree, tree,
 				  bool *, bool *, tree *);
 extern tree get_reflection (location_t, tree, reflect_kind = REFLECT_UNDEF);

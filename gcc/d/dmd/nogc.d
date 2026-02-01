@@ -16,17 +16,22 @@ module dmd.nogc;
 import core.stdc.stdio;
 
 import dmd.aggregate;
+import dmd.arraytypes;
 import dmd.astenums;
-import dmd.declaration;
 import dmd.common.outbuffer;
+import dmd.declaration;
 import dmd.dmodule;
 import dmd.dscope;
-import dmd.dtemplate : isDsymbol;
 import dmd.dsymbol : PASS;
+import dmd.dtemplate : isDsymbol;
 import dmd.errors;
+import dmd.escape;
 import dmd.expression;
+import dmd.expressionsem;
 import dmd.func;
 import dmd.globals;
+import dmd.id;
+import dmd.identifier;
 import dmd.init;
 import dmd.location;
 import dmd.mtype;
@@ -34,6 +39,7 @@ import dmd.rootobject : RootObject, DYNCAST;
 import dmd.semantic2;
 import dmd.semantic3;
 import dmd.tokens;
+import dmd.typesem : unqualify;
 import dmd.visitor;
 import dmd.visitor.postorder;
 
@@ -45,13 +51,15 @@ extern (C++) final class NOGCVisitor : StoppableVisitor
     alias visit = typeof(super).visit;
 public:
     FuncDeclaration f;
+    Scope* sc;
     bool checkOnly;     // don't print errors
     bool err;
     bool nogcExceptions; // -preview=dip1008 enabled
 
-    extern (D) this(FuncDeclaration f) scope @safe
+    extern (D) this(FuncDeclaration f, Scope* sc) scope @safe
     {
         this.f = f;
+        this.sc = sc;
     }
 
     void doCond(Expression exp)
@@ -86,6 +94,8 @@ public:
      */
     private bool setGC(Expression e, const(char)* msg)
     {
+        if (sc.debug_)
+            return false;
         if (checkOnly)
         {
             err = true;
@@ -119,10 +129,37 @@ public:
 
     override void visit(ArrayLiteralExp e)
     {
-        if (e.type.ty != Tarray || !e.elements || !e.elements.length || e.onstack)
+        const dim = e.elements ? e.elements.length : 0;
+        if (e.type.toBasetype().isTypeSArray() || dim == 0 || e.onstack)
             return;
         if (setGC(e, "this array literal"))
             return;
+
+        if (checkArrayLiteralEscape(*sc, e, false))
+        {
+            err = true;
+            return;
+        }
+
+        if (!global.params.useGC)
+        {
+            if (!checkOnly)
+            {
+                version (IN_GCC)
+                    error(e.loc, "this array literal requires the GC and cannot be used with `???`");
+                else
+                    error(e.loc, "this array literal requires the GC and cannot be used with `-betterC`");
+            }
+            err = true;
+            return;
+        }
+
+        if (!lowerArrayLiteral(e, sc))
+        {
+            err = true;
+            return;
+        }
+
         f.printGCUsage(e.loc, "array literal may cause a GC allocation");
     }
 
@@ -208,9 +245,10 @@ public:
     }
 }
 
-Expression checkGC(Scope* sc, Expression e)
+Expression checkGC(Expression e, Scope* sc)
 {
-    if (sc.ctfeBlock)     // ignore GC in ctfe blocks
+    // printf("%s checkGC(%s)\n", e.loc.toChars, e.toChars);
+    if (e.gcPassDone || sc.ctfeBlock || sc.ctfe || sc.intypeof == 1 || !sc.func)
         return e;
 
     /* If betterC, allow GC to happen in non-CTFE code.
@@ -219,28 +257,20 @@ Expression checkGC(Scope* sc, Expression e)
      */
     const betterC = !global.params.useGC;
     FuncDeclaration f = sc.func;
-    if (e && e.op != EXP.error && f && sc.intypeof != 1 &&
-           (!sc.ctfe || betterC) &&
-           (f.type.ty == Tfunction &&
-            (cast(TypeFunction)f.type).isNogc || f.nogcInprocess || global.params.v.gc) &&
-           !sc.debug_)
-    {
-        scope NOGCVisitor gcv = new NOGCVisitor(f);
-        gcv.checkOnly = betterC;
-        gcv.nogcExceptions = sc.previews.dip1008;
-        walkPostorder(e, gcv);
-        if (gcv.err)
-        {
-            if (betterC)
-            {
-                /* Allow ctfe to use the gc code, but don't let it into the runtime
-                 */
-                f.skipCodegen = true;
-            }
-            else
-                return ErrorExp.get();
-        }
-    }
+    scope NOGCVisitor gcv = new NOGCVisitor(f, sc);
+    gcv.checkOnly = betterC && (f.type.isTypeFunction().isNogc || f.nogcInprocess);
+    gcv.nogcExceptions = sc.previews.dip1008;
+    walkPostorder(e, gcv);
+    e.gcPassDone = true;
+
+    if (!gcv.err)
+        return e;
+
+    if (!betterC)
+        return ErrorExp.get();
+
+    // Allow ctfe to use the gc code, but don't let it into the runtime
+    f.skipCodegen = true;
     return e;
 }
 

@@ -2023,6 +2023,21 @@ AC_DEFINE_UNQUOTED(HAVE_GNU_LD, $gnu_ld_bool, [Define to 1 if using GNU ld.])
 gnu_as_bool=`if test x"$gas" = x"yes"; then echo 1; else echo 0; fi`
 AC_DEFINE_UNQUOTED(HAVE_GNU_AS, $gnu_as_bool, [Define to 1 if using GNU as.])
 
+case "$target:$gnu_ld" in
+  *-*-solaris2*:no)
+    # While Solaris ld has -m32/-m64 it usually determines the ELF class
+    # from the input objects.
+    ;;
+  i?86-*-solaris2*:yes | x86_64-*-solaris2*:yes)
+    ld_32_opt=-melf_i386_sol2
+    ld_64_opt=-melf_x86_64_sol2
+    ;;
+  i?86-*-*:yes | x86_64-*-*:yes)
+    ld_32_opt=-melf_i386
+    ld_64_opt=-melf_x86_64
+    ;;
+esac
+
 count=a
 for f in $host_xm_file; do
 	count=${count}x
@@ -2729,6 +2744,10 @@ case "$ORIGINAL_AS_FOR_TARGET" in
   ./as | ./as$build_exeext) ;;
   *) AC_CONFIG_FILES(as:exec-tool.in, [chmod +x as]) ;;
 esac 
+
+if $gcc_cv_as --help 2>&1 | grep -- --fatal-warnings > /dev/null; then
+  fw_as_opt=--fatal-warnings
+fi
 
 default_ld=
 AC_ARG_ENABLE(ld,
@@ -3445,13 +3464,6 @@ gcc_GAS_CHECK_FEATURE([cfi directives], gcc_cv_as_cfi_directive,,
       # No objdump, err on the side of caution.
       gcc_cv_as_cfi_directive=no
     else
-      if test x$gas = xyes; then
-	as_32_opt="--32"
-	as_64_opt="--64"
-      else
-	as_32_opt="-m32"
-	as_64_opt="-m64"
-      fi
       case "$target" in
 	sparc*-*-solaris2.*)
 	  # On Solaris/SPARC, .eh_frame sections should always be read-write.
@@ -3621,7 +3633,7 @@ fi
 # Test if the assembler supports the section flag 'e' or #exclude for
 # specifying an excluded section.
 gcc_GAS_CHECK_FEATURE([section exclude flag], gcc_cv_as_section_exclude_e,
- [--fatal-warnings],
+ [$fw_as_opt],
  [.section foo1,"e"
   .byte 0,0,0,0])
 if test $gcc_cv_as_section_exclude_e = no; then
@@ -3657,7 +3669,7 @@ case "${target}" in
     ;;
   *)
     gcc_GAS_CHECK_FEATURE([section 'R' flag], gcc_cv_as_shf_gnu_retain,
-      [--fatal-warnings],
+      [$fw_as_opt],
       [.section .foo,"awR",%progbits
 .byte 0])
     ;;
@@ -3677,7 +3689,7 @@ case "${target}" in
     ;;
   *)
     gcc_GAS_CHECK_FEATURE([section 'o' flag], gcc_cv_as_section_link_order,
-      [--fatal-warnings],
+      [$fw_as_opt],
       [.section .foo,"a"
 .byte 0
 .section __patchable_function_entries,"awo",%progbits,.foo
@@ -3689,12 +3701,12 @@ AC_DEFINE_UNQUOTED(HAVE_GAS_SECTION_LINK_ORDER,
   [Define 0/1 if your assembler supports 'o' flag in .section directive.])
 
 gcc_GAS_CHECK_FEATURE(section merging support, gcc_cv_as_shf_merge,
- [--fatal-warnings],
+ [$fw_as_opt],
  [.section .rodata.str, "aMS", @progbits, 1])
 if test $gcc_cv_as_shf_merge = no; then
   gcc_GAS_CHECK_FEATURE(section merging support (%progbits),
     gcc_cv_as_shf_merge_percent,
-    [--fatal-warnings],
+    [$fw_as_opt],
     [.section .rodata.str, "aMS", %progbits, 1])
 fi
 AC_DEFINE_UNQUOTED(HAVE_GAS_SHF_MERGE,
@@ -3704,7 +3716,7 @@ AC_DEFINE_UNQUOTED(HAVE_GAS_SHF_MERGE,
 
 gcc_GAS_CHECK_FEATURE([COMDAT group support (GNU as)],
  gcc_cv_as_comdat_group,
- [--fatal-warnings],
+ [$fw_as_opt],
  [.section .text,"axG",@progbits,.foo,comdat])
 if test $gcc_cv_as_comdat_group = yes; then
   gcc_cv_as_comdat_group_percent=no
@@ -3712,7 +3724,7 @@ if test $gcc_cv_as_comdat_group = yes; then
 else
  gcc_GAS_CHECK_FEATURE([COMDAT group support (GNU as, %type)],
    gcc_cv_as_comdat_group_percent,
-   [--fatal-warnings],
+   [$fw_as_opt],
    [.section .text,"axG",%progbits,.foo,comdat])
  if test $gcc_cv_as_comdat_group_percent = yes; then
    gcc_cv_as_comdat_group_group=no
@@ -3852,7 +3864,6 @@ foo:	.long	25
 	ldah	$2,foo($29)			!tprelhi
 	lda	$3,foo($2)			!tprello
 	lda	$4,foo($29)			!tprel'
-	tls_as_opt=--fatal-warnings
 	;;
   arc*-*-*)
     conftest_s='
@@ -3865,7 +3876,6 @@ x:      .long   25
         .text
 	move.d x:IE,$r10
 	nop'
-	tls_as_opt=--fatal-warnings
 	;;
   frv*-*-*)
     conftest_s='
@@ -3899,7 +3909,6 @@ foo:	.long	25
 	mfctl %cr27,%t1 		
 	addil LR%foo-$tls_leoff$,%t1
 	ldo RR%foo-$tls_leoff$(%r1),%t2'
-	tls_as_opt=--fatal-warnings
 	;;
   arm*-*-*)
     conftest_s='
@@ -3912,36 +3921,24 @@ foo:	.long	25
 .word foo(tlsldm)
 .word foo(tlsldo)'
 	;;
-  i[34567]86-*-* | x86_64-*-*)
-    case "$target" in
-      i[34567]86-*-solaris2.* | x86_64-*-solaris2.*)
-	on_solaris=yes
-        ;;
-      *)
-	on_solaris=no
-	;;
-    esac
-    if test x$on_solaris = xyes && test x$gas_flag = xno; then
-      conftest_s='
-	.section .tdata,"awt",@progbits'
-      tls_section_flag=t
+  i?86-*-* | x86_64-*-*)
+    case "$target:$gas_flag" in
+      i?86-*-solaris2*:no | x86_64-*-solaris2*:no)
+	tls_section_flag=t
 changequote([,])dnl
-      AC_DEFINE(TLS_SECTION_ASM_FLAG, 't',
+	AC_DEFINE(TLS_SECTION_ASM_FLAG, 't',
 [Define to the flag used to mark TLS sections if the default (`T') doesn't work.])
 changequote(,)dnl
-    else
-      conftest_s='
-	.section ".tdata","awT",@progbits'
-      tls_section_flag=T
-      tls_as_opt="--fatal-warnings"
-    fi
+	;;
+      *:*)
+	tls_section_flag=T
+	;;
+    esac
+    conftest_s='
+      .section .tdata,"aw'$tls_section_flag'",@progbits'
     case "$target" in
-      i[34567]86-*-*)
-	if test x$on_solaris = xyes; then
-	  case $gas_flag in
-	    yes) tls_as_opt="$tls_as_opt --32" ;;
-	  esac
-	fi
+      i?86-*-*)
+	tls_as_opt="$tls_as_opt $as_32_opt"
 	conftest_s="$conftest_s
 foo:	.long	25
 	.text
@@ -3958,12 +3955,7 @@ foo:	.long	25
 	leal	foo@ntpoff(%ecx), %eax"
 	;;
       x86_64-*-*)
-	if test x$on_solaris = xyes; then
-	  case $gas_flag in
-	    yes) tls_as_opt="$tls_as_opt --64" ;;
-	    no)	 tls_as_opt="$tls_as_opt -xarch=amd64" ;;
-	  esac	  
-	fi
+	tls_as_opt="$as_64_opt"
 	conftest_s="$conftest_s
 foo:	.long	25
 	.text
@@ -3973,7 +3965,7 @@ foo:	.long	25
 	leaq	foo@dtpoff(%rax), %rdx
 	movq	foo@gottpoff(%rip), %rax
 	movq	\$foo@tpoff, %rax"
-        ;;
+	;;
     esac
     ;;
   ia64-*-*)
@@ -3990,7 +3982,6 @@ foo:	data8	25
 	addl	r20 = @tprel(foo#), gp
 	adds	r22 = @tprel(foo#), r13
 	movl	r24 = @tprel(foo#)'
-	tls_as_opt=--fatal-warnings
 	;;
   loongarch*-*-*)
     conftest_s='
@@ -4001,7 +3992,6 @@ x:	.word 2
 	bl __tls_get_addr'
 	tls_first_major=0
 	tls_first_minor=0
-	tls_as_opt='--fatal-warnings'
 	;;
   microblaze*-*-*)
     conftest_s='
@@ -4011,7 +4001,6 @@ x:
 	.text
 	addik r5,r20,x@TLSGD
 	addik r5,r20,x@TLSLDM'
-	tls_as_opt='--fatal-warnings'
 	;;
   mips*-*-*)
     conftest_s='
@@ -4026,7 +4015,7 @@ x:
 	lw $4, %gottprel(x)($28)
 	lui $4, %tprel_hi(x)
 	addiu $4, $4, %tprel_lo(x)'
-	tls_as_opt='-32 --fatal-warnings'
+	tls_as_opt='-32'
 	;;
   m68k-*-*)
     conftest_s='
@@ -4040,7 +4029,6 @@ foo:
 	move.l x@TLSLDO(%a5),%a0
 	move.l x@TLSIE(%a5),%a0
 	move.l x@TLSLE(%a5),%a0'
-	tls_as_opt='--fatal-warnings'
 	;;
   aarch64*-*-*)
     conftest_s='
@@ -4051,7 +4039,6 @@ foo:	.long	25
 	add   x0, x0, #:tlsgd_lo12:x
         bl    __tls_get_addr
 	nop'
-	tls_as_opt='--fatal-warnings'
 	;;
   or1k*-*-*)
     conftest_s='
@@ -4061,7 +4048,6 @@ foo:	.long	25
 	l.movhi	r3, tpoffha(foo)
 	l.add	r3, r3, r10
 	l.lwz	r4, tpofflo(foo)(r3)'
-    tls_as_opt=--fatal-warnings
     ;;
   powerpc-ibm-aix*)
     conftest_s='
@@ -4109,7 +4095,7 @@ x3:	.space 8
 	add 9,9,3
 	bl .__tls_get_addr
 	nop'
-	tls_as_opt="-a64 --fatal-warnings"
+	tls_as_opt="-a64"
 	;;
   powerpc*-*-*)
     conftest_s='
@@ -4133,7 +4119,7 @@ x3:	.space 4
 	addi 9,2,x1@tprel
 	addis 9,2,x2@tprel@ha
 	addi 9,9,x2@tprel@l'
-	tls_as_opt="-a32 --fatal-warnings"
+	tls_as_opt="-a32"
 	;;
   riscv*-*-*)
     conftest_s='
@@ -4142,7 +4128,6 @@ x:	.word 2
 	.text
 	la.tls.gd a0,x
         call __tls_get_addr'
-	tls_as_opt='--fatal-warnings'
 	;;
   s390-*-*)
     conftest_s='
@@ -4159,7 +4144,7 @@ foo:	.long	25
 	l	%r1,0(%r1):tls_load:foo
 	bas	%r14,0(%r1,%r13):tls_gdcall:foo
 	bas	%r14,0(%r1,%r13):tls_ldcall:foo'
-	tls_as_opt="-m31 --fatal-warnings"
+	tls_as_opt="-m31"
 	;;
   s390x-*-*)
     conftest_s='
@@ -4175,7 +4160,7 @@ foo:	.long	25
 	larl	%r1,foo@INDNTPOFF
 	brasl	%r14,__tls_get_offset@PLT:tls_gdcall:foo
 	brasl	%r14,__tls_get_offset@PLT:tls_ldcall:foo'
-	tls_as_opt="-m64 -Aesame --fatal-warnings"
+	tls_as_opt="-m64 -Aesame"
 	;;
   sh-*-* | sh[123456789lbe]*-*-*)
     conftest_s='
@@ -4187,25 +4172,19 @@ foo:	.long	25
 	.long	foo@DTPOFF
 	.long	foo@GOTTPOFF
 	.long	foo@TPOFF'
-	tls_as_opt=--fatal-warnings
 	;;
   sparc*-*-*)
-    case "$target" in
-      sparc*-sun-solaris2.*)
-	on_solaris=yes
+    case "$target:$gas_flag" in
+      sparc*-sun-solaris2.*:no)
+	conftest_s='
+	.section ".tdata",#alloc,#write,#tls'
 	;;
-      *)
-	on_solaris=no
+       *:*)
+	 conftest_s='
+	.section ".tdata","awT",@progbits'
 	;;
     esac
-    if test x$on_solaris = xyes && test x$gas_flag = xno; then
-      conftest_s='
-	.section ".tdata",#alloc,#write,#tls'
-    else
-      conftest_s='
-	.section ".tdata","awT",@progbits'
-	tls_as_opt="-32 --fatal-warnings"
-    fi
+    tls_as_opt=$as_32_opt
     conftest_s="$conftest_s
 foo:	.long	25
 	.text
@@ -4248,7 +4227,7 @@ elif test -z "$conftest_s"; then
   : # If we don't have a check, assume no support.
 else
   gcc_GAS_CHECK_FEATURE(thread-local storage support, gcc_cv_as_tls,
-  [$tls_as_opt], [$conftest_s],,
+  [$tls_as_opt $fw_as_opt], [$conftest_s],,
   [set_have_as_tls=yes])
 fi
 case $target_os in
@@ -4890,7 +4869,7 @@ foo:	nop
 	# but normally only after installation, so we warn but don't fail the
 	# configure if LTO is enabled but the assembler does not support it.
 	gcc_GAS_CHECK_FEATURE([.section with alignment], gcc_cv_as_section_has_align,
-	  -fatal-warnings,[.section lto_test,"dr0"])
+	  $fw_as_opt,[.section lto_test,"dr0"])
 	if test x$gcc_cv_as_section_has_align != xyes; then
 	  case ",$enable_languages," in
 	    *,lto,*)
@@ -4998,23 +4977,12 @@ foo:	nop
       [AC_DEFINE(HAVE_AS_IX86_UD2, 1,
 	[Define if your assembler supports the 'ud2' mnemonic.])])
 
-    # Enforce 32-bit output with gas and gld.
-    if test x$gas = xyes; then
-      as_ix86_gas_32_opt="--32"
-    fi
-    if test x$gnu_ld = xyes; then
-      case $target in
-	*-*-solaris2*) ld_ix86_gld_32_opt="-melf_i386_sol2" ;;
-	*)             ld_ix86_gld_32_opt="-melf_i386" ;;
-      esac
-    fi
-
     gcc_GAS_CHECK_FEATURE([R_386_TLS_GD_PLT reloc],
         gcc_cv_as_ix86_tlsgdplt,
-	[$as_ix86_gas_32_opt],
+	[$as_32_opt],
 	[call    tls_gd@tlsgdplt],
 	[if test x$gcc_cv_ld != x \
-	 && $gcc_cv_ld $ld_ix86_gld_32_opt -o conftest conftest.o -G > /dev/null 2>&1; then
+	 && $gcc_cv_ld $ld_32_opt -o conftest conftest.o -G > /dev/null 2>&1; then
 	   gcc_cv_as_ix86_tlsgdplt=yes
 	 fi
 	 rm -f conftest],
@@ -5029,10 +4997,10 @@ tls_ld:
 
     gcc_GAS_CHECK_FEATURE([R_386_TLS_LDM_PLT reloc],
         gcc_cv_as_ix86_tlsldmplt,
-	[$as_ix86_gas_32_opt],
+	[$as_32_opt],
 	[$conftest_s],
 	[if test x$gcc_cv_ld != x \
-	 && $gcc_cv_ld $ld_ix86_gld_32_opt -o conftest conftest.o -G > /dev/null 2>&1; then
+	 && $gcc_cv_ld $ld_32_opt -o conftest conftest.o -G > /dev/null 2>&1; then
 	   gcc_cv_as_ix86_tlsldmplt=yes
 	 fi
 	 rm -f conftest])
@@ -5053,10 +5021,10 @@ _start:
 value:'
     gcc_GAS_CHECK_FEATURE([R_386_TLS_LDM reloc],
         gcc_cv_as_ix86_tlsldm,
-	[$as_ix86_gas_32_opt],
+	[$as_32_opt],
 	[$conftest_s],
 	[if test x$gcc_cv_ld != x && test x$gcc_cv_objdump != x \
-	    && $gcc_cv_ld $ld_ix86_gld_32_opt -o conftest conftest.o $ld_tls_libs -lc > /dev/null 2>&1; then
+	    && $gcc_cv_ld $ld_32_opt -o conftest conftest.o $ld_tls_libs -lc > /dev/null 2>&1; then
 	   if $gcc_cv_objdump -d conftest 2>/dev/null | grep nop > /dev/null \
 	      || dis conftest 2>/dev/null | grep nop > /dev/null; then
 	     gcc_cv_as_ix86_tlsldm=yes
@@ -5078,13 +5046,13 @@ _start:
 	 jmp *_start@GOT'
     gcc_GAS_CHECK_FEATURE([R_386_GOT32X reloc],
         gcc_cv_as_ix86_got32x,
-	[$as_ix86_gas_32_opt],
+	[$as_32_opt],
 	[$conftest_s],
 	[if test x$gcc_cv_ld != x && test x$gcc_cv_objdump != x \
 	    && test x$gcc_cv_readelf != x \
 	    && $gcc_cv_readelf --relocs --wide conftest.o 2>&1 \
 	       | grep R_386_GOT32X > /dev/null 2>&1 \
-	    && $gcc_cv_ld $ld_ix86_gld_32_opt -o conftest conftest.o > /dev/null 2>&1; then
+	    && $gcc_cv_ld $ld_32_opt -o conftest conftest.o > /dev/null 2>&1; then
 	   if $gcc_cv_objdump -dw conftest 2>&1 \
 	      | grep 0xffffff > /dev/null 2>&1; then
 	     gcc_cv_as_ix86_got32x=no
@@ -5099,16 +5067,6 @@ _start:
 
     # Check if gas and gld support "addq %r23,foo@GOTTPOFF(%rip), %r15"
     # with R_X86_64_CODE_6_GOTTPOFF relocation.
-    if test x$gnu_ld = xyes; then
-      case $target in
-	*-*-solaris2*) ld_ix86_gld_64_opt="-melf_x86_64_sol2" ;;
-	*)             ld_ix86_gld_64_opt="-melf_x86_64" ;;
-      esac
-    fi
-    # Enforce 64-bit output with gas and gld.
-    if test x$gas = xyes; then
-      as_ix86_gas_64_opt="--64"
-    fi
     conftest_s='
 	.text
 	.globl	_start
@@ -5121,13 +5079,13 @@ foo:
 	.quad 0'
     gcc_GAS_CHECK_FEATURE([R_X86_64_CODE_6_GOTTPOFF reloc],
 	gcc_cv_as_x86_64_code_6_gottpoff,
-	[$as_ix86_gas_64_opt],
+	[$as_64_opt],
 	[$conftest_s],
 	[if test x$gcc_cv_ld != x && test x$gcc_cv_objdump != x \
 	    && test x$gcc_cv_readelf != x \
 	    && $gcc_cv_readelf --relocs --wide conftest.o 2>&1 \
 	       | grep R_X86_64_CODE_6_GOTTPOFF > /dev/null 2>&1 \
-	    && $gcc_cv_ld $ld_ix86_gld_64_opt -o conftest conftest.o > /dev/null 2>&1; then
+	    && $gcc_cv_ld $ld_64_opt -o conftest conftest.o > /dev/null 2>&1; then
 	   if $gcc_cv_objdump -dw conftest 2>&1 \
 	      | grep "add \+\$0xf\+8,%r23,%r15" > /dev/null 2>&1; then
 	     gcc_cv_as_x86_64_code_6_gottpoff=yes
@@ -5142,7 +5100,7 @@ foo:
 
     gcc_GAS_CHECK_FEATURE([GOTOFF in data],
       gcc_cv_as_ix86_gotoff_in_data,
-      [$as_ix86_gas_32_opt],
+      [$as_32_opt],
 [	.text
 .L0:
 	nop
@@ -5172,10 +5130,10 @@ gd:
 	.byte 0'
     gcc_GAS_CHECK_FEATURE([calling ___tls_get_addr via GOT],
         gcc_cv_as_ix86_tls_get_addr_via_got,
-	[$as_ix86_gas_32_opt],
+	[$as_32_opt],
 	[$conftest_s],
 	[if test x$gcc_cv_ld != x \
-	    && $gcc_cv_ld $ld_ix86_gld_32_opt -o conftest conftest.o > /dev/null 2>&1; then
+	    && $gcc_cv_ld $ld_32_opt -o conftest conftest.o > /dev/null 2>&1; then
 	   gcc_cv_as_ix86_tls_get_addr_via_got=yes
 	 fi
 	 rm -f conftest])
@@ -5287,13 +5245,13 @@ LCF0:
 	  [Define if your assembler supports .gnu_attribute.])])
 
     gcc_GAS_CHECK_FEATURE([prologue entry point marker support],
-      gcc_cv_as_powerpc_entry_markers,-a64 --fatal-warnings,
+      gcc_cv_as_powerpc_entry_markers,-a64 $fw_as_opt,
       [ .reloc .,R_PPC64_ENTRY; nop],,
       [AC_DEFINE(HAVE_AS_ENTRY_MARKERS, 1,
 	  [Define if your assembler supports the R_PPC64_ENTRY relocation.])])
 
     gcc_GAS_CHECK_FEATURE([plt sequence marker support],
-      gcc_cv_as_powerpc_pltseq_markers,-a32 --fatal-warnings,
+      gcc_cv_as_powerpc_pltseq_markers,-a32 $fw_as_opt,
       [ .reloc .,R_PPC_PLTSEQ; nop],,
       [AC_DEFINE(HAVE_AS_PLTSEQ, 1,
 	  [Define if your assembler supports R_PPC*_PLTSEQ relocations.])])
@@ -5369,7 +5327,7 @@ LCF0:
     fi
 
     gcc_GAS_CHECK_FEATURE([.micromips support],
-      gcc_cv_as_micromips_support,[--fatal-warnings],
+      gcc_cv_as_micromips_support,[$fw_as_opt],
       [.set micromips],,
       [AC_DEFINE(HAVE_GAS_MICROMIPS, 1,
           [Define if your assembler supports the .set micromips directive])])
@@ -5570,7 +5528,7 @@ x:
 		[Define if your assembler supports -mrelax option.])])
     gcc_GAS_CHECK_FEATURE([conditional branch relaxation support],
       gcc_cv_as_loongarch_cond_branch_relax,
-      [--fatal-warnings],
+      [$fw_as_opt],
       [a:
        .rept 32769
        nop
@@ -6217,10 +6175,10 @@ main:
 ptr:
 	.quad	a_glob
 EOF
-      if $gcc_cv_as --64 -o conftest1.o conftest1.s > /dev/null 2>&1 \
-         && $gcc_cv_ld -shared -melf_x86_64 -o conftest1.so conftest1.o > /dev/null 2>&1 \
-         && $gcc_cv_as --64 -o conftest2.o conftest2.s > /dev/null 2>&1 \
-         && $gcc_cv_ld -pie -melf_x86_64 -o conftest conftest2.o conftest1.so > /dev/null 2>&1; then
+      if $gcc_cv_as $as_64_opt -o conftest1.o conftest1.s > /dev/null 2>&1 \
+         && $gcc_cv_ld -shared $ld_64_opt -o conftest1.so conftest1.o > /dev/null 2>&1 \
+         && $gcc_cv_as $as_64_opt -o conftest2.o conftest2.s > /dev/null 2>&1 \
+         && $gcc_cv_ld -pie $ld_64_opt -o conftest conftest2.o conftest1.so > /dev/null 2>&1; then
         gcc_cv_ld_pie_copyreloc=yes
       fi
       rm -f conftest conftest1.so conftest1.o conftest2.o conftest1.s conftest2.s

@@ -778,7 +778,7 @@ a68_lower_slice (NODE_T *p, LOW_CTX_T ctx)
 	{
 	  tree ptrtype = CTYPE (orig_sliced_multiple_mode);
 	  tree slice_addr = fold_build1 (ADDR_EXPR, ptrtype, slice);
-	  tree alloc = a68_lower_malloc (ptrtype, size_in_bytes (TREE_TYPE (slice)));
+	  tree alloc = a68_lower_malloc (orig_sliced_multiple_mode, size_in_bytes (TREE_TYPE (slice)));
 	  alloc = save_expr (alloc);
 	  tree copy = a68_lower_memcpy (alloc, slice_addr, size_in_bytes (TREE_TYPE (slice)));
 
@@ -1236,6 +1236,28 @@ a68_lower_routine_text (NODE_T *p, LOW_CTX_T ctx)
     return fold_build1 (ADDR_EXPR,
 			build_pointer_type (TREE_TYPE (func_decl)),
 			func_decl);
+}
+
+/* Lower a formal hole.
+
+      formal hole : formal nest symbol, tertiary ;
+                    formal nest symbol, language indicant, tertiary.
+*/
+
+tree
+a68_lower_formal_hole (NODE_T *p, LOW_CTX_T ctx ATTRIBUTE_UNUSED)
+{
+  NODE_T *str = NEXT_SUB (p);
+  if (IS (str, LANGUAGE_INDICANT))
+    FORWARD (str);
+  gcc_assert (IS (str, TERTIARY));
+  while (str != NO_NODE && !IS (str, ROW_CHAR_DENOTATION))
+    str = SUB (str);
+  gcc_assert (IS (str, ROW_CHAR_DENOTATION));
+
+  char *symbol = a68_string_process_breaks (p, NSYMBOL (str));
+  tree decl = a68_make_formal_hole_decl (p, symbol);
+  return decl;
 }
 
 /* Lower an unit.

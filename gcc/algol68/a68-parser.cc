@@ -377,6 +377,7 @@ a68_dont_mark_here (NODE_T *p)
     case NIL_SYMBOL:
     case OD_SYMBOL:
     case OF_SYMBOL:
+    case QUOTE_SYMBOL:
     case OPEN_SYMBOL:
     case OP_SYMBOL:
     case ORF_SYMBOL:
@@ -726,6 +727,7 @@ a68_new_moid (void)
   DIM (z) = 0;
   USE (z) = false;
   HAS_ROWS (z) = false;
+  HAS_REFS (z) = false;
   PORTABLE (z) = true;
   DERIVATE (z) = false;
   NODE (z) = NO_NODE;

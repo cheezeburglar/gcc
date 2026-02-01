@@ -790,6 +790,14 @@ ftms = {
 };
 
 ftms = {
+  name = atomic_min_max;
+  values = {
+    v = 202403;
+    cxxmin = 26;
+  };
+};
+
+ftms = {
   name = atomic_lock_free_type_aliases;
   values = {
     v = 201907;
@@ -2259,6 +2267,7 @@ ftms = {
     v = 202506;
     cxxmin = 26;
     extra_cond = "__cpp_impl_reflection >= 202506L";
+    cxx11abi = yes;
   };
 };
 
@@ -2268,6 +2277,15 @@ ftms = {
     v =  202302;
     cxxmin = 23;
     extra_cond = "__has_builtin(__builtin_is_implicit_lifetime)";
+  };
+};
+
+ftms = {
+  name = contracts;
+  values = {
+    v = 202502;
+    cxxmin = 26;
+    extra_cond = "__cpp_contracts >= 202502L";
   };
 };
 

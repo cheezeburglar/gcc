@@ -730,7 +730,9 @@ public:
 	void *__monitor;
 	TypeInfo value;
 	TypeInfo key;
-	TypeInfo entry;  */
+	TypeInfo entry;
+	bool function(in void*, in void*) xopEquals;
+	hash_t function(in void*) xtoHash;  */
 
   void visit (TypeInfoAssociativeArrayDeclaration *d) final override
   {
@@ -750,6 +752,16 @@ public:
       this->layout_field (build_typeinfo (d->loc, d->entry));
     else
       this->layout_field (null_pointer_node);
+
+    /* bool function(in void*, in void*) xopEquals;  */
+    tree xeq = (d->xopEqual) ? build_address (get_symbol_decl (d->xopEqual))
+      : null_pointer_node;
+    this->layout_field (xeq);
+
+    /* hash_t function (in void*) xtoHash;  */
+    tree xhash = (d->xtoHash) ? build_address (get_symbol_decl (d->xtoHash))
+      : null_pointer_node;
+    this->layout_field (xhash);
   }
 
   /* Layout of TypeInfo_Vector is:
@@ -908,7 +920,7 @@ public:
 	      }
 	  }
 
-	if (cd->isAbstract ())
+	if (dmd::isAbstract (cd))
 	  flags |= ClassFlags::isAbstract;
 
 	for (ClassDeclaration *bcd = cd; bcd; bcd = bcd->baseClass)
@@ -919,7 +931,7 @@ public:
 	    for (size_t i = 0; i < bcd->members->length; i++)
 	      {
 		Dsymbol *sm = (*bcd->members)[i];
-		if (sm->hasPointers ())
+		if (dmd::hasPointers (sm))
 		  goto Lhaspointers;
 	      }
 	  }
@@ -1442,6 +1454,15 @@ check_typeinfo_type (const Loc &loc, Scope *sc, Expression *expr)
 	    error_at (make_location_t (loc),
 		      "%<object.TypeInfo%> cannot be used with %<-fno-rtti%>");
 
+	  if (expr != NULL || !warned)
+	    {
+	      /* Print the location of where the error came from.  */
+	      if (sc && sc->tinst)
+		dmd::printInstantiationTrace (sc->tinst);
+
+	      global.errors++;
+	    }
+
 	  warned = 1;
 	}
     }
@@ -1521,6 +1542,10 @@ layout_cpp_typeinfo (ClassDeclaration *cd)
   d_finish_decl (decl);
 }
 
+/* Cached instance of class `__cpp_type_info_ptr`.  */
+
+static hash_map<ClassDeclaration *, tree> *cpp_type_info_ptrs;
+
 /* Get the VAR_DECL of the __cpp_type_info_ptr for DECL.  If this does not yet
    exist, create it.  The __cpp_type_info_ptr decl is then initialized with a
    pointer to the C++ type_info for the given class.  */
@@ -1528,10 +1553,12 @@ layout_cpp_typeinfo (ClassDeclaration *cd)
 tree
 get_cpp_typeinfo_decl (ClassDeclaration *decl)
 {
-  gcc_assert (decl->isCPPclass ());
+  hash_map_maybe_create<hm_ggc> (cpp_type_info_ptrs);
 
-  if (decl->cpp_type_info_ptr_sym)
-    return decl->cpp_type_info_ptr_sym;
+  if (tree *tiptr = cpp_type_info_ptrs->get (decl))
+    return *tiptr;
+
+  gcc_assert (decl->isCPPclass ());
 
   if (!tinfo_types[TK_CPPTI_TYPE])
     make_internal_typeinfo (TK_CPPTI_TYPE,
@@ -1541,18 +1568,18 @@ get_cpp_typeinfo_decl (ClassDeclaration *decl)
   tree ident = mangle_internal_decl (decl, "_cpp_type_info_ptr", "");
   tree type = tinfo_types[TK_CPPTI_TYPE];
 
-  decl->cpp_type_info_ptr_sym = declare_extern_var (ident, type);
-  DECL_LANG_SPECIFIC (decl->cpp_type_info_ptr_sym) = build_lang_decl (NULL);
+  tree cpp_type_info = declare_extern_var (ident, type);
+  cpp_type_info_ptrs->put (decl, cpp_type_info);
+  DECL_LANG_SPECIFIC (cpp_type_info) = build_lang_decl (NULL);
 
   /* Class is a reference, want the record type.  */
-  DECL_CONTEXT (decl->cpp_type_info_ptr_sym)
-    = TREE_TYPE (build_ctype (decl->type));
-  TREE_READONLY (decl->cpp_type_info_ptr_sym) = 1;
+  DECL_CONTEXT (cpp_type_info) = TREE_TYPE (build_ctype (decl->type));
+  TREE_READONLY (cpp_type_info) = 1;
 
   /* Layout the initializer and emit the symbol.  */
   layout_cpp_typeinfo (decl);
 
-  return decl->cpp_type_info_ptr_sym;
+  return cpp_type_info;
 }
 
 /* Get the exact TypeInfo for TYPE, if it doesn't exist, create it.  */
@@ -1647,6 +1674,7 @@ create_typeinfo (Type *type, Scope *sc)
 	    {
 	      ident = Identifier::idPool ("TypeInfo_AssociativeArray");
 	      make_internal_typeinfo (tk, ident, ptr_type_node, ptr_type_node,
+				      ptr_type_node, ptr_type_node,
 				      ptr_type_node, NULL);
 	    }
 	  t->vtinfo = sc && have_typeinfo_p (Type::typeinfoassociativearray)

@@ -22,19 +22,16 @@ import dmd.delegatize;
 import dmd.dscope;
 import dmd.dstruct;
 import dmd.dsymbol;
-import dmd.dsymbolsem : dsymbolSemantic, aliasSemantic;
+import dmd.dsymbolsem : toAlias;
 import dmd.dtemplate;
 import dmd.errors;
 import dmd.expression;
 import dmd.func;
-import dmd.funcsem : overloadApply, getLevelAndCheck;
 import dmd.globals;
-import dmd.gluelayer;
 import dmd.hdrgen;
 import dmd.id;
 import dmd.identifier;
 import dmd.init;
-import dmd.initsem : initializerToExpression, initializerSemantic;
 import dmd.intrange;
 import dmd.location;
 import dmd.mtype;
@@ -43,7 +40,7 @@ import dmd.rootobject;
 import dmd.root.filename;
 import dmd.target;
 import dmd.tokens;
-import dmd.typesem : toDsymbol, typeSemantic, size, hasPointers;
+import dmd.typesem : typeSemantic, size;
 import dmd.visitor;
 
 version (IN_GCC) {}
@@ -123,7 +120,7 @@ extern (C++) abstract class Declaration : Dsymbol
         return "declaration";
     }
 
-    override final uinteger_t size(Loc loc)
+    override final ulong size(Loc loc)
     {
         assert(type);
         const sz = type.size();
@@ -359,21 +356,6 @@ extern (C++) final class TupleDeclaration : Declaration
         return tupletype;
     }
 
-    override Dsymbol toAlias2()
-    {
-        //printf("TupleDeclaration::toAlias2() '%s' objects = %s\n", toChars(), objects.toChars());
-        for (size_t i = 0; i < objects.length; i++)
-        {
-            RootObject o = (*objects)[i];
-            if (Dsymbol s = isDsymbol(o))
-            {
-                s = s.toAlias2();
-                (*objects)[i] = s;
-            }
-        }
-        return this;
-    }
-
     override bool needThis()
     {
         //printf("TupleDeclaration::needThis(%s)\n", toChars());
@@ -602,117 +584,7 @@ extern (C++) final class AliasDeclaration : Declaration
     {
         if (type)
             return type;
-        return toAlias().getType();
-    }
-
-    override Dsymbol toAlias()
-    {
-        static if (0)
-        printf("[%s] AliasDeclaration::toAlias('%s', this = %p, aliassym: %s, kind: '%s', inuse = %d)\n",
-            loc.toChars(), toChars(), this, aliassym ? aliassym.toChars() : "", aliassym ? aliassym.kind() : "", inuse);
-        assert(this != aliassym);
-        //static int count; if (++count == 10) *(char*)0=0;
-
-        Dsymbol err()
-        {
-            // Avoid breaking "recursive alias" state during errors gagged
-            if (global.gag)
-                return this;
-            aliassym = new AliasDeclaration(loc, ident, Type.terror);
-            type = Type.terror;
-            return aliassym;
-        }
-        // Reading the AliasDeclaration
-        if (!this.ignoreRead)
-            this.wasRead = true;                 // can never assign to this AliasDeclaration again
-
-        if (inuse == 1 && type && _scope)
-        {
-            inuse = 2;
-            const olderrors = global.errors;
-            Dsymbol s = type.toDsymbol(_scope);
-            //printf("[%s] type = %s, s = %p, this = %p\n", loc.toChars(), type.toChars(), s, this);
-            if (global.errors != olderrors)
-                return err();
-            if (s)
-            {
-                s = s.toAlias();
-                if (global.errors != olderrors)
-                    return err();
-                aliassym = s;
-                inuse = 0;
-            }
-            else
-            {
-                Type t = type.typeSemantic(loc, _scope);
-                if (t.ty == Terror)
-                    return err();
-                if (global.errors != olderrors)
-                    return err();
-                //printf("t = %s\n", t.toChars());
-                inuse = 0;
-            }
-        }
-        if (inuse)
-        {
-            .error(loc, "%s `%s` recursive alias declaration", kind, toPrettyChars);
-            return err();
-        }
-
-        if (semanticRun >= PASS.semanticdone)
-        {
-            // semantic is already done.
-
-            // Do not see aliassym !is null, because of lambda aliases.
-
-            // Do not see type.deco !is null, even so "alias T = const int;` needs
-            // semantic analysis to take the storage class `const` as type qualifier.
-        }
-        else
-        {
-            // stop AliasAssign tuple building
-            if (aliassym)
-            {
-                if (auto td = aliassym.isTupleDeclaration())
-                {
-                    if (td.building)
-                    {
-                        td.building = false;
-                        semanticRun = PASS.semanticdone;
-                        return td;
-                    }
-                }
-            }
-            if (_import && _import._scope)
-            {
-                /* If this is an internal alias for selective/renamed import,
-                 * load the module first.
-                 */
-                _import.dsymbolSemantic(null);
-            }
-            if (_scope)
-            {
-                aliasSemantic(this, _scope);
-            }
-        }
-
-        inuse = 1;
-        Dsymbol s = aliassym ? aliassym.toAlias() : this;
-        inuse = 0;
-        return s;
-    }
-
-    override Dsymbol toAlias2()
-    {
-        if (inuse)
-        {
-            .error(loc, "%s `%s` recursive alias declaration", kind, toPrettyChars);
-            return this;
-        }
-        inuse = 1;
-        Dsymbol s = aliassym ? aliassym.toAlias2() : this;
-        inuse = 0;
-        return s;
+        return toAlias(this).getType();
     }
 
     override bool isOverloadable() const
@@ -781,25 +653,6 @@ extern (C++) final class OverDeclaration : Declaration
     override bool isOverloadable() const
     {
         return true;
-    }
-
-    Dsymbol isUnique()
-    {
-        Dsymbol result = null;
-        overloadApply(aliassym, (Dsymbol s)
-        {
-            if (result)
-            {
-                result = null;
-                return 1; // ambiguous, done
-            }
-            else
-            {
-                result = s;
-                return 0;
-            }
-        });
-        return result;
     }
 
     override void accept(Visitor v)
@@ -978,7 +831,7 @@ extern (C++) class VarDeclaration : Declaration
         {
             isdataseg = 2; // The Variables does not go into the datasegment
 
-            if (!canTakeAddressOf())
+            if (!canTakeAddressOf() || (storage_class & STC.exptemp))
             {
                 return false;
             }
@@ -1031,7 +884,7 @@ extern (C++) class VarDeclaration : Declaration
         auto bitoffset  =   offset * 8;
         auto vbitoffset = v.offset * 8;
 
-        // Bitsize of types are overridden by any bit-field widths.
+        // Bitsize of types are overridden by any bitfield widths.
         ulong tbitsize;
         if (auto bf = isBitFieldDeclaration())
         {
@@ -1054,12 +907,6 @@ extern (C++) class VarDeclaration : Declaration
                 vbitoffset <  bitoffset + tbitsize;
     }
 
-    override final bool hasPointers()
-    {
-        //printf("VarDeclaration::hasPointers() %s, ty = %d\n", toChars(), type.ty);
-        return (!isDataseg() && type.hasPointers());
-    }
-
     /*************************************
      * Return true if we can take the address of this variable.
      */
@@ -1075,126 +922,6 @@ extern (C++) class VarDeclaration : Declaration
     {
         //printf("VarDeclaration::needsScopeDtor() %s %d\n", toChars(), edtor && !(storage_class & STC.nodtor));
         return edtor && !(storage_class & STC.nodtor);
-    }
-
-    /*******************************************
-     * If variable has a constant expression initializer, get it.
-     * Otherwise, return null.
-     */
-    extern (D) final Expression getConstInitializer(bool needFullType = true)
-    {
-        assert(type && _init);
-
-        // Ungag errors when not speculative
-        const oldgag = global.gag;
-        if (global.gag)
-        {
-            Dsymbol sym = isMember();
-            if (sym && !sym.isSpeculative())
-                global.gag = 0;
-        }
-
-        if (_scope)
-        {
-            inuse++;
-            _init = _init.initializerSemantic(_scope, type, INITinterpret);
-            import dmd.semantic2 : lowerStaticAAs;
-            lowerStaticAAs(this, _scope);
-            _scope = null;
-            inuse--;
-        }
-
-        Expression e = _init.initializerToExpression(needFullType ? type : null);
-        global.gag = oldgag;
-        return e;
-    }
-
-    /************************************
-     * Check to see if this variable is actually in an enclosing function
-     * rather than the current one.
-     * Update nestedrefs[], closureVars[] and outerVars[].
-     * Returns: true if error occurs.
-     */
-    extern (D) final bool checkNestedReference(Scope* sc, Loc loc)
-    {
-        //printf("VarDeclaration::checkNestedReference() %s\n", toChars());
-        if (sc.intypeof == 1 || sc.ctfe)
-            return false;
-        if (!parent || parent == sc.parent)
-            return false;
-        if (isDataseg() || (storage_class & STC.manifest))
-            return false;
-
-        // The current function
-        FuncDeclaration fdthis = sc.parent.isFuncDeclaration();
-        if (!fdthis)
-            return false; // out of function scope
-
-        Dsymbol p = toParent2();
-
-        // Function literals from fdthis to p must be delegates
-        ensureStaticLinkTo(fdthis, p);
-
-        // The function that this variable is in
-        FuncDeclaration fdv = p.isFuncDeclaration();
-        if (!fdv || fdv == fdthis)
-            return false;
-
-        // Add fdthis to nestedrefs[] if not already there
-        if (!nestedrefs.contains(fdthis))
-            nestedrefs.push(fdthis);
-
-        //printf("\tfdv = %s\n", fdv.toChars());
-        //printf("\tfdthis = %s\n", fdthis.toChars());
-        if (loc.isValid())
-        {
-            if (fdthis.getLevelAndCheck(loc, sc, fdv, this) == fdthis.LevelError)
-                return true;
-        }
-
-        // Add this VarDeclaration to fdv.closureVars[] if not already there
-        if (!sc.intypeof && !sc.traitsCompiles &&
-            // https://issues.dlang.org/show_bug.cgi?id=17605
-            (fdv.skipCodegen || !fdthis.skipCodegen))
-        {
-            if (!fdv.closureVars.contains(this))
-                fdv.closureVars.push(this);
-        }
-
-        if (!fdthis.outerVars.contains(this))
-            fdthis.outerVars.push(this);
-
-        //printf("fdthis is %s\n", fdthis.toChars());
-        //printf("var %s in function %s is nested ref\n", toChars(), fdv.toChars());
-        // __dollar creates problems because it isn't a real variable
-        // https://issues.dlang.org/show_bug.cgi?id=3326
-        if (ident == Id.dollar)
-        {
-            .error(loc, "cannnot use `$` inside a function literal");
-            return true;
-        }
-        if (ident == Id.withSym) // https://issues.dlang.org/show_bug.cgi?id=1759
-        {
-            ExpInitializer ez = _init.isExpInitializer();
-            assert(ez);
-            Expression e = ez.exp;
-            if (e.op == EXP.construct || e.op == EXP.blit)
-                e = (cast(AssignExp)e).e2;
-            return lambdaCheckForNestedRef(e, sc);
-        }
-
-        return false;
-    }
-
-    override final Dsymbol toAlias()
-    {
-        //printf("VarDeclaration::toAlias('%s', this = %p, aliassym = %p)\n", toChars(), this, aliassym);
-        if ((!type || !type.deco) && _scope)
-            dsymbolSemantic(this, _scope);
-
-        assert(this != aliasTuple);
-        Dsymbol s = aliasTuple ? aliasTuple.toAlias() : this;
-        return s;
     }
 
     override void accept(Visitor v)
@@ -1499,6 +1226,8 @@ extern (C++) final class TypeInfoStaticArrayDeclaration : TypeInfoDeclaration
 extern (C++) final class TypeInfoAssociativeArrayDeclaration : TypeInfoDeclaration
 {
     Type entry; // type of TypeInfo_AssociativeArray.Entry!(t.index, t.next)
+    Declaration xopEqual; // implementation of TypeInfo_AssociativeArray.equals
+    Declaration xtoHash;  // implementation of TypeInfo_AssociativeArray.getHash
 
     extern (D) this(Type tinfo)
     {

@@ -29,6 +29,7 @@ class AliasDeclaration;
 class AggregateDeclaration;
 class EnumDeclaration;
 class ClassDeclaration;
+class StructDeclaration;
 class InterfaceDeclaration;
 class StructDeclaration;
 class UnionDeclaration;
@@ -101,10 +102,13 @@ namespace dmd
     void dsymbolSemantic(Dsymbol *dsym, Scope *sc);
     void semantic2(Dsymbol *dsym, Scope *sc);
     void semantic3(Dsymbol *dsym, Scope* sc);
+    Dsymbol *toAlias(Dsymbol* s);
+    Dsymbol *toAlias2(Dsymbol* s);
     // in iasm.d
     void asmSemantic(CAsmDeclaration *ad, Scope *sc);
     // in iasmgcc.d
     void gccAsmSemantic(CAsmDeclaration *ad, Scope *sc);
+    bool isPOD(StructDeclaration *sd);
 }
 
 struct Visibility
@@ -223,8 +227,6 @@ public:
     virtual Identifier *getIdent();
     virtual const char *toPrettyChars(bool QualifyTypes = false);
     virtual const char *kind() const;
-    virtual Dsymbol *toAlias();                 // resolve real symbol
-    virtual Dsymbol *toAlias2();
     virtual bool overloadInsert(Dsymbol *s);
     virtual uinteger_t size(Loc loc);
     virtual bool isforwardRef();
@@ -243,7 +245,6 @@ public:
     virtual bool needThis();                    // need a 'this' pointer?
     virtual Visibility visible();
     virtual Dsymbol *syntaxCopy(Dsymbol *s);    // copy only syntax trees
-    virtual bool hasPointers();
     virtual void addObjcSymbols(ClassDeclarations *, ClassDeclarations *) { }
 
     virtual void addComment(const utf8_t *comment);
@@ -428,7 +429,5 @@ namespace dmd
     Dsymbols *include(Dsymbol *d, Scope *sc);
     void setScope(Dsymbol *d, Scope *sc);
     void importAll(Dsymbol *d, Scope *sc);
-    void addComment(Dsymbol *d, const char *comment);
-    bool oneMember(Dsymbol *d, Dsymbol *&ps, Identifier *ident);
-    bool hasStaticCtorOrDtor(Dsymbol *d);
+    bool hasPointers(Dsymbol *d);
 }
