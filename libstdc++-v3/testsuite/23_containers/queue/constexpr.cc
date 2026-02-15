@@ -20,6 +20,7 @@ template<typename Container>
 constexpr void ctor_tests()
 {
   using Tp = typename Container::value_type;
+  typename Container::allocator_type Alloc;
 
   Container c0 {};
   auto alloc = c0.get_allocator();
@@ -48,23 +49,23 @@ constexpr void ctor_tests()
   VERIFY( q3.back() == q1.back() );
   VERIFY( q2.empty() );
 
-  std::queue<Tp, Container> q4 (alloc);
+  std::queue<Tp, Container, Alloc> q4 (alloc);
   q4.push(1);
   q4.push(2);
   VERIFY( q4.size() == 2 );
 
-  std::queue<Tp, Container> q5 (q4, alloc);
+  std::queue<Tp, Container, Alloc> q5 (q4, alloc);
   VERIFY( q5 == q4 );
   VERIFY( q5.size() == q4.size() );
   VERIFY( q5.front() == q4.front() );
   VERIFY( q5.back() == q4.back() );
 
-  std::queue<Tp, Container> q6 (std::move(q5), alloc);
+  std::queue<Tp, Container, Alloc> q6 (std::move(q5), alloc);
   VERIFY( q6 == q4 );
   VERIFY( q6.size() == q4.size() );
   VERIFY( q5.empty() );
 
-  std::queue<Tp, Container> q7 (alloc);
+  std::queue<Tp, Container, Alloc> q7 (alloc);
   VERIFY( q7.size() == 0 );
 
   Tp rg[4] = {2, 3, 5, 7};
@@ -79,7 +80,7 @@ constexpr void ctor_tests()
   VERIFY( q8.front() == 7 );
   q8.pop();
 
-  std::queue<Tp, Container> q9(std::begin(rg), std::end(rg), alloc);
+  std::queue<Tp, Container, Alloc> q9(std::begin(rg), std::end(rg), alloc);
   VERIFY( q9.size() == std::size(rg));
   VERIFY( q9.front() == 2 );
   q9.pop();
@@ -93,12 +94,12 @@ constexpr void ctor_tests()
   auto rg0 = {2, 3, 5, 7};
   auto test_q0 = rg0 | std::ranges::to<std::queue<Container>>();
   auto q10 = std::queue<Tp, Container>(std::from_range,
-					std::ranges::views::iota(0, 7));
+				       std::ranges::views::iota(0, 7));
   VERIFY( q10.size() == 7 );
 
-  auto q11 = std::queue<Tp, Container>(std::from_range,
-					std::ranges::views::iota(0, 7),
-					alloc);
+  auto q11 = std::queue<Tp, Container, Alloc>(std::from_range,
+					      std::ranges::views::iota(0, 7),
+					      alloc);
   VERIFY( q11.size() == 7 );
 }
 
@@ -235,29 +236,29 @@ constexpr void operator_test()
 constexpr bool
 do_tests()
 {
+  using namespace __gnu_test;
+
   auto do_modifier_tests = []() {
     push_and_pop_test();
     push_range_test();
     swap_test();
     emplace_test();
   };
-  ctor_tests<std::deque<int>>();
-  ctor_tests<std::deque<int, SimpleAllocator<int>>>();
 
-  //TODO: for adaptors, what else should we wrap around?
-//  auto ctor_tests = [](){
-//
-//  };
+  // TODO: Check also list when made constexpr.
+  auto do_ctor_tests = []() {
+    ctor_tests<std::deque<int>>();
+    ctor_tests<std::deque<int, SimpleAllocator<int>>>();
+  }
 
-  // TODO: We should also test std::list later.
-  ctor_tests<std::deque<int>>();
+  do_ctor_tests();
   do_modifier_tests();
   element_access_tests();
   operator_test();
 
   // Additional code coverage
   do_ranges_tests<std::allocator<int>>();
-  do_ranges_tests<__gnu_test::SimpleAllocator<int>>();
+  do_ranges_tests<SimpleAllocator<int>>();
   return true;
 }
 
