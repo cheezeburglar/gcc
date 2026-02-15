@@ -14,6 +14,7 @@
 #include <testsuite_iterators.h>
 #include <testsuite_allocator.h>
 
+template<typename Alloc>
 constexpr bool ctor_tests()
 {
 
@@ -320,9 +321,16 @@ constexpr void do_ranges_tests()
   ranges_test<rvalue_input_range>();
 }
 
+constexpr void do_ctor_tests()
+{
+  using namespace __gnu_test;
+  ctor_tests<std::allocator<int>>();
+  ctor_tests<SimpleAllocator<int>>();
+}
+
 constexpr bool do_tests()
 {
-  ctor_tests();
+  do_ctor_tests();
   insert_tests();
   iterators_tests();
   capacity_tests();
