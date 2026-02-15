@@ -46,6 +46,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "selftest-tree.h"
 #include "context.h"
 #include "channels.h"
+#include "value-relation.h"
+#include "range-op.h"
 
 #include "text-art/tree-widget.h"
 
@@ -4842,7 +4844,11 @@ region_model::scan_for_null_terminator (const region *reg,
       reg->dump_to_pp (pp, true);
       logger->end_log_line ();
     }
+  if (out_sval)
+    *out_sval = nullptr;
   const svalue *sval = scan_for_null_terminator_1 (reg, expr, out_sval, ctxt);
+  if (sval && out_sval)
+    gcc_assert (*out_sval);
   if (logger)
     {
       pretty_printer *pp = logger->get_printer ();
@@ -5026,6 +5032,8 @@ region_model::check_for_null_terminated_string_arg (const call_details &cd,
 				  out_sval,
 				  &my_ctxt))
     {
+      if (out_sval)
+	gcc_assert (*out_sval);
       if (include_terminator)
 	return num_bytes_read_sval;
       else
@@ -5346,6 +5354,30 @@ region_model::eval_condition (const svalue *lhs,
 	  }
 	  break;
 	}
+    }
+
+  /* Try range_op, but avoid cases where we have been sloppy about types.  */
+  if (lhs->get_type ()
+      && rhs->get_type ()
+      && range_compatible_p (lhs->get_type (), rhs->get_type ()))
+    {
+      value_range lhs_vr, rhs_vr;
+      if (lhs->maybe_get_value_range (lhs_vr))
+	if (rhs->maybe_get_value_range (rhs_vr))
+	  {
+	    range_op_handler handler (op);
+	    if (handler)
+	      {
+		int_range_max out;
+		if (handler.fold_range (out, boolean_type_node, lhs_vr, rhs_vr))
+		  {
+		    if (out.zero_p ())
+		      return tristate::TS_FALSE;
+		    if (out.nonzero_p ())
+		      return tristate::TS_TRUE;
+		  }
+	      }
+	  }
     }
 
   /* Attempt to unwrap cast if there is one, and the types match.  */
@@ -6339,13 +6371,14 @@ region_model::push_frame (const function &fun,
 
 	    /* Get region for default val of DECL_RESULT within the
 	       callee.  */
-	    tree result_default_ssa = get_ssa_default_def (fun, result);
-	    gcc_assert (result_default_ssa);
-	    const region *callee_result_reg
-	      = get_lvalue (result_default_ssa, ctxt);
+	    if (tree result_default_ssa = get_ssa_default_def (fun, result))
+	      {
+		const region *callee_result_reg
+		  = get_lvalue (result_default_ssa, ctxt);
 
-	    /* Set the callee's reference to refer to the caller's lhs.  */
-	    set_value (callee_result_reg, ref_sval, ctxt);
+		/* Set the callee's reference to refer to the caller's lhs.  */
+		set_value (callee_result_reg, ref_sval, ctxt);
+	      }
 	  }
     }
   else

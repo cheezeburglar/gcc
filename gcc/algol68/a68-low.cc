@@ -1421,7 +1421,9 @@ lower_module_declaration (NODE_T *p, LOW_CTX_T ctx)
 	  for (tree d : A68_MODULE_DEFINITION_DECLS)
 	    {
 	      if (TREE_CODE (d) == FUNCTION_DECL)
-		cgraph_node::finalize_function (d, true);
+		{
+		  cgraph_node::finalize_function (d, true);
+		}
 	      else
 		{
 		  rest_of_decl_compilation (d, 1, 0);

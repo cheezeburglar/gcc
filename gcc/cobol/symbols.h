@@ -1,5 +1,5 @@
  /*
- * Copyright (c) 2021-2025 Symas Corporation
+ * Copyright (c) 2021-2026 Symas Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -889,6 +889,7 @@ struct cbl_field_t {
   uint64_t set_attr( cbl_field_attr_t attr );
   uint64_t clear_attr( cbl_field_attr_t attr );
   const char * attr_str( const std::vector<cbl_field_attr_t>& attrs ) const;
+  uint64_t set_signable();
 
   bool is_justifiable() const {
     if( type == FldAlphanumeric ) return true;

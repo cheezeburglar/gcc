@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021-2025 Symas Corporation
+ * Copyright (c) 2021-2026 Symas Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -814,6 +814,40 @@ cbl_field_t::set_attr( cbl_field_attr_t attr ) {
 uint64_t
 cbl_field_t::clear_attr( cbl_field_attr_t attr ) {
   return this->attr &= ~uint64_t(attr);
+}
+
+// Test various ways a Numeric Edited picture can describe a signed value.
+uint64_t 
+cbl_field_t::set_signable() {
+  gcc_assert(type == FldNumericEdited);
+  gcc_assert(data.picture);
+  char *p = xstrdup(data.picture);
+  char *pend;
+  // Look to see if this is a floating-point numeric-edited:
+  pend = strchr(p, ascii_e);
+  if( !pend ) {
+    pend = strchr(p, ascii_E);
+  }
+  if( pend ) {
+    // We end our inspection at the 'E'
+    *pend = '\0';
+  }
+  size_t len = strlen(p);
+  if( p[0] == ascii_plus || p[0] == ascii_minus ) {
+    // The very first character is plus or minus
+    set_attr(signable_e);
+  } else if( len >= 1 && (p[len-1] == ascii_plus || p[len-1] == ascii_minus)) {
+    // The very last character is plus or minus
+    set_attr(signable_e);
+  }
+  else if( len >= 2 &&
+     (   (TOUPPER(p[len-2]) == ascii_D && TOUPPER(p[len-1]) == ascii_B)
+      || (TOUPPER(p[len-2]) == ascii_C && TOUPPER(p[len-1]) == ascii_R) ) ) {
+    // The last two characters are DB or CR
+    set_attr(signable_e);
+  }
+  free(p);
+  return attr;
 }
 
 static uint32_t
@@ -4094,10 +4128,15 @@ cbl_field_t::encode( size_t srclen, cbl_loc_t loc ) {
 
     if( inbytesleft == 0 ) {
       if( data.all() ) {
-        for( size_t len = outbuf - data.initial;
-             outbuf + len <= data.initial + data.capacity();
-             outbuf += len ) {
-          std::copy( data.initial, data.initial + len, outbuf );
+        size_t len = outbuf - data.initial;
+        // We need to repeatedly append the first len bytes of data.initial to
+        // data.initial until it is full.  Thus ALL "ABC" becomes "ABCABC..."
+        char *d = const_cast<char*>(data.initial);
+        size_t source_i = 0;
+        size_t dest_i   = len;
+        while( dest_i < static_cast<size_t>(data.capacity()) ) {
+          d[dest_i++] = d[source_i++];
+          source_i %= len;
         }
       }
       if( is_literal(this) ) {

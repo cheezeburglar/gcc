@@ -416,7 +416,10 @@ a68_extract_indicants (NODE_T *p)
 		  else
 		    {
 		      q = skip_module_text (NEXT (q));
-		      FORWARD (q);
+		      if (q == NO_NODE)
+			siga = false;
+		      else
+			FORWARD (q);
 		    }
 		}
 	      else
@@ -758,6 +761,7 @@ extract_identities (NODE_T *p)
 	      FORWARD (q);
 	    }
 
+	  NODE_T *declarer = q;
 	  do
 	    {
 	      if (a68_whether ((FORWARD (q)), IDENTIFIER, EQUALS_SYMBOL, STOP))
@@ -767,6 +771,12 @@ extract_identities (NODE_T *p)
 		    gcc_unreachable ();
 		  ATTRIBUTE (q) = DEFINING_IDENTIFIER;
 		  PUBLICIZED (q) = is_public;
+		  if (IS (SUB (declarer), PROC_SYMBOL))
+		    {
+		      NODE_T *actual_param = NEXT (NEXT (q));
+		      if (actual_param != NO_NODE && IS (actual_param, FORMAL_NEST_SYMBOL))
+			NEST_PROC (tag) = true;
+		    }
 		  FORWARD (q);
 		  ATTRIBUTE (q) = ALT_EQUALS_SYMBOL;
 		  q = skip_unit (q);

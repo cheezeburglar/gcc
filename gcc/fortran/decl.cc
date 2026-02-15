@@ -3960,10 +3960,9 @@ gfc_get_pdt_instance (gfc_actual_arglist *param_list, gfc_symbol **sym,
   /* Pointers to the parameter specification being used.  */
   gfc_actual_arglist *actual_param;
   gfc_actual_arglist *tail = NULL;
-  /* Used to build up the name of the PDT instance. The prefix uses 4
+  /* Used to build up the name of the PDT instance. The prefix uses 3
      characters and each KIND parameter 2 more.  Allow 8 of the latter. */
-  char name[GFC_MAX_SYMBOL_LEN + 21];
-
+  char name[GFC_MAX_SYMBOL_LEN + PDT_PREFIX_LEN + 16];
   bool name_seen = (param_list == NULL);
   bool assumed_seen = false;
   bool deferred_seen = false;
@@ -3980,7 +3979,7 @@ gfc_get_pdt_instance (gfc_actual_arglist *param_list, gfc_symbol **sym,
 
   type_param_name_list = pdt->formal;
   actual_param = param_list;
-  sprintf (name, "Pdt%s", pdt->name);
+  sprintf (name, "%s%s", PDT_PREFIX, pdt->name);
 
   /* Prevent a PDT component of the same type as the template from being
      converted into an instance. Doing this results in the component being
@@ -4301,6 +4300,12 @@ gfc_get_pdt_instance (gfc_actual_arglist *param_list, gfc_symbol **sym,
 
 	  c2->ts.u.derived->refs++;
 	  gfc_set_sym_referenced (c2->ts.u.derived);
+
+	  /* If the component is allocatable or the parent has allocatable
+	     components, make sure that the new instance also is marked as
+	     having allocatable components.  */
+	  if (c2->attr.allocatable || c2->ts.u.derived->attr.alloc_comp)
+	    instance->attr.alloc_comp = 1;
 
 	  /* Set extension level.  */
 	  if (c2->ts.u.derived->attr.extension == 255)
@@ -10399,7 +10404,7 @@ gfc_match_volatile (void)
       switch (m)
 	{
 	case MATCH_YES:
-	  name = XCNEWVAR (char, strlen (sym->name) + 1);
+	  name = XALLOCAVAR (char, strlen (sym->name) + 1);
 	  strcpy (name, sym->name);
 	  if (!check_function_name (name))
 	    return MATCH_ERROR;
@@ -10463,7 +10468,7 @@ gfc_match_asynchronous (void)
       switch (m)
 	{
 	case MATCH_YES:
-	  name = XCNEWVAR (char, strlen (sym->name) + 1);
+	  name = XALLOCAVAR (char, strlen (sym->name) + 1);
 	  strcpy (name, sym->name);
 	  if (!check_function_name (name))
 	    return MATCH_ERROR;

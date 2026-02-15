@@ -279,6 +279,8 @@ static tree omp_start_variant_function
 static int omp_finish_variant_function
   (cp_parser *, tree, tree, tree, bool, bool);
 static void maybe_start_implicit_template (cp_parser *parser);
+static void missing_template_diag
+  (location_t, diagnostics::kind = diagnostics::kind::warning);
 
 /* Manifest constants.  */
 #define CP_LEXER_BUFFER_SIZE ((256 * 1024) / sizeof (cp_token))
@@ -1635,10 +1637,11 @@ struct saved_token_sentinel
 {
   cp_lexer *lexer;
   unsigned len;
+  location_t loc;
   saved_token_sentinel_mode mode;
   saved_token_sentinel (cp_lexer *_lexer,
 			saved_token_sentinel_mode _mode = STS_COMMIT)
-    : lexer (_lexer), mode (_mode)
+    : lexer (_lexer), loc (input_location), mode (_mode)
   {
     len = lexer->saved_tokens.length ();
     cp_lexer_save_tokens (lexer);
@@ -1646,8 +1649,7 @@ struct saved_token_sentinel
   void rollback ()
   {
     cp_lexer_rollback_tokens (lexer);
-    cp_lexer_set_source_position_from_token
-      (cp_lexer_previous_token (lexer));
+    input_location = loc;
     mode = STS_DONOTHING;
   }
   ~saved_token_sentinel ()
@@ -4171,7 +4173,8 @@ cp_parser_parse_and_diagnose_invalid_type_name (cp_parser *parser)
   /* If the next token is a (, this is a function with no explicit return
      type, i.e. constructor, destructor or conversion op.  */
   if (cp_lexer_next_token_is (parser->lexer, CPP_OPEN_PAREN)
-      || TREE_CODE (id) == TYPE_DECL)
+      || TREE_CODE (id) == TYPE_DECL
+      || id == error_mark_node)
     {
       cp_parser_abort_tentative_parse (parser);
       return false;
@@ -5024,7 +5027,7 @@ cp_parser_string_literal_common (cp_parser *parser, bool translate,
       (parse_in, strs, count, &istr, type))
     {
       value = build_string (istr.len, (const char *)istr.text);
-      free (CONST_CAST (unsigned char *, istr.text));
+      free (const_cast<unsigned char *> (istr.text));
       if (count > 1)
 	{
 	  location_t *locs = (location_t *)obstack_finish (&loc_ob);
@@ -6125,11 +6128,13 @@ cp_parser_next_tokens_can_start_splice_scope_spec_p (cp_parser *parser)
       splice-specifier < template-argument-list[opt] >
 
    TEMPLATE_P is true if we've parsed the leading template keyword.
+   TYPENAME_P is true if we've parsed the leading typename keyword or are
+   in a type-only context.
    TARGS_P is set to true if there is a splice-specialization-specifier.  */
 
 static cp_expr
 cp_parser_splice_specifier (cp_parser *parser, bool template_p = false,
-			    bool *targs_p = nullptr)
+			    bool typename_p = false, bool *targs_p = nullptr)
 {
   /* Get the location of the '[:'.  */
   location_t start_loc = cp_lexer_peek_token (parser->lexer)->location;
@@ -6169,8 +6174,20 @@ cp_parser_splice_specifier (cp_parser *parser, bool template_p = false,
   /* Get the reflected operand.  */
   expr = splice (expr);
 
-  /* If the next token is a '<', it's a splice-specialization-specifier.  */
-  if (cp_lexer_next_token_is (parser->lexer, CPP_LESS))
+  /* If the next token is a <, it could be a splice-specialization-specifier.
+     But we need to handle "[:r:] < 42" where the < doesn't start a template
+     argument list.  [temp.names]/3: A < is interpreted as the delimiter of
+     a template-argument-list if either
+     -- it follows a splice-specifier that either
+       -- appears in a type-only context or
+       -- is preceded by template or typename.  */
+  if (cp_parser_nth_token_starts_template_argument_list_p (parser, 1)
+      /* As a courtesy to the user, if there is a < after a template
+	 name, parse the construct as an s-s-s and warn about the missing
+	 'template'; it can't be anything else.  */
+      && (template_p
+	  || typename_p
+	  || TREE_CODE (OVL_FIRST (expr)) == TEMPLATE_DECL))
     {
       /* For member access splice-specialization-specifier, try to wrap
 	 non-dependent splice for function template into a BASELINK so
@@ -6222,7 +6239,8 @@ cp_parser_splice_type_specifier (cp_parser *parser)
   if (cp_lexer_next_token_is_keyword (parser->lexer, RID_TYPENAME))
     cp_lexer_consume_token (parser->lexer);
 
-  cp_expr expr = cp_parser_splice_specifier (parser);
+  cp_expr expr = cp_parser_splice_specifier (parser, /*template_p=*/false,
+					     /*typename_p=*/true);
   const location_t loc = (expr != error_mark_node
 			  ? expr.get_location () : input_location);
   tree type = expr.get_value ();
@@ -6238,7 +6256,11 @@ cp_parser_splice_type_specifier (cp_parser *parser)
   if (!valid_splice_type_p (type))
     {
       if (!cp_parser_simulate_error (parser))
-	error_at (loc, "reflection %qE not usable in a splice type", type);
+	{
+	  auto_diagnostic_group d;
+	  error_at (loc, "expected a reflection of a type");
+	  inform_tree_category (type);
+	}
       type = NULL_TREE;
     }
 
@@ -6271,7 +6293,8 @@ cp_parser_splice_expression (cp_parser *parser, bool template_p,
   parser->object_scope = NULL_TREE;
   parser->qualifying_scope = NULL_TREE;
 
-  cp_expr expr = cp_parser_splice_specifier (parser, template_p, &targs_p);
+  cp_expr expr = cp_parser_splice_specifier (parser, template_p,
+					     /*typename_p=*/false, &targs_p);
 
   /* And don't leave the scopes set, either.  */
   parser->scope = NULL_TREE;
@@ -6298,71 +6321,42 @@ cp_parser_splice_expression (cp_parser *parser, bool template_p,
       return error_mark_node;
     }
 
+  /* Make sure this splice-expression produces an expression.  */
+  if (!check_splice_expr (loc, expr.get_start (), t, address_p,
+			  member_access_p, /*complain=*/true))
+    return error_mark_node;
+
   if (template_p)
     {
       /* [expr.prim.splice] For a splice-expression of the form template
 	 splice-specifier, the splice-specifier shall designate a function
 	 template.  */
-      if (!targs_p)
+      if (!targs_p
+	  && !really_overloaded_fn (t)
+	  && !dependent_splice_p (t))
 	{
-	  if (!really_overloaded_fn (t) && !dependent_splice_p (t))
-	    {
-	      auto_diagnostic_group d;
-	      error_at (loc, "reflection %qE not usable in a template splice",
-			t);
-	      inform (loc, "only function templates are allowed here");
-	      return error_mark_node;
-	    }
+	  auto_diagnostic_group d;
+	  error_at (loc, "expected a reflection of a function template");
+	  inform_tree_category (t);
+	  return error_mark_node;
 	}
       /* [expr.prim.splice] For a splice-expression of the form
 	 template splice-specialization-specifier, the splice-specifier of the
-	 splice-specialization-specifier shall designate a template.  */
-      else
-	{
-	  if (really_overloaded_fn (t)
-	      || get_template_info (t)
-	      || TREE_CODE (t) == TEMPLATE_ID_EXPR)
-	    /* OK */;
-	  else
-	    {
-	      auto_diagnostic_group d;
-	      error_at (loc, "reflection %qE not usable in a template splice",
-			t);
-	      inform (loc, "only templates are allowed here");
-	      return error_mark_node;
-	    }
-	}
+	 splice-specialization-specifier shall designate a template.  Since
+	 we would have already complained, just check that we have a template.  */
+      gcc_checking_assert (really_overloaded_fn (t)
+			   || get_template_info (t)
+			   || TREE_CODE (t) == TEMPLATE_ID_EXPR
+			   || dependent_splice_p (t));
     }
   else if (/* No 'template' but there were template arguments?  */
-	   targs_p
-	   /* No 'template' but the splice-specifier designates a template?  */
-	   || really_overloaded_fn (t))
-    {
-      auto_diagnostic_group d;
-      if (targs_p)
-	error_at (loc, "reflection %qE not usable in a splice expression with "
-		  "template arguments", t);
-      else
-	error_at (loc, "reflection %qE not usable in a splice expression", t);
-      location_t sloc = expr.get_start ();
-      rich_location richloc (line_table, sloc);
-      richloc.add_fixit_insert_before (sloc, "template ");
-      inform (&richloc, "add %<template%> to denote a template");
-      return error_mark_node;
-    }
-
-  if (parser->in_template_argument_list_p
-      && !parser->greater_than_is_operator_p)
-    {
-      error_at (loc, "unparenthesized splice expression cannot be used as "
-		"a template argument");
-      return error_mark_node;
-    }
-
-  /* Make sure this splice-expression produces an expression.  */
-  if (!check_splice_expr (loc, expr.get_start (), t, address_p,
-			  member_access_p, /*complain=*/true))
-    return error_mark_node;
+	   (targs_p
+	    /* No 'template' but the splice-specifier designates a function
+	       template?  */
+	    || really_overloaded_fn (t))
+	   && warning_enabled_at (loc, OPT_Wmissing_template_keyword))
+    /* Were 'template' present, this would be valid code, so keep going.  */
+    missing_template_diag (loc, diagnostics::kind::pedwarn);
 
   /* When doing foo.[: bar :], cp_parser_postfix_dot_deref_expression wants
      to see an identifier or a TEMPLATE_ID_EXPR, if we have something like
@@ -6432,7 +6426,8 @@ cp_parser_splice_scope_specifier (cp_parser *parser, bool typename_p,
 				  bool template_p)
 {
   bool targs_p = false;
-  cp_expr scope = cp_parser_splice_specifier (parser, template_p, &targs_p);
+  cp_expr scope = cp_parser_splice_specifier (parser, template_p, typename_p,
+					      &targs_p);
   const location_t loc = scope.get_location ();
   if (TREE_CODE (scope) == TYPE_DECL)
     scope = TREE_TYPE (scope);
@@ -6463,17 +6458,45 @@ cp_parser_splice_scope_specifier (cp_parser *parser, bool typename_p,
   if (!valid_splice_scope_p (scope))
     {
       auto_diagnostic_group d;
-      error_at (loc, "reflection not usable in a splice scope");
-      if (TYPE_P (scope))
-	inform (loc, "%qT is not a class, namespace, or enumeration",
-		tree (scope));
-      else
-	inform (loc, "%qE is not a class, namespace, or enumeration",
-		tree (scope));
+      error_at (loc, "expected a reflection of a class, namespace, or "
+		"enumeration");
+      inform_tree_category (tree (scope));
       scope = error_mark_node;
     }
 
   return scope;
+}
+
+/* Skip the whole splice-expression: the optional typename/template,
+   [:...:], and also the <...>, if present.  Return true if we skipped
+   successfully.  */
+
+static bool
+cp_parser_skip_entire_splice_expr (cp_parser *parser)
+{
+  if (cp_lexer_next_token_is_keyword (parser->lexer, RID_TYPENAME)
+      || cp_lexer_next_token_is_keyword (parser->lexer, RID_TEMPLATE))
+    cp_lexer_consume_token (parser->lexer);
+
+  if (cp_lexer_next_token_is_not (parser->lexer, CPP_OPEN_SPLICE))
+    return false;
+
+  size_t n = cp_parser_skip_balanced_tokens (parser, 1);
+  if (n != 1)
+    {
+      /* Consume tokens up to the ':]' (including).  */
+      for (n = n - 1; n; --n)
+	cp_lexer_consume_token (parser->lexer);
+
+      /* Consume the whole '<....>', if present.  */
+      if (cp_lexer_next_token_is (parser->lexer, CPP_LESS)
+	  && !cp_parser_skip_entire_template_parameter_list (parser))
+	return false;
+
+      return true;
+    }
+
+  return false;
 }
 
 /* We know the next token is '[:' (optionally preceded by a template or
@@ -6484,36 +6507,9 @@ cp_parser_splice_scope_specifier (cp_parser *parser, bool typename_p,
 static bool
 cp_parser_splice_spec_is_nns_p (cp_parser *parser)
 {
-  /* ??? It'd be nice to use saved_token_sentinel, but its rollback
-     uses cp_lexer_previous_token, but we may be the first token in the
-     file so there are no previous tokens.  Sigh.  */
-  cp_lexer_save_tokens (parser->lexer);
-
-  if (cp_lexer_next_token_is_keyword (parser->lexer, RID_TYPENAME)
-      || cp_lexer_next_token_is_keyword (parser->lexer, RID_TEMPLATE))
-    cp_lexer_consume_token (parser->lexer);
-
-  bool ok = false;
-  size_t n = cp_parser_skip_balanced_tokens (parser, 1);
-  if (n != 1)
-    {
-      ok = true;
-      /* Consume tokens up to the ':]' (including).  */
-      for (n = n - 1; n; --n)
-	cp_lexer_consume_token (parser->lexer);
-
-      /* Consume the whole '<....>', if present.  */
-      if (cp_lexer_next_token_is (parser->lexer, CPP_LESS)
-	  && !cp_parser_skip_entire_template_parameter_list (parser))
-	ok = false;
-
-      ok = ok && cp_lexer_next_token_is (parser->lexer, CPP_SCOPE);
-    }
-
-  /* Roll back the tokens we skipped.  */
-  cp_lexer_rollback_tokens (parser->lexer);
-
-  return ok;
+  saved_token_sentinel toks (parser->lexer, STS_ROLLBACK);
+  return (cp_parser_skip_entire_splice_expr (parser)
+	  && cp_lexer_next_token_is (parser->lexer, CPP_SCOPE));
 }
 
 /* Return true if the N-th token is '[:' and its closing ':]' is NOT
@@ -7222,7 +7218,7 @@ cp_parser_primary_expression (cp_parser *parser,
 
 static void
 missing_template_diag (location_t loc,
-		       enum diagnostics::kind diag_kind = diagnostics::kind::warning)
+		       diagnostics::kind diag_kind/*=kind::warning*/)
 {
   if (warning_suppressed_at (loc, OPT_Wmissing_template_keyword))
     return;
@@ -17912,9 +17908,12 @@ cp_parser_simple_declaration (cp_parser* parser,
      omitted only when declaring a class or enumeration, that is when
      the decl-specifier-seq contains either a class-specifier, an
      elaborated-type-specifier, or an enum-specifier.  */
-  cp_parser_decl_specifier_seq (parser,
-				CP_PARSER_FLAGS_OPTIONAL,
-				&decl_specifiers,
+  cp_parser_flags flags = CP_PARSER_FLAGS_OPTIONAL;
+  /* [temp.res.general]/4.4.1: a decl-specifier of the decl-specifier-seq
+     of a simple-declaration in namespace scope is a type-only context.  */
+  if (at_namespace_scope_p ())
+    flags |= CP_PARSER_FLAGS_TYPENAME_OPTIONAL;
+  cp_parser_decl_specifier_seq (parser, flags, &decl_specifiers,
 				&declares_class_or_enum);
   /* We no longer need to defer access checks.  */
   stop_deferring_access_checks ();
@@ -20560,34 +20559,6 @@ cp_parser_check_constrained_type_parm (cp_parser *parser,
   return true;
 }
 
-/* Finish parsing/processing a template type parameter and checking
-   various restrictions. */
-
-static inline tree
-cp_parser_constrained_type_template_parm (cp_parser *parser,
-                                          tree id,
-                                          cp_parameter_declarator* parmdecl)
-{
-  if (cp_parser_check_constrained_type_parm (parser, parmdecl))
-    return finish_template_type_parm (class_type_node, id);
-  else
-    return error_mark_node;
-}
-
-/* Create a new non-type template parameter from the given PARM
-   declarator.  */
-
-static tree
-cp_parser_constrained_non_type_template_parm (bool *is_non_type,
-					      cp_parameter_declarator *parm)
-{
-  *is_non_type = true;
-  cp_declarator *decl = parm->declarator;
-  cp_decl_specifier_seq *specs = &parm->decl_specifiers;
-  specs->type = TREE_TYPE (DECL_INITIAL (specs->type));
-  return grokdeclarator (decl, specs, TPARM, 0, NULL);
-}
-
 /* Build a constrained template parameter based on the PARMDECL
    declarator. The type of PARMDECL is the constrained type, which
    refers to the prototype template parameter that ultimately
@@ -20598,24 +20569,60 @@ finish_constrained_parameter (cp_parser *parser,
                               cp_parameter_declarator *parmdecl,
                               bool *is_non_type)
 {
-  tree decl = parmdecl->decl_specifiers.type;
+  tree constr = parmdecl->decl_specifiers.type;
   tree id = get_unqualified_id (parmdecl->declarator);
   tree def = parmdecl->default_argument;
-  tree proto = DECL_INITIAL (decl);
 
   /* Build the parameter. Return an error if the declarator was invalid. */
+  bool set_template_parm_constraints_p = true;
   tree parm;
-  if (TREE_CODE (proto) == TYPE_DECL)
-    parm = cp_parser_constrained_type_template_parm (parser, id, parmdecl);
+  if (is_constrained_auto (constr))
+    {
+      /* Constrained non-type parameter.  */
+      *is_non_type = true;
+      if (!parmdecl->declarator
+	  || parmdecl->declarator->kind == cdk_id)
+	/* For a simple constrained auto NTTP, move its constraint from
+	   PLACEHOLDER_TYPE_CONSTRAINTS to TEMPLATE_PARM_CONSTRAINTS to
+	   eventually include them in the template's associated constraints.
+	   finish_shorthand_constraint will convert the constraint to its
+	   final form.  */
+	parmdecl->decl_specifiers.type = (AUTO_IS_DECLTYPE (constr)
+					  ? make_decltype_auto ()
+					  : make_auto ());
+      else
+	/* ??? For constrained auto*, auto& etc it's not clear how to represent
+	   the type-constraint as an associated constraint (we need it in terms
+	   of the pointed-to type).  We keep it in PLACEHOLDER_TYPE_CONSTRAINTS
+	   and effectively treat it like a non-NTTP constrained auto.  */
+	set_template_parm_constraints_p = false;
+      parm = grokdeclarator (parmdecl->declarator,
+			     &parmdecl->decl_specifiers,
+			     TPARM, /*initialized=*/0, /*attrlist=*/NULL);
+    }
   else
-    parm = cp_parser_constrained_non_type_template_parm (is_non_type, parmdecl);
+    {
+      /* Constrained type parameter.  */
+      gcc_checking_assert (CONSTRAINED_PARM_CONCEPT (constr));
+      if (cp_parser_check_constrained_type_parm (parser, parmdecl))
+	parm = finish_template_type_parm (class_type_node, id);
+      else
+	parm = error_mark_node;
+    }
   if (parm == error_mark_node)
     return error_mark_node;
 
   /* Finish the parameter decl and create a node attaching the
      default argument and constraint.  */
   parm = build_tree_list (def, parm);
-  TEMPLATE_PARM_CONSTRAINTS (parm) = decl;
+  if (set_template_parm_constraints_p)
+    {
+      if (*is_non_type)
+	TEMPLATE_PARM_CONSTRAINTS (parm)
+	  = PLACEHOLDER_TYPE_CONSTRAINTS (constr);
+      else
+	TEMPLATE_PARM_CONSTRAINTS (parm) = constr;
+    }
 
   return parm;
 }
@@ -20812,7 +20819,9 @@ cp_parser_template_parameter (cp_parser* parser, bool *is_non_type,
     }
 
   /* The parameter may have been constrained type parameter.  */
-  if (declares_constrained_type_template_parameter (parameter_declarator))
+  tree type = parameter_declarator->decl_specifiers.type;
+  if (declares_constrained_type_template_parameter (parameter_declarator)
+      || (type && is_constrained_auto (type)))
     return finish_constrained_parameter (parser,
                                          parameter_declarator,
                                          is_non_type);
@@ -21270,6 +21279,7 @@ cp_parser_template_id (cp_parser *parser,
 	    error_at (token->location, "%qT is not a template", templ);
 	  else
 	    error_at (token->location, "%qE is not a template", templ);
+	  pop_deferring_access_checks ();
 	  return error_mark_node;
 	}
       else
@@ -21950,9 +21960,27 @@ cp_parser_template_argument (cp_parser* parser)
 	  && cp_lexer_next_token_is (parser->lexer, CPP_OPEN_BRACE))
 	return cp_parser_braced_list (parser);
 
+      /* [temp.names]/6: The constant-expression of a template-argument
+	 shall not be an unparenthesized splice-expression.  */
+      cp_token *next = nullptr;
+      if (flag_reflection)
+	{
+	  saved_token_sentinel toks (parser->lexer, STS_ROLLBACK);
+	  if (cp_parser_skip_entire_splice_expr (parser))
+	    next = cp_lexer_peek_token (parser->lexer);
+	}
+
       /* With C++17 generalized non-type template arguments we need to handle
 	 lvalue constant expressions, too.  */
       argument = cp_parser_assignment_expression (parser);
+      if (UNLIKELY (cp_lexer_peek_token (parser->lexer) == next)
+	  && argument != error_mark_node)
+	{
+	  loc = cp_lexer_peek_token (parser->lexer)->location;
+	  error_at (loc, "unparenthesized splice expression cannot be used "
+		    "as a template argument");
+	  return error_mark_node;
+	}
     }
 
   if (!maybe_type_id)
@@ -36450,7 +36478,7 @@ cp_parser_single_declaration (cp_parser* parser,
       && (cp_lexer_next_token_is_not (parser->lexer, CPP_SEMICOLON)
 	  || decl_specifiers.type != error_mark_node))
     {
-      int flags = CP_PARSER_FLAGS_TYPENAME_OPTIONAL;
+      cp_parser_flags flags = CP_PARSER_FLAGS_TYPENAME_OPTIONAL;
       /* FIXME: Delay parsing for all template friends, not just class
 	 template scope ones (PR114764).  */
       if (member_p && (!(friend_p && *friend_p)

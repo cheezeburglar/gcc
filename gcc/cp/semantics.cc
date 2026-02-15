@@ -2495,6 +2495,8 @@ finish_asm_stmt (location_t loc, int volatile_p, tree string,
 				"of a function or non-automatic variable");
 		      operand = error_mark_node;
 		    }
+		  else if (TREE_CODE (TREE_OPERAND (t, 0)) == FUNCTION_DECL)
+		    suppress_warning (TREE_OPERAND (t, 0), OPT_Wunused);
 		}
 	    }
 	  else
@@ -12860,7 +12862,10 @@ cexpr_str::extract (location_t location, const char * & msg, int &len)
       cpp_string istr, ostr;
       istr.len = len;
       istr.text = (const unsigned char *) msg;
-      if (!cpp_translate_string (parse_in, &istr, &ostr, CPP_STRING, true))
+      if (len == 0)
+	;
+      else if (!cpp_translate_string (parse_in, &istr, &ostr, CPP_STRING,
+				      true))
 	{
 	  error_at (location, "could not convert constexpr string from "
 			      "ordinary literal encoding to source character "

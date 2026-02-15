@@ -1124,6 +1124,9 @@ explain_invalid_constexpr_fn (tree fun)
 		/* Also check the body, not just the ctor-initializer.  */
 		require_potential_rvalue_constant_expression (body);
 	    }
+	  else if (massaged == NULL_TREE || massaged == error_mark_node)
+	    error ("body of %<constexpr%> function %qD not a return-statement",
+		   fun);
 	}
     }
 }
@@ -3247,14 +3250,12 @@ is_std_class (tree ctx, const char *name)
 bool
 is_std_allocator (tree ctx)
 {
-  return (is_std_class (ctx, "allocator")
-	  || (flag_reflection
-	      && is_std_class (ctx, "__new_allocator")));
+  return is_std_class (ctx, "allocator");
 }
 
 /* Return true if FNDECL is std::allocator<T>::{,de}allocate.  */
 
-bool
+static bool
 is_std_allocator_allocate (tree fndecl)
 {
   tree name = DECL_NAME (fndecl);

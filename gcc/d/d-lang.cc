@@ -455,7 +455,7 @@ d_handle_option (size_t scode, const char *arg, HOST_WIDE_INT value,
       break;
 
     case OPT_fdebug_:
-      if (Identifier::isValidIdentifier (CONST_CAST (char *, arg)))
+      if (Identifier::isValidIdentifier (const_cast<char *> (arg)))
 	{
 	  DebugCondition::addGlobalIdent (arg);
 	  break;
@@ -700,7 +700,7 @@ d_handle_option (size_t scode, const char *arg, HOST_WIDE_INT value,
       break;
 
     case OPT_fversion_:
-      if (Identifier::isValidIdentifier (CONST_CAST (char *, arg)))
+      if (Identifier::isValidIdentifier (const_cast<char *> (arg)))
 	{
 	  VersionCondition::addGlobalIdent (arg);
 	  break;
@@ -775,6 +775,14 @@ d_handle_option (size_t scode, const char *arg, HOST_WIDE_INT value,
 
     case OPT_nostdinc:
       d_option.stdinc = false;
+      break;
+
+    case OPT_std_d2024:
+      global.params.edition = Edition::v2024;
+      break;
+
+    case OPT_std_d202y:
+      global.params.edition = Edition::v2025;
       break;
 
     case OPT_v:
@@ -1270,7 +1278,7 @@ d_parse_file (void)
     }
 
   /* Do deferred semantic analysis.  */
-  Module::runDeferredSemantic ();
+  dmd::runDeferredSemantic ();
 
   if (Module::deferred.length)
     {
@@ -1300,7 +1308,7 @@ d_parse_file (void)
       dmd::semantic2 (m, NULL);
     }
 
-  Module::runDeferredSemantic2 ();
+  dmd::runDeferredSemantic2 ();
 
   if (global.errors)
     goto had_errors;
@@ -1331,7 +1339,7 @@ d_parse_file (void)
 	}
     }
 
-  Module::runDeferredSemantic3 ();
+  dmd::runDeferredSemantic3 ();
 
   /* Check again, incase semantic3 pass loaded any more modules.  */
   while (builtin_modules.length != 0)
@@ -1413,7 +1421,7 @@ d_parse_file (void)
 
   /* Generate C++ header files.  */
   if (global.params.cxxhdr.doOutput)
-    dmd::genCppHdrFiles (modules);
+    dmd::genCppHdrFiles (modules, global.errorSink);
 
   if (global.errors)
     goto had_errors;

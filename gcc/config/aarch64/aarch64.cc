@@ -422,6 +422,7 @@ static const struct aarch64_flag_desc aarch64_tuning_flags[] =
 #include "tuning_models/thunderxt88.h"
 #include "tuning_models/thunderx.h"
 #include "tuning_models/tsv110.h"
+#include "tuning_models/hip12.h"
 #include "tuning_models/xgene1.h"
 #include "tuning_models/emag.h"
 #include "tuning_models/qdf24xx.h"
@@ -10793,6 +10794,20 @@ aarch64_use_return_insn_p (void)
   return known_eq (cfun->machine->frame.frame_size, 0);
 }
 
+/* Return false for locally streaming functions in order to avoid
+   shrink-wrapping them.  Shrink-wrapping is unsafe when the function prologue
+   and epilogue contain streaming state change, because these implicitly change
+   the meaning of poly_int values.  */
+
+bool
+aarch64_use_simple_return_insn_p (void)
+{
+  if (aarch64_cfun_enables_pstate_sm ())
+    return false;
+
+  return true;
+}
+
 /* Generate the epilogue instructions for returning from a function.
    This is almost exactly the reverse of the prolog sequence, except
    that we need to insert barriers to avoid scheduling loads that read
@@ -18614,8 +18629,6 @@ aarch64_vector_costs::add_stmt_cost (int count, vect_cost_for_stmt kind,
 		|| SLP_TREE_DEF_TYPE (node) == vect_external_def)
 	       && !aarch64_possible_by_lane_insn_p (m_vinfo, stmt))
 	m_num_dup_stmts++;
-      else
-	m_loop_fully_scalar_dup = false;
     }
 
   /* Apply the heuristic described above m_stp_sequence_cost.  */
@@ -23729,7 +23742,7 @@ aarch64_mangle_type (const_tree type)
      The Windows Arm64 ABI uses just an address of the first variadic
      argument.  */
   if (!TARGET_AARCH64_MS_ABI
-      && lang_hooks.types_compatible_p (CONST_CAST_TREE (type), va_list_type))
+      && lang_hooks.types_compatible_p (const_cast<tree> (type), va_list_type))
     return "St9__va_list";
 
   /* Half-precision floating point types.  */
@@ -25662,7 +25675,8 @@ seq_cost_ignoring_scalar_moves (const rtx_insn *seq, bool speed)
 	  }
 	else
 	  {
-	    int this_cost = insn_cost (CONST_CAST_RTX_INSN (seq), speed);
+	    int this_cost = insn_cost (const_cast<struct rtx_insn *> (seq),
+				       speed);
 	    if (this_cost > 0)
 	      cost += this_cost;
 	    else

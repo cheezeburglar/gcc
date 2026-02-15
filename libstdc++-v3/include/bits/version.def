@@ -1634,6 +1634,14 @@ ftms = {
 };
 
 ftms = {
+  name = associative_heterogeneous_erasure;
+  values = {
+    v = 202110;
+    cxxmin = 23;
+  };
+};
+
+ftms = {
   name = is_scoped_enum;
   values = {
     v = 202011;
@@ -2263,6 +2271,16 @@ ftms = {
 
 ftms = {
   name = reflection;
+  values = {
+    v = 202506;
+    cxxmin = 26;
+    extra_cond = "__cpp_impl_reflection >= 202506L";
+    cxx11abi = yes;
+  };
+};
+
+ftms = {
+  name = define_static;
   values = {
     v = 202506;
     cxxmin = 26;
