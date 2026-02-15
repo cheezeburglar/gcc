@@ -1185,7 +1185,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
   // Overload for deque::iterators, exploiting the "segmented-iterator
   // optimization".
   template<typename _Tp, typename _VTp>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     void
     __fill_a1(const _GLIBCXX_STD_C::_Deque_iterator<_Tp, _Tp&, _Tp*>& __first,
 	      const _GLIBCXX_STD_C::_Deque_iterator<_Tp, _Tp&, _Tp*>& __last,
@@ -1238,7 +1238,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 
   template<bool _IsMove,
 	   typename _Tp, typename _Ref, typename _Ptr, typename _OI>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     _OI
     __copy_move_a1(_GLIBCXX_STD_C::_Deque_iterator<_Tp, _Ref, _Ptr> __first,
 		   _GLIBCXX_STD_C::_Deque_iterator<_Tp, _Ref, _Ptr> __last,
@@ -1247,7 +1247,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 
   template<bool _IsMove,
 	   typename _ITp, typename _IRef, typename _IPtr, typename _OTp>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     _GLIBCXX_STD_C::_Deque_iterator<_OTp, _OTp&, _OTp*>
     __copy_move_a1(_GLIBCXX_STD_C::_Deque_iterator<_ITp, _IRef, _IPtr> __first,
 		   _GLIBCXX_STD_C::_Deque_iterator<_ITp, _IRef, _IPtr> __last,
@@ -1255,7 +1255,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
     { return __copy_move_dit<_IsMove>(__first, __last, __result); }
 
   template<bool _IsMove, typename _II, typename _Tp>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<
       __is_random_access_iter<_II>::__value,
       _GLIBCXX_STD_C::_Deque_iterator<_Tp, _Tp&, _Tp*> >::__type
@@ -1282,7 +1282,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
     }
 
   template<bool _IsMove, typename _CharT>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<
       __is_char<_CharT>::__value,
       _GLIBCXX_STD_C::_Deque_iterator<_CharT, _CharT&, _CharT*> >::__type
@@ -1310,7 +1310,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
     }
 
   template<typename _CharT, typename _Size>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<
       __is_char<_CharT>::__value,
       _GLIBCXX_STD_C::_Deque_iterator<_CharT, _CharT&, _CharT*> >::__type
@@ -1364,7 +1364,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 
   template<bool _IsMove,
 	   typename _Tp, typename _Ref, typename _Ptr, typename _OI>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     _OI
     __copy_move_backward_a1(
 		_GLIBCXX_STD_C::_Deque_iterator<_Tp, _Ref, _Ptr> __first,
@@ -1374,7 +1374,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 
   template<bool _IsMove,
 	   typename _ITp, typename _IRef, typename _IPtr, typename _OTp>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     _GLIBCXX_STD_C::_Deque_iterator<_OTp, _OTp&, _OTp*>
     __copy_move_backward_a1(
 		_GLIBCXX_STD_C::_Deque_iterator<_ITp, _IRef, _IPtr> __first,
@@ -1383,7 +1383,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
     { return __copy_move_backward_dit<_IsMove>(__first, __last, __result); }
 
   template<bool _IsMove, typename _II, typename _Tp>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<
       __is_random_access_iter<_II>::__value,
       _GLIBCXX_STD_C::_Deque_iterator<_Tp, _Tp&, _Tp*> >::__type
@@ -1444,7 +1444,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
     }
 
   template<typename _Tp, typename _Ref, typename _Ptr, typename _II>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<
       __is_random_access_iter<_II>::__value, bool>::__type
     __equal_aux1(_GLIBCXX_STD_C::_Deque_iterator<_Tp, _Ref, _Ptr> __first1,
@@ -1454,7 +1454,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 
   template<typename _Tp1, typename _Ref1, typename _Ptr1,
 	   typename _Tp2, typename _Ref2, typename _Ptr2>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     bool
     __equal_aux1(_GLIBCXX_STD_C::_Deque_iterator<_Tp1, _Ref1, _Ptr1> __first1,
 		 _GLIBCXX_STD_C::_Deque_iterator<_Tp1, _Ref1, _Ptr1> __last1,
@@ -1462,7 +1462,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
     { return std::__equal_dit(__first1, __last1, __first2); }
 
   template<typename _II, typename _Tp, typename _Ref, typename _Ptr>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<
       __is_random_access_iter<_II>::__value, bool>::__type
     __equal_aux1(_II __first1, _II __last1,
@@ -1530,7 +1530,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 
   template<typename _Tp1, typename _Ref1, typename _Ptr1,
 	   typename _Tp2>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     inline bool
     __lexicographical_compare_aux1(
 	_GLIBCXX_STD_C::_Deque_iterator<_Tp1, _Ref1, _Ptr1> __first1,
@@ -1540,7 +1540,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 
   template<typename _Tp1,
 	   typename _Tp2, typename _Ref2, typename _Ptr2>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     inline  bool
     __lexicographical_compare_aux1(_Tp1* __first1, _Tp1* __last1,
 	_GLIBCXX_STD_C::_Deque_iterator<_Tp2, _Ref2, _Ptr2> __first2,
@@ -1549,7 +1549,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
 
   template<typename _Tp1, typename _Ref1, typename _Ptr1,
 	   typename _Tp2, typename _Ref2, typename _Ptr2>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     inline bool
     __lexicographical_compare_aux1(
 		_GLIBCXX_STD_C::_Deque_iterator<_Tp1, _Ref1, _Ptr1> __first1,
