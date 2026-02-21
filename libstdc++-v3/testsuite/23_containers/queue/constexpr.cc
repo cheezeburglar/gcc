@@ -22,6 +22,19 @@ constexpr void ctor_tests()
   using Tp = typename Container::value_type;
   typename Container::allocator_type Alloc;
 
+  auto eq = [&] (std::queue<Container> l, std::span<Tp> r) {
+    if (l.size() != r.size())
+      return false;
+
+    std::vector<Tp> s(r.begin(), r.end());
+    for (auto v : s) {
+      if (v != l.front())
+	return false;
+      l.pop();
+    }
+    return true;
+  }
+
   Container c0 {};
   auto alloc = c0.get_allocator();
 
@@ -32,75 +45,72 @@ constexpr void ctor_tests()
   VERIFY( q1.size() == 2) ;
 
   Container c1 {1, 2};
-  std::queue<Tp, Container> q_0 {c1};
-  VERIFY ( q_0 == q1 );
-  std::queue<Tp, Container> q_1 {std::move(c1)};
-  VERIFY ( q_1 == q1 );
+  std::queue<Tp, Container> q2 {c1}; // q4
+  VERIFY ( q2 == q1 );
+  std::queue<Tp, Container> q3 {std::move(c1)}; //q5
+  VERIFY ( q3 == q1 );
 
-
-  std::queue<Tp, Container> q2 (q1);
-  VERIFY( q2.size() == q1.size() );
-  VERIFY( q2.front() == q1.front() );
-  VERIFY( q2.back() == q1.back() );
-
-  std::queue<Tp, Container> q3 (std::move(q2));
-  VERIFY( q3.size() == q1.size() );
-  VERIFY( q3.front() == q1.front() );
-  VERIFY( q3.back() == q1.back() );
-  VERIFY( q2.empty() );
-
-  std::queue<Tp, Container, Alloc> q4 (alloc);
-  q4.push(1);
-  q4.push(2);
-  VERIFY( q4.size() == 2 );
-
-  std::queue<Tp, Container, Alloc> q5 (q4, alloc);
-  VERIFY( q5 == q4 );
-  VERIFY( q5.size() == q4.size() );
-  VERIFY( q5.front() == q4.front() );
-  VERIFY( q5.back() == q4.back() );
-
-  std::queue<Tp, Container, Alloc> q6 (std::move(q5), alloc);
-  VERIFY( q6 == q4 );
-  VERIFY( q6.size() == q4.size() );
-  VERIFY( q5.empty() );
-
-  std::queue<Tp, Container, Alloc> q7 (alloc);
-  VERIFY( q7.size() == 0 );
+  std::queue<Tp, Container> q4 {q1};
+  std::queue<Tp, Container> q5 {std::move(q1)};
+  VERIFY ( q4 == q5 );
 
   Tp rg[4] = {2, 3, 5, 7};
-  std::queue<Tp, Container> q8(std::begin(rg), std::end(rg));
-  VERIFY( q8.size() == std::size(rg));
-  VERIFY( q8.front() == 2 );
-  q8.pop();
-  VERIFY( q8.front() == 3 );
-  q8.pop();
-  VERIFY( q8.front() == 5 );
-  q8.pop();
-  VERIFY( q8.front() == 7 );
-  q8.pop();
+  std::queue<Tp, Container> q6(std::begin(rg), std::end(rg)); // q3
+  VERIFY ( eq(q6, rg) );
 
-  std::queue<Tp, Container, Alloc> q9(std::begin(rg), std::end(rg), alloc);
-  VERIFY( q9.size() == std::size(rg));
-  VERIFY( q9.front() == 2 );
-  q9.pop();
-  VERIFY( q9.front() == 3 );
-  q9.pop();
-  VERIFY( q9.front() == 5 );
-  q9.pop();
-  VERIFY( q9.front() == 7 );
-  q9.pop();
+  VERIFY( q6.size() == std::size(rg));
+  VERIFY( q6.front() == 2 );
+  q6.pop();
+  VERIFY( q6.front() == 3 );
+  q6.pop();
+  VERIFY( q6.front() == 5 );
+  q6.pop();
+  VERIFY( q6.front() == 7 );
+  q6.pop();
 
-  auto rg0 = {2, 3, 5, 7};
-  auto test_q0 = rg0 | std::ranges::to<std::queue<Container>>();
-  auto q10 = std::queue<Tp, Container>(std::from_range,
-				       std::ranges::views::iota(0, 7));
-  VERIFY( q10.size() == 7 );
+  Alloc alloc;
+  Container c2 {1, 2};
 
-  auto q11 = std::queue<Tp, Container, Alloc>(std::from_range,
-					      std::ranges::views::iota(0, 7),
-					      alloc);
-  VERIFY( q11.size() == 7 );
+  std::queue<Tp, Container, Alloc> q7 (alloc);
+  q7.push(1);
+  q7.push(2);
+  VERIFY( q7.size() == 2 );
+
+  std::queue<Tp, Container, Alloc> q8 (c2, alloc);
+  VERIFY( q8 == q6 );
+
+  std::queue<Tp, Container, Alloc> q9 (std::move(c2), alloc);
+  VERIFY( q9 == q7 );
+  VERIFY( q8.empty() );
+
+  std::queue<Tp, Container, Alloc> q10 (q7, alloc);
+  VERIFY( q10 == q7 );
+  VERIFY( q10.size() == q7.size() );
+  VERIFY( q10.front() == q7.front() );
+  VERIFY( q10.back() == q7.back() );
+
+  std::queue<Tp, Container, Alloc> q11 (std::move(q7), alloc);
+  VERIFY( q11 == q10 );
+  VERIFY( q11.size() == q10.size() );
+  VERIFY( q7.empty() );
+
+  std::queue<Tp, Container> q12(std::begin(rg), std::end(rg), alloc);
+  VERIFY ( eq(q12, rg) );
+  VERIFY( q12.size() == std::size(rg));
+  VERIFY( q12.front() == 2 );
+  q12.pop();
+  VERIFY( q12.front() == 3 );
+  q12.pop();
+  VERIFY( q12.front() == 5 );
+  q12.pop();
+  VERIFY( q12.front() == 7 );
+  q12.pop();
+
+  auto q13 = std::queue(std::from_range_t, rg);
+  VERIFY ( eq(q13, rg) );
+  auto q14 = std::queue(std::from_range_t, rg, alloc);
+  VERIFY ( eq(q14, rg) );
+
 }
 
 template<typename Range, typename Alloc>
