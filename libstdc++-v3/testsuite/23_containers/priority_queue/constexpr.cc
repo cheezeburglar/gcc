@@ -38,7 +38,6 @@ constexpr void ctor_tests(Cmp cmp = Cmp())
   Cont v1 = v0;
   Cont v2 = v0;
   auto top_range = * std::ranges::max_element(v0, cmp);
-//  auto rg = v0 | std::views::transform([](V v) { return v; } );
 
   auto eq = [&] (std::priority_queue<V, Cont, Cmp>& l, std::span<V> r) {
     if (l.size() != r.size())
@@ -301,16 +300,9 @@ constexpr bool range_tests(Cmp cmp = Cmp())
   auto pq24 = std::priority_queue<V, Cont, Cmp>(std::from_range, Range(rg, rg+6), cmp, alloc);
   VERIFY( eq(pq24, {rg, 6}) );
 
-  std::vector<T> s(std::from_range, rg);
-  std::ranges::sort(s, cmp);
-
   std::priority_queue<V, Cont, Cmp> pq;
   pq.push_range(Range(rg, rg+6));
-
-  for (auto const& v : s | std::views::reverse) {
-    VERIFY(v == pq.top());
-    pq.pop();
-  }
+  VERIFY( eq(pq, {rg, 6} );
 
   return true;
 }
