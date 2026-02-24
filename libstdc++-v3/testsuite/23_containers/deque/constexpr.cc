@@ -314,7 +314,7 @@ constexpr void do_ranges_tests()
   struct C {
     constexpr C(int v) : val(v) { }
     constexpr operator int() { return val; }
-    constexpr bool operator==(const int b) const { return b == val; }
+    constexpr bool operator==(int b) { return b == val; }
     int val;
   };
   using rvalue_input_range = test_range<C, input_iterator_wrapper_rval>;
