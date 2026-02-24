@@ -104,14 +104,14 @@ constexpr void ctor_tests()
   VERIFY( q12.front() == 7 );
   q12.pop();
 
-  std::queue<Tp, Container> q13 {std::from_range_t, rg};
+  std::queue<Tp, Container> q13 (std::from_range_t, rg);
   VERIFY ( eq(q13, rg) );
-  std::queue<Tp, Container> q14 {std::from_range_t, rg, Alloc};
+  std::queue<Tp, Container> q14 (std::from_range_t, rg, Alloc);
   VERIFY ( eq(q14, rg) );
 
 }
 
-template<typename Range, typename Alloc>
+template<typename Range, typename Alloc, typename Container>
 constexpr void
 do_ranges_tests_a()
 {
@@ -132,12 +132,17 @@ do_ranges_tests_a()
     return true;
   };
 
-//  auto q0 = Range(a, a+2) | std::ranges::to<std::queue>();
+  // TODO: Can check also list when made constexpr.
   auto q1 = std::queue<Tp>(std::from_range, Range(a, a+4));
-
   std::queue<Tp> q2;
   q2.push_range(Range(a, a+4));
   VERIFY( eq (q1, q2) );
+
+  auto q3 = std::queue<Tp>(std::from_range, Range(a, a+4), alloc);
+  std::queue<Tp> q4 (alloc);
+  q2.push_range(Range(a, a+4));
+  VERIFY( eq (q3, q4) );
+  VERIFY( eq (q1, q3) );
 }
 
 template<typename Alloc>
