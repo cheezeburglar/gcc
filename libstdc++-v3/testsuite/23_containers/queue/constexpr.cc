@@ -79,7 +79,7 @@ constexpr void ctor_tests()
 
   std::queue<Tp, Container> q9 (std::move(c2), Alloc);
   VERIFY( q9 == q7 );
-  VERIFY( q8.empty() );
+  VERIFY( c2.empty() );
 
   std::queue<Tp, Container> q10 (q7, Alloc);
   VERIFY( q10 == q7 );
