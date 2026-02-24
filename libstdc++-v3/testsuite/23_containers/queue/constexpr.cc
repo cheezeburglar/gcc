@@ -36,7 +36,6 @@ constexpr void ctor_tests()
   };
 
   Container c0 {};
-  Alloc alloc = c0.get_allocator();
 
   std::queue<Tp, Container> q1 (c0);
   VERIFY( q1.size() == 0 && q1.empty() );
