@@ -302,7 +302,7 @@ constexpr bool range_tests(Cmp cmp = Cmp())
 
   std::priority_queue<V, Cont, Cmp> pq;
   pq.push_range(Range(rg, rg+6));
-  VERIFY( eq(pq, {rg, 6} );
+  VERIFY( eq(pq, {rg, 6}) );
 
   return true;
 }
