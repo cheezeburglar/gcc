@@ -70,30 +70,30 @@ constexpr void ctor_tests()
 
   Container c2 {1, 2};
 
-  std::queue<Tp, Container> q7 (alloc);
+  std::queue<Tp, Container> q7 (Alloc);
   q7.push(1);
   q7.push(2);
   VERIFY( q7.size() == 2 );
 
-  std::queue<Tp, Container> q8 (c2, alloc);
+  std::queue<Tp, Container> q8 (c2, Alloc);
   VERIFY( q8 == q6 );
 
-  std::queue<Tp, Container> q9 (std::move(c2), alloc);
+  std::queue<Tp, Container> q9 (std::move(c2), Alloc);
   VERIFY( q9 == q7 );
   VERIFY( q8.empty() );
 
-  std::queue<Tp, Container> q10 (q7, alloc);
+  std::queue<Tp, Container> q10 (q7, Alloc);
   VERIFY( q10 == q7 );
   VERIFY( q10.size() == q7.size() );
   VERIFY( q10.front() == q7.front() );
   VERIFY( q10.back() == q7.back() );
 
-  std::queue<Tp, Container> q11 (std::move(q7), alloc);
+  std::queue<Tp, Container> q11 (std::move(q7), Alloc);
   VERIFY( q11 == q10 );
   VERIFY( q11.size() == q10.size() );
   VERIFY( q7.empty() );
 
-  std::queue<Tp, Container> q12(std::begin(rg), std::end(rg), alloc);
+  std::queue<Tp, Container> q12(std::begin(rg), std::end(rg), Alloc);
   VERIFY ( eq(q12, rg) );
   VERIFY( q12.size() == std::size(rg));
   VERIFY( q12.front() == 2 );
@@ -107,7 +107,7 @@ constexpr void ctor_tests()
 
   auto q13 = std::queue(std::from_range_t, rg);
   VERIFY ( eq(q13, rg) );
-  auto q14 = std::queue(std::from_range_t, rg, alloc);
+  auto q14 = std::queue(std::from_range_t, rg, Alloc);
   VERIFY ( eq(q14, rg) );
 
 }
@@ -258,7 +258,7 @@ do_tests()
   auto do_ctor_tests = []() {
     ctor_tests<std::deque<int>>();
     ctor_tests<std::deque<int, SimpleAllocator<int>>>();
-  }
+  };
 
   do_ctor_tests();
   do_modifier_tests();
