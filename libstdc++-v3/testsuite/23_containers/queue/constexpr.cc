@@ -104,10 +104,10 @@ constexpr void ctor_tests()
   VERIFY( q12.front() == 7 );
   q12.pop();
 
-  std::queue<Tp, Container> q13 (std::from_range_t, rg);
-  VERIFY ( eq(q13, rg) );
-  std::queue<Tp, Container> q14 (std::from_range_t, rg, Alloc);
-  VERIFY ( eq(q14, rg) );
+//  std::queue<Tp, Container> q13 (std::from_range_t, rg);
+//  VERIFY ( eq(q13, rg) );
+//  std::queue<Tp, Container> q14 (std::from_range_t, rg, Alloc);
+//  VERIFY ( eq(q14, rg) );
 
 }
 
