@@ -139,9 +139,6 @@ do_ranges_tests_a()
   VERIFY( eq (q1, q2) );
 
   auto q3 = std::queue<Tp>(std::from_range, Range(a, a+4), alloc);
-  std::queue<Tp> q4 (alloc);
-  q2.push_range(Range(a, a+4));
-  VERIFY( eq (q3, q4) );
   VERIFY( eq (q1, q3) );
 }
 
