@@ -33,10 +33,10 @@ constexpr void ctor_tests()
       l.pop();
     }
     return true;
-  }
+  };
 
   Container c0 {};
-  auto alloc = c0.get_allocator();
+  Alloc alloc = c0.get_allocator();
 
   std::queue<Tp, Container> q1 (c0);
   VERIFY( q1.size() == 0 && q1.empty() );
@@ -68,28 +68,27 @@ constexpr void ctor_tests()
   VERIFY( q6.front() == 7 );
   q6.pop();
 
-  Alloc alloc;
   Container c2 {1, 2};
 
-  std::queue<Tp, Container, Alloc> q7 (alloc);
+  std::queue<Tp, Container> q7 (alloc);
   q7.push(1);
   q7.push(2);
   VERIFY( q7.size() == 2 );
 
-  std::queue<Tp, Container, Alloc> q8 (c2, alloc);
+  std::queue<Tp, Container> q8 (c2, alloc);
   VERIFY( q8 == q6 );
 
-  std::queue<Tp, Container, Alloc> q9 (std::move(c2), alloc);
+  std::queue<Tp, Container> q9 (std::move(c2), alloc);
   VERIFY( q9 == q7 );
   VERIFY( q8.empty() );
 
-  std::queue<Tp, Container, Alloc> q10 (q7, alloc);
+  std::queue<Tp, Container> q10 (q7, alloc);
   VERIFY( q10 == q7 );
   VERIFY( q10.size() == q7.size() );
   VERIFY( q10.front() == q7.front() );
   VERIFY( q10.back() == q7.back() );
 
-  std::queue<Tp, Container, Alloc> q11 (std::move(q7), alloc);
+  std::queue<Tp, Container> q11 (std::move(q7), alloc);
   VERIFY( q11 == q10 );
   VERIFY( q11.size() == q10.size() );
   VERIFY( q7.empty() );
