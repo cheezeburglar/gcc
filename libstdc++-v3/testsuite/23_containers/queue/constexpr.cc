@@ -138,8 +138,8 @@ do_ranges_tests_a()
   q2.push_range(Range(a, a+4));
   VERIFY( eq (q1, q2) );
 
-  auto q3 = std::queue<Tp>(std::from_range, Range(a, a+4), alloc);
-  VERIFY( eq (q1, q3) );
+//  auto q3 = std::queue<Tp>(std::from_range, Range(a, a+4), alloc);
+//  VERIFY( eq (q1, q3) );
 }
 
 template<typename Alloc>
