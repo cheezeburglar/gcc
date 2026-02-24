@@ -18,7 +18,6 @@ template<typename Alloc>
 constexpr bool ctor_tests()
 {
 
-  using Alloc = __gnu_test::SimpleAllocator<int>;
   Alloc alloc;
 
   std::deque<int> dq1 {};
