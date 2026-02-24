@@ -111,7 +111,7 @@ constexpr void ctor_tests()
 
 }
 
-template<typename Range, typename Alloc, typename Container>
+template<typename Range, typename Alloc>
 constexpr void
 do_ranges_tests_a()
 {
