@@ -1310,7 +1310,7 @@ _GLIBCXX_END_NAMESPACE_CONTAINER
     }
 
   template<typename _CharT, typename _Size>
-    _GLIBCXX26_CONSTEXPR
+    _GLIBCXX20_CONSTEXPR
     typename __gnu_cxx::__enable_if<
       __is_char<_CharT>::__value,
       _GLIBCXX_STD_C::_Deque_iterator<_CharT, _CharT&, _CharT*> >::__type
