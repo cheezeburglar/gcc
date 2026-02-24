@@ -22,7 +22,7 @@ constexpr void ctor_tests()
   using Tp = typename Container::value_type;
   typename Container::allocator_type Alloc;
 
-  auto eq = [] (std::queue<Tp, Alloc> l, std::span<Tp> r) {
+  auto eq = [] (std::queue<Tp, Container> l, std::span<Tp> r) {
     if (l.size() != r.size())
       return false;
 
