@@ -1,3 +1,39 @@
+2026-02-24  Eric Botcazou  <ebotcazou@adacore.com>
+	    Liam Powell  <liam@liampwll.com>
+
+	PR ada/124224
+	* sem_aggr.adb (Resolve_Container_Aggregate): Minor tweaks.
+	(Resolve_Iterated_Association): Compute Typ on all paths.
+
+2026-02-22  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/124192
+	* doc/gnat_rm/standard_and_implementation_defined_restrictions.rst
+	(Max_Tasks): Adjust description.
+	* gnat_rm.texi: Regenerate.
+
+2026-02-22  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/124179
+	* sem_ch9.adb (Analyze_Triggering_Alternative): Use more robust
+	test for delay and entry call statements and fix thinko in test
+	for procedure call statements.
+
+2026-02-20  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* libgnat/s-stposu.adb (Finalize_Pool): Pass a local copy of the
+	handle in the call to Finalize_And_Deallocate.
+
+2026-02-16  Eric Botcazou  <ebotcazou@adacore.com>
+
+	PR ada/124106
+	* exp_ch4.adb (Expand_N_Allocator): Minor fix in commentary.
+	(Expand_Allocator_Expression): Propagate the Subpool_Handle_Name
+	of the original allocator onto the newly built allocators.
+	* exp_ch6.adb (Make_Build_In_Place_Call_In_Allocator): Likewise.
+	Use Preserve_Comes_From_Source to propagate Comes_From_Source.
+	(Make_CPP_Constructor_Call_In_Allocator): Likewise.
+
 2026-02-11  Steve Baird  <baird@adacore.com>
 
 	PR ada/124016
