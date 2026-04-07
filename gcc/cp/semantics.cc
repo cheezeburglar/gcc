@@ -5962,9 +5962,9 @@ finalize_nrv (tree fndecl, tree var)
   tree outer = outer_curly_brace_block (fndecl);
   data.simple = chain_member (var, BLOCK_VARS (outer));
 
-  nrv_maybe_dump_init (fndecl, var);
+//  nrv_maybe_dump_init (fndecl, var);
   cp_walk_tree (&DECL_SAVED_TREE (fndecl), finalize_nrv_r, &data, 0);
-  nrv_maybe_dump_end (fndecl);
+//  nrv_maybe_dump_end (fndecl);
 }
 
 /* Create CP_OMP_CLAUSE_INFO for clause C.  Returns true if it is invalid.  */
