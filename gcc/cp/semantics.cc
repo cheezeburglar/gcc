@@ -49,8 +49,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "contracts.h"
 #include "c-family/c-pragma.h"
 
-#include "error.h"
-#include "cstdio"
+#include "cxx-pretty-print.h"
+#include "langhooks.h"
 
 /* There routines provide a modular interface to perform many parsing
    operations.  They may therefore be used during actual parsing, or
@@ -5684,6 +5684,116 @@ public:
 
 
 
+static FILE * nrv_dump = NULL;
+
+static void
+nrv_maybe_dump_init(tree fndecl, tree nrv_cand)
+{
+  if (!nrv_dump)
+    return;
+  cxx_pretty_printer pp;
+  pp.set_output_stream(nrv_dump);
+  pp.flags=0;
+
+  fprintf (nrv_dump,
+	   "Starting nrv opt for\n  %s\n",
+	   lang_hooks.decl_printable_name(fndecl, 2));
+  pp.declaration (fndecl);
+  pp_newline_and_flush (&pp);
+
+  fprintf (nrv_dump,
+	   "Candidate var is\n  %s\n",
+	   lang_hooks.decl_printable_name(nrv_cand, 2));
+  pp.declaration (nrv_cand);
+  pp_newline_and_flush (&pp);
+}
+
+static void
+nrv_maybe_dump_replacement_start (tree tp, int rule, bool exp = true)
+{
+  if (!nrv_dump)
+    return;
+  cxx_pretty_printer pp;
+  pp.set_output_stream(nrv_dump);
+  pp.flags=0;
+
+  fprintf(nrv_dump, "Replacing by rule %d\n", rule);
+  pp_string(&pp, "Old node is: ");
+  pp_newline_and_indent(&pp, 0);
+  exp ? pp.expression(tp) : pp.declaration(tp);
+  pp_newline_and_flush(&pp);
+}
+
+static void
+nrv_maybe_dump_replacement_end (tree tp /*replaced thingie*/, bool exp = true)
+{
+  if (!nrv_dump)
+    return;
+  cxx_pretty_printer pp;
+  pp.set_output_stream(nrv_dump);
+  pp.flags=0;
+
+  pp_string(&pp, "New node is: ");
+  pp_newline_and_indent(&pp, 0);
+  exp ? pp.expression(tp) : pp.declaration(tp);
+  pp.expression(tp);
+  pp_newline_and_flush (&pp);
+}
+
+static void
+nrv_maybe_log_cleanup_start (tree tp, bool simple)
+{
+  if (!nrv_dump)
+    return;
+  cxx_pretty_printer pp;
+  pp.set_output_stream(nrv_dump);
+  pp.flags=0;
+
+  if (cp_function_chain->throwing_cleanup)
+    fprintf(nrv_dump, "Starting cleanups. Throwing. Statement is: \n");
+  else
+    fprintf(nrv_dump, "Starting cleanups. Statement is: \n");
+  pp.statement(tp);
+  pp_newline_and_flush (&pp);
+}
+
+
+// TODO: think eh is getting munged. this isnt finished yet.
+static void
+nrv_maybe_log_cleanup_end (tree tp, bool simple)
+{
+  if (!nrv_dump)
+    return;
+  cxx_pretty_printer pp;
+  pp.set_output_stream(nrv_dump);
+  pp.flags=0;
+
+  if (cp_function_chain->throwing_cleanup)
+    fprintf(nrv_dump, "Ending cleanups. Throwing. Statement is: \n");
+  else
+    fprintf(nrv_dump, "Ending cleanups. Statement is: \n");
+  pp.statement(tp);
+  pp_newline_and_flush (&pp);
+}
+
+static void
+nrv_maybe_dump_end (tree fndecl)
+{
+  if (!nrv_dump)
+    return;
+  cxx_pretty_printer pp;
+  pp.set_output_stream(nrv_dump);
+  pp.flags=0;
+
+  fprintf (nrv_dump,
+	   "Ending nrv opt for\n  %s\n",
+           lang_hooks.decl_printable_name(fndecl, 2));
+  pp.expression(fndecl);
+  pp_newline_and_flush (&pp);
+
+}
+
+
 /* Helper function for walk_tree, used by finalize_nrv below.  */
 
 static tree
@@ -5749,14 +5859,14 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	     don't want to destroy the NRV.  If the sentinel is not set, we're
 	     leaving scope some other way, either by flowing off the end of its
 	     scope or throwing an exception.  */
-	  if (current_retval_sentinel)
-	  {
+//	  if (current_retval_sentinel)
+//	  {
 	    tree cond = build3 (COND_EXPR, void_type_node,
 				current_retval_sentinel,
 				void_node, CLEANUP_EXPR (*tp));
 	    CLEANUP_EXPR (*tp) = cond;
-	    nrv_maybe_log_cleanup_end(*tp);
-	  }
+	    nrv_maybe_log_cleanup_end(*tp, dp->simple);
+//	  }
 	}
 
       /* If a cleanup might throw, we need to clear current_retval_sentinel on
@@ -5772,7 +5882,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	      /* We're already only on the EH path, just prepend it.  */
 	      tree &exp = CLEANUP_EXPR (*tp);
 	      exp = build2 (COMPOUND_EXPR, void_type_node, clear, exp);
-	      nrv_maybe_log_cleanup_end(*tp);
+	      nrv_maybe_log_cleanup_end(*tp, dp->simple);
 	    }
 	  else
 	    {
@@ -5782,7 +5892,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
 	      bod = build_stmt (EXPR_LOCATION (*tp), CLEANUP_STMT,
 				bod, clear, current_retval_sentinel);
 	      CLEANUP_EH_ONLY (bod) = true;
-	      nrv_maybe_log_cleanup_end(*tp);
+	      nrv_maybe_log_cleanup_end(*tp, dp->simple);
 	    }
 	}
     }
@@ -5797,7 +5907,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
   else if (TREE_CODE (*tp) == DECL_EXPR
 	   && DECL_EXPR_DECL (*tp) == dp->var)
     {
-      nrv_maybe_dump_replacement_start(*tp, 3, false);
+      nrv_maybe_dump_replacement_start(*tp, 3, true);
       tree init;
       if (DECL_INITIAL (dp->var)
 	  && DECL_INITIAL (dp->var) != error_mark_node)
@@ -5819,114 +5929,6 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
    optimization by overriding all the RETURN_EXPRs and pertinent
    CLEANUP_STMTs and replacing all occurrences of VAR with RESULT, the
    RESULT_DECL for the function.  */
-
-static FILE * nrv_dump = fopen("/tmp/nrvo-dump_exp", "r+w");
-
-static void
-nrv_maybe_dump_init(tree fndecl, tree nrv_cand)
-{
-  if (!nrv_dump)
-    return;
-  cxx_pretty_printer pp;
-  pp.set_output_stream(nrv_dump);
-  pp.flags=0;
-
-  fprintf (nrv_dump,
-	   "Starting nrv opt for\n  %s\n",
-	   lang_hooks.decl_printable_name(fndecl, 2))
-  pp.declaration (fndecl);
-  pp_newline_and_flush (&pp);
-
-  fprintf (nrv_dump,
-	   "Candidate var is\n  %s\n",
-	   lang_hooks.decl_printable_name(nrv_cand, 2))
-  pp.declaration (nrv_cand);
-  pp_newline_and_flush (&pp);
-}
-
-static void
-nrv_maybe_dump_replacement_start (tree tp, int rule, bool exp)
-{
-  if (!nrv_dump)
-    return;
-  cxx_pretty_printer pp;
-  pp.set_output_stream(nrv_dump);
-  pp.flags=0;
-
-  fprintf(nrv_dump, "Replacing by rule %d\n", rule);
-  pp.string(&pp, "Old node is: ");
-  pp.newline_and_indent();
-  exp ? pp.expression(tp) : pp.declaration(tp);
-  pp.newline_and_flush();
-}
-
-static void
-nrv_maybe_dump_replacement_end (tree tp /*replaced thingie*/, bool exp = true)
-{
-  if (!nrv_dump)
-    return;
-  cxx_pretty_printer pp;
-  pp.set_output_stream(nrv_dump);
-  pp.flags=0;
-
-  pp.string(&pp, "New node is: ");
-  pp.newline_and_indent();
-  exp ? pp.expression(tp) : pp.declaration(tp);
-  pp.expression(tp);
-  pp.newline_and_flush();
-}
-
-static void
-nrv_maybe_log_cleanup_start (tree tp, bool simple)
-{
-  if (!nrv_dump)
-    return;
-  cxx_pretty_printer pp;
-  pp.set_output_stream(nrv_dump);
-  pp.flags=0;
-
-  if (cp_function_chain->throwing_cleanup)
-    fprintf(nrv_dump, "Starting cleanups. Throwing. Statement is: \n", nrv_dump);
-  else
-    fprintf(nrv_dump, "Starting cleanups. Statement is: \n", nrv_dump);
-  pp.statement(tp);
-  pp_newline_and_flush (&pp);
-}
-
-
-// TODO: think eh is getting munged. this isnt finished yet.
-static void
-nrv_maybe_log_cleanup_end (tree tp, bool simple)
-{
-  if (!nrv_dump)
-    return;
-  cxx_pretty_printer pp;
-  pp.set_output_stream(nrv_dump);
-  pp.flags=0;
-
-  if (cp_function_chain->throwing_cleanup)
-    fprintf(nrv_dump, "Ending cleanups. Throwing. Statement is: \n", nrv_dump);
-  else
-    fprintf(nrv_dump, "Ending cleanups. Statement is: \n", nrv_dump);
-  pp.statement(tp);
-  pp_newline_and_flush (&pp);
-}
-
-static void
-nrv_maybe_dump_end (tree fndecl)
-{
-  if (!nrv_dump)
-    return;
-  cxx_pretty_printer pp;
-  pp.set_output_stream(nrv_dump);
-  pp.flags=0;
-
-  fprintf ("Ending nrv opt for\n  %s\n",
-           lang_hooks.decl_printable_name(fndecl, 2))
-  pp.declaration (fndecl);
-  pp_newline_and_flush (&pp);
-
-}
 
 void
 finalize_nrv (tree fndecl, tree var)
