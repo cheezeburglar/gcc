@@ -5904,7 +5904,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
   else if (TREE_CODE (*tp) == DECL_EXPR
 	   && DECL_EXPR_DECL (*tp) == dp->var)
     {
-      nrv_maybe_dump_replacement_start(*tp, 3, false);
+      nrv_maybe_dump_replacement_start(*tp, 3, true);
       tree init;
       if (DECL_INITIAL (dp->var)
 	  && DECL_INITIAL (dp->var) != error_mark_node)
