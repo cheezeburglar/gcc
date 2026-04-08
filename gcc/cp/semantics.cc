@@ -5683,6 +5683,8 @@ public:
 };
 
 
+#include "context.h"
+
 static dump_file_info *nrv_dfi = g->get_dumps ()->get_dump_file_info (TDI_original);
 static FILE * nrv_dump = nrv_dfi->pstream;
 
