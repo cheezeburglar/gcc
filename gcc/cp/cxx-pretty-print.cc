@@ -130,7 +130,9 @@ pp_cxx_unqualified_id (cxx_pretty_printer *pp, tree t)
   switch (code)
     {
     case RESULT_DECL:
+      t = DECL_NAME(t);
       pp->translate_string ("<return-value>");
+      pp_cxx_tree_identifier(pp, t);
       break;
 
     case OVERLOAD:

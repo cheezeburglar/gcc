@@ -432,6 +432,7 @@ static inline HOST_WIDE_INT
 top_bit_of (const HOST_WIDE_INT *a, unsigned int len, unsigned int prec)
 {
   int excess = len * HOST_BITS_PER_WIDE_INT - prec;
+  gcc_assert(len != 0);
   unsigned HOST_WIDE_INT val = a[len - 1];
   if (excess > 0)
     val <<= excess;

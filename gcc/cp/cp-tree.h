@@ -2365,6 +2365,7 @@ struct GTY(()) language_function {
      vec<bool> doesn't work with gtype.  */
   vec<tree, va_gc> *infinite_loops;
   vec<tree, va_gc> *all_return_values;
+  hash_map<tree, tree> * experimental_retvals;
 };
 
 /* The current C++-specific per-function global variables.  */
@@ -2441,6 +2442,9 @@ struct GTY(()) language_function {
 
 #define current_function_return_values \
   (cp_function_chain->all_return_values)
+
+#define current_function_return_values_experimental \
+  (cp_function_chain->experimental_retvals)
 
 /* In parser.cc.  */
 extern tree cp_literal_operator_id (const char *);

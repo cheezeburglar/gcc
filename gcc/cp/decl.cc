@@ -20678,18 +20678,16 @@ finish_function (bool inline_p)
      variables are selected in check_return_expr.  */
   if (current_function_return_values)
     {
+      current_function_return_value = NULL_TREE;
       for ( auto r : current_function_return_values)
       {
-	if (r != error_mark_node)
+	if (r != NULL_TREE)
 	{
-	  finalize_nrv(fndecl, r);
-//	  printf("breakpoint 1\n");
-//	  debug_tree(r);
+	  if (r != error_mark_node)
+	    finalize_nrv(fndecl, r);
 	  r = NULL_TREE;
-	  current_function_return_value = NULL_TREE;
 	}
       }
-//    printf("breakpoint 2\n");
     }
 
   /* Must mark the RESULT_DECL as being in this function.  */
