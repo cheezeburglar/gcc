@@ -5874,7 +5874,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
   else if (TREE_CODE (*tp) == CLEANUP_STMT
 	   && CLEANUP_DECL (*tp) == dp->var)
     {
-      nrv_maybe_log_cleanup_start (*tp, dp->simple);
+      nrv_maybe_log_cleanup_start (*tp);
       dp->in_nrv_cleanup = true;
       cp_walk_tree (&CLEANUP_BODY (*tp), finalize_nrv_r, data, 0);
       dp->in_nrv_cleanup = false;
