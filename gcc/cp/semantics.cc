@@ -5756,7 +5756,7 @@ nrv_maybe_dump_replacement_end (tree tp /*replaced thingie*/, bool exp = true)
 }
 
 static void
-nrv_maybe_log_cleanup_start (tree tp, bool simple)
+nrv_maybe_log_cleanup_start (tree tp)
 {
   if (!nrv_dump)
     return;
