@@ -20693,7 +20693,6 @@ finish_function (bool inline_p)
   if (current_function_nrv_context)
   {
     current_function_nrv_context->finalize_nrv_exp(fndecl);
-    ~current_function_nrv_context;
   }
     //  gcc_assert(current_function_nrv_context);
 
