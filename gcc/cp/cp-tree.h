@@ -9850,10 +9850,6 @@ public:
   }
 
   void add_candidate(tree bare_retval, tree retval) {
-    class nrv_candidate new_cand;
-    new_cand.candidate_bare_retval = bare_retval;
-    new_cand.candidate_corresponding_retvals.add(retval);
-    vec_safe_push(all_retvals, bare_retval);
     exp_bare_retval_to_data.get_or_insert(bare_retval).safe_push(retval);
 //    else
 //    hash_map_safe_get_or_insert<hm_ggc> (exp_bare_retval_to_data,
