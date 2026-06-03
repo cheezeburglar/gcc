@@ -9673,7 +9673,7 @@ public:
 #define nrv_walk_tree(tp,func,data,pset) \
 	walk_tree_1 (tp, func, data, pset, cp_walk_subtrees);
 
-class GTY(()) nrv_data_exp {
+class nrv_data_exp {
   public:
     nrv_data_exp () : visited (10) {}
 
@@ -9687,7 +9687,7 @@ class GTY(()) nrv_data_exp {
 };
 
 static retval_hash_map exp_bare_retval_to_data;
-class GTY(()) nrv_context {
+class nrv_context {
 public:
 
 
