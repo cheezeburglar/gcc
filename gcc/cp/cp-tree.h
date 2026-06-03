@@ -9660,22 +9660,12 @@ extern const char *const percent_i;
 typedef hash_map<tree, auto_vec<tree>> retval_hash_map;
 //static retval_hash_map *foobar;
 
-class nrv_candidate {
-public:
-  ~nrv_candidate()= default;
-  tree candidate_bare_retval;
-  hash_set<tree> candidate_corresponding_retvals; // TODO: replace with hash_set
-  hash_set<tree> visited;
-  bool simple;
-  bool in_nrv_cleanup;
-};
-
 #define nrv_walk_tree(tp,func,data,pset) \
 	walk_tree_1 (tp, func, data, pset, cp_walk_subtrees);
 
 class nrv_data_exp {
   public:
-    nrv_data_exp () : visited(10), var_corr_rets(10) {}
+    nrv_data_exp () : visited(10) {}
 
     tree var;
     hash_set<tree> var_corr_rets;
