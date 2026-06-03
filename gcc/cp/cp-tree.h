@@ -9657,7 +9657,7 @@ extern const char *const percent_i;
 //};
 //struct retval_hasher_traits
 //  : simple_hashmap_traits<retval_hasher, tree> {};
-typedef hash_map<tree, auto_vec<tree>> retval_hash_map;
+typedef hash_map<tree, vec<tree>> retval_hash_map;
 //static retval_hash_map *foobar;
 
 #define nrv_walk_tree(tp,func,data,pset) \
@@ -9821,7 +9821,7 @@ public:
     {
       class nrv_data_exp temp;
       temp.var = r.first;
-      temp.var_corr_rets = r.second.to_vec();
+      temp.var_corr_rets = r.second;
 //      temp.in_nrv_cleanup = 0;
 //      temp.simple = 0;
 //      nrv_walk_tree(&DECL_SAVED_TREE (fndecl), finalize_nrv_exp_r, &temp, 0);
