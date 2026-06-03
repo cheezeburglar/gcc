@@ -9817,8 +9817,8 @@ struct GTY(()) nrv_context {
 
 public:
   void finalize_nrv_exp(tree fndecl) {
-    for (auto r: all_nrv_candidates)
-    {
+//    for (auto r: all_nrv_candidates)
+//    {
 //      class nrv_data_exp temp;
 //      temp.var = r.candidate_bare_retval;
 //      temp.var_corr_rets = r.candidate_corresponding_retvals;
