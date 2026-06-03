@@ -11828,6 +11828,12 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
   if (retval && retval != result)
     retval = cp_build_init_expr (result, retval);
 
+  gcc_assert(in_experimental_nrvo);
+  if (in_experimental_nrvo)
+  {
+	current_function_nrv_context->add_candidate(bare_retval, retval);
+  }
+
   if (current_function_return_value == bare_retval)
   {
     INIT_EXPR_NRV_P (retval) = true;
@@ -11842,11 +11848,6 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
  //     {
  //     vec_safe_push (current_function_return_values, bare_retval);
 //      }
-    gcc_assert(in_experimental_nrvo);
-    if (in_experimental_nrvo)
-      {
-	current_function_nrv_context->add_candidate(bare_retval, retval);
-      }
   }
 
   if (tree set = maybe_set_retval_sentinel ())
