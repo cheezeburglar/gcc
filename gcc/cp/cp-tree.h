@@ -9668,7 +9668,7 @@ class GTY(()) nrv_data_exp {
     nrv_data_exp () : visited(10) {}
 
     tree var;
-    auto_vec<tree> var_corr_rets;
+    vec<tree> var_corr_rets;
     /* Result we are inserting into copy ctor */
     tree result;
     hash_set<tree> visited;
@@ -9821,7 +9821,7 @@ public:
     {
       class nrv_data_exp temp;
       temp.var = r.first;
-      temp.var_corr_rets = &r.second;
+      temp.var_corr_rets = r.second.to_vec();
 //      temp.in_nrv_cleanup = 0;
 //      temp.simple = 0;
 //      nrv_walk_tree(&DECL_SAVED_TREE (fndecl), finalize_nrv_exp_r, &temp, 0);
