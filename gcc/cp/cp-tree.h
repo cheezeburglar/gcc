@@ -9663,7 +9663,7 @@ typedef hash_map<tree, auto_vec<tree>> retval_hash_map;
 #define nrv_walk_tree(tp,func,data,pset) \
 	walk_tree_1 (tp, func, data, pset, cp_walk_subtrees);
 
-class nrv_data_exp {
+class GTY(()) nrv_data_exp {
   public:
     nrv_data_exp () : visited(10) {}
 
