@@ -9677,18 +9677,9 @@ class nrv_data_exp {
 };
 
 static retval_hash_map exp_bare_retval_to_data;
-class nrv_context {
+
+class GTY(()) nrv_context {
 public:
-
-
-//  vec<nrv_candidate, va_heap, vl_ptr> *all_nrv_candidates;
-//  vec<tree, va_gc> *all_retvals; // TODO: replace with hash_set
-
-  /* TODO: Do we need to keep track of other nrv candidates in recursive call? */
-
-//  nrv_data * nrv_candidate;
-
-
   static tree
   finalize_nrv_exp_r(tree *tp, int * walk_subtrees, void * data)
   {
