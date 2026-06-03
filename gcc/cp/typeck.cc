@@ -11828,26 +11828,26 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
   if (retval && retval != result)
     retval = cp_build_init_expr (result, retval);
 
+
+  if (current_function_return_value == bare_retval)
+  {
+    INIT_EXPR_NRV_P (retval) = true;
+    if (!current_function_return_values_experimental)
+      hash_map_safe_put<hm_ggc> (current_function_return_values_experimental,
+				 retval,
+				 bare_retval);
+    else
+	current_function_return_values_experimental->put(retval, bare_retval);
+    if (!current_function_return_values
+	|| !current_function_return_values->contains(bare_retval))
+     {
+     vec_safe_push (current_function_return_values, bare_retval);
+      }
   gcc_assert(in_experimental_nrvo);
   if (in_experimental_nrvo)
   {
 	current_function_nrv_context->add_candidate(bare_retval, retval);
   }
-
-  if (current_function_return_value == bare_retval)
-  {
-    INIT_EXPR_NRV_P (retval) = true;
-//    if (!current_function_return_values_experimental)
-//      hash_map_safe_put<hm_ggc> (current_function_return_values_experimental,
-//				 retval,
-//				 bare_retval);
-//    else
-//	current_function_return_values_experimental->put(retval, bare_retval);
-//    if (!current_function_return_values
-//	|| !current_function_return_values->contains(bare_retval))
- //     {
- //     vec_safe_push (current_function_return_values, bare_retval);
-//      }
   }
 
   if (tree set = maybe_set_retval_sentinel ())
