@@ -9692,7 +9692,7 @@ public:
 
 
 //  vec<nrv_candidate, va_heap, vl_ptr> *all_nrv_candidates;
-  vec<tree, va_gc> *all_retvals; // TODO: replace with hash_set
+//  vec<tree, va_gc> *all_retvals; // TODO: replace with hash_set
 
   /* TODO: Do we need to keep track of other nrv candidates in recursive call? */
 
