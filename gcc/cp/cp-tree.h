@@ -9678,8 +9678,7 @@ class GTY(()) nrv_data_exp {
 
 static retval_hash_map exp_bare_retval_to_data;
 
-class GTY(()) nrv_context {
-public:
+struct GTY(()) nrv_context {
   static tree
   finalize_nrv_exp_r(tree *tp, int * walk_subtrees, void * data)
   {
