@@ -11681,8 +11681,8 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
   {
     if (!in_experimental_nrvo)
       in_experimental_nrvo = 1;
-    if (!current_function_nrv_context)
-      current_function_nrv_context = new nrv_context();
+//    if (!current_function_nrv_context)
+//      current_function_nrv_context = new nrv_context();
   }
 
   if (fn_returns_value_p && flag_elide_constructors
