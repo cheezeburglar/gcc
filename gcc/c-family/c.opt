@@ -2018,6 +2018,9 @@ Write all declarations as Ada code for the given file only.
 felide-constructors
 C++ ObjC++ Var(flag_elide_constructors) Init(1)
 
+felide-constructors-experimental
+C++ ObjC++ Var(flag_elide_constructors_experimental) Init(1)
+
 felide-type
 C++ ObjC++ Var(flag_elide_type) Init(1)
 Do not elide common elements in template comparisons.

@@ -2057,6 +2057,8 @@ struct GTY(()) cp_omp_declare_variant_attr {
   tree selector;
 };
 
+class nrv_context;
+
 /* Global state.  */
 
 struct GTY(()) saved_scope {
@@ -2366,6 +2368,8 @@ struct GTY(()) language_function {
   vec<tree, va_gc> *infinite_loops;
   vec<tree, va_gc> *all_return_values;
   hash_map<tree, tree> * experimental_retvals;
+
+  nrv_context *exp_nrv_context;
 };
 
 /* The current C++-specific per-function global variables.  */
@@ -2445,6 +2449,13 @@ struct GTY(()) language_function {
 
 #define current_function_return_values_experimental \
   (cp_function_chain->experimental_retvals)
+
+
+/* Is this always zero in functions we perform nrvo? */
+#define in_experimental_nrvo cp_function_chain->x_in_base_initializer
+
+/* I think we have to dump nrv context garbage collected so should be cheap? */
+#define current_function_nrv_context cp_function_chain->exp_nrv_context
 
 /* In parser.cc.  */
 extern tree cp_literal_operator_id (const char *);
@@ -6302,6 +6313,8 @@ struct GTY((for_user)) spec_entry
   hashval_t hash = 0;
 };
 
+//extern class nrv_context *cfun_nrv_context;
+
 /* in class.cc */
 
 extern int current_class_depth;
@@ -8360,8 +8373,7 @@ extern bool perform_or_defer_access_check	(tree, tree, tree,
 						 access_failure_info *afi = NULL);
 extern tree maybe_convert_cond (tree);
 
-/* RAII sentinel to ensures that deferred access checks are popped before
-  a function returns.  */
+/* */
 
 class deferring_access_check_sentinel
 {
@@ -9633,6 +9645,222 @@ extern const char *const percent_h;
 extern const char *const percent_i;
 
 } // namespace highlight_colors
+
+/* Experimental nrv */
+
+//struct retval_hasher : ggc_ptr_hash<tree>
+//{
+//  static inline hashval_t hash(tree t)
+//  {
+//    return IDENTIFIER_HASH_VALUE (t);
+//  }
+//};
+//struct retval_hasher_traits
+//  : simple_hashmap_traits<retval_hasher, tree> {};
+typedef hash_map<tree, auto_vec<tree>> retval_hash_map;
+//static retval_hash_map *foobar;
+
+class GTY(()) nrv_candidate {
+public:
+  ~nrv_candidate()= default;
+  tree candidate_bare_retval;
+  hash_set<tree> candidate_corresponding_retvals; // TODO: replace with hash_set
+  hash_set<tree> visited;
+  bool simple;
+  bool in_nrv_cleanup;
+};
+
+#define nrv_walk_tree(tp,func,data,pset) \
+	walk_tree_1 (tp, func, data, pset, cp_walk_subtrees);
+
+class GTY(()) nrv_data_exp {
+  public:
+    nrv_data_exp () : visited (10) {}
+
+    tree var;
+    hash_set<tree> var_corr_rets;
+    /* Result we are inserting into copy ctor */
+    tree result;
+    hash_set<tree> visited;
+    bool simple;
+    bool in_nrv_cleanup;
+};
+
+static retval_hash_map exp_bare_retval_to_data;
+class GTY(()) nrv_context {
+public:
+
+
+//  vec<nrv_candidate, va_heap, vl_ptr> *all_nrv_candidates;
+  vec<tree, va_gc> *all_retvals; // TODO: replace with hash_set
+
+  /* TODO: Do we need to keep track of other nrv candidates in recursive call? */
+
+//  nrv_data * nrv_candidate;
+
+
+  static tree
+  finalize_nrv_exp_r(tree *tp, int * walk_subtrees, void * data)
+  {
+    class nrv_data_exp *dp = (class nrv_data_exp *)data;
+
+
+    /* No need to walk into types.  There wouldn't be any need to walk into
+       non-statements, except that we have to consider STMT_EXPRs.  */
+    if (TYPE_P (*tp))
+      *walk_subtrees = 0;
+    /* Replace all uses of the NRV with the RESULT_DECL.  */
+    /* check target expr here? */
+    /*TODO: I think this munges function calls with multiple result_decls.
+     * We need to keep track of other info.*/
+    else if (*tp == dp->var)
+    {
+      *tp = dp->result;
+    }
+    /* Avoid walking into the same tree more than once.  Unfortunately, we
+       can't just use walk_tree_without duplicates because it would only call
+       us for the first occurrence of dp->var in the function body.  */
+    else if (dp->visited.add(*tp))
+      *walk_subtrees = 0;
+
+    /* If there's a label, we might need to destroy the NRV on goto (92407).  */
+    else if (TREE_CODE (*tp) == LABEL_EXPR && !dp->in_nrv_cleanup)
+      dp->simple = false;
+
+    /* Change NRV returns to just refer to the RESULT_DECL; this is a nop,
+       but differs from using NULL_TREE in that it indicates that we care
+       about the value of the RESULT_DECL.  But preserve anything appended
+       by check_return_expr.  */
+    else if (TREE_CODE (*tp) == RETURN_EXPR
+  	   && TREE_OPERAND(*tp, 0))
+      {
+        tree *p = &TREE_OPERAND (*tp, 0);
+        while (TREE_CODE (*p) == COMPOUND_EXPR)
+  	p = &TREE_OPERAND (*p, 0);
+  //      tree *foo = hash_map_safe_get (current_function_return_values_experimental, *p);
+  //      gcc_assert(*foo);
+        if (TREE_CODE (*p) == INIT_EXPR
+  	  && INIT_EXPR_NRV_P (*p))
+  //	  && (*foo == dp->var || DECL_NAME(*p) == DECL_NAME(dp->result)))
+        {
+  	tree *foo = hash_map_safe_get (current_function_return_values_experimental, *p);
+  	gcc_assert(DECL_NAME(*foo));
+  	gcc_assert(dp->result);
+  	if (DECL_NAME(*foo) == DECL_NAME(dp->result))
+  	  *p = dp->result;
+  //	else
+  //	  gcc_unreachable();
+        }
+      }
+    /* Change all cleanups for the NRV to only run when not returning.  */
+    else if (TREE_CODE (*tp) == CLEANUP_STMT
+  	   && CLEANUP_DECL (*tp) == dp->var)
+      {
+        dp->in_nrv_cleanup = true;
+        nrv_walk_tree (&CLEANUP_BODY (*tp), finalize_nrv_exp_r, data, 0);
+        dp->in_nrv_cleanup = false;
+        nrv_walk_tree (&CLEANUP_EXPR (*tp), finalize_nrv_exp_r, data, 0);
+        *walk_subtrees = 0;
+
+        if (dp->simple)
+  	{
+  	/* For a simple NRV, just run it on the EH path.  */
+  	CLEANUP_EH_ONLY (*tp) = true;
+  	}
+        else
+  	{
+  	  /* Not simple, we need to check current_retval_sentinel to decide
+  	     whether to run it.  If it's set, we're returning normally and
+  	     don't want to destroy the NRV.  If the sentinel is not set, we're
+  	     leaving scope some other way, either by flowing off the end of its
+  	     scope or throwing an exception.  */
+  //	  if (current_retval_sentinel)
+  //	  {
+  	    tree cond = build3 (COND_EXPR, void_type_node,
+  				current_retval_sentinel,
+  				void_node, CLEANUP_EXPR (*tp));
+  	    CLEANUP_EXPR (*tp) = cond;
+  //	  }
+  	}
+
+        /* If a cleanup might throw, we need to clear current_retval_sentinel on
+  	 the exception path, both so the check above succeeds and so an outer
+  	 cleanup added by maybe_splice_retval_cleanup doesn't run.  */
+        if (cp_function_chain->throwing_cleanup)
+  	{
+  	  tree clear = build2 (MODIFY_EXPR, boolean_type_node,
+  			       current_retval_sentinel,
+  			       boolean_false_node);
+  	  if (dp->simple)
+  	    {
+  	      /* We're already only on the EH path, just prepend it.  */
+  	      tree &exp = CLEANUP_EXPR (*tp);
+  	      exp = build2 (COMPOUND_EXPR, void_type_node, clear, exp);
+  	    }
+  	  else
+  	    {
+  	      /* The cleanup runs on both normal and EH paths, we need another
+  		 CLEANUP_STMT to clear the flag only on the EH path.  */
+  	      tree &bod = CLEANUP_BODY (*tp);
+  	      bod = build_stmt (EXPR_LOCATION (*tp), CLEANUP_STMT,
+  				bod, clear, current_retval_sentinel);
+  	      CLEANUP_EH_ONLY (bod) = true;
+  	    }
+  	}
+      }
+    /* Disable maybe_splice_retval_cleanup within the NRV cleanup scope, we don't
+       want to destroy the retval before the variable goes out of scope.  */
+    else if (TREE_CODE (*tp) == CLEANUP_STMT
+  	   && dp->in_nrv_cleanup
+  	   && CLEANUP_DECL (*tp) == dp->result)
+      CLEANUP_EXPR (*tp) = void_node;
+    /* Replace the DECL_EXPR for the NRV with an initialization of the
+       RESULT_DECL, if needed.  */
+    else if (TREE_CODE (*tp) == DECL_EXPR
+  	   && DECL_EXPR_DECL (*tp) == dp->var)
+      {
+        tree init;
+        if (DECL_INITIAL (dp->var)
+  	  && DECL_INITIAL (dp->var) != error_mark_node)
+  	init = cp_build_init_expr (dp->result,
+  		       DECL_INITIAL (dp->var));
+        else
+  	init = build_empty_stmt (EXPR_LOCATION (*tp));
+        DECL_INITIAL (dp->var) = NULL_TREE;
+        SET_EXPR_LOCATION (init, EXPR_LOCATION (*tp));
+        *tp = init;
+      }
+
+    /* Keep iterating.  */
+    return NULL_TREE;
+  }
+
+public:
+  void finalize_nrv_exp(tree fndecl) {
+//    for (auto r: all_nrv_candidates)
+//    {
+//      class nrv_data_exp temp;
+//      temp.var = r.candidate_bare_retval;
+//      temp.var_corr_rets = r.candidate_corresponding_retvals;
+//      temp.in_nrv_cleanup = 0;
+//      temp.simple = 0;
+//      nrv_walk_tree(&DECL_SAVED_TREE (fndecl), finalize_nrv_exp_r, &temp, 0);
+      //~r;
+//    }
+  }
+
+  void add_candidate(tree bare_retval, tree retval) {
+    class nrv_candidate new_cand;
+    new_cand.candidate_bare_retval = bare_retval;
+    new_cand.candidate_corresponding_retvals.add(retval);
+    vec_safe_push(all_retvals, bare_retval);
+    exp_bare_retval_to_data.get_or_insert(bare_retval).safe_push(retval);
+//    else
+//    hash_map_safe_get_or_insert<hm_ggc> (exp_bare_retval_to_data,
+//			       bare_retval,
+//			       retval);
+  }
+};
 
 #if CHECKING_P
 namespace selftest {

@@ -66,6 +66,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "pretty-print-markup.h"
 #include "cstdio"
 #include "print-tree.h"
+
 /* Possible cases of bad specifiers type used by bad_specifiers. */
 enum bad_spec_place {
   BSP_VAR,    /* variable */
@@ -20689,6 +20690,8 @@ finish_function (bool inline_p)
 	}
       }
     }
+  else if (current_function_nrv_context)
+    current_function_nrv_context->finalize_nrv_exp(fndecl);
 
   /* Must mark the RESULT_DECL as being in this function.  */
   DECL_CONTEXT (DECL_RESULT (fndecl)) = fndecl;

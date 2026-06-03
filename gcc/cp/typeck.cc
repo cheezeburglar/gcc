@@ -11674,9 +11674,18 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
     }
 
   bool named_return_value_okay_p = want_nrvo_p (bare_retval, functype);
-  if (current_function_return_value == bare_retval)
-  {}
-  else if (fn_returns_value_p && flag_elide_constructors
+
+  // TODO: automagically figure out when to do this more expensive nrv
+//  gcc_assert(!in_experimental_nrvo);
+  if (fn_returns_value_p && flag_elide_constructors_experimental)
+  {
+    if (!in_experimental_nrvo)
+      in_experimental_nrvo = 1;
+    if (!current_function_nrv_context)
+      current_function_nrv_context = new nrv_context();
+  }
+
+  if (fn_returns_value_p && flag_elide_constructors
       && (current_function_return_value != bare_retval
 	  || (current_function_return_values
 	      && !current_function_return_values->contains (bare_retval))))
@@ -11822,16 +11831,21 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
   if (current_function_return_value == bare_retval)
   {
     INIT_EXPR_NRV_P (retval) = true;
-      if (!current_function_return_values_experimental)
-	hash_map_safe_put<hm_ggc> (current_function_return_values_experimental,
-				   retval,
-				   bare_retval);
-      else
-	current_function_return_values_experimental->put(retval, bare_retval);
-    if (!current_function_return_values
-	|| !current_function_return_values->contains(bare_retval))
+//    if (!current_function_return_values_experimental)
+//      hash_map_safe_put<hm_ggc> (current_function_return_values_experimental,
+//				 retval,
+//				 bare_retval);
+//    else
+//	current_function_return_values_experimental->put(retval, bare_retval);
+//    if (!current_function_return_values
+//	|| !current_function_return_values->contains(bare_retval))
+ //     {
+ //     vec_safe_push (current_function_return_values, bare_retval);
+//      }
+    gcc_assert(in_experimental_nrvo);
+    if (in_experimental_nrvo)
       {
-      vec_safe_push (current_function_return_values, bare_retval);
+	current_function_nrv_context->add_candidate(bare_retval, retval);
       }
   }
 

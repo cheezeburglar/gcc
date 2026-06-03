@@ -6005,7 +6005,6 @@ finalize_nrv (tree fndecl, tree var)
   data.in_nrv_cleanup = false;
 
 
-  hash_set<tree> experimental_visited(100);
   /* This is simpler for variables declared in the outer scope of
      the function so we know that their lifetime always ends with a
      return; see g++.dg/opt/nrv6.C.  */
