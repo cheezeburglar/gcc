@@ -9819,7 +9819,7 @@ public:
   void finalize_nrv_exp(tree fndecl) {
     for (auto r: exp_bare_retval_to_data)
     {
-//      class nrv_data_exp temp;
+      class nrv_data_exp temp;
 //      temp.var = r.candidate_bare_retval;
 //      temp.var_corr_rets = r.candidate_corresponding_retvals;
 //      temp.in_nrv_cleanup = 0;
