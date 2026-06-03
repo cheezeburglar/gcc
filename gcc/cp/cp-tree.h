@@ -9675,7 +9675,7 @@ public:
 
 class nrv_data_exp {
   public:
-    nrv_data_exp () : visited (10) {}
+    nrv_data_exp () : visited(10), var_corr_rets(10) {}
 
     tree var;
     hash_set<tree> var_corr_rets;
@@ -9837,12 +9837,12 @@ public:
 
 public:
   void finalize_nrv_exp(tree fndecl) {
-//    for (auto r: all_nrv_candidates)
-//    {
-//      class nrv_data_exp temp;
-//      temp.var = r.candidate_bare_retval;
-//      temp.var_corr_rets = r.candidate_corresponding_retvals;
-//      temp.in_nrv_cleanup = 0;
+    for (auto r: all_nrv_candidates)
+    {
+      class nrv_data_exp temp;
+      temp.var = r.candidate_bare_retval;
+      temp.var_corr_rets = r.candidate_corresponding_retvals;
+      temp.in_nrv_cleanup = 0;
 //      temp.simple = 0;
 //      nrv_walk_tree(&DECL_SAVED_TREE (fndecl), finalize_nrv_exp_r, &temp, 0);
       //~r;
