@@ -20677,6 +20677,10 @@ finish_function (bool inline_p)
 
   /* Set up the named return value optimization, if we can.  Candidate
      variables are selected in check_return_expr.  */
+  if (current_function_nrv_context)
+  {
+    current_function_nrv_context->finalize_nrv_exp(fndecl);
+  }
   if (current_function_return_values)
     {
       current_function_return_value = NULL_TREE;
@@ -20690,10 +20694,6 @@ finish_function (bool inline_p)
 	}
       }
     }
-  if (current_function_nrv_context)
-  {
-    current_function_nrv_context->finalize_nrv_exp(fndecl);
-  }
     //  gcc_assert(current_function_nrv_context);
 
   /* Must mark the RESULT_DECL as being in this function.  */
