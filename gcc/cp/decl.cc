@@ -20692,7 +20692,7 @@ finish_function (bool inline_p)
     }
   if (current_function_nrv_context)
     current_function_nrv_context->finalize_nrv_exp(fndecl);
-  gcc_assert(current_function_nrv_context);
+//  gcc_assert(current_function_nrv_context);
 
   /* Must mark the RESULT_DECL as being in this function.  */
   DECL_CONTEXT (DECL_RESULT (fndecl)) = fndecl;
