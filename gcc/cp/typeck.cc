@@ -11844,10 +11844,10 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
      vec_safe_push (current_function_return_values, bare_retval);
       }
   gcc_assert(in_experimental_nrvo);
-  if (in_experimental_nrvo)
-  {
+    if (in_experimental_nrvo)
+    {
 	current_function_nrv_context->add_candidate(bare_retval, retval);
-  }
+    }
   }
 
   if (tree set = maybe_set_retval_sentinel ())
