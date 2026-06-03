@@ -9660,7 +9660,7 @@ extern const char *const percent_i;
 typedef hash_map<tree, auto_vec<tree>> retval_hash_map;
 //static retval_hash_map *foobar;
 
-class GTY(()) nrv_candidate {
+class nrv_candidate {
 public:
   ~nrv_candidate()= default;
   tree candidate_bare_retval;
