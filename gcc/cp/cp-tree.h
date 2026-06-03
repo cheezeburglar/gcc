@@ -9820,8 +9820,8 @@ public:
     for (auto r: exp_bare_retval_to_data)
     {
       class nrv_data_exp temp;
-//      temp.var = r.candidate_bare_retval;
-//      temp.var_corr_rets = r.candidate_corresponding_retvals;
+      temp.var = r.first;
+      temp.var_corr_rets = r.second;
 //      temp.in_nrv_cleanup = 0;
 //      temp.simple = 0;
 //      nrv_walk_tree(&DECL_SAVED_TREE (fndecl), finalize_nrv_exp_r, &temp, 0);
