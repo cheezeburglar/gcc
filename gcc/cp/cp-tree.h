@@ -2453,7 +2453,7 @@ struct GTY(()) language_function {
 #define in_experimental_nrvo cp_function_chain->x_in_base_initializer
 
 /* I think we have to dump nrv context garbage collected so should be cheap? */
-static nrv_context *nrv_context_exp;
+extern nrv_context *nrv_context_exp;
 #define current_function_nrv_context nrv_context_exp
 
 /* In parser.cc.  */
