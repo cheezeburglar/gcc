@@ -2057,7 +2057,7 @@ struct GTY(()) cp_omp_declare_variant_attr {
   tree selector;
 };
 
-class nrv_context;
+struct nrv_context;
 
 /* Global state.  */
 
@@ -2115,6 +2115,8 @@ struct GTY(()) saved_scope {
   vec<cp_omp_declare_target_attr, va_gc> *omp_declare_target_attribute;
   vec<cp_omp_begin_assumes_data, va_gc> *omp_begin_assumes;
   vec<cp_omp_declare_variant_attr, va_gc> *omp_declare_variant_attribute;
+
+  nrv_context exp_nrv_context;
 
   struct saved_scope *prev;
 };
@@ -2368,8 +2370,6 @@ struct GTY(()) language_function {
   vec<tree, va_gc> *infinite_loops;
   vec<tree, va_gc> *all_return_values;
   hash_map<tree, tree> * experimental_retvals;
-
-  nrv_context *exp_nrv_context = NULL;
 };
 
 /* The current C++-specific per-function global variables.  */
