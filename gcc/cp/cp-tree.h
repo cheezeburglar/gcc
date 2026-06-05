@@ -9657,7 +9657,7 @@ extern const char *const percent_i;
 //};
 //struct retval_hasher_traits
 //  : simple_hashmap_traits<retval_hasher, tree> {};
-typedef hash_map<tree, vec<tree>> retval_hash_map;
+typedef hash_map<tree, vec<tree, va_heap>> retval_hash_map;
 //static retval_hash_map *foobar;
 
 #define nrv_walk_tree(tp,func,data,pset) \
