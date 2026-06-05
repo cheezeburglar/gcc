@@ -20683,6 +20683,7 @@ finish_function (bool inline_p)
   }
   else if (current_function_return_values)
     {
+      gcc_unreachable();
       current_function_return_value = NULL_TREE;
       for ( auto r : current_function_return_values)
       {
