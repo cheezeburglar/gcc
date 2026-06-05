@@ -9711,7 +9711,8 @@ struct nrv_context {
        about the value of the RESULT_DECL.  But preserve anything appended
        by check_return_expr.  */
     else if (TREE_CODE (*tp) == RETURN_EXPR
-	     && TREE_OPERAND(*tp, 0))
+	     && TREE_OPERAND(*tp, 0)
+	     && dp->var_corr_rets.contains(*tp))
       {
         tree *p = &TREE_OPERAND (*tp, 0);
         while (TREE_CODE (*p) == COMPOUND_EXPR)
