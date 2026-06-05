@@ -9712,16 +9712,13 @@ struct nrv_context {
        about the value of the RESULT_DECL.  But preserve anything appended
        by check_return_expr.  */
     else if (TREE_CODE (*tp) == RETURN_EXPR
-  	   && TREE_OPERAND(*tp, 0))
+	     && TREE_OPERAND(*tp, 0))
       {
         tree *p = &TREE_OPERAND (*tp, 0);
         while (TREE_CODE (*p) == COMPOUND_EXPR)
   	p = &TREE_OPERAND (*p, 0);
-  //      tree *foo = hash_map_safe_get (current_function_return_values_experimental, *p);
-  //      gcc_assert(*foo);
         if (TREE_CODE (*p) == INIT_EXPR
   	  && INIT_EXPR_NRV_P (*p))
-  //	  && (*foo == dp->var || DECL_NAME(*p) == DECL_NAME(dp->result)))
         {
   	tree *foo = hash_map_safe_get (current_function_return_values_experimental, *p);
   	gcc_assert(DECL_NAME(*foo));
@@ -9820,10 +9817,23 @@ public:
     for (auto r: exp_bare_retval_to_data)
     {
       class nrv_data_exp temp;
-      temp.var = r.first;
+      tree result = DECL_RESULT (fndecl);
+      tree var = r.first;
+      if (DECL_NAME(result) == DECL_NAME (var))
+      {
+	TREE_ADDRESSABLE (result) = TREE_ADDRESSABLE (var);
+	SET_DECL_VALUE_EXPR(var, result);
+	DECL_HAS_VALUE_EXPR_P(var) = 1;
+      }
+      else {} // TODO: figure out how to elide other copy ctors
+      TREE_CHAIN(result);
+      temp.var = var;
       temp.var_corr_rets = r.second.copy();
-      temp.in_nrv_cleanup = 0;
-      temp.simple = 0;
+      temp.in_nrv_cleanup = false;
+
+      tree outer = outer_curly_brace_block (fndecl);
+      temp.simple = chain_member(var, BLOCK_VARS (outer));
+
       nrv_walk_tree(&DECL_SAVED_TREE (fndecl), finalize_nrv_exp_r, &temp, 0);
       //~r;
     }

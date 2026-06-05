@@ -20679,9 +20679,9 @@ finish_function (bool inline_p)
      variables are selected in check_return_expr.  */
   if (current_function_nrv_context)
   {
-//    current_function_nrv_context->finalize_nrv_exp(fndecl);
+    current_function_nrv_context->finalize_nrv_exp(fndecl);
   }
-  if (current_function_return_values)
+  else if (current_function_return_values)
     {
       current_function_return_value = NULL_TREE;
       for ( auto r : current_function_return_values)
