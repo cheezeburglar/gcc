@@ -9663,12 +9663,12 @@ typedef hash_map<tree, vec<tree>> retval_hash_map;
 #define nrv_walk_tree(tp,func,data,pset) \
 	walk_tree_1 (tp, func, data, pset, cp_walk_subtrees);
 
-class GTY(()) nrv_data_exp {
+class nrv_data_exp {
   public:
     nrv_data_exp () : visited(10) {}
 
     tree var;
-    vec<tree> var_corr_rets;
+    vec<tree, va_heap> var_corr_rets;
     /* Result we are inserting into copy ctor */
     tree result;
     hash_set<tree> visited;
