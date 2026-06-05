@@ -59,7 +59,7 @@ along with GCC; see the file COPYING3.  If not see
 
 static tree finalize_nrv_r (tree *, int *, void *);
 
-static nrv_context * nrv_context_exp;
+nrv_context * nrv_context_exp;
 
 /* Used for OpenMP non-static data member privatization.  */
 
