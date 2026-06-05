@@ -2116,7 +2116,7 @@ struct GTY(()) saved_scope {
   vec<cp_omp_begin_assumes_data, va_gc> *omp_begin_assumes;
   vec<cp_omp_declare_variant_attr, va_gc> *omp_declare_variant_attribute;
 
-  nrv_context exp_nrv_context;
+  nrv_context *exp_nrv_context;
 
   struct saved_scope *prev;
 };
