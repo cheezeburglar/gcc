@@ -2369,7 +2369,7 @@ struct GTY(()) language_function {
   vec<tree, va_gc> *all_return_values;
   hash_map<tree, tree> * experimental_retvals;
 
-  nrv_context *exp_nrv_context;
+  nrv_context *exp_nrv_context = NULL;
 };
 
 /* The current C++-specific per-function global variables.  */
