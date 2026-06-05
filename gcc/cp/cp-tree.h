@@ -2116,8 +2116,6 @@ struct GTY(()) saved_scope {
   vec<cp_omp_begin_assumes_data, va_gc> *omp_begin_assumes;
   vec<cp_omp_declare_variant_attr, va_gc> *omp_declare_variant_attribute;
 
-  nrv_context *exp_nrv_context;
-
   struct saved_scope *prev;
 };
 
@@ -2455,7 +2453,8 @@ struct GTY(()) language_function {
 #define in_experimental_nrvo cp_function_chain->x_in_base_initializer
 
 /* I think we have to dump nrv context garbage collected so should be cheap? */
-#define current_function_nrv_context scope_chain->exp_nrv_context
+static nrv_context *nrv_context_exp;
+#define current_function_nrv_context nrv_context_exp
 
 /* In parser.cc.  */
 extern tree cp_literal_operator_id (const char *);
