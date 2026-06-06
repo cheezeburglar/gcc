@@ -9751,13 +9751,13 @@ struct nrv_context {
   	     don't want to destroy the NRV.  If the sentinel is not set, we're
   	     leaving scope some other way, either by flowing off the end of its
   	     scope or throwing an exception.  */
-  	  if (current_retval_sentinel)
-  	  {
+//  	  if (current_retval_sentinel)
+//  	  {
   	    tree cond = build3 (COND_EXPR, void_type_node,
   				current_retval_sentinel,
   				void_node, CLEANUP_EXPR (*tp));
   	    CLEANUP_EXPR (*tp) = cond;
-  	  }
+//  	  }
   	}
 
         /* If a cleanup might throw, we need to clear current_retval_sentinel on
@@ -9825,7 +9825,7 @@ public:
 	SET_DECL_VALUE_EXPR(var, result);
 	DECL_HAS_VALUE_EXPR_P(var) = 1;
       }
-      else {} // TODO: figure out how to elide other copy ctors
+      else { return; } // TODO: figure out how to elide other copy ctors
 //      TREE_CHAIN(result);
       temp.result = result;
       temp.var = var;
