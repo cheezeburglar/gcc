@@ -9751,13 +9751,13 @@ struct nrv_context {
   	     don't want to destroy the NRV.  If the sentinel is not set, we're
   	     leaving scope some other way, either by flowing off the end of its
   	     scope or throwing an exception.  */
-  //	  if (current_retval_sentinel)
-  //	  {
+  	  if (current_retval_sentinel)
+  	  {
   	    tree cond = build3 (COND_EXPR, void_type_node,
   				current_retval_sentinel,
   				void_node, CLEANUP_EXPR (*tp));
   	    CLEANUP_EXPR (*tp) = cond;
-  //	  }
+  	  }
   	}
 
         /* If a cleanup might throw, we need to clear current_retval_sentinel on
