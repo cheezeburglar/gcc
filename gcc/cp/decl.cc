@@ -20681,9 +20681,9 @@ finish_function (bool inline_p)
   {
     current_function_nrv_context->finalize_nrv_exp(fndecl);
   }
-  else if (current_function_return_values)
+  if (current_function_return_values)
     {
-      gcc_unreachable();
+//      gcc_unreachable();
       current_function_return_value = NULL_TREE;
       for ( auto r : current_function_return_values)
       {
