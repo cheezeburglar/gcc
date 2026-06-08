@@ -9712,7 +9712,7 @@ struct nrv_context {
        by check_return_expr.  */
     else if (TREE_CODE (*tp) == RETURN_EXPR
 	     && TREE_OPERAND(*tp, 0)
-	     && dp->var_corr_rets.contains(tp))
+	     && dp->var_corr_rets.contains(*tp))
       {
 	gcc_unreachable();
         tree *p = &TREE_OPERAND (*tp, 0);
@@ -9842,6 +9842,7 @@ public:
   }
 
   void add_candidate(tree bare_retval, tree retval) {
+    gcc_assert(TREE_CODE(retval) == RETURN_EXPR);
     exp_bare_retval_to_data.get_or_insert(bare_retval).safe_push(retval);
 //    else
 //    hash_map_safe_get_or_insert<hm_ggc> (exp_bare_retval_to_data,
