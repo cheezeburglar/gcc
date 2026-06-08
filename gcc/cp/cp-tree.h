@@ -9830,6 +9830,7 @@ public:
 //      TREE_CHAIN(result);
       temp.result = result;
       temp.var = var;
+      gcc_assert(r.second);
       temp.var_corr_rets = r.second.copy();
       temp.in_nrv_cleanup = false;
 
