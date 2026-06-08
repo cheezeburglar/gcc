@@ -9712,7 +9712,7 @@ struct nrv_context {
        by check_return_expr.  */
     else if (TREE_CODE (*tp) == RETURN_EXPR
 	     && TREE_OPERAND(*tp, 0)
-	     && dp->var_corr_rets.contains(*tp))
+	     && dp->var_corr_rets.contains(tp))
       {
 	gcc_unreachable();
         tree *p = &TREE_OPERAND (*tp, 0);
@@ -9830,7 +9830,6 @@ public:
 //      TREE_CHAIN(result);
       temp.result = result;
       temp.var = var;
-      gcc_assert(r.second);
       temp.var_corr_rets = r.second.copy();
       temp.in_nrv_cleanup = false;
 
