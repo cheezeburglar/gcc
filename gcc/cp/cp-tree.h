@@ -9724,7 +9724,8 @@ struct nrv_context {
   	tree *foo = hash_map_safe_get (current_function_return_values_experimental, *p);
   	gcc_assert(DECL_NAME(*foo));
   	gcc_assert(dp->result);
-  	if (DECL_NAME(*foo) == DECL_NAME(dp->result))
+  //	if (DECL_NAME(*foo) == DECL_NAME(dp->result))
+	if (dp->var_corr_rets.contains(*p))
   	  *p = dp->result;
   //	else
   //	  gcc_unreachable();
@@ -9842,7 +9843,7 @@ public:
   }
 
   void add_candidate(tree bare_retval, tree retval) {
-    gcc_assert(TREE_CODE(retval) == RETURN_EXPR);
+//    gcc_assert(TREE_CODE(retval) == RETURN_EXPR);
     exp_bare_retval_to_data.get_or_insert(bare_retval).safe_push(retval);
 //    else
 //    hash_map_safe_get_or_insert<hm_ggc> (exp_bare_retval_to_data,
