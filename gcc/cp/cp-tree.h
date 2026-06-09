@@ -9816,7 +9816,6 @@ struct nrv_context {
 
 public:
   void finalize_nrv_exp(tree fndecl) {
-      gcc_unreachable();
     for (auto r: exp_bare_retval_to_data)
     {
       class nrv_data_exp temp;
@@ -9845,6 +9844,7 @@ public:
 
   void add_candidate(tree bare_retval, tree retval) {
 //    gcc_assert(TREE_CODE(retval) == RETURN_EXPR);
+    gcc_unreachable();
     exp_bare_retval_to_data.get_or_insert(bare_retval).safe_push(retval);
 //    else
 //    hash_map_safe_get_or_insert<hm_ggc> (exp_bare_retval_to_data,
