@@ -9681,6 +9681,7 @@ struct nrv_context {
   static tree
   finalize_nrv_exp_r(tree *tp, int * walk_subtrees, void * data)
   {
+	gcc_unreachable();
     class nrv_data_exp *dp = (class nrv_data_exp *)data;
 
 
@@ -9717,7 +9718,7 @@ struct nrv_context {
 	gcc_unreachable();
         tree *p = &TREE_OPERAND (*tp, 0);
         while (TREE_CODE (*p) == COMPOUND_EXPR)
-  	p = &TREE_OPERAND (*p, 0);
+	 p = &TREE_OPERAND (*p, 0);
         if (TREE_CODE (*p) == INIT_EXPR
   	  && INIT_EXPR_NRV_P (*p))
         {
