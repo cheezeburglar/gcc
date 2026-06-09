@@ -9825,7 +9825,7 @@ public:
       auto pair = *r;
       tree result = DECL_RESULT (fndecl);
       tree var = pair.first;
-      if (!DECL_NAME(result)) { DECL_NAME(result) = get_identifer("__nrvo_init"); }
+      if (!DECL_NAME(result)) { DECL_NAME(result) = get_identifier("__nrvo_init"); }
       else if (DECL_NAME(result) == DECL_NAME (var))
       {
 	TREE_ADDRESSABLE (result) = TREE_ADDRESSABLE (var);
