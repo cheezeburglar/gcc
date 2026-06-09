@@ -9820,6 +9820,7 @@ public:
 	 r != exp_bare_retval_to_data.end();
 	 ++r)
     {
+      gcc_unreachable();
       class nrv_data_exp temp;
       auto pair = *r;
       tree result = DECL_RESULT (fndecl);
