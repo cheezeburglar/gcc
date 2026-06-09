@@ -9678,6 +9678,7 @@ class nrv_data_exp {
 static retval_hash_map exp_bare_retval_to_data;
 
 struct nrv_context {
+  retval_hash_map exp_bare_retval_to_data_2;
   static tree
   finalize_nrv_exp_r(tree *tp, int * walk_subtrees, void * data)
   {
@@ -9816,8 +9817,8 @@ struct nrv_context {
 
 public:
   void finalize_nrv_exp(tree fndecl) {
-    for (auto r = exp_bare_retval_to_data.begin ();
-	 r != exp_bare_retval_to_data.end();
+    for (auto r = exp_bare_retval_to_data_2.begin ();
+	 r != exp_bare_retval_to_data_2.end();
 	 ++r)
     {
       gcc_unreachable();
@@ -9853,6 +9854,12 @@ public:
 	.safe_push(retval);
     gcc_assert(exp_bare_retval_to_data.get(bare_retval));
     gcc_assert(exp_bare_retval_to_data.get(bare_retval)
+		 ->contains(retval));
+    exp_bare_retval_to_data_2
+      .get_or_insert(bare_retval)
+	.safe_push(retval);
+    gcc_assert(exp_bare_retval_to_data_2.get(bare_retval));
+    gcc_assert(exp_bare_retval_to_data_2.get(bare_retval)
 		 ->contains(retval));
 //    else
 //    hash_map_safe_get_or_insert<hm_ggc> (exp_bare_retval_to_data,
