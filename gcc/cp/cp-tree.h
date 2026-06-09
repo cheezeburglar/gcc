@@ -9838,8 +9838,8 @@ public:
       temp.var_corr_rets = pair.second.copy();
       temp.in_nrv_cleanup = false;
 
-      tree outer = outer_curly_brace_block (fndecl);
-      temp.simple = chain_member(var, BLOCK_VARS (outer));
+//      tree outer = outer_curly_brace_block (fndecl);
+//      temp.simple = chain_member(var, BLOCK_VARS (outer));
 
       nrv_walk_tree(&DECL_SAVED_TREE (fndecl), finalize_nrv_exp_r, &temp, 0);
       //~r;
