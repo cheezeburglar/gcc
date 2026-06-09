@@ -9844,7 +9844,12 @@ public:
 
   void add_candidate(tree bare_retval, tree retval) {
 //    gcc_assert(TREE_CODE(retval) == RETURN_EXPR);
-    exp_bare_retval_to_data.get_or_insert(bare_retval).safe_push(retval);
+    exp_bare_retval_to_data
+      .get_or_insert(bare_retval)
+	.safe_push(retval);
+    gcc_assert(exp_bare_retval_to_data.get(bare_retval));
+    gcc_assert(exp_bare_retval_to_data.get(bare_retval)
+		 ->contains(retval));
 //    else
 //    hash_map_safe_get_or_insert<hm_ggc> (exp_bare_retval_to_data,
 //			       bare_retval,
