@@ -9816,9 +9816,9 @@ struct nrv_context {
 
 public:
   void finalize_nrv_exp(tree fndecl) {
+      gcc_unreachable();
     for (auto r: exp_bare_retval_to_data)
     {
-      gcc_unreachable();
       class nrv_data_exp temp;
       tree result = DECL_RESULT (fndecl);
       tree var = r.first;
