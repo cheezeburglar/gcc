@@ -9681,7 +9681,6 @@ struct nrv_context {
   static tree
   finalize_nrv_exp_r(tree *tp, int * walk_subtrees, void * data)
   {
-	gcc_unreachable();
     class nrv_data_exp *dp = (class nrv_data_exp *)data;
 
 
@@ -9819,6 +9818,7 @@ public:
   void finalize_nrv_exp(tree fndecl) {
     for (auto r: exp_bare_retval_to_data)
     {
+      gcc_unreachable();
       class nrv_data_exp temp;
       tree result = DECL_RESULT (fndecl);
       tree var = r.first;
