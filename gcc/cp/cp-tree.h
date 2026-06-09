@@ -9816,7 +9816,7 @@ struct nrv_context {
 
 public:
   void finalize_nrv_exp(tree fndecl) {
-    for (tree r: exp_bare_retval_to_data)
+    for (auto r: exp_bare_retval_to_data)
     {
       class nrv_data_exp temp;
       tree result = DECL_RESULT (fndecl);
