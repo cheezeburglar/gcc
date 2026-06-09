@@ -9816,11 +9816,14 @@ struct nrv_context {
 
 public:
   void finalize_nrv_exp(tree fndecl) {
-    for (auto r: exp_bare_retval_to_data)
+    for (auto r = exp_bare_retval_to_data.begin ();
+	 r != exp_bare_retval_to_data.end();
+	 ++r)
     {
       class nrv_data_exp temp;
+      auto pair = *r;
       tree result = DECL_RESULT (fndecl);
-      tree var = r.first;
+      tree var = pair.first;
       if (DECL_NAME(result) == DECL_NAME (var))
       {
 	TREE_ADDRESSABLE (result) = TREE_ADDRESSABLE (var);
@@ -9831,7 +9834,7 @@ public:
 //      TREE_CHAIN(result);
       temp.result = result;
       temp.var = var;
-      temp.var_corr_rets = r.second.copy();
+      temp.var_corr_rets = pair.second.copy();
       temp.in_nrv_cleanup = false;
 
       tree outer = outer_curly_brace_block (fndecl);
