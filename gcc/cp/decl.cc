@@ -20690,7 +20690,7 @@ finish_function (bool inline_p)
 	if (r != NULL_TREE)
 	{
 	  if (r != error_mark_node)
-	    finalize_nrv(fndecl, r);
+//	    finalize_nrv(fndecl, r);
 	  r = NULL_TREE;
 	}
       }
