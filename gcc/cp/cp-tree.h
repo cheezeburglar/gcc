@@ -9840,6 +9840,7 @@ public:
 
 //      tree outer = outer_curly_brace_block (fndecl);
 //      temp.simple = chain_member(var, BLOCK_VARS (outer));
+      temp.simple = false;
 
       nrv_walk_tree(&DECL_SAVED_TREE (fndecl), finalize_nrv_exp_r, &temp, 0);
       //~r;
