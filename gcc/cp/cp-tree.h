@@ -9825,13 +9825,7 @@ public:
       auto pair = *r;
       tree result = DECL_RESULT (fndecl);
       tree var = pair.first;
-      if (!DECL_NAME(result))
-      {
-	TREE_ADDRESSABLE (result) = TREE_ADDRESSABLE (var);
-	SET_DECL_VALUE_EXPR(var, result);
-	DECL_HAS_VALUE_EXPR_P(var) = 1;
-      }
-      else if (DECL_NAME(result) == DECL_NAME (var))
+      if (DECL_NAME(result) == DECL_NAME (var))
       {
 	TREE_ADDRESSABLE (result) = TREE_ADDRESSABLE (var);
 	SET_DECL_VALUE_EXPR(var, result);
