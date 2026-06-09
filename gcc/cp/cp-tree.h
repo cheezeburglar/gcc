@@ -9715,7 +9715,7 @@ struct nrv_context {
 	     && TREE_OPERAND(*tp, 0))
 //	     && dp->var_corr_rets.contains(*tp))
       {
-	gcc_unreachable();
+//	gcc_unreachable();
         tree *p = &TREE_OPERAND (*tp, 0);
         while (TREE_CODE (*p) == COMPOUND_EXPR)
 	 p = &TREE_OPERAND (*p, 0);
