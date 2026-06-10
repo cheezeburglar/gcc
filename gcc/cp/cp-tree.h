@@ -9827,13 +9827,13 @@ public:
       tree var = pair.first;
 //      if (!DECL_NAME(result))
 //	return;
-      if (DECL_NAME(result) == DECL_NAME (var))
-      {
+//      if (DECL_NAME(result) == DECL_NAME (var))
+//      {
 	TREE_ADDRESSABLE (result) = TREE_ADDRESSABLE (var);
 	SET_DECL_VALUE_EXPR(var, result);
 	DECL_HAS_VALUE_EXPR_P(var) = 1;
-      }
-      else { return; } // TODO: figure out how to elide other copy ctors
+//      }
+//      else { return; } // TODO: figure out how to elide other copy ctors
 //      TREE_CHAIN(result);
       temp.result = result;
       temp.var = var;
