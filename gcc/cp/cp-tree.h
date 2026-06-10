@@ -9826,7 +9826,7 @@ public:
       tree result = DECL_RESULT (fndecl);
       tree var = pair.first;
       if (!DECL_NAME(result))
-	gcc_unreachable();
+	return;
       if (DECL_NAME(result) == DECL_NAME (var))
       {
 	TREE_ADDRESSABLE (result) = TREE_ADDRESSABLE (var);
