@@ -9825,6 +9825,8 @@ public:
       auto pair = *r;
       tree result = DECL_RESULT (fndecl);
       tree var = pair.first;
+      if (!DECL_NAME(result))
+	gcc_unreachable();
       if (DECL_NAME(result) == DECL_NAME (var))
       {
 	TREE_ADDRESSABLE (result) = TREE_ADDRESSABLE (var);
