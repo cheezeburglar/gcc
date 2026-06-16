@@ -9824,7 +9824,7 @@ struct nrv_context {
     return NULL_TREE;
   }
 
-  FILE * nrv_dump = stdout;
+  FILE * nrv_dump = NULL;
 
   void
   nrv_maybe_dump_init(tree fndecl)
