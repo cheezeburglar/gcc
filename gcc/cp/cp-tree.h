@@ -9917,7 +9917,7 @@ public:
       foo->safe_push(retval);
     else
     {
-      vec<tree> temp = NULL;
+      vec<tree> temp = vNULL;
       gcc_assert(retval);
       temp.safe_push(retval);
       exp_bare_retval_to_data_2.put(bare_retval, temp);
