@@ -41,6 +41,11 @@ c-common.h, not after.
 #include "c-family/c-common.h"
 #include "diagnostic.h"
 
+#include "print-tree.h"
+#include "cxx-pretty-print.h"
+#include "cstdio"
+#include "langhooks.h"
+
 /* A tree node, together with a location, so that we can track locations
    (and ranges) during parsing.
 
@@ -9656,7 +9661,7 @@ extern const char *const percent_i;
 //};
 //struct retval_hasher_traits
 //  : simple_hashmap_traits<retval_hasher, tree> {};
-typedef hash_map<tree, vec<tree, va_heap>> retval_hash_map;
+typedef hash_map<tree, vec<tree>> retval_hash_map;
 //static retval_hash_map *foobar;
 
 #define nrv_walk_tree(tp,func,data,pset) \
@@ -9728,8 +9733,12 @@ struct nrv_context {
   //	if (DECL_NAME(*foo) == DECL_NAME(dp->result))
 	if (dp->var_corr_rets.contains(*p))
   	  *p = dp->result;
-  //	else
-  //	  gcc_unreachable();
+	else
+	  {
+//	    tree target_expr = *TREE_OPERAND(*p, 1); // arg_init
+//
+//	    tree arg_init = *TREE_OPERAND(*target_expr, 1);
+	  }
         }
       }
     /* Change all cleanups for the NRV to only run when not returning.  */
@@ -9815,8 +9824,60 @@ struct nrv_context {
     return NULL_TREE;
   }
 
+  FILE * nrv_dump = stdout;
+
+  void
+  nrv_maybe_dump_init(tree fndecl)
+  {
+    if (!nrv_dump)
+      return;
+    cxx_pretty_printer pp;
+    pp.set_output_stream(nrv_dump);
+    pp.flags=0;
+
+    fprintf (nrv_dump,
+	     "\n;; Starting nrv opt for %s\n",
+	     lang_hooks.decl_printable_name(fndecl, 2));
+    int i = 0;
+    for (auto r = exp_bare_retval_to_data_2.begin ();
+	 r != exp_bare_retval_to_data_2.end();
+	 ++r)
+    {
+      auto temp = *r;
+      tree var = temp.first;
+      fprintf (nrv_dump,
+	       "  ;; Candidate var %d is %s\n",
+	       i,
+	       lang_hooks.decl_printable_name(var, 2));
+      for (auto x : exp_bare_retval_to_data_2.get(var))
+	fprintf (nrv_dump,
+		 "    ;; Retval %p is good candidate.\n",
+		 (void *)&x);
+      i++;
+    }
+  }
+
+  void
+  nrv_maybe_dump_add_candidate(tree bare_retval, tree retval)
+  {
+    if (!nrv_dump)
+      return;
+    cxx_pretty_printer pp;
+    pp.set_output_stream(nrv_dump);
+    pp.flags=0;
+    fprintf (nrv_dump,
+	     "\n;; Adding candidate retval %p to bare_retval: %s\n",
+	     (void *)&retval,
+	     lang_hooks.decl_printable_name(bare_retval, 2));
+    for (auto x : exp_bare_retval_to_data_2.get(bare_retval))
+	fprintf (nrv_dump,
+		 "  ;; Retval %p is currently in corr vec candidate.\n",
+		 (void *)&x);
+  }
+
 public:
   void finalize_nrv_exp(tree fndecl) {
+    nrv_maybe_dump_init(fndecl);
     for (auto r = exp_bare_retval_to_data_2.begin ();
 	 r != exp_bare_retval_to_data_2.end();
 	 ++r)
@@ -9845,21 +9906,25 @@ public:
 //      temp.simple = false;
 
       nrv_walk_tree(&DECL_SAVED_TREE (fndecl), finalize_nrv_exp_r, &temp, 0);
+      exp_bare_retval_to_data_2.remove(var);
       //~r;
     }
   }
 
   void add_candidate(tree bare_retval, tree retval) {
 //    gcc_assert(TREE_CODE(retval) == RETURN_EXPR);
-    exp_bare_retval_to_data
-      .get_or_insert(bare_retval)
-	.safe_push(retval);
-    gcc_assert(exp_bare_retval_to_data.get(bare_retval));
-    gcc_assert(exp_bare_retval_to_data.get(bare_retval)
-		 ->contains(retval));
-    exp_bare_retval_to_data_2
-      .get_or_insert(bare_retval)
-	.safe_push(retval);
+    if (auto foo = exp_bare_retval_to_data_2.get(bare_retval))
+      foo->safe_push(retval);
+    else
+    {
+      vec<tree> temp;
+      temp.safe_push(retval);
+      exp_bare_retval_to_data_2.put(bare_retval, temp);
+    }
+    nrv_maybe_dump_add_candidate(bare_retval, retval);
+//    exp_bare_retval_to_data_2
+//      .get_or_insert(bare_retval)
+//	.safe_push(retval);
     gcc_assert(exp_bare_retval_to_data_2.get(bare_retval));
     gcc_assert(exp_bare_retval_to_data_2.get(bare_retval)
 		 ->contains(retval));
