@@ -11679,6 +11679,10 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
 //  gcc_assert(!in_experimental_nrvo);
   if (fn_returns_value_p && flag_elide_constructors_experimental)
   {
+    tree exp_bare_retval = NULL_TREE;
+    bool exp_bare_retval_okay_p = true;
+    if (named_return_value_okay_p)
+      exp_bare_retval = bare_retval;
     if (!in_experimental_nrvo)
       in_experimental_nrvo = 1;
     if (!current_function_nrv_context)
@@ -11789,6 +11793,7 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
       if (retval == error_mark_node)
 	{
 	  /* And suppress NRV.  */
+	  exp_bare_retval_okay_p = false;
 	  current_function_return_value = error_mark_node;
 	  return retval;
 	}
@@ -11829,7 +11834,14 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
     retval = cp_build_init_expr (result, retval);
 
 
-  if (current_function_return_value == bare_retval)
+  if (in_experimental_nrvo
+      && exp_bare_retval_okay_p
+      && (exp_bare_retval != NULL_TREE))
+  {
+    INIT_EXPR_NRV_P (retval) = true;
+    current_function_nrv_context->add_candidate(exp_bare_retval, retval);
+  }
+  else if (current_function_return_value == bare_retval)
   {
     INIT_EXPR_NRV_P (retval) = true;
     if (!current_function_return_values_experimental)
@@ -11843,11 +11855,6 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
      {
      vec_safe_push (current_function_return_values, bare_retval);
       }
-    gcc_assert(in_experimental_nrvo);
-    if (in_experimental_nrvo)
-    {
-	current_function_nrv_context->add_candidate(bare_retval, retval);
-    }
   }
 
   if (tree set = maybe_set_retval_sentinel ())
