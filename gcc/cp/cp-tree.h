@@ -9735,9 +9735,9 @@ struct nrv_context {
   	  *p = dp->result;
 	else
 	  {
-//	    tree target_expr = *TREE_OPERAND(*p, 1); // arg_init
+//	    tree * target_expr = &TREE_OPERAND(*p, 1); // arg_init
 //
-//	    tree arg_init = *TREE_OPERAND(*target_expr, 1);
+//	    tree * arg_init = &TREE_OPERAND(*target_expr, 1);
 	  }
         }
       }
