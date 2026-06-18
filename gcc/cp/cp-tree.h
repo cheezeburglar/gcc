@@ -9700,7 +9700,7 @@ struct nrv_context {
      * We need to keep track of other info.*/
     else if (*tp == dp->var)
     {
-      *tp = dp->result;
+//      *tp = dp->result;
     }
     /* Avoid walking into the same tree more than once.  Unfortunately, we
        can't just use walk_tree_without duplicates because it would only call
