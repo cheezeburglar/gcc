@@ -9824,7 +9824,7 @@ struct nrv_context {
     return NULL_TREE;
   }
 
-  FILE * nrv_dump = NULL;
+  FILE * nrv_dump = stdout;
 
   void
   nrv_maybe_dump_init(tree fndecl)
@@ -9909,6 +9909,7 @@ public:
       exp_bare_retval_to_data_2.remove(var);
       //~r;
     }
+    gcc_assert(exp_bare_retval_to_data_2.is_empty() == true);
   }
 
   void add_candidate(tree bare_retval, tree retval) {
