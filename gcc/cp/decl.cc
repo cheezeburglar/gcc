@@ -20679,7 +20679,7 @@ finish_function (bool inline_p)
      variables are selected in check_return_expr.  */
   if (current_function_nrv_context && cfun->language->experimental_retvals)
   {
-//    current_function_nrv_context->finalize_nrv_exp(fndecl);
+    current_function_nrv_context->finalize_nrv_exp(fndecl);
   }
   if (current_function_return_values)
     {
