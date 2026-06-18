@@ -5832,7 +5832,7 @@ finalize_nrv_r (tree* tp, int* walk_subtrees, void* data)
   else if (*tp == dp->var)
   {
     nrv_maybe_dump_replacement_start(*tp, 1);
-//    *tp = dp->result;
+    *tp = dp->result;
     nrv_maybe_dump_replacement_end(*tp);
   }
   /* Avoid walking into the same tree more than once.  Unfortunately, we
