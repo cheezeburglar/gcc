@@ -11677,10 +11677,10 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
 
   // TODO: automagically figure out when to do this more expensive nrv
 //  gcc_assert(!in_experimental_nrvo);
+  tree exp_bare_retval = NULL_TREE;
+  bool exp_bare_retval_okay_p = true;
   if (fn_returns_value_p && flag_elide_constructors_experimental)
   {
-    tree exp_bare_retval = NULL_TREE;
-    bool exp_bare_retval_okay_p = true;
     if (named_return_value_okay_p)
       exp_bare_retval = bare_retval;
     if (!in_experimental_nrvo)
