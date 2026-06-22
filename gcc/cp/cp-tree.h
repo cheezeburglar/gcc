@@ -9727,9 +9727,9 @@ struct nrv_context {
         if (TREE_CODE (*p) == INIT_EXPR
   	  && INIT_EXPR_NRV_P (*p))
         {
-  	tree *foo = hash_map_safe_get (current_function_return_values_experimental, *p);
-  	gcc_assert(DECL_NAME(*foo));
-  	gcc_assert(dp->result);
+//  	tree *foo = hash_map_safe_get (current_function_return_values_experimental, *p);
+//  	gcc_assert(DECL_NAME(*foo));
+//  	gcc_assert(dp->result);
   //	if (DECL_NAME(*foo) == DECL_NAME(dp->result))
 	if (dp->var_corr_rets.contains(*p))
   	  *p = dp->result;
@@ -9878,6 +9878,11 @@ struct nrv_context {
 public:
   void finalize_nrv_exp(tree fndecl) {
     nrv_maybe_dump_init(fndecl);
+    for (auto it : exp_bare_retval_to_data_2)
+      {
+
+     }
+
     for (auto r = exp_bare_retval_to_data_2.begin ();
 	 r != exp_bare_retval_to_data_2.end();
 	 ++r)
