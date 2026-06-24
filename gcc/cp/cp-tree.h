@@ -9713,7 +9713,7 @@ public:
      * We need to keep track of other info.*/
     else if (*tp == dp->var)
     {
-//      *tp = dp->result;
+      *tp = dp->result;
     }
     /* Avoid walking into the same tree more than once.  Unfortunately, we
        can't just use walk_tree_without duplicates because it would only call
@@ -9837,7 +9837,7 @@ public:
     return NULL_TREE;
   }
 
-  FILE * nrv_dump = NULL;
+  FILE * nrv_dump = stdout;
 
   void
   nrv_maybe_dump_init(tree fndecl)
