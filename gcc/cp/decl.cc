@@ -20677,7 +20677,7 @@ finish_function (bool inline_p)
 
   /* Set up the named return value optimization, if we can.  Candidate
      variables are selected in check_return_expr.  */
-  if (current_function_nrv_context) //&& cfun->language->experimental_retvals)
+  if (current_function_nrv_context && current_function_return_values) //&& cfun->language->experimental_retvals)
   {
     current_function_nrv_context->finalize_nrv_exp(fndecl);
   }
