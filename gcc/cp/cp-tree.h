@@ -9677,6 +9677,7 @@ class nrv_data_exp {
     hash_set<tree> visited;
     bool simple;
     bool in_nrv_cleanup;
+    bool in_first_nrv_pass;
 };
 
 struct nrv_context {
@@ -9909,6 +9910,7 @@ public:
 
 public:
   void finalize_nrv_exp(tree fndecl) {
+    bool first_pass = true;
     nrv_maybe_dump_init(fndecl);
     gcc_assert (current_function_return_values);
     for (auto it : exp_bare_retval_to_data_2)
@@ -9939,6 +9941,7 @@ public:
       temp.var = var;
       temp.var_corr_rets = pair.second.copy();
       temp.in_nrv_cleanup = false;
+      temp.in_first_nrv_pass = first_pass;
 
       tree outer = outer_curly_brace_block (fndecl);
       temp.simple = chain_member(var, BLOCK_VARS (outer));
@@ -9946,6 +9949,7 @@ public:
 
       nrv_walk_tree(&DECL_SAVED_TREE (fndecl), finalize_nrv_exp_r, &temp, 0);
       exp_bare_retval_to_data_2.remove(var);
+      first_pass = false;
       //~r;
     }
     gcc_assert(exp_bare_retval_to_data_2.is_empty() == true);
