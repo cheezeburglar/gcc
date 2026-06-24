@@ -11839,7 +11839,9 @@ check_return_expr (tree retval, bool *no_warning, bool *dangling)
       && (exp_bare_retval != NULL_TREE))
   {
     INIT_EXPR_NRV_P (retval) = true;
-    current_function_nrv_context->add_candidate(exp_bare_retval, retval);
+    tree * exp_bare_retval_p = &exp_bare_retval;
+    tree * retval_p = &retval;
+    current_function_nrv_context->add_candidate(exp_bare_retval_p, retval_p);
   }
   else if (current_function_return_value == bare_retval)
   {

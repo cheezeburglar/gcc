@@ -9661,7 +9661,6 @@ extern const char *const percent_i;
 //};
 //struct retval_hasher_traits
 //  : simple_hashmap_traits<retval_hasher, tree> {};
-typedef hash_map<tree, vec<tree>> retval_hash_map;
 //static retval_hash_map *foobar;
 
 #define nrv_walk_tree(tp,func,data,pset) \
@@ -9672,7 +9671,7 @@ class nrv_data_exp {
     nrv_data_exp () : visited(10) {}
 
     tree var;
-    vec<tree, va_heap> var_corr_rets;
+    auto_vec<tree> var_corr_rets;
     /* Result we are inserting into copy ctor */
     tree result;
     hash_set<tree> visited;
@@ -9680,10 +9679,24 @@ class nrv_data_exp {
     bool in_nrv_cleanup;
 };
 
-static retval_hash_map exp_bare_retval_to_data;
-
 struct nrv_context {
-  retval_hash_map exp_bare_retval_to_data_2;
+  typedef hash_map<tree, auto_vec<tree >> retval_hash_map_t;
+  typedef retval_hash_map_t::iterator iterator;
+
+  nrv_context() : exp_bare_retval_to_data_2() {}
+
+private:
+  retval_hash_map_t exp_bare_retval_to_data_2;
+public:
+  iterator begin() const { return exp_bare_retval_to_data_2.begin (); }
+  iterator end() const { return exp_bare_retval_to_data_2.end (); }
+
+  bool operator== (const nrv_context & other) const;
+  bool operator!= (const nrv_context & other) const
+  {
+    return !(*this == other);
+  }
+
   static tree
   finalize_nrv_exp_r(tree *tp, int * walk_subtrees, void * data)
   {
@@ -9824,7 +9837,7 @@ struct nrv_context {
     return NULL_TREE;
   }
 
-  FILE * nrv_dump = NULL;
+  FILE * nrv_dump = stdout;
 
   void
   nrv_maybe_dump_init(tree fndecl)
@@ -9844,12 +9857,16 @@ struct nrv_context {
 	 ++r)
     {
       auto temp = *r;
-      tree var = temp.first;
+      tree  var = temp.first;
       fprintf (nrv_dump,
-	       "  ;; Candidate var %d is %s\n",
+	       "  ;; Candidate var %d is %p\n",
 	       i,
-	       lang_hooks.decl_printable_name(var, 2));
-      for (auto x : exp_bare_retval_to_data_2.get(var))
+	       (void *)&(*var));
+//      fprintf (nrv_dump,
+//	       "  ;; Candidate var %d is %s\n",
+//	       i,
+//	       lang_hooks.decl_printable_name(*var, 2));
+      for (auto x : temp.second)
 	fprintf (nrv_dump,
 		 "    ;; Retval %p is good candidate.\n",
 		 (void *)&x);
@@ -9875,20 +9892,36 @@ struct nrv_context {
 		 (void *)&x);
   }
 
+  void
+  nrv_debug_dump_all_candidates(tree first, auto_vec<tree> second)
+  {
+    if (!nrv_dump)
+      return;
+    fprintf(nrv_dump,
+	    "First (candidate bare_retval) is %p \n  corr rets:",
+	    (void *)&*first);
+    for (auto it : second)
+    {
+      fprintf(nrv_dump, " %p ", (void *)it);
+    }
+    fprintf(nrv_dump, "\n");
+  }
+
 public:
   void finalize_nrv_exp(tree fndecl) {
     nrv_maybe_dump_init(fndecl);
     for (auto it : exp_bare_retval_to_data_2)
       {
+      nrv_debug_dump_all_candidates(it.first, it.second.copy());
+      }
 
-     }
-
-    for (auto r = exp_bare_retval_to_data_2.begin ();
-	 r != exp_bare_retval_to_data_2.end();
-	 ++r)
+//    for (auto r = exp_bare_retval_to_data_2.begin ();
+//	 r != exp_bare_retval_to_data_2.end();
+//	 ++r)
+    for (auto r : exp_bare_retval_to_data_2)
     {
       class nrv_data_exp temp;
-      auto pair = *r;
+      auto pair = r;
       tree result = DECL_RESULT (fndecl);
       tree var = pair.first;
 //      if (!DECL_NAME(result))
@@ -9917,29 +9950,32 @@ public:
     gcc_assert(exp_bare_retval_to_data_2.is_empty() == true);
   }
 
-  void add_candidate(tree bare_retval, tree retval) {
+  void add_candidate(tree * bare_retval_p, tree * retval_p) {
 //    gcc_assert(TREE_CODE(retval) == RETURN_EXPR);
-    if (auto foo = exp_bare_retval_to_data_2.get(bare_retval))
-      foo->safe_push(retval);
-    else
-    {
-      vec<tree> temp = vNULL;
-      gcc_assert(retval);
-      temp.safe_push(retval);
-      exp_bare_retval_to_data_2.put(bare_retval, temp);
-    }
-    nrv_maybe_dump_add_candidate(bare_retval, retval);
+    auto_vec<tree > &v = exp_bare_retval_to_data_2.get_or_insert(*bare_retval_p);
+    if (!v.contains(*retval_p))
+      v.safe_push(*retval_p);
+    nrv_maybe_dump_add_candidate(*bare_retval_p, *retval_p);
+//    if (auto foo = exp_bare_retval_to_data_2.get(*bare_retval_p))
+//      foo->safe_push(retval_p);
+//    else
+//    {
+//      auto_vec<tree *> temp = vNULL;
+//      gcc_assert(retval_p);
+//      temp.safe_push(retval_p);
+//      exp_bare_retval_to_data_2.put(*bare_retval_p, temp);
+//    }
 //    exp_bare_retval_to_data_2
 //      .get_or_insert(bare_retval)
 //	.safe_push(retval);
-    gcc_assert(exp_bare_retval_to_data_2.get(bare_retval));
-    gcc_assert(exp_bare_retval_to_data_2.get(bare_retval)
-		 ->contains(retval));
+//    gcc_assert(exp_bare_retval_to_data_2.get(bare_retval));
+//    gcc_assert(exp_bare_retval_to_data_2.get(bare_retval)
+//		 ->contains(retval));
 //    else
 //    hash_map_safe_get_or_insert<hm_ggc> (exp_bare_retval_to_data,
 //			       bare_retval,
 //			       retval);
-  }
+    }
 };
 
 #if CHECKING_P
