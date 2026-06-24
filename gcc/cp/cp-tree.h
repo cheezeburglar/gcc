@@ -9910,6 +9910,7 @@ public:
 public:
   void finalize_nrv_exp(tree fndecl) {
     nrv_maybe_dump_init(fndecl);
+    gcc_assert (current_function_return_values);
     for (auto it : exp_bare_retval_to_data_2)
       {
       nrv_debug_dump_all_candidates(it.first, it.second.copy());
